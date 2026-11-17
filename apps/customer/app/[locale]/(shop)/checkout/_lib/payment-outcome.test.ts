@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveCardVerifyViewState, resolveMomoPollOutcome } from "./payment-outcome";
+import {
+  resolveCardVerifyViewState,
+  resolveMomoPollOutcome,
+} from "./payment-outcome";
 
 describe("resolveCardVerifyViewState", () => {
   it("shows success only when order_confirmed is true", () => {
@@ -52,17 +55,27 @@ describe("resolveCardVerifyViewState", () => {
 
 describe("resolveMomoPollOutcome", () => {
   it("keeps COD on the COD path and never claims MoMo success", () => {
-    expect(resolveMomoPollOutcome({ status: "success", cod: true })).toBe("cod");
+    expect(resolveMomoPollOutcome({ status: "success", cod: true })).toBe(
+      "cod",
+    );
     expect(resolveMomoPollOutcome({ status: "cod", cod: true })).toBe("cod");
   });
 
   it("treats payment success as confirming, not a paid claim", () => {
-    expect(resolveMomoPollOutcome({ status: "success", cod: false })).toBe("confirming");
+    expect(resolveMomoPollOutcome({ status: "success", cod: false })).toBe(
+      "confirming",
+    );
   });
 
   it("keeps USSD rails in waiting and maps terminal failures", () => {
-    expect(resolveMomoPollOutcome({ status: "ussd_pushed", cod: false })).toBe("waiting");
-    expect(resolveMomoPollOutcome({ status: "failed", cod: false })).toBe("failed");
-    expect(resolveMomoPollOutcome({ status: "cancelled", cod: false })).toBe("cancelled");
+    expect(resolveMomoPollOutcome({ status: "ussd_pushed", cod: false })).toBe(
+      "waiting",
+    );
+    expect(resolveMomoPollOutcome({ status: "failed", cod: false })).toBe(
+      "failed",
+    );
+    expect(resolveMomoPollOutcome({ status: "cancelled", cod: false })).toBe(
+      "cancelled",
+    );
   });
 });

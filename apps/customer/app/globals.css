@@ -32,17 +32,18 @@ body {
   animation: page-in var(--dur-slow) var(--ease-out) both;
 }
 
-.shop-main section + section {
-  margin-top: var(--sp-8);
+/* Block-flow stacks only; flex/grid parents space sections with their own gap. */
+.shop-main :not(.flex, .grid) > section + section {
+  margin-top: var(--sp-4);
 }
 
 /* Homepage rails: quiet white shelves on the stone ground. Hairline border,
    no wash — the products are the colour. */
 .home-rail {
   position: relative;
-  padding: clamp(1rem, 2vw, 1.5rem);
+  padding: var(--sp-2);
   border: 1px solid var(--border);
-  border-radius: var(--r-lg);
+  border-radius: var(--r);
   background: var(--surface);
 }
 
@@ -50,9 +51,9 @@ body {
   padding-top: 0;
 }
 
-@media (min-width: 64rem) {
-  .shop-main section + section {
-    margin-top: var(--sp-12);
+@media (min-width: 48rem) {
+  .home-rail {
+    padding: var(--sp-3);
   }
 }
 

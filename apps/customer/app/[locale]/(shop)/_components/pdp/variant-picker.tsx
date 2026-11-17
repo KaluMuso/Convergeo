@@ -35,48 +35,75 @@ export function VariantPicker({
   const baseId = useId();
   const groupRefs = useRef(new Map<string, HTMLDivElement>());
 
-  const onKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>, groupId: string) => {
-    if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"].includes(event.key)) {
-      return;
-    }
-    const container = groupRefs.current.get(groupId);
-    const radios = Array.from(
-      container?.querySelectorAll<HTMLButtonElement>('[role="radio"]:not([disabled])') ?? [],
-    );
-    if (radios.length === 0) {
-      return;
-    }
-    event.preventDefault();
-    const current = radios.indexOf(document.activeElement as HTMLButtonElement);
-    let next = current;
-    if (event.key === "Home") {
-      next = 0;
-    } else if (event.key === "End") {
-      next = radios.length - 1;
-    } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      next = current < 0 ? 0 : (current + 1) % radios.length;
-    } else {
-      next = current <= 0 ? radios.length - 1 : current - 1;
-    }
-    radios[next]?.focus();
-  }, []);
+  const onKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>, groupId: string) => {
+      if (
+        ![
+          "ArrowRight",
+          "ArrowDown",
+          "ArrowLeft",
+          "ArrowUp",
+          "Home",
+          "End",
+        ].includes(event.key)
+      ) {
+        return;
+      }
+      const container = groupRefs.current.get(groupId);
+      const radios = Array.from(
+        container?.querySelectorAll<HTMLButtonElement>(
+          '[role="radio"]:not([disabled])',
+        ) ?? [],
+      );
+      if (radios.length === 0) {
+        return;
+      }
+      event.preventDefault();
+      const current = radios.indexOf(
+        document.activeElement as HTMLButtonElement,
+      );
+      let next = current;
+      if (event.key === "Home") {
+        next = 0;
+      } else if (event.key === "End") {
+        next = radios.length - 1;
+      } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        next = current < 0 ? 0 : (current + 1) % radios.length;
+      } else {
+        next = current <= 0 ? radios.length - 1 : current - 1;
+      }
+      radios[next]?.focus();
+    },
+    [],
+  );
 
   return (
     <div className="flex flex-col gap-4" data-testid="pdp-variant-picker">
       {groups.map((group) => {
         const labelId = `${baseId}-${group.id}`;
-        const chosen = group.values.find((value) => value.id === selection[group.id]);
+        const chosen = group.values.find(
+          (value) => value.id === selection[group.id],
+        );
         const missing = showMissing && !chosen;
         const firstEnabled = group.values.find(
           (value) =>
-            valueAvailability(groups, variants, selection, group.id, value.id) === "available",
+            valueAvailability(
+              groups,
+              variants,
+              selection,
+              group.id,
+              value.id,
+            ) === "available",
         );
         const tabStop = chosen?.id ?? firstEnabled?.id;
         return (
           <div key={group.id} className="flex flex-col gap-2">
             <p id={labelId} className="text-sm font-medium text-text">
               {chosen
-                ? t("pdp.variants.groupLabel", { group: group.name, value: chosen.label })
+                ? t("pdp.variants.groupLabel", {
+                    group: group.name,
+                    value: chosen.label,
+                  })
                 : t("pdp.variants.choose", { group: group.name })}
             </p>
             <div
@@ -95,7 +122,9 @@ export function VariantPicker({
               onKeyDown={(event) => onKeyDown(event, group.id)}
               className={[
                 "flex flex-wrap gap-2 rounded",
-                missing ? "outline outline-2 outline-offset-4 outline-danger" : "",
+                missing
+                  ? "outline outline-2 outline-offset-4 outline-danger"
+                  : "",
               ].join(" ")}
             >
               {group.values.map((value) => {
@@ -132,7 +161,9 @@ export function VariantPicker({
                       "relative inline-flex min-h-11 items-center justify-center border text-sm font-medium",
                       "focus-visible:outline-none focus-visible:shadow-focusRing",
                       "disabled:cursor-not-allowed disabled:opacity-50",
-                      swatch ? "min-w-11 rounded-full p-1" : "min-w-11 rounded px-3",
+                      swatch
+                        ? "min-w-11 rounded-full p-1"
+                        : "min-w-11 rounded px-3",
                       checked
                         ? "border-primary bg-primary/5 ring-2 ring-primary"
                         : "border-border bg-bg text-text",
@@ -142,7 +173,9 @@ export function VariantPicker({
                       <span
                         aria-hidden="true"
                         className="block h-8 w-8 rounded-full border border-border"
-                        style={{ backgroundColor: value.swatchHex ?? undefined }}
+                        style={{
+                          backgroundColor: value.swatchHex ?? undefined,
+                        }}
                       />
                     ) : (
                       <span aria-hidden="true">{value.label}</span>

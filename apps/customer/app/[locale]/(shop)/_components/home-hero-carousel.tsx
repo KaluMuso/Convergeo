@@ -36,7 +36,9 @@ export function HomeHeroCarousel({
       const isPrimary = def.primary === true;
       const priority = index === 0;
       const publicId =
-        isPrimary && catalogVisualPublicId?.trim() ? catalogVisualPublicId.trim() : def.publicId;
+        isPrimary && catalogVisualPublicId?.trim()
+          ? catalogVisualPublicId.trim()
+          : def.publicId;
 
       return {
         key: def.key,
@@ -56,7 +58,11 @@ export function HomeHeroCarousel({
         ),
         cta: isPrimary ? (
           <>
-            <LinkButton href={`/${locale}/search`} variant="primary" LinkComponent={Link}>
+            <LinkButton
+              href={`/${locale}/search`}
+              variant="primary"
+              LinkComponent={Link}
+            >
               {t("home.hero.primaryCta")}
             </LinkButton>
             <LinkButton
@@ -101,7 +107,9 @@ export function HomeHeroCarousel({
             variant="primary"
             LinkComponent={ad.external ? undefined : Link}
             aria-label={`${sponsoredLabel}: ${ad.cta_label ?? ad.headline}`}
-            {...(ad.external ? { target: "_blank", rel: "sponsored noopener noreferrer" } : {})}
+            {...(ad.external
+              ? { target: "_blank", rel: "sponsored noopener noreferrer" }
+              : {})}
           >
             {ad.cta_label ?? t("home.feed.adCta")}
           </LinkButton>

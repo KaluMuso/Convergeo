@@ -5,7 +5,14 @@ import { Buffer } from "node:buffer";
 import { execFile } from "node:child_process";
 import console from "node:console";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import process from "node:process";
@@ -15,7 +22,8 @@ import { promisify } from "node:util";
 import { inspectMeasuredContent } from "./perf-content-readiness.mjs";
 
 const execute = promisify(execFile);
-const sha = (value) => (typeof value === "string" && /^[0-9a-f]{40}$/.test(value) ? value : null);
+const sha = (value) =>
+  typeof value === "string" && /^[0-9a-f]{40}$/.test(value) ? value : null;
 export const INCOMPLETE_LOAD_WARNING =
   "The page loaded too slowly to finish within the time limit. Results may be incomplete.";
 
@@ -35,7 +43,9 @@ const performanceMetricIds = [
   "cumulative-layout-shift",
 ];
 const hasUsablePerformanceMetric = (lhr) =>
-  performanceMetricIds.some((id) => Number.isFinite(lhr.audits?.[id]?.numericValue));
+  performanceMetricIds.some((id) =>
+    Number.isFinite(lhr.audits?.[id]?.numericValue),
+  );
 const securityBypass = (flag) =>
   /^--(?:no-sandbox|disable-(?:setuid|namespace|seccomp-filter|gpu)-sandbox|disable-web-security|ignore-certificate-errors(?:-spki-list)?|allow-insecure-localhost)(?:=|$)/.test(
     flag,
@@ -46,11 +56,15 @@ export async function sourceIdentity(cwd, env = process.env) {
     checkoutTree = null,
     candidateSha = null;
   try {
-    const { stdout } = await execute("git", ["rev-parse", "HEAD", "HEAD^{tree}"], {
-      cwd,
-      timeout: 5000,
-      maxBuffer: 4096,
-    });
+    const { stdout } = await execute(
+      "git",
+      ["rev-parse", "HEAD", "HEAD^{tree}"],
+      {
+        cwd,
+        timeout: 5000,
+        maxBuffer: 4096,
+      },
+    );
     [checkoutSha, checkoutTree] = stdout.trim().split("\n").map(sha);
   } catch {
     // Local contract fixtures are intentionally outside Git; identity stays unknown.
@@ -60,7 +74,10 @@ export async function sourceIdentity(cwd, env = process.env) {
       const event = JSON.parse(await readFile(env.GITHUB_EVENT_PATH, "utf8"));
       if (env.GITHUB_EVENT_NAME === "pull_request")
         candidateSha = sha(event.pull_request?.head?.sha);
-      else if (env.GITHUB_EVENT_NAME === "push" && sha(event.after) === sha(env.GITHUB_SHA))
+      else if (
+        env.GITHUB_EVENT_NAME === "push" &&
+        sha(event.after) === sha(env.GITHUB_SHA)
+      )
         candidateSha = sha(event.after);
     } catch {
       // Never serialize the event, environment, or parsing error.
@@ -68,7 +85,8 @@ export async function sourceIdentity(cwd, env = process.env) {
   } else if (env.GITHUB_ACTIONS !== "true") {
     candidateSha = checkoutSha;
   }
-  const number = (value) => (/^[1-9][0-9]{0,19}$/.test(value ?? "") ? value : null);
+  const number = (value) =>
+    /^[1-9][0-9]{0,19}$/.test(value ?? "") ? value : null;
   const identity = {
     checkout_sha: checkoutSha,
     checkout_tree: checkoutTree,
@@ -96,8 +114,14 @@ export function classifyChromeStderr(stderr) {
       "missing_shared_library",
       /error while loading shared libraries|cannot open shared object file/i,
     ],
-    ["sandbox_unavailable", /No usable sandbox|Failed to move to new namespace/i],
-    ["user_namespace_policy", /apparmor|user.?namespace.*denied|userns.*denied/i],
+    [
+      "sandbox_unavailable",
+      /No usable sandbox|Failed to move to new namespace/i,
+    ],
+    [
+      "user_namespace_policy",
+      /apparmor|user.?namespace.*denied|userns.*denied/i,
+    ],
     ["root_without_sandbox", /Running as root without/i],
     ["profile_lock", /SingletonLock|ProcessSingleton/],
     ["disk_exhaustion", /No space left on device/i],
@@ -128,8 +152,9 @@ async function browserVersion(chromePath) {
       maxBuffer: 4096,
     });
     return (
-      stdout.match(/(?:Google Chrome(?: for Testing)?|Chromium) ([0-9]+(?:\.[0-9]+){3})/)?.[1] ??
-      null
+      stdout.match(
+        /(?:Google Chrome(?: for Testing)?|Chromium) ([0-9]+(?:\.[0-9]+){3})/,
+      )?.[1] ?? null
     );
   } catch {
     return null;
@@ -170,23 +195,34 @@ export function traceDiagnostics(traceEvents) {
   for (const event of traceEvents) {
     if (finite(event?.ts)) {
       firstTimestamp = Math.min(firstTimestamp, event.ts);
-      lastTimestamp = Math.max(lastTimestamp, event.ts + (finite(event.dur) ? event.dur : 0));
+      lastTimestamp = Math.max(
+        lastTimestamp,
+        event.ts + (finite(event.dur) ? event.dur : 0),
+      );
     }
     if (event?.name === "navigationStart") navigationStartsAnyCategory++;
   }
   for (const event of keyEvents) {
     if (Object.hasOwn(counts, event?.name)) {
       counts[event.name]++;
-      if (finite(event.ts)) first[event.name] = Math.min(first[event.name] ?? Infinity, event.ts);
+      if (finite(event.ts))
+        first[event.name] = Math.min(first[event.name] ?? Infinity, event.ts);
     }
   }
-  const browserStart = keyEvents.find((event) => event?.name === "TracingStartedInBrowser");
+  const browserStart = keyEvents.find(
+    (event) => event?.name === "TracingStartedInBrowser",
+  );
   const firstRootFrame = Array.isArray(browserStart?.args?.data?.frames)
     ? browserStart.args.data.frames.find((frame) => !frame?.parent)
     : null;
-  const browserFrame = firstRootFrame?.frame && firstRootFrame?.processId ? firstRootFrame : null;
-  const pageStart = keyEvents.find((event) => event?.name === "TracingStartedInPage");
-  const firstResource = keyEvents.find((event) => event?.name === "ResourceSendRequest");
+  const browserFrame =
+    firstRootFrame?.frame && firstRootFrame?.processId ? firstRootFrame : null;
+  const pageStart = keyEvents.find(
+    (event) => event?.name === "TracingStartedInPage",
+  );
+  const firstResource = keyEvents.find(
+    (event) => event?.name === "ResourceSendRequest",
+  );
   const firstFallbackNav = keyEvents.find(
     (event) =>
       event?.name === "navigationStart" &&
@@ -200,7 +236,10 @@ export function traceDiagnostics(traceEvents) {
     firstFallbackNav?.args?.frame
       ? firstFallbackNav
       : null;
-  const mainFrame = browserFrame?.frame || pageStart?.args?.data?.page || fallbackNav?.args?.frame;
+  const mainFrame =
+    browserFrame?.frame ||
+    pageStart?.args?.data?.page ||
+    fallbackNav?.args?.frame;
   const mainFrameSource = browserFrame?.frame
     ? "browser"
     : pageStart?.args?.data?.page
@@ -209,12 +248,19 @@ export function traceDiagnostics(traceEvents) {
         ? "navigation_fallback"
         : "unknown";
   const frameOf = (event) =>
-    event?.args?.data?.frame || event?.args?.data?.frameID || event?.args?.frame;
+    event?.args?.data?.frame ||
+    event?.args?.data?.frameID ||
+    event?.args?.frame;
   function acceptableDocument(event) {
     const url = event?.args?.data?.documentLoaderURL;
-    return url === undefined || (typeof url === "string" && /^(chrome|https?):/.test(url));
+    return (
+      url === undefined ||
+      (typeof url === "string" && /^(chrome|https?):/.test(url))
+    );
   }
-  const navigationStarts = keyEvents.filter((event) => event?.name === "navigationStart");
+  const navigationStarts = keyEvents.filter(
+    (event) => event?.name === "navigationStart",
+  );
   const documentNavigations = navigationStarts.filter(acceptableDocument);
   const mainNavigations = mainFrame
     ? navigationStarts.filter((event) => frameOf(event) === mainFrame)
@@ -222,12 +268,15 @@ export function traceDiagnostics(traceEvents) {
   const mainDocumentNavigations = mainNavigations.filter(acceptableDocument);
   const mainCommits = mainFrame
     ? keyEvents.filter(
-        (event) => event?.name === "FrameCommittedInBrowser" && frameOf(event) === mainFrame,
+        (event) =>
+          event?.name === "FrameCommittedInBrowser" &&
+          frameOf(event) === mainFrame,
       )
     : [];
   const mainRequests = mainFrame
     ? keyEvents.filter(
-        (event) => event?.name === "ResourceSendRequest" && frameOf(event) === mainFrame,
+        (event) =>
+          event?.name === "ResourceSendRequest" && frameOf(event) === mainFrame,
       )
     : [];
   const offset = (timestamp) =>
@@ -236,7 +285,8 @@ export function traceDiagnostics(traceEvents) {
       : null;
   const firstTs = (events) => {
     const timestamp = events.reduce(
-      (minimum, event) => (finite(event.ts) ? Math.min(minimum, event.ts) : minimum),
+      (minimum, event) =>
+        finite(event.ts) ? Math.min(minimum, event.ts) : minimum,
       Infinity,
     );
     return finite(timestamp) ? timestamp : null;
@@ -276,12 +326,18 @@ export function traceDiagnostics(traceEvents) {
 const median = (values) => {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  return sorted.length % 2
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) / 2;
 };
 
 export function validatePolicy(config) {
   const { collect, assert, upload } = config.ci ?? {};
-  if (!collect || !Number.isInteger(collect.numberOfRuns) || collect.numberOfRuns < 3)
+  if (
+    !collect ||
+    !Number.isInteger(collect.numberOfRuns) ||
+    collect.numberOfRuns < 3
+  )
     throw new Error("At least three integer runs are required");
   if (
     !Array.isArray(collect.url) ||
@@ -291,7 +347,11 @@ export function validatePolicy(config) {
     throw new Error("Unique collect URLs are required");
   for (const url of collect.url) {
     const parsed = new URL(url);
-    if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password)
+    if (
+      !["http:", "https:"].includes(parsed.protocol) ||
+      parsed.username ||
+      parsed.password
+    )
       throw new Error("Invalid collect URL");
   }
   if (
@@ -306,9 +366,17 @@ export function validatePolicy(config) {
         ].includes(key),
     )
   )
-    throw new Error("Unsupported Lighthouse setting; review adapter forwarding before use");
-  if (Object.keys(collect).some((key) => !["url", "numberOfRuns", "settings"].includes(key)))
-    throw new Error("Unsupported collect option; implement and test it before use");
+    throw new Error(
+      "Unsupported Lighthouse setting; review adapter forwarding before use",
+    );
+  if (
+    Object.keys(collect).some(
+      (key) => !["url", "numberOfRuns", "settings"].includes(key),
+    )
+  )
+    throw new Error(
+      "Unsupported collect option; implement and test it before use",
+    );
   if (
     !assert ||
     Object.keys(assert).some((key) => key !== "assertMatrix") ||
@@ -316,36 +384,59 @@ export function validatePolicy(config) {
   )
     throw new Error("Only explicit assertMatrix policy is supported");
   for (const row of assert.assertMatrix) {
-    if (Object.keys(row).some((key) => !["matchingUrlPattern", "assertions"].includes(key)))
+    if (
+      Object.keys(row).some(
+        (key) => !["matchingUrlPattern", "assertions"].includes(key),
+      )
+    )
       throw new Error("Unsupported assertion row option");
     new RegExp(row.matchingUrlPattern);
     if (!row.matchingUrlPattern || !Object.keys(row.assertions ?? {}).length)
       throw new Error("Assertion row must have a pattern and assertions");
     for (const [id, spec] of Object.entries(row.assertions)) {
-      if (!Array.isArray(spec) || spec.length !== 2 || !["error", "warn"].includes(spec[0]))
+      if (
+        !Array.isArray(spec) ||
+        spec.length !== 2 ||
+        !["error", "warn"].includes(spec[0])
+      )
         throw new Error(`Unsupported assertion: ${id}`);
       const options = spec[1];
       if (
         !options ||
         Object.keys(options).some(
-          (key) => !["minScore", "maxNumericValue", "aggregationMethod"].includes(key),
+          (key) =>
+            !["minScore", "maxNumericValue", "aggregationMethod"].includes(key),
         )
       )
         throw new Error(`Unsupported assertion options: ${id}`);
       if (
-        !["optimistic", "pessimistic", "median"].includes(options.aggregationMethod ?? "optimistic")
+        !["optimistic", "pessimistic", "median"].includes(
+          options.aggregationMethod ?? "optimistic",
+        )
       )
         throw new Error(`Unsupported aggregation: ${id}`);
-      if (!Object.keys(options).some((key) => ["minScore", "maxNumericValue"].includes(key)))
+      if (
+        !Object.keys(options).some((key) =>
+          ["minScore", "maxNumericValue"].includes(key),
+        )
+      )
         throw new Error(`Explicit assertion threshold required: ${id}`);
       for (const key of ["minScore", "maxNumericValue"])
-        if (key in options && !finite(options[key])) throw new Error(`Invalid threshold: ${id}`);
-      if (id.includes(":") && (!/^categories:[a-z-]+$/.test(id) || "maxNumericValue" in options))
+        if (key in options && !finite(options[key]))
+          throw new Error(`Invalid threshold: ${id}`);
+      if (
+        id.includes(":") &&
+        (!/^categories:[a-z-]+$/.test(id) || "maxNumericValue" in options)
+      )
         throw new Error(`Unsupported category assertion: ${id}`);
     }
   }
   for (const url of collect.url)
-    if (!assert.assertMatrix.some((row) => new RegExp(row.matchingUrlPattern).test(url)))
+    if (
+      !assert.assertMatrix.some((row) =>
+        new RegExp(row.matchingUrlPattern).test(url),
+      )
+    )
       throw new Error(`No assertions match ${url}`);
   if (
     upload?.target !== "filesystem" ||
@@ -415,7 +506,10 @@ export function evaluateAssertions(config, reports) {
           const aggregation = options.aggregationMethod ?? "optimistic";
           const min = name === "minScore";
           let actual = NaN;
-          if (valid.length && (aggregation !== "pessimistic" || valid.length === values.length)) {
+          if (
+            valid.length &&
+            (aggregation !== "pessimistic" || valid.length === values.length)
+          ) {
             actual =
               aggregation === "median"
                 ? median(valid)
@@ -434,13 +528,17 @@ export function evaluateAssertions(config, reports) {
                 ? valid
                 : values.map((value) => (finite(value) ? value : NaN)),
             operator: min ? ">=" : "<=",
-            passed: finite(actual) && (min ? actual >= expected : actual <= expected),
+            passed:
+              finite(actual) && (min ? actual >= expected : actual <= expected),
           });
         }
       }
     }
   }
-  if (reports.length !== config.ci.collect.url.length * config.ci.collect.numberOfRuns)
+  if (
+    reports.length !==
+    config.ci.collect.url.length * config.ci.collect.numberOfRuns
+  )
     throw new Error("Unexpected reports outside configured collection");
   return results;
 }
@@ -450,18 +548,56 @@ export function evaluateAssertions(config, reports) {
 export function representativeRun(runs) {
   const value = (run, name) => run.audits?.[name]?.numericValue || 0;
   const middle = (name) =>
-    [...runs].map((r) => value(r, name)).sort((a, b) => a - b)[Math.floor(runs.length / 2)];
+    [...runs].map((r) => value(r, name)).sort((a, b) => a - b)[
+      Math.floor(runs.length / 2)
+    ];
   const fcp = middle("first-contentful-paint"),
     tti = middle("interactive");
   const distance = (r) =>
-    (fcp - value(r, "first-contentful-paint")) ** 2 + (tti - value(r, "interactive")) ** 2;
+    (fcp - value(r, "first-contentful-paint")) ** 2 +
+    (tti - value(r, "interactive")) ** 2;
   return [...runs].sort((a, b) => distance(a) - distance(b))[0];
 }
 
-export async function auditWithChrome(url, settings, dependencies, context = {}) {
+// /en/checkout with an empty cart redirects to the cart (#804), so the checkout
+// measurement runs with one fixture item in a guest cart. The guest-cart cookie
+// lives in this run's Chrome profile; Lighthouse's storage reset keeps cookies
+// (it clears caches and service workers only), so the measured load sees it.
+export const CHECKOUT_PATH = "/en/checkout";
+export const CHECKOUT_FIXTURE_LISTING_ID =
+  "b1000000-0000-0000-0000-000000000001";
+
+export async function seedCheckoutCart(url, page) {
+  const origin = new URL(url).origin;
+  await page.goto(`${origin}/en`, { waitUntil: "domcontentloaded" });
+  const status = await page.evaluate(async (listingId) => {
+    const response = await fetch("/api/ci-perf/cart/items", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": `ci-perf-checkout-${crypto.randomUUID()}`,
+      },
+      body: JSON.stringify({ listing_id: listingId, qty: 1 }),
+    });
+    return response.status;
+  }, CHECKOUT_FIXTURE_LISTING_ID);
+  if (status !== 200) throw new Error(`Checkout cart seed failed (${status})`);
+}
+
+export async function auditWithChrome(
+  url,
+  settings,
+  dependencies,
+  context = {},
+) {
   const [{ default: lighthouse }, chromeLauncher, { default: puppeteer }] =
     dependencies ??
-    (await Promise.all([import("lighthouse"), import("chrome-launcher"), import("puppeteer")]));
+    (await Promise.all([
+      import("lighthouse"),
+      import("chrome-launcher"),
+      import("puppeteer"),
+    ]));
   const profile = await mkdtemp(join(tmpdir(), "vergeo-lighthouse-"));
   const started = Date.now();
   let chrome,
@@ -478,7 +614,10 @@ export async function auditWithChrome(url, settings, dependencies, context = {})
     stage = "validate_flags";
     // Preserve the pinned benchmark defaults without the launcher's implicit
     // Linux --disable-setuid-sandbox. No sandbox or TLS fallback is permitted.
-    const chromeFlags = [...chromeLauncher.Launcher.defaultFlags(), "--headless=new"];
+    const chromeFlags = [
+      ...chromeLauncher.Launcher.defaultFlags(),
+      "--headless=new",
+    ];
     unsafeFlags = chromeFlags.some(securityBypass);
     if (unsafeFlags) throw new Error("Unsafe Chrome flag");
     chrome = new chromeLauncher.Launcher({
@@ -498,6 +637,10 @@ export async function auditWithChrome(url, settings, dependencies, context = {})
         defaultViewport: null,
       });
       measuredPage = await browser.newPage();
+      if (new URL(url).pathname === CHECKOUT_PATH) {
+        stage = "seed_checkout_cart";
+        await seedCheckoutCart(url, measuredPage);
+      }
     }
     stage = "audit";
     const flags = {
@@ -523,11 +666,15 @@ export async function auditWithChrome(url, settings, dependencies, context = {})
     stage = "complete";
   } catch (error) {
     failure =
-      stage === "audit" ? error : new Error(`Chrome ${stage} failed; inspect startup diagnostics`);
+      stage === "audit"
+        ? error
+        : new Error(`Chrome ${stage} failed; inspect startup diagnostics`);
   } finally {
     const reasons = await startupStderr(profile);
     const chromeProcess = chrome?.chromeProcess;
-    const exitCode = Number.isInteger(chromeProcess?.exitCode) ? chromeProcess.exitCode : null;
+    const exitCode = Number.isInteger(chromeProcess?.exitCode)
+      ? chromeProcess.exitCode
+      : null;
     const signal = /^SIG[A-Z0-9]{1,12}$/.test(chromeProcess?.signalCode ?? "")
       ? chromeProcess.signalCode
       : null;
@@ -556,7 +703,8 @@ export async function auditWithChrome(url, settings, dependencies, context = {})
     if (context.diagnosticsPath) {
       try {
         const identity = context.source ?? {};
-        const number = (v) => (/^[1-9][0-9]{0,19}$/.test(v ?? "") ? String(v) : null);
+        const number = (v) =>
+          /^[1-9][0-9]{0,19}$/.test(v ?? "") ? String(v) : null;
         await writeFile(
           context.diagnosticsPath,
           JSON.stringify(
@@ -570,7 +718,9 @@ export async function auditWithChrome(url, settings, dependencies, context = {})
               config_sha256: /^[0-9a-f]{64}$/.test(identity.config_sha256 ?? "")
                 ? identity.config_sha256
                 : null,
-              url_index: Number.isInteger(context.urlIndex) ? context.urlIndex : null,
+              url_index: Number.isInteger(context.urlIndex)
+                ? context.urlIndex
+                : null,
               run: Number.isInteger(context.run) ? context.run : null,
               stage,
               collection_completed: stage === "complete" && !cleanupFailed,
@@ -608,7 +758,9 @@ export async function runPerformance(
   await mkdir(output, { recursive: true });
   const source = {
     ...(await sourceIdentity(cwd)),
-    config_sha256: /^[0-9a-f]{64}$/.test(configSha256 ?? "") ? configSha256 : null,
+    config_sha256: /^[0-9a-f]{64}$/.test(configSha256 ?? "")
+      ? configSha256
+      : null,
   };
   const reports = [],
     browserVersions = [],
@@ -626,16 +778,21 @@ export async function runPerformance(
       try {
         let result;
         for (let attempt = 1; attempt <= 2; attempt++) {
-          result = await audit(url, structuredClone(config.ci.collect.settings ?? {}), undefined, {
-            diagnosticsPath: join(
-              output,
-              `chrome-startup-${urlIndex + 1}-${run + 1}${attempt === 2 ? "-retry" : ""}.json`,
-            ),
-            source,
-            urlIndex: urlIndex + 1,
-            run: run + 1,
-            verifyContent: process.env.CI_PERF_HARNESS === "1",
-          });
+          result = await audit(
+            url,
+            structuredClone(config.ci.collect.settings ?? {}),
+            undefined,
+            {
+              diagnosticsPath: join(
+                output,
+                `chrome-startup-${urlIndex + 1}-${run + 1}${attempt === 2 ? "-retry" : ""}.json`,
+              ),
+              source,
+              urlIndex: urlIndex + 1,
+              run: run + 1,
+              verifyContent: process.env.CI_PERF_HARNESS === "1",
+            },
+          );
           const lhr = result?.lhr;
           if (
             attempt !== 1 ||
@@ -664,8 +821,14 @@ export async function runPerformance(
             htmlPath,
           });
         }
-        if (!result?.lhr || typeof result.report !== "string" || !result.report.length)
-          throw new Error("Lighthouse did not produce both JSON and HTML reports");
+        if (
+          !result?.lhr ||
+          typeof result.report !== "string" ||
+          !result.report.length
+        )
+          throw new Error(
+            "Lighthouse did not produce both JSON and HTML reports",
+          );
         const lhr = result.lhr;
         if (
           typeof result.browserVersion === "string" &&
@@ -694,7 +857,10 @@ export async function runPerformance(
         });
         if (
           Object.values(lhr.categories ?? {}).some(
-            (category) => !category || typeof category !== "object" || Array.isArray(category),
+            (category) =>
+              !category ||
+              typeof category !== "object" ||
+              Array.isArray(category),
           )
         )
           throw new Error("Lighthouse produced a malformed category");
@@ -703,7 +869,9 @@ export async function runPerformance(
             `Invalid collection: ${JSON.stringify(lhr.runtimeError ?? lhr.requestedUrl)}`,
           );
         if (incompleteLoadWarning(lhr))
-          throw new Error("Incomplete collection: Lighthouse page-load timeout warning");
+          throw new Error(
+            "Incomplete collection: Lighthouse page-load timeout warning",
+          );
         if (process.env.CI_PERF_HARNESS === "1") {
           contentReadiness.push({
             url,
@@ -720,15 +888,21 @@ export async function runPerformance(
     }
   }
   for (const url of config.ci.collect.url) {
-    const representative = representativeRun(reports.filter((lhr) => lhr.requestedUrl === url));
-    if (representative) manifest[reports.indexOf(representative)].isRepresentativeRun = true;
+    const representative = representativeRun(
+      reports.filter((lhr) => lhr.requestedUrl === url),
+    );
+    if (representative)
+      manifest[reports.indexOf(representative)].isRepresentativeRun = true;
   }
   try {
     assertions = evaluateAssertions(config, reports);
   } catch (error) {
     errors.push({ message: error.message });
   }
-  await writeFile(join(output, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+  await writeFile(
+    join(output, "manifest.json"),
+    JSON.stringify(manifest, null, 2) + "\n",
+  );
   await writeFile(
     join(output, "content-readiness.json"),
     JSON.stringify(contentReadiness, null, 2) + "\n",
@@ -747,9 +921,14 @@ export async function runPerformance(
     JSON.stringify(assertions, null, 2) + "\n",
   );
   const exitCode =
-    errors.length || assertions.some((a) => !a.passed && a.level === "error") ? 1 : 0;
+    errors.length || assertions.some((a) => !a.passed && a.level === "error")
+      ? 1
+      : 0;
   const puppeteerPackage = JSON.parse(
-    await readFile(new URL(import.meta.resolve("puppeteer/package.json")), "utf8"),
+    await readFile(
+      new URL(import.meta.resolve("puppeteer/package.json")),
+      "utf8",
+    ),
   );
   await writeFile(
     join(output, "run-summary.json"),
@@ -766,7 +945,9 @@ export async function runPerformance(
         nodeVersion: process.version,
         puppeteerVersion: puppeteerPackage.version,
         browserVersions: [...new Set(browserVersions)],
-        lighthouseVersions: [...new Set(reports.map((lhr) => lhr.lighthouseVersion))],
+        lighthouseVersions: [
+          ...new Set(reports.map((lhr) => lhr.lighthouseVersion)),
+        ],
       },
       null,
       2,
@@ -775,12 +956,19 @@ export async function runPerformance(
   return { exitCode, assertions, errors, manifest };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(resolve(process.argv[1])).href
+) {
   try {
     const args = process.argv.slice(2);
     if (args.length > 1 || (args.length && !args[0].startsWith("--config=")))
-      throw new Error("Usage: lighthouse-runner.mjs [--config=lighthouserc.json]");
-    const configBytes = await readFile(args[0]?.slice("--config=".length) || "lighthouserc.json");
+      throw new Error(
+        "Usage: lighthouse-runner.mjs [--config=lighthouserc.json]",
+      );
+    const configBytes = await readFile(
+      args[0]?.slice("--config=".length) || "lighthouserc.json",
+    );
     const config = JSON.parse(configBytes.toString("utf8"));
     const result = await runPerformance(config, {
       configSha256: createHash("sha256").update(configBytes).digest("hex"),

@@ -2,26 +2,26 @@
   "about": {
     "meta": {
       "title": "À propos de Convergeo",
-      "description": "Convergeo est la place de marché mobile de la Zambie pour les produits, services et événements — avec votre argent gardé en sécurité sous séquestre jusqu'à ce que vous receviez ce que vous avez payé."
+      "description": "Convergeo est la place de marché mobile de la Zambie pour les produits, services et événements — payez à la livraison pendant notre pilote."
     },
     "hero": {
       "eyebrow": "À propos",
       "headline": "La place de marché de la Zambie, conçue pour la confiance",
-      "subhead": "Convergeo réunit produits, services et événements au même endroit — avec un séquestre qui conserve votre argent jusqu'à la confirmation de la livraison."
+      "subhead": "Convergeo réunit produits, services et événements au même endroit — et pendant notre pilote, vous payez à la livraison."
     },
     "mission": {
       "heading": "Notre mission",
-      "body": "Rendre l'achat et la vente en ligne en Zambie sûrs, simples et rapides — même avec une connexion lente. Chaque commande est protégée par le séquestre, chaque versement parvient aux vendeurs en quelques minutes via mobile money, et chaque conversation peut se faire sur WhatsApp."
+      "body": "Rendre l'achat et la vente en ligne en Zambie sûrs, simples et rapides — même avec une connexion lente. Chaque conversation peut se faire sur WhatsApp, et le paiement en ligne avec protection acheteur arrive bientôt."
     },
     "values": {
       "heading": "Nos engagements",
       "trust": {
         "title": "La confiance avant tout",
-        "body": "Vous payez, nous conservons, le vendeur expédie, vous confirmez — puis les fonds sont libérés. Fini d'espérer qu'un inconnu vous livre."
+        "body": "Vous commandez, nous livrons, vous payez à l'arrivée. Pas de paiement d'avance en espérant qu'un inconnu livre."
       },
       "local": {
         "title": "Conçu pour la Zambie",
-        "body": "Le mobile money d'abord (MTN, Airtel), l'adressage par points de repère, la livraison à Lusaka et le retrait dans tout le pays, avec des prix en Kwacha."
+        "body": "Paiement à la livraison, adresses par points de repère, livraison à Lusaka et retrait dans tout le pays, prix en Kwacha."
       },
       "fast": {
         "title": "Rapide sur tous les réseaux",
@@ -29,15 +29,15 @@
       },
       "fair": {
         "title": "Équitable pour les vendeurs",
-        "body": "Des commissions transparentes affichées avant publication, et des versements sous 48 heures — souvent en quelques minutes via mobile money."
+        "body": "Commissions transparentes affichées avant publication. Les versements en ligne arrivent bientôt."
       }
     },
     "howItWorks": {
       "heading": "Comment fonctionne Convergeo",
       "step1": "Découvrez des produits, services et événements proposés par des vendeurs partout en Zambie.",
-      "step2": "Payez par mobile money, carte ou à la livraison pour les commandes jusqu'à K500.",
-      "step3": "Votre argent est gardé en sécurité sous séquestre jusqu'à ce que vous confirmiez la livraison.",
-      "step4": "Nous versons les fonds au vendeur — et intervenons en cas de problème."
+      "step2": "Passez votre commande et payez en espèces à la livraison. Le paiement en ligne arrive bientôt.",
+      "step3": "Votre commande est livrée ou prête à être retirée.",
+      "step4": "Nous intervenons en cas de problème."
     },
     "cta": {
       "heading": "Prêt à explorer ?",
@@ -94,7 +94,7 @@
   "help": {
     "meta": {
       "title": "Centre d'aide",
-      "description": "Des réponses sur le séquestre, les paiements, la livraison, les retours, les billets et la vente sur Convergeo."
+      "description": "Réponses sur les paiements, la livraison, les retours, les billets et la vente sur Convergeo."
     },
     "hero": {
       "eyebrow": "Centre d'aide",
@@ -103,7 +103,7 @@
     },
     "search": {
       "label": "Rechercher des articles d'aide",
-      "placeholder": "Rechercher — ex. séquestre, livraison, remboursement",
+      "placeholder": "Rechercher — p. ex. paiement, livraison, remboursement",
       "clear": "Effacer la recherche",
       "resultsCount": "{count, plural, =0 {Aucun article trouvé} one {# article} other {# articles}}",
       "noResults": "Aucun article ne correspond à votre recherche.",
@@ -111,7 +111,7 @@
     },
     "categories": {
       "buying": "Achats et paiements",
-      "escrow": "Séquestre et sécurité",
+      "escrow": "Paiements et sécurité",
       "delivery": "Livraison et retrait",
       "returns": "Retours et remboursements",
       "events": "Événements et billets",
@@ -123,7 +123,8 @@
       "inCategory": "Dans {category}",
       "relatedHeading": "Articles connexes",
       "notHelpful": "Besoin d'aide supplémentaire ?",
-      "contactCta": "Contacter l'assistance"
+      "contactCta": "Contacter l'assistance",
+      "comingSoon": "Bientôt disponible : le paiement en ligne n'est pas proposé pendant le pilote. Pour l'instant, vous payez en espèces à la livraison."
     },
     "cta": {
       "heading": "Vous n'avez pas trouvé de réponse ?",

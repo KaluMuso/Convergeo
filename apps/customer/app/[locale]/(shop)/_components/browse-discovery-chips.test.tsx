@@ -14,7 +14,11 @@ describe("BrowseDiscoveryChips", () => {
       <BrowseDiscoveryChips
         ariaLabel="Browse by area"
         chips={[
-          { key: "categories", href: "/en/categories", label: "All Categories" },
+          {
+            key: "categories",
+            href: "/en/categories",
+            label: "All Categories",
+          },
           { key: "directory", href: "/en/directory", label: "Directory" },
           { key: "services", href: "/en/services", label: "Services" },
           { key: "events", href: "/en/events", label: "Events" },
@@ -23,10 +27,9 @@ describe("BrowseDiscoveryChips", () => {
     );
 
     expect(screen.getByTestId("browse-discovery-chips")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "All Categories" })).toHaveAttribute(
-      "href",
-      "/en/categories",
-    );
+    expect(
+      screen.getByRole("link", { name: "All Categories" }),
+    ).toHaveAttribute("href", "/en/categories");
     expect(screen.getByRole("link", { name: "Directory" })).toHaveAttribute(
       "href",
       "/en/directory",
@@ -34,7 +37,9 @@ describe("BrowseDiscoveryChips", () => {
   });
 
   it("renders nothing when there are no chips", () => {
-    const { container } = render(<BrowseDiscoveryChips ariaLabel="Browse" chips={[]} />);
+    const { container } = render(
+      <BrowseDiscoveryChips ariaLabel="Browse" chips={[]} />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 });

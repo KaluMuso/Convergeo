@@ -22,11 +22,18 @@ vi.mock("../plp/listing-grid", () => ({
   ),
 }));
 
-import { StorefrontProducts, type StorefrontListing } from "./storefront-products";
+import {
+  StorefrontProducts,
+  type StorefrontListing,
+} from "./storefront-products";
 
 afterEach(cleanup);
 
-const listing = (title: string, slug: string | null, name: string | null): StorefrontListing => ({
+const listing = (
+  title: string,
+  slug: string | null,
+  name: string | null,
+): StorefrontListing => ({
   id: title,
   title,
   productSlug: title,
@@ -116,6 +123,8 @@ describe("StorefrontProducts compare action", () => {
     const links = screen.getAllByTestId("storefront-compare");
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveAttribute("href", "/en/p/solar-lamp#compare");
-    expect(links[0]).toHaveTextContent("Compare with 2 other shops · from K90.00");
+    expect(links[0]).toHaveTextContent(
+      "Compare with 2 other shops · from K90.00",
+    );
   });
 });

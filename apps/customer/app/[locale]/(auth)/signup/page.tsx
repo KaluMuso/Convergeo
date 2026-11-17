@@ -2,7 +2,10 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { buildPageMetadata } from "../../../../lib/page-title";
 import { AuthSignupShell } from "../_components/login-shell";
+
+import type { Metadata } from "next";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -11,6 +14,15 @@ type PageProps = {
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "auth", "signup.title");
 }
 
 export default async function SignupPage({ params, searchParams }: PageProps) {

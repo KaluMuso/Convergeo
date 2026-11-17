@@ -1,5 +1,8 @@
 /** Shared PDP variant fixtures (not a test file). */
-import type { ListingVariantOption, VariantOptionGroup } from "./variant-selection";
+import type {
+  ListingVariantOption,
+  VariantOptionGroup,
+} from "./variant-selection";
 
 export const GROUPS: VariantOptionGroup[] = [
   {
@@ -23,7 +26,11 @@ export const GROUPS: VariantOptionGroup[] = [
   },
 ];
 
-export function variant(id: string, ids: string[], overrides: Partial<ListingVariantOption> = {}) {
+export function variant(
+  id: string,
+  ids: string[],
+  overrides: Partial<ListingVariantOption> = {},
+) {
   return {
     id,
     sku: id.toUpperCase(),
@@ -41,6 +48,9 @@ export function variant(id: string, ids: string[], overrides: Partial<ListingVar
 export const VARIANTS: ListingVariantOption[] = [
   variant("red-s", ["red", "s"]),
   variant("red-m", ["red", "m"], { stockQty: 0, inStock: false }),
-  variant("blue-m", ["blue", "m"], { priceNgwee: 25_000, imagePublicId: "img/blue" }),
+  variant("blue-m", ["blue", "m"], {
+    priceNgwee: 25_000,
+    imagePublicId: "img/blue",
+  }),
   variant("blue-l", ["blue", "l"]),
 ];

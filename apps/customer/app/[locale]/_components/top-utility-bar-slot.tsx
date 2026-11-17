@@ -2,6 +2,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages } from "next-intl/server";
 
 import { getSupportEmail, getSupportPhoneDisplay } from "../(marketing)/contact/_components/config";
+import { getSocialLinks } from "../(marketing)/contact/_components/social-links";
 import { TopUtilityBar } from "../(shop)/_components/top-utility-bar";
 
 type TopUtilityBarSlotProps = {
@@ -41,9 +42,8 @@ export async function TopUtilityBarSlot({ locale }: TopUtilityBarSlotProps) {
       links={{
         phoneHref: contactPhone ? `tel:${contactPhone}` : null,
         emailHref: `mailto:${contactEmail}`,
-        facebook: tCommon("social.facebook"),
-        twitter: tCommon("social.twitter"),
-        instagram: tCommon("social.instagram"),
+        // Config-driven (NEXT_PUBLIC_SOCIAL_*_URL): a network with no URL is hidden.
+        ...getSocialLinks(),
       }}
     />
   );

@@ -32,11 +32,16 @@ type AppliedFilterBarProps = {
   labels: AppliedFilterBarLabels;
 };
 
-function chipLabel(chip: AppliedFilterChip, labels: AppliedFilterBarLabels): string {
+function chipLabel(
+  chip: AppliedFilterChip,
+  labels: AppliedFilterBarLabels,
+): string {
   switch (chip.kind) {
     case "price":
       if (chip.min && chip.max) {
-        return labels.priceRange.replace("{min}", chip.min).replace("{max}", chip.max);
+        return labels.priceRange
+          .replace("{min}", chip.min)
+          .replace("{max}", chip.max);
       }
       if (chip.min) {
         return labels.minPriceOnly.replace("{min}", chip.min);
@@ -46,13 +51,17 @@ function chipLabel(chip: AppliedFilterChip, labels: AppliedFilterBarLabels): str
       if (chip.value === "used") {
         return labels.conditionUsed;
       }
-      return chip.value === "refurbished" ? labels.conditionRefurbished : labels.conditionNew;
+      return chip.value === "refurbished"
+        ? labels.conditionRefurbished
+        : labels.conditionNew;
     case "availability":
       return chip.value === "out_of_stock" ? labels.outOfStock : labels.inStock;
     case "rating":
       return chip.value === "3" ? labels.rating3Plus : labels.rating4Plus;
     case "location":
-      return chip.radiusKm ? labels.radiusKm.replace("{km}", chip.radiusKm) : labels.nearMe;
+      return chip.radiusKm
+        ? labels.radiusKm.replace("{km}", chip.radiusKm)
+        : labels.nearMe;
     default:
       return "";
   }
@@ -138,7 +147,9 @@ export function AppliedFilterBar({
       className="motion-fade flex flex-col gap-2 rounded-lg border border-border bg-surface px-3 py-2"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="m-0 text-sm font-semibold text-text-2">{labels.ariaLabel}</p>
+        <p className="m-0 text-sm font-semibold text-text-2">
+          {labels.ariaLabel}
+        </p>
         <Link
           href={clearAllHref(pathname, searchParams)}
           className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
@@ -146,7 +157,10 @@ export function AppliedFilterBar({
           {labels.clearAll}
         </Link>
       </div>
-      <ul className="m-0 flex list-none flex-wrap gap-2 p-0" aria-label={labels.ariaLabel}>
+      <ul
+        className="m-0 flex list-none flex-wrap gap-2 p-0"
+        aria-label={labels.ariaLabel}
+      >
         {chips.map((chip) => {
           const label = chipLabel(chip, labels);
           const removeLabel = labels.removeChip.replace("{filter}", label);

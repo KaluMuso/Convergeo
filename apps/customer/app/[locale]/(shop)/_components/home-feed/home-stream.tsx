@@ -23,10 +23,13 @@ export async function loadHomeStreamFirstPage(): Promise<HomeStreamPage> {
   const url = absoluteApiUrl(`/home/stream?limit=${HOME_STREAM_PAGE_SIZE}`);
   if (!url) return EMPTY_STREAM;
   try {
-    const page = await fetchJson<HomeStreamPage>(url, { next: { revalidate: 60 } });
+    const page = await fetchJson<HomeStreamPage>(url, {
+      next: { revalidate: 60 },
+    });
     return {
       items: Array.isArray(page.items) ? page.items : [],
-      next_cursor: typeof page.next_cursor === "string" ? page.next_cursor : null,
+      next_cursor:
+        typeof page.next_cursor === "string" ? page.next_cursor : null,
     };
   } catch {
     return EMPTY_STREAM;
@@ -35,7 +38,9 @@ export async function loadHomeStreamFirstPage(): Promise<HomeStreamPage> {
 
 /** Listing ids already shown by feed sections (so the stream never repeats them). */
 export function listingIdsOf(sections: FeedSection[]): string[] {
-  return sections.flatMap((section) => section.listings.map((listing) => listing.id));
+  return sections.flatMap((section) =>
+    section.listings.map((listing) => listing.id),
+  );
 }
 
 /**
@@ -56,7 +61,9 @@ export function HomeListingStream({
   labels: StreamLabels;
 }) {
   const shown = new Set(sectionListingIds);
-  const first: FeedListingWire[] = page.items.filter((item) => !shown.has(item.id));
+  const first: FeedListingWire[] = page.items.filter(
+    (item) => !shown.has(item.id),
+  );
   if (first.length === 0 && !page.next_cursor) return null;
   const { title, ...controlLabels } = labels;
   const seenIds = [...sectionListingIds, ...first.map((item) => item.id)];
@@ -66,7 +73,10 @@ export function HomeListingStream({
       className="home-rail flex flex-col gap-3 lg:gap-4"
       data-testid="home-stream"
     >
-      <h2 id="home-stream-title" className="font-display text-h2 text-display-ink">
+      <h2
+        id="home-stream-title"
+        className="font-display text-h2 text-display-ink"
+      >
         {title}
       </h2>
       <HomeStreamClient

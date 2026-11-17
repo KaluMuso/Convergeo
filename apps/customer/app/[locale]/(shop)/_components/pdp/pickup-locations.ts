@@ -21,7 +21,9 @@ export type PickupLocationsResult = {
  * picker even renders, so a false negative would let a real branch-tracked
  * add-to-cart through with no pickup_location_id).
  */
-export async function fetchPickupLocations(listingId: string): Promise<PickupLocationsResult> {
+export async function fetchPickupLocations(
+  listingId: string,
+): Promise<PickupLocationsResult> {
   const response = await fetch(
     `${getApiBaseUrl().replace(/\/$/, "")}/products/listings/${encodeURIComponent(listingId)}/pickup-locations`,
     { credentials: "include" },
@@ -31,7 +33,12 @@ export async function fetchPickupLocations(listingId: string): Promise<PickupLoc
   }
   const payload = (await response.json()) as {
     branch_tracked: boolean;
-    locations: Array<{ id: string; landmark: string; lat: number; lng: number }>;
+    locations: Array<{
+      id: string;
+      landmark: string;
+      lat: number;
+      lng: number;
+    }>;
   };
   return {
     branchTracked: payload.branch_tracked,

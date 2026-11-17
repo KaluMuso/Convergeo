@@ -14,7 +14,11 @@ export type ResolvablePrice = {
  * remains the authority at checkout — so the shown total matches what the buyer
  * will actually pay.
  */
-export function resolveUnitPriceNgwee(ticket: ResolvablePrice, qty: number, now: Date): number {
+export function resolveUnitPriceNgwee(
+  ticket: ResolvablePrice,
+  qty: number,
+  now: Date,
+): number {
   const candidates = [ticket.price_ngwee];
   if (isEarlyBirdActive(ticket, now)) {
     candidates.push(ticket.early_bird_price_ngwee as number);
@@ -29,7 +33,10 @@ export function resolveUnitPriceNgwee(ticket: ResolvablePrice, qty: number, now:
 
 /** Whether an early-bird window is currently open (strictly before the cutoff). */
 export function isEarlyBirdActive(ticket: ResolvablePrice, now: Date): boolean {
-  if (ticket.early_bird_price_ngwee === null || ticket.early_bird_until === null) {
+  if (
+    ticket.early_bird_price_ngwee === null ||
+    ticket.early_bird_until === null
+  ) {
     return false;
   }
   const until = new Date(ticket.early_bird_until).getTime();
@@ -37,10 +44,16 @@ export function isEarlyBirdActive(ticket: ResolvablePrice, now: Date): boolean {
 }
 
 /** The best group tier that applies at `qty` (lowest price among those met), or null. */
-export function bestActiveTier(ticket: ResolvablePrice, qty: number): PriceTier | null {
+export function bestActiveTier(
+  ticket: ResolvablePrice,
+  qty: number,
+): PriceTier | null {
   let best: PriceTier | null = null;
   for (const tier of ticket.tiers) {
-    if (qty >= tier.min_qty && (best === null || tier.price_ngwee < best.price_ngwee)) {
+    if (
+      qty >= tier.min_qty &&
+      (best === null || tier.price_ngwee < best.price_ngwee)
+    ) {
       best = tier;
     }
   }
@@ -53,7 +66,11 @@ export function bestActiveTier(ticket: ResolvablePrice, qty: number): PriceTier 
  * Returns null when no higher tier improves on what they already pay (e.g. an
  * active early-bird already beats every remaining tier).
  */
-export function nextTierUpsell(ticket: ResolvablePrice, qty: number, now: Date): PriceTier | null {
+export function nextTierUpsell(
+  ticket: ResolvablePrice,
+  qty: number,
+  now: Date,
+): PriceTier | null {
   const current = resolveUnitPriceNgwee(ticket, qty, now);
   let nearest: PriceTier | null = null;
   for (const tier of ticket.tiers) {

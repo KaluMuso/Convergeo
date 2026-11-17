@@ -21,12 +21,18 @@ describe("VariantLineLabel", () => {
         testId="line-variant"
       />,
     );
-    expect(screen.getByTestId("line-variant")).toHaveTextContent("Colour: Red · Size: M");
+    expect(screen.getByTestId("line-variant")).toHaveTextContent(
+      "Colour: Red · Size: M",
+    );
   });
 
   it("renders nothing for lines without a variant", () => {
     const { container } = render(
-      <VariantLineLabel options={[]} template="{group}: {value}" separator=" · " />,
+      <VariantLineLabel
+        options={[]}
+        template="{group}: {value}"
+        separator=" · "
+      />,
     );
     expect(container).toBeEmptyDOMElement();
   });

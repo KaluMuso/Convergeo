@@ -85,7 +85,6 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
-    # Rate-limit scope re-sync: notification/checkout-group scopes (additive, reversible).
     # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000",
     # Listing fulfilment options + Class D may be sold new (additive, reversible).
@@ -116,6 +115,20 @@ PENDING_REPAIR_VERSIONS = {
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000",
+    # Coupons, gift orders, birthday greetings (additive; flags default off).
+    "20261116100000",
+    # Coupons: collection net of the coupon + coupon_funding leg (additive).
+    "20261116100100",
+    # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
+    "20261116110000",
+    # Shared canonical photos + sha256 dedup (additive, reversible).
+    "20261116110100",
+    # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
+    "20261116130000",
+    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
+    "20261117000000",
 }
 
 

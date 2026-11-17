@@ -40,7 +40,11 @@ describe("PdpWishlistButton", () => {
     await user.click(button);
     expect(button).toHaveAttribute("aria-pressed", "true");
     expect(button).toHaveAccessibleName("Remove from wishlist");
-    expect(window.localStorage.getItem(WISHLIST_STORAGE_KEY)).toContain("tecno-spark");
-    expect(window.localStorage.getItem(WISHLIST_STORAGE_KEY)).toContain("prod-1");
+    expect(window.localStorage.getItem(WISHLIST_STORAGE_KEY)).toContain(
+      "tecno-spark",
+    );
+    expect(window.localStorage.getItem(WISHLIST_STORAGE_KEY)).toContain(
+      "prod-1",
+    );
   });
 });

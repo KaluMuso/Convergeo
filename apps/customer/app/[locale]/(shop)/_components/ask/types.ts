@@ -72,10 +72,15 @@ const AI_PREFIX = "ai.";
 
 /** Strip the `ai.` namespace prefix so the key is usable under `useTranslations("ai")`. */
 export function relativeAiKey(fullKey: string): string {
-  return fullKey.startsWith(AI_PREFIX) ? fullKey.slice(AI_PREFIX.length) : fullKey;
+  return fullKey.startsWith(AI_PREFIX)
+    ? fullKey.slice(AI_PREFIX.length)
+    : fullKey;
 }
 
-function stringField(details: Record<string, unknown>, key: string): string | null {
+function stringField(
+  details: Record<string, unknown>,
+  key: string,
+): string | null {
   const value = details[key];
   return typeof value === "string" && value.length > 0 ? value : null;
 }
@@ -94,7 +99,9 @@ export function extractErrorState(error: unknown): AskErrorState {
     const messageKey =
       stringField(details, "message_key") ??
       stringField(details, "i18n_key") ??
-      (error.message.startsWith(AI_PREFIX) ? error.message : "ai.answer.unavailable");
+      (error.message.startsWith(AI_PREFIX)
+        ? error.message
+        : "ai.answer.unavailable");
     return {
       messageKey,
       signupPromptKey: stringField(details, "signup_prompt_key"),
@@ -118,5 +125,10 @@ export function parseQuota(value: unknown): AskQuota | null {
   ) {
     return null;
   }
-  return { tier, daily_limit: dailyLimit, used, remaining: Math.max(0, remaining) };
+  return {
+    tier,
+    daily_limit: dailyLimit,
+    used,
+    remaining: Math.max(0, remaining),
+  };
 }

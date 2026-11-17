@@ -90,7 +90,7 @@
   "home": {
     "meta": {
       "title": "Shop products, services & events in Zambia",
-      "description": "Compare sellers, book services, and find events across Zambia on Convergeo — mobile-money escrow, Lusaka delivery, nationwide pickup."
+      "description": "Compare sellers, book services, and find events across Zambia on Convergeo — pay cash on delivery, Lusaka delivery, nationwide pickup."
     },
     "serviceBar": {
       "ariaLabel": "Delivery and pickup information",
@@ -109,10 +109,10 @@
         "title": "Welcome to Convergeo",
         "subtitle": "Your config-driven storefront will appear here as merchandising slots go live."
       },
-      "escrowLine": "Buyer protection with escrow when online payment is available — held by Convergeo until delivery, then released.",
-      "escrowStep1": "You pay",
-      "escrowStep2": "Held by Convergeo",
-      "escrowStep3": "Released on delivery",
+      "escrowLine": "Pay cash when your order arrives. Online payment is coming soon.",
+      "escrowStep1": "You order",
+      "escrowStep2": "We deliver",
+      "escrowStep3": "You pay on arrival",
       "carousel": {
         "previous": "Previous slide",
         "next": "Next slide",
@@ -143,7 +143,7 @@
       "sellers": "Seller profiles with status you can review",
       "fulfillment": "Lusaka delivery or nationwide pickup when the listing supports it",
       "returns": "Clear returns and refund guidance for eligible orders",
-      "escrow": "When online payment is available, Convergeo holds your money until delivery"
+      "escrow": "Pay when it arrives — cash on delivery during the pilot"
     },
     "demo": {
       "sampleListing": "Sample listing"
@@ -243,6 +243,16 @@
         "loadMore": "Load more",
         "moreLoaded": "{count} more items loaded."
       }
+    },
+    "trustStrip": {
+      "ariaLabel": "Why shop on Convergeo",
+      "cod": "Pay on delivery",
+      "verified": "Verified sellers",
+      "lusaka": "Lusaka delivery",
+      "returns": "Easy returns"
+    },
+    "dealsRail": {
+      "title": "Today's deals"
     }
   },
   "pdp": {
@@ -447,7 +457,7 @@
       "delivery": "Delivery available for this seller",
       "pickup": "Pickup available for this seller",
       "returns": "Returns & refunds",
-      "escrow": "When online payment is available, Convergeo holds your money until delivery. Cash on delivery may be offered for eligible orders."
+      "escrow": "Pay when it arrives with cash on delivery on eligible orders. Online payment is coming soon."
     },
     "condition": {
       "new": "New",
@@ -578,7 +588,7 @@
   "deals": {
     "metaTitle": "Today's deals",
     "title": "Today's deals",
-    "subtitle": "Limited-time prices from verified sellers. Paid safely through escrow.",
+    "subtitle": "Limited-time prices from verified sellers. Pay when it arrives.",
     "endsIn": "Ends in {time}",
     "ended": "Ended",
     "off": "-{percent}%",
@@ -635,5 +645,16 @@
       "added": "Bundle added to cart",
       "failed": "Could not add the bundle. Try again."
     }
+  },
+  "madeToOrder": {
+    "when": {
+      "oneDay": "within a day",
+      "days": "in about {count} days",
+      "oneWeek": "within a week",
+      "weeks": "in about {count} weeks",
+      "oneMonth": "in about a month",
+      "months": "in about {count} months"
+    },
+    "badge": "Made to order · ready {when}"
   }
 }

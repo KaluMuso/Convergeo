@@ -5,8 +5,10 @@ export type ListingCondition = "new" | "refurbished" | "used";
 export type SaleUnit = "each" | "metre" | "kg" | "litre" | "bag" | "sqm";
 export type FulfilmentMode = "stocked" | "made_to_order";
 export type StockMode = "tracked" | "always_available";
-export type UsedGrade = "used_excellent" | "used_good" | "used_fair" | "parts_not_working";
-export type FulfilmentOption = "lusaka_delivery" | "pickup_shop" | "pickup_nationwide";
+export type UsedGrade =
+  "used_excellent" | "used_good" | "used_fair" | "parts_not_working";
+export type FulfilmentOption =
+  "lusaka_delivery" | "pickup_shop" | "pickup_nationwide";
 
 export const FULFILMENT_OPTIONS: readonly FulfilmentOption[] = [
   "lusaka_delivery",

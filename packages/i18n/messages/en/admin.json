@@ -50,7 +50,10 @@
     "homeFeed": "Home feed",
     "advertising": "Advertising",
     "accounts": "Admin accounts",
-    "auditLog": "Audit log"
+    "auditLog": "Audit log",
+    "offers": "Offers",
+    "coupons": "Coupons",
+    "branches": "Branch verification"
   },
   "hubs": {
     "moderation": {
@@ -75,7 +78,9 @@
       "categoriesTitle": "Category tree",
       "categoriesBody": "Public catalogue category structure.",
       "platformTitle": "Platform knobs",
-      "platformBody": "Operational limits and platform settings."
+      "platformBody": "Operational limits and platform settings.",
+      "vendorPlansTitle": "Vendor plans",
+      "vendorPlansBody": "Plan prices, listing and photo limits, and per-vendor overrides."
     }
   },
   "translations": {
@@ -114,7 +119,7 @@
       "nav": "All apps — navigation labels",
       "auth": "All apps — sign in and sign up",
       "catalog": "Customer — product listings, detail, comparison",
-      "clips": "Customer — Vergeo Clips feed, playback and shoppable overlay",
+      "clips": "Customer — Convergeo Clips feed, playback and shoppable overlay",
       "search": "Customer — search and suggestions",
       "checkout": "Customer — cart and checkout",
       "orders": "Customer & vendor — order history and queue",
@@ -152,7 +157,8 @@
       "deliveryZones": "Delivery zones",
       "platform": "Platform knobs",
       "flags": "Feature flags",
-      "categories": "Category tree"
+      "categories": "Category tree",
+      "vendorPlans": "Vendor plans"
     },
     "common": {
       "save": "Save changes",
@@ -209,7 +215,8 @@
       "advanceMinKycTier": "Pre-event advance: minimum KYC tier",
       "advanceMinEvents": "Pre-event advance: minimum successful past events",
       "advanceRepaymentDays": "Pre-event advance: repayment window (days)",
-      "dangerousHint": "COD cap changes affect new checkout eligibility only."
+      "dangerousHint": "COD cap changes affect new checkout eligibility only.",
+      "branchMinDistance": "Min. distance between branches (m)"
     },
     "flags": {
       "title": "Feature flags",
@@ -229,6 +236,10 @@
       "moveChildrenConfirm": "Move with children",
       "orphanWarning": "Cannot move without children — enable move-with-children.",
       "rootOption": "Root (no parent)"
+    },
+    "vendorPlans": {
+      "title": "Vendor plans",
+      "subtitle": "Listing limits, photo limits, features and monthly prices. Changes apply immediately and are audited."
     }
   },
   "business": {
@@ -646,7 +657,7 @@
     },
     "presets": {
       "slate": {
-        "name": "Vergeo Slate",
+        "name": "Convergeo Slate",
         "blurb": "The signature deep-blue brand palette. The default all year round."
       },
       "harvest": {
@@ -1885,7 +1896,8 @@
     "working": "Working…",
     "copy": "Copy",
     "copied": "Copied",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "rateLimited": "Too many changes in a short time. Wait a minute and try again."
   },
   "today": {
     "title": "Today",
@@ -2277,6 +2289,347 @@
         "clipNote": "Clip views are signed-in views of 3 seconds or more. Clip orders are paid orders whose buyer added the product to the cart from the clip in the {days} days before.",
         "viewsNote": "View counters are kept per UTC day, so at the edges of a period up to two hours of views can fall on the next or previous day."
       }
+    }
+  },
+  "offers": {
+    "title": "Vendor offers",
+    "subtitle": "Review bundles and offers across vendors. An admin pause stops an offer at once and the vendor cannot lift it.",
+    "loading": "Loading offers…",
+    "error": "Could not load offers.",
+    "permissionDenied": "You do not have access to offers.",
+    "permissionDeniedHint": "Ask a super admin for the advertising permission.",
+    "retry": "Try again",
+    "empty": "No offers match these filters.",
+    "listLabel": "Offers",
+    "truncated": "Showing the first 200 offers. Narrow the filters to see the rest.",
+    "vendor": "Vendor: {name}",
+    "window": "{starts} to {ends}",
+    "windowOpen": "From {starts}, no end date",
+    "perCustomer": "{count, plural, one {# use per customer} other {# uses per customer}}",
+    "perCustomerUnlimited": "No per-customer limit",
+    "giftStock": "Gifts {reserved} of {total} used",
+    "note": "Admin note: {note}",
+    "pausedToast": "Offer paused.",
+    "unpausedToast": "Admin pause lifted.",
+    "filters": {
+      "label": "Filter offers",
+      "state": "State",
+      "status": "Vendor status",
+      "type": "Type",
+      "search": "Title",
+      "searchPlaceholder": "Search titles",
+      "apply": "Search",
+      "all": "All"
+    },
+    "state": {
+      "live": "Live",
+      "admin_paused": "Paused by admin",
+      "scheduled": "Scheduled",
+      "ended": "Ended"
+    },
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "paused": "Paused by vendor",
+      "archived": "Archived"
+    },
+    "type": {
+      "bundle": "Bundle",
+      "buy_n_pay_m": "Buy N pay M",
+      "bxgy": "Buy X get Y",
+      "free_gift": "Free gift"
+    },
+    "actions": {
+      "pause": "Pause",
+      "unpause": "Lift pause",
+      "pauseTitle": "Pause this offer?",
+      "unpauseTitle": "Lift the admin pause?",
+      "pauseBody": "“{title}” stops applying in carts and checkouts straight away. Orders already placed keep their price.",
+      "unpauseBody": "“{title}” applies again if the vendor still has it active and it is within its dates.",
+      "noteLabel": "Note (shown to admins)",
+      "notePlaceholder": "Why are you changing this offer?",
+      "audited": "This action is recorded in the audit log.",
+      "cancel": "Cancel",
+      "submitting": "Saving…",
+      "confirmPause": "Pause offer",
+      "confirmUnpause": "Lift pause",
+      "failure": "Could not update the offer. Try again."
+    }
+  },
+  "coupons": {
+    "manager": {
+      "title": "Platform coupons",
+      "intro": "Codes paid for by Convergeo. Shops still get their full price.",
+      "fundingNote": "Every platform discount comes out of the monthly promotions budget. When it's used up, platform coupons stop working until next month.",
+      "createTitle": "New coupon",
+      "code": "Code",
+      "codeHelp": "3–32 letters, numbers or dashes, e.g. SAVE20.",
+      "kind": "Discount type",
+      "kindPercent": "Percent off",
+      "kindFixed": "Kwacha off",
+      "percent": "Percent (e.g. 10)",
+      "amount": "Amount in Kwacha (e.g. 20)",
+      "maxDiscount": "Largest discount (K, optional)",
+      "maxDiscountHelp": "Caps a percent coupon on big baskets.",
+      "minSpend": "Minimum spend (K, optional)",
+      "minSpendHelp": "Counted on the items the coupon covers.",
+      "scope": "Works on",
+      "scopeAll": "Everything",
+      "scopeShop": "My whole shop",
+      "scopeVendor": "One shop",
+      "scopeCategory": "One category",
+      "scopeListing": "One listing",
+      "scopeId": "ID",
+      "scopeIdHelp": "Copy the ID from the shop, category or listing page.",
+      "startsOn": "Starts on",
+      "endsOn": "Ends on (optional)",
+      "endsOnHelp": "The code works until the end of this day, Lusaka time.",
+      "totalLimit": "Total uses (optional)",
+      "totalLimitHelp": "Leave empty for no total limit.",
+      "perUserLimit": "Uses per customer",
+      "create": "Create coupon",
+      "creating": "Creating…",
+      "created": "Coupon created.",
+      "listTitle": "Platform coupons",
+      "empty": "No coupons yet.",
+      "loading": "Loading…",
+      "usage": "{used} used",
+      "usageLimited": "{used} of {limit} used",
+      "summaryOff": "{value} off",
+      "summaryMin": "min. {amount}",
+      "statusActive": "Active",
+      "statusPaused": "Paused",
+      "statusArchived": "Ended",
+      "pause": "Pause",
+      "resume": "Resume",
+      "archive": "End coupon",
+      "errors": {
+        "generic": "Something went wrong. Try again.",
+        "disabled": "Coupons aren't switched on yet.",
+        "forbidden": "Only admins can manage platform coupons.",
+        "code": "Use 3–32 letters, numbers or dashes.",
+        "codeTaken": "That code is already taken.",
+        "percent": "Enter a percent between 1 and 100.",
+        "percentTooHigh": "That percent is above the allowed maximum.",
+        "amount": "Enter an amount like 20 or 12.50.",
+        "dates": "The end date must be on or after the start date, and not in the past.",
+        "scope": "Choose what the coupon works on and paste its ID.",
+        "listing": "That listing isn't in your shop.",
+        "archived": "Ended coupons can't be restarted. Create a new one."
+      }
+    }
+  },
+  "productImages": {
+    "errors": {
+      "full": "A product can have at most 8 photos.",
+      "duplicate": "That photo is already on this product."
+    }
+  },
+  "vendorPlans": {
+    "hint": "Limits count distinct listings, never stock. Leave the listing limit empty for unlimited. Going over a limit never removes listings: vendors only see an upgrade prompt. Billing is not collected yet.",
+    "unlimited": "Unlimited",
+    "default": "Default plan",
+    "vendorCount": "{count, plural, one {# vendor} other {# vendors}}",
+    "summary": "{price}/month · {listings} listings · {images} photos",
+    "makeDefault": "Make default",
+    "delete": "Delete",
+    "createHeading": "New plan",
+    "create": "Create plan",
+    "fields": {
+      "key": "Plan key (lowercase, e.g. market_stall)",
+      "name": "Name",
+      "priceKwacha": "Monthly price (K)",
+      "maxListings": "Listing limit (empty = unlimited)",
+      "maxImages": "Photos per listing (1–8)",
+      "featuredSlots": "Featured slots",
+      "analyticsDepth": "Analytics",
+      "wholesaleTools": "Wholesale tools",
+      "active": "Active",
+      "includedShops": "Shops included (empty = unlimited)",
+      "extraShopPrice": "Extra shop (K/month, empty = not sold)",
+      "staffSeats": "Staff seats (empty = unlimited)",
+      "broadcasts": "WhatsApp broadcasts / month",
+      "adCredit": "Ad credit (K/month)",
+      "integrationsLevel": "Integrations",
+      "payoutSpeed": "Payout speed",
+      "supportLevel": "Support",
+      "officialStoreBadge": "Official store badge",
+      "clickAndCollect": "Click & collect",
+      "multiBranchStock": "Multi-branch stock"
+    },
+    "depth": {
+      "basic": "Basic",
+      "standard": "Standard",
+      "advanced": "Advanced"
+    },
+    "errors": {
+      "nameRequired": "Enter a plan name.",
+      "keyInvalid": "Use 2–32 lowercase letters, numbers or underscores, starting with a letter.",
+      "priceInvalid": "Enter a price in kwacha, for example 49 or 49.50.",
+      "listingsInvalid": "Enter a whole number of listings, or leave it empty for unlimited.",
+      "imagesInvalid": "Photos per listing must be between 1 and 8.",
+      "slotsInvalid": "Featured slots must be between 0 and 100.",
+      "overrideEmpty": "An override must change the listing limit or the photo limit.",
+      "expiryInvalid": "Choose an expiry date in the future, at most one year ahead.",
+      "reasonRequired": "Give a reason for the override.",
+      "vendorIdInvalid": "Enter a vendor ID (UUID).",
+      "vendorNotFound": "Vendor not found.",
+      "saveFailed": "Could not save. Check the values and try again.",
+      "keyTaken": "That plan key already exists.",
+      "defaultInactive": "The default plan must stay active.",
+      "defaultDelete": "The default plan cannot be deleted.",
+      "inUse": "Vendors are on this plan. Deactivate it instead, or move them first.",
+      "planInactive": "That plan is not active.",
+      "shopsInvalid": "Shops included must be a whole number from 1, or empty for unlimited.",
+      "extraShopPriceInvalid": "Enter the extra shop price in kwacha, or leave it empty.",
+      "seatsInvalid": "Staff seats must be a whole number, or empty for unlimited.",
+      "broadcastsInvalid": "Enter a whole number of broadcasts.",
+      "adCreditInvalid": "Enter the ad credit in kwacha."
+    },
+    "vendor": {
+      "heading": "Vendor plan",
+      "hint": "Look up a vendor to assign a plan or give a time-limited exception.",
+      "vendorId": "Vendor ID",
+      "load": "Load",
+      "flagOff": "The vendor_plans flag is off, so these limits are not enforced yet.",
+      "effective": "Plan {plan}: {listings} listings ({count} used), {images} photos per listing",
+      "plan": "Plan",
+      "defaultPlan": "Choose a plan",
+      "note": "Note (optional)",
+      "assign": "Assign plan",
+      "noBilling": "Assigning a plan only records it. No payment is taken.",
+      "none": "default"
+    },
+    "override": {
+      "heading": "Override",
+      "current": "Active: {listings} listings until {expires} ({reason})",
+      "expired": "Expired on {expires}: {listings} listings ({reason})",
+      "unlimited": "Unlimited listings",
+      "expiresOn": "Expires on",
+      "reason": "Reason",
+      "save": "Save override",
+      "remove": "Remove override"
+    },
+    "integrations": {
+      "none": "None",
+      "basic": "Basic",
+      "sheets_webhooks": "Sheets + webhooks",
+      "api": "API"
+    },
+    "payoutSpeed": {
+      "standard": "Standard",
+      "fast": "Fast",
+      "priority": "Priority"
+    },
+    "support": {
+      "community": "Community",
+      "standard": "Standard",
+      "priority": "Priority",
+      "dedicated": "Dedicated"
+    }
+  },
+  "branches": {
+    "title": "Branch verification",
+    "subtitle": "Approve new shops of multi-branch businesses. Every decision is audited.",
+    "status": {
+      "draft": "Draft",
+      "pending_review": "Pending review",
+      "info_requested": "Info requested",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "kind": {
+      "physical": "Physical",
+      "online": "Online"
+    },
+    "queue": {
+      "filter": "Status",
+      "flagsLink": "Duplicate flags",
+      "loading": "Loading branches…",
+      "error": "Could not load branches.",
+      "permissionDenied": "You do not have access to branch verification.",
+      "retry": "Retry",
+      "empty": "No branches here.",
+      "evidence": "{count, plural, one {# evidence file} other {# evidence files}}",
+      "openFlags": "{count, plural, one {# open flag} other {# open flags}}"
+    },
+    "detail": {
+      "back": "Back to queue",
+      "business": "Business",
+      "legalName": "Legal name",
+      "registration": "Registration",
+      "pacraCertificate": "PACRA certificate",
+      "open": "Open",
+      "ownerKyc": "Owner KYC approved",
+      "yes": "Yes",
+      "no": "No",
+      "shop": "Shop",
+      "location": "Location",
+      "address": "Address",
+      "phone": "Phone",
+      "payout": "Payout",
+      "onHold": "on hold",
+      "plan": "Plan",
+      "planAddon": "{plan} · add-on {price}/month",
+      "planIncluded": "{plan} · included",
+      "evidence": "Evidence",
+      "noEvidence": "No evidence uploaded.",
+      "unavailable": "Preview unavailable",
+      "flags": "{count, plural, =0 {Duplicate flags} one {Duplicate flags (# open)} other {Duplicate flags (# open)}}",
+      "siblings": "Other branches of this business",
+      "primary": "main shop",
+      "note": "Note to the vendor (required to request info or reject)",
+      "flagsBlock": "Resolve the open duplicate flags before approving.",
+      "history": "History"
+    },
+    "actions": {
+      "approve": "Approve",
+      "requestInfo": "Request info",
+      "reject": "Reject"
+    },
+    "evidence": {
+      "storefront_photo": "Shopfront photo",
+      "premises_proof": "Proof of premises"
+    },
+    "proof": {
+      "lease": "Lease",
+      "utility_bill": "Utility bill",
+      "council_permit": "Council trading permit"
+    },
+    "flags": {
+      "title": "Duplicate flags",
+      "subtitle": "Possible duplicate shops found by name, phone, payout number, GPS or photo.",
+      "none": "No flags.",
+      "score": "match {score}%",
+      "pair": "{branch} ↔ {matched}",
+      "noteLabel": "Resolution note",
+      "notePlaceholder": "Why is this (not) a duplicate?",
+      "clear": "Not a duplicate",
+      "confirm": "Confirm duplicate"
+    },
+    "flagKind": {
+      "name_similar": "Similar name",
+      "phone_match": "Same phone",
+      "payout_other_owner": "Payout number of another owner",
+      "payout_shared_same_owner": "Shared payout number (same owner)",
+      "gps_near_other_owner": "Another owner at this spot",
+      "image_duplicate": "Same shopfront photo"
+    },
+    "flagStatus": {
+      "open": "Open",
+      "cleared": "Cleared",
+      "confirmed": "Confirmed duplicate"
+    },
+    "errors": {
+      "noteRequired": "Write a short note (at least 3 characters).",
+      "openFlags": "Resolve the open duplicate flags first.",
+      "primary": "The main shop is verified through KYC.",
+      "flagResolved": "This flag is already resolved.",
+      "payoutOtherOwner": "A payout number can never be shared across owners.",
+      "noPacra": "This business has no PACRA number.",
+      "invalidTransition": "This branch is not ready for that decision.",
+      "permission": "You do not have permission for this action.",
+      "saveFailed": "Could not save the decision. Try again."
     }
   }
 }

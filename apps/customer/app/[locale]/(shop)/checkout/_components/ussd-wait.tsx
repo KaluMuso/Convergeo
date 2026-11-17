@@ -93,7 +93,11 @@ function nextPollDelay(attempt: number): number {
   return Math.min(delay, MAX_POLL_MS);
 }
 
-function railHelp(rail: string | null, amount: string, labels: UssdWaitLabels): string {
+function railHelp(
+  rail: string | null,
+  amount: string,
+  labels: UssdWaitLabels,
+): string {
   if (rail === "mtn") {
     return labels.mtnHelp.replace("{amount}", amount);
   }
@@ -118,7 +122,9 @@ export function UssdWait({ locale, amountNgwee, rail, labels }: UssdWaitProps) {
       <div className="flex flex-col items-center gap-4 text-center">
         <Spinner label={labels.waiting} size="lg" />
         <div className="space-y-1">
-          <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
+          <h2 className="font-display text-h2 text-display-ink">
+            {labels.title}
+          </h2>
           <p className="font-body text-sm text-text-2">
             {labels.subtitle.replace("{amount}", formattedAmount)}
           </p>
@@ -129,10 +135,14 @@ export function UssdWait({ locale, amountNgwee, rail, labels }: UssdWaitProps) {
         <p className="font-body text-xs uppercase tracking-wide text-text-3">
           {labels.amountLabel}
         </p>
-        <p className="font-mono text-2xl font-semibold text-text">{formattedAmount}</p>
+        <p className="font-mono text-2xl font-semibold text-text">
+          {formattedAmount}
+        </p>
       </div>
 
-      <p className="font-body text-sm text-text-2">{railHelp(rail, formattedAmount, labels)}</p>
+      <p className="font-body text-sm text-text-2">
+        {railHelp(rail, formattedAmount, labels)}
+      </p>
       <p className="font-body text-xs text-text-3">{labels.doNotClose}</p>
     </div>
   );
@@ -160,7 +170,8 @@ export function PendingPaymentShell({
 }: PendingPaymentShellProps) {
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
-  const [statusPayload, setStatusPayload] = useState<PaymentStatusPayload | null>(null);
+  const [statusPayload, setStatusPayload] =
+    useState<PaymentStatusPayload | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryError, setRetryError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
@@ -173,18 +184,21 @@ export function PendingPaymentShell({
   const checkoutPath = groupRoutes?.checkout ?? `/${locale}/checkout`;
   const successPath = groupRoutes?.success ?? null;
 
-  const fetchStatus = useCallback(async (): Promise<PaymentStatusPayload | null> => {
-    const token = session?.access_token;
-    const apiBase = getApiBaseUrl();
-    if (!token || !apiBase) {
-      return null;
-    }
-    const client = createApiClient({
-      baseUrl: apiBase,
-      getToken: () => token,
-    });
-    return client.request<PaymentStatusPayload>(`/payments/status?group=${groupId}`);
-  }, [groupId, session?.access_token]);
+  const fetchStatus =
+    useCallback(async (): Promise<PaymentStatusPayload | null> => {
+      const token = session?.access_token;
+      const apiBase = getApiBaseUrl();
+      if (!token || !apiBase) {
+        return null;
+      }
+      const client = createApiClient({
+        baseUrl: apiBase,
+        getToken: () => token,
+      });
+      return client.request<PaymentStatusPayload>(
+        `/payments/status?group=${groupId}`,
+      );
+    }, [groupId, session?.access_token]);
 
   const schedulePoll = useCallback((fetcher: () => Promise<void>) => {
     if (timeoutRef.current) {
@@ -256,7 +270,13 @@ export function PendingPaymentShell({
     };
     // `locale`/`router` are deliberately absent: this effect no longer
     // navigates. Redirecting is the separate, state-driven effect below.
-  }, [fetchStatus, labels.error, schedulePoll, session?.access_token, sessionLoading]);
+  }, [
+    fetchStatus,
+    labels.error,
+    schedulePoll,
+    session?.access_token,
+    sessionLoading,
+  ]);
 
   /**
    * Provider success -> authoritative order state, in two committed steps.
@@ -340,7 +360,9 @@ export function PendingPaymentShell({
   if (sessionLoading || (!statusPayload && !loadError)) {
     return (
       <div className="space-y-4" aria-live="polite">
-        <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
+        <h1 className="font-display text-h1 text-display-ink">
+          {labels.pageTitle}
+        </h1>
         <div className="flex items-center gap-3">
           <Spinner label={labels.loading} />
           <p className="font-body text-sm text-text-3">{labels.loading}</p>
@@ -352,7 +374,9 @@ export function PendingPaymentShell({
   if (loadError) {
     return (
       <div className="space-y-4" data-testid="payment-status-error">
-        <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
+        <h1 className="font-display text-h1 text-display-ink">
+          {labels.pageTitle}
+        </h1>
         <p role="alert" className="font-body text-sm text-danger">
           {loadError}
         </p>
@@ -376,12 +400,19 @@ export function PendingPaymentShell({
       : null;
     return (
       <div className="space-y-5" data-testid="payment-cod">
-        <h1 className="font-display text-h1 text-display-ink">{labels.codTitle}</h1>
+        <h1 className="font-display text-h1 text-display-ink">
+          {labels.codTitle}
+        </h1>
         <div className="space-y-4 rounded-card border border-border bg-surface p-5">
           {cod && orderNumber ? (
-            <dl className="grid grid-cols-2 gap-3" data-testid="payment-cod-summary">
+            <dl
+              className="grid grid-cols-2 gap-3"
+              data-testid="payment-cod-summary"
+            >
               <div className="space-y-0.5">
-                <dt className="font-body text-xs text-text-2">{cod.orderNumberLabel}</dt>
+                <dt className="font-body text-xs text-text-2">
+                  {cod.orderNumberLabel}
+                </dt>
                 <dd
                   className="font-mono text-h3 font-semibold tracking-wide text-display-ink"
                   data-testid="payment-cod-order-number"
@@ -390,7 +421,9 @@ export function PendingPaymentShell({
                 </dd>
               </div>
               <div className="space-y-0.5">
-                <dt className="font-body text-xs text-text-2">{cod.amountDueLabel}</dt>
+                <dt className="font-body text-xs text-text-2">
+                  {cod.amountDueLabel}
+                </dt>
                 <dd className="font-mono text-h3 font-semibold text-[var(--price)]">
                   {formattedAmount}
                 </dd>
@@ -431,7 +464,10 @@ export function PendingPaymentShell({
               aria-labelledby="payment-cod-help"
               className="space-y-2 rounded-card border border-border bg-bg-2 p-4"
             >
-              <h2 id="payment-cod-help" className="font-body text-sm font-semibold text-text">
+              <h2
+                id="payment-cod-help"
+                className="font-body text-sm font-semibold text-text"
+              >
                 {cod.helpTitle}
               </h2>
               <p className="font-body text-sm text-text-2">{cod.helpBody}</p>
@@ -461,7 +497,9 @@ export function PendingPaymentShell({
     // Brief confirming state while navigation completes — never a "paid" claim.
     return (
       <div className="space-y-4" data-testid="payment-confirming">
-        <h1 className="font-display text-h1 text-display-ink">{labels.confirmingTitle}</h1>
+        <h1 className="font-display text-h1 text-display-ink">
+          {labels.confirmingTitle}
+        </h1>
         <p className="font-body text-sm text-text-2">{labels.confirmingBody}</p>
         <Spinner label={labels.confirmingBody} />
       </div>
@@ -483,7 +521,9 @@ export function PendingPaymentShell({
             ? labels.failed.cancelledTitle
             : labels.failed.timeoutTitle}
         </h1>
-        <p className="font-body text-sm text-text-2">{labels.ticketUnavailableBody}</p>
+        <p className="font-body text-sm text-text-2">
+          {labels.ticketUnavailableBody}
+        </p>
         <LinkButton
           href={orderPath}
           variant="secondary"
@@ -500,7 +540,9 @@ export function PendingPaymentShell({
   if (statusPayload.status === "cancelled") {
     return (
       <div className="space-y-4">
-        <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
+        <h1 className="font-display text-h1 text-display-ink">
+          {labels.pageTitle}
+        </h1>
         <PaymentFailed
           locale={locale}
           amountNgwee={statusPayload.amount_ngwee}
@@ -515,7 +557,9 @@ export function PendingPaymentShell({
   if (statusPayload.status === "failed" || statusPayload.status === "expired") {
     return (
       <div className="space-y-4">
-        <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
+        <h1 className="font-display text-h1 text-display-ink">
+          {labels.pageTitle}
+        </h1>
         <PaymentFailed
           locale={locale}
           amountNgwee={statusPayload.amount_ngwee}
@@ -531,7 +575,9 @@ export function PendingPaymentShell({
 
   return (
     <div className="space-y-4">
-      <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
+      <h1 className="font-display text-h1 text-display-ink">
+        {labels.pageTitle}
+      </h1>
       <UssdWait
         locale={locale}
         amountNgwee={statusPayload.amount_ngwee}

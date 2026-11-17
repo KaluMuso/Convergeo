@@ -23,7 +23,9 @@ type OfferAddAllProps = {
  * The cart module is imported on click so it stays off the PDP page graph.
  */
 export function OfferAddAll({ offerId, items, labels }: OfferAddAllProps) {
-  const [state, setState] = useState<"idle" | "adding" | "added" | "failed">("idle");
+  const [state, setState] = useState<"idle" | "adding" | "added" | "failed">(
+    "idle",
+  );
 
   const onClick = async () => {
     if (state === "adding") {
@@ -60,7 +62,11 @@ export function OfferAddAll({ offerId, items, labels }: OfferAddAllProps) {
         {labels.addAll}
       </Button>
       <p className="sr-only" aria-live="polite">
-        {state === "added" ? labels.added : state === "failed" ? labels.failed : ""}
+        {state === "added"
+          ? labels.added
+          : state === "failed"
+            ? labels.failed
+            : ""}
       </p>
     </div>
   );

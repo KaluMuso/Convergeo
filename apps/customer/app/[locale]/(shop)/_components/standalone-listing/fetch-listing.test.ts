@@ -38,7 +38,13 @@ describe("fetchStandaloneListing", () => {
     };
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({ status: 200, ok: true, json: async () => listing }),
+      vi
+        .fn()
+        .mockResolvedValue({
+          status: 200,
+          ok: true,
+          json: async () => listing,
+        }),
     );
 
     await expect(fetchStandaloneListing("listing/id")).resolves.toEqual({
@@ -48,15 +54,22 @@ describe("fetchStandaloneListing", () => {
     expect(fetch).toHaveBeenCalledWith(
       "https://api.example.test/catalog/listings/listing%2Fid",
       expect.objectContaining({
-        next: expect.objectContaining({ tags: ["listing:listing/id", "catalog-listings"] }),
+        next: expect.objectContaining({
+          tags: ["listing:listing/id", "catalog-listings"],
+        }),
       }),
     );
   });
 
   it("keeps confirmed missing listings distinct from transient failures", async () => {
     const request = vi.fn();
-    vi.stubGlobal("fetch", request.mockResolvedValueOnce({ status: 404, ok: false }));
-    await expect(fetchStandaloneListing("missing")).resolves.toEqual({ kind: "not_found" });
+    vi.stubGlobal(
+      "fetch",
+      request.mockResolvedValueOnce({ status: 404, ok: false }),
+    );
+    await expect(fetchStandaloneListing("missing")).resolves.toEqual({
+      kind: "not_found",
+    });
 
     request.mockResolvedValueOnce({ status: 503, ok: false });
     await expect(fetchStandaloneListing("temporarily-down")).resolves.toEqual({
@@ -65,7 +78,10 @@ describe("fetchStandaloneListing", () => {
   });
 
   it("forwards business identity without sharing the response cache", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status: 404, ok: false }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ status: 404, ok: false }),
+    );
 
     await fetchStandaloneListing("wholesale-listing", "business-token");
 

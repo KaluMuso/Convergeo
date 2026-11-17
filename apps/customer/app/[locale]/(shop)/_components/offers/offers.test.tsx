@@ -19,7 +19,10 @@ const badgeLabels = catalogMessages.offers.badge;
 describe("offerBadgeLabel", () => {
   it("renders each offer type", () => {
     expect(
-      offerBadgeLabel({ offer_id: "o", offer_type: "bxgy", buy_qty: 2, get_qty: 1 }, badgeLabels),
+      offerBadgeLabel(
+        { offer_id: "o", offer_type: "bxgy", buy_qty: 2, get_qty: 1 },
+        badgeLabels,
+      ),
     ).toBe("Buy 2 get 1 free");
     expect(
       offerBadgeLabel(
@@ -44,10 +47,12 @@ describe("offerBadgeLabel", () => {
         badgeLabels,
       ),
     ).toBe("3 for 2");
-    expect(offerBadgeLabel({ offer_id: "o", offer_type: "free_gift" }, badgeLabels)).toBe(
-      "Free gift",
-    );
-    expect(offerBadgeLabel({ offer_id: "o", offer_type: "unknown" }, badgeLabels)).toBeNull();
+    expect(
+      offerBadgeLabel({ offer_id: "o", offer_type: "free_gift" }, badgeLabels),
+    ).toBe("Free gift");
+    expect(
+      offerBadgeLabel({ offer_id: "o", offer_type: "unknown" }, badgeLabels),
+    ).toBeNull();
   });
 });
 
@@ -126,7 +131,9 @@ describe("cart shows offer discounts and free gifts", () => {
       />,
     );
     expect(screen.getByTestId("cart-line-list-l1")).toHaveTextContent("K30.00");
-    expect(screen.getByTestId("cart-line-offer-saving-l1")).toHaveTextContent("K10.00");
+    expect(screen.getByTestId("cart-line-offer-saving-l1")).toHaveTextContent(
+      "K10.00",
+    );
     const gift = screen.getByTestId("cart-offer-gift-gift-1");
     expect(gift).toHaveTextContent("Free gift: Tote × 1");
     expect(gift).toHaveTextContent("K25.00");

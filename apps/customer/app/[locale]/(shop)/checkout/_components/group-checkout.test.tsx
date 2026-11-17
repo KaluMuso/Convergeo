@@ -17,7 +17,8 @@ const JOB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const PAYMENT = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 
 const routerReplace = vi.fn<(href: string) => void>();
-const apiRequest = vi.fn<(endpoint: string, init?: RequestInit) => Promise<unknown>>();
+const apiRequest =
+  vi.fn<(endpoint: string, init?: RequestInit) => Promise<unknown>>();
 const sessionState = {
   session: { access_token: "tok" } as { access_token: string } | null,
   loading: false,
@@ -41,7 +42,8 @@ vi.mock("@vergeo/config", async (importOriginal) => {
   return {
     ...actual,
     createApiClient: () => ({
-      request: (endpoint: string, init?: RequestInit) => apiRequest(endpoint, init),
+      request: (endpoint: string, init?: RequestInit) =>
+        apiRequest(endpoint, init),
     }),
   };
 });
@@ -75,11 +77,17 @@ const labels: GroupCheckoutLabels = {
   payCtaTemplate: g.payCta,
   viewOrder: g.viewOrder,
   escrowTitle: c.review.escrowTitle,
-  escrowSteps: [c.review.escrowStep1, c.review.escrowStep2, c.review.escrowStep3],
+  escrowSteps: [
+    c.review.escrowStep1,
+    c.review.escrowStep2,
+    c.review.escrowStep3,
+  ],
   payment: { ...paymentRest, codIneligibleTemplate: codIneligible },
 };
 
-function ticketSummary(overrides: Partial<CheckoutGroupSummary> = {}): CheckoutGroupSummary {
+function ticketSummary(
+  overrides: Partial<CheckoutGroupSummary> = {},
+): CheckoutGroupSummary {
   return {
     checkout_group_id: GROUP,
     kind: "ticket",
@@ -115,7 +123,9 @@ function ticketSummary(overrides: Partial<CheckoutGroupSummary> = {}): CheckoutG
   };
 }
 
-function serviceSummary(overrides: Partial<CheckoutGroupSummary> = {}): CheckoutGroupSummary {
+function serviceSummary(
+  overrides: Partial<CheckoutGroupSummary> = {},
+): CheckoutGroupSummary {
   return ticketSummary({
     kind: "service_deposit",
     subtotal_ngwee: 120_000,
@@ -145,7 +155,10 @@ function serviceSummary(overrides: Partial<CheckoutGroupSummary> = {}): Checkout
 }
 
 /** Route the mocked API: group summary, latest payment status, payment starts. */
-function mockApi(summary: CheckoutGroupSummary | Error, status: unknown = null) {
+function mockApi(
+  summary: CheckoutGroupSummary | Error,
+  status: unknown = null,
+) {
   apiRequest.mockImplementation(async (endpoint) => {
     if (endpoint.startsWith("/checkout/groups/")) {
       if (summary instanceof Error) throw summary;
@@ -188,7 +201,9 @@ describe("GroupCheckout", () => {
     mockApi(ticketSummary());
     render(<GroupCheckout locale="en" groupId={GROUP} labels={labels} />);
 
-    expect(await screen.findByTestId("group-summary-ticket")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("group-summary-ticket"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Jazz Night")).toBeInTheDocument();
     expect(screen.getByText("VIP × 2")).toBeInTheDocument();
     expect(screen.getByTestId("group-platform-fee")).toHaveTextContent("15.00");
@@ -196,15 +211,22 @@ describe("GroupCheckout", () => {
     expect(screen.getByText(c.payment.momo)).toBeInTheDocument();
     expect(screen.getByText(c.payment.card)).toBeInTheDocument();
     expect(screen.queryByText(c.payment.cod)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /pay k\s?315\.00/i })).toBeInTheDocument();
-    expect(apiRequest).toHaveBeenCalledWith(`/checkout/groups/${GROUP}`, undefined);
+    expect(
+      screen.getByRole("button", { name: /pay k\s?315\.00/i }),
+    ).toBeInTheDocument();
+    expect(apiRequest).toHaveBeenCalledWith(
+      `/checkout/groups/${GROUP}`,
+      undefined,
+    );
   });
 
   it("renders a service group with the API amount and provider, no fee row", async () => {
     mockApi(serviceSummary());
     render(<GroupCheckout locale="en" groupId={GROUP} labels={labels} />);
 
-    expect(await screen.findByTestId("group-summary-service_deposit")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("group-summary-service_deposit"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Mwila Plumbing")).toBeInTheDocument();
     expect(screen.getByTestId("group-total")).toHaveTextContent("1,200.00");
     expect(screen.queryByTestId("group-platform-fee")).not.toBeInTheDocument();
@@ -215,21 +237,31 @@ describe("GroupCheckout", () => {
     mockApi(new ApiError("forbidden", "no", { status: 403 }));
     render(<GroupCheckout locale="en" groupId={GROUP} labels={labels} />);
 
-    expect(await screen.findByTestId("group-checkout-error")).toHaveTextContent(g.forbidden);
-    expect(screen.queryByRole("button", { name: /pay/i })).not.toBeInTheDocument();
+    expect(await screen.findByTestId("group-checkout-error")).toHaveTextContent(
+      g.forbidden,
+    );
+    expect(
+      screen.queryByRole("button", { name: /pay/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("blocks payment on an expired group", async () => {
-    mockApi(ticketSummary({ status: "expired", expired: true, payable: false }));
+    mockApi(
+      ticketSummary({ status: "expired", expired: true, payable: false }),
+    );
     render(<GroupCheckout locale="en" groupId={GROUP} labels={labels} />);
 
-    expect(await screen.findByTestId("group-checkout-closed")).toHaveTextContent(g.expired);
+    expect(
+      await screen.findByTestId("group-checkout-closed"),
+    ).toHaveTextContent(g.expired);
     expect(screen.queryByText(c.payment.momo)).not.toBeInTheDocument();
   });
 
   it("rejects a malformed group id without calling the API", async () => {
     render(<GroupCheckout locale="en" groupId="not-a-uuid" labels={labels} />);
-    expect(await screen.findByTestId("group-checkout-error")).toHaveTextContent(g.notFound);
+    expect(await screen.findByTestId("group-checkout-error")).toHaveTextContent(
+      g.notFound,
+    );
     expect(apiRequest).not.toHaveBeenCalled();
   });
 
@@ -239,13 +271,20 @@ describe("GroupCheckout", () => {
     render(<GroupCheckout locale="en" groupId={GROUP} labels={labels} />);
 
     await user.click(await screen.findByText(c.payment.railAirtel));
-    await user.type(screen.getByLabelText(c.payment.nationalNumber), "971234567");
+    await user.type(
+      screen.getByLabelText(c.payment.nationalNumber),
+      "971234567",
+    );
     await user.click(screen.getByRole("button", { name: /pay k\s?315\.00/i }));
 
     await waitFor(() =>
-      expect(routerReplace).toHaveBeenCalledWith(`/en/checkout/pending/${GROUP}?kind=ticket`),
+      expect(routerReplace).toHaveBeenCalledWith(
+        `/en/checkout/pending/${GROUP}?kind=ticket`,
+      ),
     );
-    const retry = apiRequest.mock.calls.find(([endpoint]) => endpoint === "/payments/retry");
+    const retry = apiRequest.mock.calls.find(
+      ([endpoint]) => endpoint === "/payments/retry",
+    );
     expect(JSON.parse(String(retry?.[1]?.body))).toEqual({
       checkout_group_id: GROUP,
       payer_number: "+260971234567",
@@ -259,7 +298,9 @@ describe("GroupCheckout", () => {
     render(<GroupCheckout locale="en" groupId={GROUP} labels={labels} />);
 
     await user.click(await screen.findByText(c.payment.card));
-    await user.click(screen.getByRole("button", { name: /pay k\s?1,200\.00/i }));
+    await user.click(
+      screen.getByRole("button", { name: /pay k\s?1,200\.00/i }),
+    );
 
     await waitFor(() =>
       expect(routerReplace).toHaveBeenCalledWith(
@@ -279,7 +320,9 @@ describe("GroupCheckout", () => {
 
     await user.click(await screen.findByRole("button", { name: /pay k/i }));
     expect(await screen.findByText(c.payment.required)).toBeInTheDocument();
-    expect(apiRequest.mock.calls.some(([e]) => e === "/payments/retry")).toBe(false);
+    expect(apiRequest.mock.calls.some(([e]) => e === "/payments/retry")).toBe(
+      false,
+    );
   });
 
   it("resumes a live MoMo attempt instead of offering rails again", async () => {
@@ -294,14 +337,18 @@ describe("GroupCheckout", () => {
     render(<GroupCheckout locale="en" groupId={GROUP} labels={labels} />);
 
     await waitFor(() =>
-      expect(routerReplace).toHaveBeenCalledWith(`/en/checkout/pending/${GROUP}?kind=ticket`),
+      expect(routerReplace).toHaveBeenCalledWith(
+        `/en/checkout/pending/${GROUP}?kind=ticket`,
+      ),
     );
   });
 
   it("shows the payments-off notice when the API offers no online rail", async () => {
     mockApi(serviceSummary({ available_methods: [] }));
     render(<GroupCheckout locale="en" groupId={GROUP} labels={labels} />);
-    expect(await screen.findByTestId("checkout-payments-off")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("checkout-payments-off"),
+    ).toBeInTheDocument();
   });
 
   it("asks a signed-out buyer to sign in and come back to this group", async () => {

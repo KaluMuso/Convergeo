@@ -13,8 +13,14 @@ export type CitationCardProps = {
   meta?: string | null;
 };
 
-function kindOf(entityKind: string): "event" | "vendor" | "service" | "product" {
-  if (entityKind === "event" || entityKind === "vendor" || entityKind === "service") {
+function kindOf(
+  entityKind: string,
+): "event" | "vendor" | "service" | "product" {
+  if (
+    entityKind === "event" ||
+    entityKind === "vendor" ||
+    entityKind === "service"
+  ) {
     return entityKind;
   }
   return "product";
@@ -28,7 +34,12 @@ function kindOf(entityKind: string): "event" | "vendor" | "service" | "product" 
  * Deep-links via the shared `searchResultHref` (slug-based, never `/p/{uuid}`), so
  * every card opens a real page.
  */
-export function CitationCard({ citation, locale, viewLabel, meta = null }: CitationCardProps) {
+export function CitationCard({
+  citation,
+  locale,
+  viewLabel,
+  meta = null,
+}: CitationCardProps) {
   const href = searchResultHref(locale, citation);
 
   return (
@@ -39,9 +50,13 @@ export function CitationCard({ citation, locale, viewLabel, meta = null }: Citat
       data-kind={kindOf(citation.entity_kind)}
       className="flex min-h-16 flex-col justify-center gap-1 rounded-lg border border-border bg-surface p-3 text-left hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
     >
-      <span className="line-clamp-2 text-sm font-medium text-text">{citation.title}</span>
+      <span className="line-clamp-2 text-sm font-medium text-text">
+        {citation.title}
+      </span>
       {citation.price_display ? (
-        <span className="text-sm font-semibold text-primary">{citation.price_display}</span>
+        <span className="text-sm font-semibold text-primary">
+          {citation.price_display}
+        </span>
       ) : null}
       {meta ? <span className="text-xs text-text-3">{meta}</span> : null}
     </Link>

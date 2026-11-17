@@ -15,11 +15,15 @@ const commonByLocale: Partial<Record<Locale, { errorPage: ErrorPageCopy }>> = {
 };
 
 export function resolveErrorPageCopy(locale: string): ErrorPageCopy {
-  const normalized = LOCALES.includes(locale as Locale) ? (locale as Locale) : DEFAULT_LOCALE;
+  const normalized = LOCALES.includes(locale as Locale)
+    ? (locale as Locale)
+    : DEFAULT_LOCALE;
   return commonByLocale[normalized]?.errorPage ?? enCommon.errorPage;
 }
 
 export function resolveLocaleFromPathname(pathname: string): Locale {
   const segment = pathname.split("/").filter(Boolean)[0];
-  return LOCALES.includes(segment as Locale) ? (segment as Locale) : DEFAULT_LOCALE;
+  return LOCALES.includes(segment as Locale)
+    ? (segment as Locale)
+    : DEFAULT_LOCALE;
 }

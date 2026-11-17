@@ -38,14 +38,25 @@ const totals = {
 };
 
 function mockOptions(options: Record<string, unknown>) {
-  requestMock.mockImplementation(async (path: string, init?: { method?: string }) => {
-    if (String(path).includes("payment-options")) return { ...totals, ...options };
-    if (init?.method === "POST") {
-      const body = JSON.parse(String((init as { body?: string }).body)) as { method: string };
-      return { ...totals, ...options, method: body.method, rail: null, payer_number: null };
-    }
-    throw new Error(`unexpected ${path}`);
-  });
+  requestMock.mockImplementation(
+    async (path: string, init?: { method?: string }) => {
+      if (String(path).includes("payment-options"))
+        return { ...totals, ...options };
+      if (init?.method === "POST") {
+        const body = JSON.parse(String((init as { body?: string }).body)) as {
+          method: string;
+        };
+        return {
+          ...totals,
+          ...options,
+          method: body.method,
+          rail: null,
+          payer_number: null,
+        };
+      }
+      throw new Error(`unexpected ${path}`);
+    },
+  );
 }
 
 function renderStep(onComplete = vi.fn()) {
@@ -74,10 +85,14 @@ describe("StepPayment honours the methods the API offers", () => {
 
     const cod = await screen.findByLabelText("label:cod");
     expect(cod).toBeChecked();
-    expect(screen.queryByRole("radio", { name: "label:momo" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("radio", { name: "label:momo" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByLabelText("label:card")).not.toBeInTheDocument();
     // No mobile-money number form for a method that cannot be used.
-    expect(screen.queryByLabelText("label:nationalNumber")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("label:nationalNumber"),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "label:continue" }));
 
@@ -90,20 +105,29 @@ describe("StepPayment honours the methods the API offers", () => {
     mockOptions({ cod_eligible: false, available_methods: [] });
     renderStep();
 
-    expect(await screen.findByTestId("checkout-payments-off")).toHaveTextContent(
-      "label:paymentsDisabled",
-    );
+    expect(
+      await screen.findByTestId("checkout-payments-off"),
+    ).toHaveTextContent("label:paymentsDisabled");
     expect(screen.getByTestId("checkout-cod-unavailable")).toBeInTheDocument();
-    expect(screen.queryByRole("radio", { name: "label:momo" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("radio", { name: "label:momo" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByLabelText("label:card")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "label:continue" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "label:continue" }),
+    ).not.toBeInTheDocument();
   });
 
   it("offers every enabled method once online payments are on", async () => {
-    mockOptions({ cod_eligible: true, available_methods: ["momo", "card", "cod"] });
+    mockOptions({
+      cod_eligible: true,
+      available_methods: ["momo", "card", "cod"],
+    });
     renderStep();
 
-    expect(await screen.findByRole("radio", { name: "label:momo" })).toBeChecked();
+    expect(
+      await screen.findByRole("radio", { name: "label:momo" }),
+    ).toBeChecked();
     expect(screen.getByLabelText("label:card")).toBeInTheDocument();
     expect(screen.getByLabelText("label:cod")).toBeInTheDocument();
   });
@@ -112,8 +136,12 @@ describe("StepPayment honours the methods the API offers", () => {
     mockOptions({ cod_eligible: true });
     renderStep();
 
-    expect(await screen.findByRole("radio", { name: "label:momo" })).toBeChecked();
+    expect(
+      await screen.findByRole("radio", { name: "label:momo" }),
+    ).toBeChecked();
     expect(screen.getByLabelText("label:card")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "label:continue" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "label:continue" }),
+    ).toBeInTheDocument();
   });
 });

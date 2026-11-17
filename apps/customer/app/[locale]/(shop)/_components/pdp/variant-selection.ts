@@ -59,11 +59,15 @@ export function valueAvailability(
   // Judge the value against the buyer's picks in the OTHER groups only, so a
   // buyer can always switch within a group.
   const probe: VariantSelection = { ...selection, [groupId]: valueId };
-  const candidates = variants.filter((variant) => matches(variant, probe, groups));
+  const candidates = variants.filter((variant) =>
+    matches(variant, probe, groups),
+  );
   if (candidates.length === 0) {
     return "unavailable";
   }
-  return candidates.some((variant) => variant.inStock) ? "available" : "soldOut";
+  return candidates.some((variant) => variant.inStock)
+    ? "available"
+    : "soldOut";
 }
 
 export function resolveVariant(
@@ -71,10 +75,15 @@ export function resolveVariant(
   variants: ListingVariantOption[],
   selection: VariantSelection,
 ): ListingVariantOption | null {
-  if (groups.length === 0 || groups.some((group) => selection[group.id] === undefined)) {
+  if (
+    groups.length === 0 ||
+    groups.some((group) => selection[group.id] === undefined)
+  ) {
     return null;
   }
-  return variants.find((variant) => matches(variant, selection, groups)) ?? null;
+  return (
+    variants.find((variant) => matches(variant, selection, groups)) ?? null
+  );
 }
 
 export function missingGroups(
@@ -101,7 +110,11 @@ export function selectValue(
       continue;
     }
     const stillOffered = variants.some((variant) =>
-      matches(variant, { [groupId]: valueId, [group.id]: next[group.id] as string }, groups),
+      matches(
+        variant,
+        { [groupId]: valueId, [group.id]: next[group.id] as string },
+        groups,
+      ),
     );
     if (!stillOffered) {
       delete next[group.id];
@@ -118,7 +131,9 @@ export function initialSelection(
   const selection: VariantSelection = {};
   for (const group of groups) {
     const offered = group.values.filter(
-      (value) => valueAvailability(groups, variants, {}, group.id, value.id) === "available",
+      (value) =>
+        valueAvailability(groups, variants, {}, group.id, value.id) ===
+        "available",
     );
     if (offered.length === 1 && group.values.length === 1 && offered[0]) {
       selection[group.id] = offered[0].id;
@@ -134,7 +149,9 @@ export function selectedOptionPairs(
 ): Array<{ group: string; value: string }> {
   const pairs: Array<{ group: string; value: string }> = [];
   for (const group of groups) {
-    const value = group.values.find((candidate) => candidate.id === selection[group.id]);
+    const value = group.values.find(
+      (candidate) => candidate.id === selection[group.id],
+    );
     if (value) {
       pairs.push({ group: group.name, value: value.label });
     }
@@ -149,6 +166,10 @@ export function formatVariantLabel(
   separator: string,
 ): string {
   return pairs
-    .map((pair) => template.replaceAll("{group}", pair.group).replaceAll("{value}", pair.value))
+    .map((pair) =>
+      template
+        .replaceAll("{group}", pair.group)
+        .replaceAll("{value}", pair.value),
+    )
     .join(separator);
 }

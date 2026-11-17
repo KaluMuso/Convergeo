@@ -6,7 +6,10 @@ import { lazy, Suspense, useCallback, useMemo, type ReactNode } from "react";
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 import { fetchJson } from "../../../../../lib/fetch-json";
 import { ProgressiveLoadControls } from "../progressive-load/progressive-load-controls";
-import { useProgressiveLoad, type ProgressivePage } from "../progressive-load/use-progressive-load";
+import {
+  useProgressiveLoad,
+  type ProgressivePage,
+} from "../progressive-load/use-progressive-load";
 
 import {
   HOME_STREAM_PAGE_SIZE,
@@ -25,14 +28,20 @@ const STREAM_FETCH_TIMEOUT_MS = 12_000;
 /** Pages made entirely of already-shown listings are skipped, at most this many. */
 const MAX_SKIPPED_PAGES = 3;
 
-export type StreamFetcher = (cursor: string, signal: AbortSignal) => Promise<HomeStreamPage>;
+export type StreamFetcher = (
+  cursor: string,
+  signal: AbortSignal,
+) => Promise<HomeStreamPage>;
 
 export const fetchStreamPage: StreamFetcher = async (cursor, signal) => {
   const url = absoluteApiUrl(
     `/home/stream?cursor=${encodeURIComponent(cursor)}&limit=${HOME_STREAM_PAGE_SIZE}`,
   );
   if (!url) throw new Error("api_unavailable");
-  return fetchJson<HomeStreamPage>(url, { signal, timeoutMs: STREAM_FETCH_TIMEOUT_MS });
+  return fetchJson<HomeStreamPage>(url, {
+    signal,
+    timeoutMs: STREAM_FETCH_TIMEOUT_MS,
+  });
 };
 
 /**
@@ -64,7 +73,11 @@ function StreamSkeleton() {
       aria-hidden="true"
     >
       {Array.from({ length: 4 }, (_, index) => (
-        <Skeleton key={index} shape="block" className="aspect-[3/4] w-full rounded-lg" />
+        <Skeleton
+          key={index}
+          shape="block"
+          className="aspect-[3/4] w-full rounded-lg"
+        />
       ))}
     </div>
   );
@@ -97,7 +110,8 @@ export function HomeStreamClient({
 }) {
   const seen = useMemo(() => new Set(seenIds), [seenIds]);
   const fetchPage = useCallback(
-    (cursor: string, signal: AbortSignal) => loadStreamPage(fetcher, cursor, signal, seen),
+    (cursor: string, signal: AbortSignal) =>
+      loadStreamPage(fetcher, cursor, signal, seen),
     [fetcher, seen],
   );
   const { items, status, hasMore, lastAppendedCount, loadMore, sentinelRef } =

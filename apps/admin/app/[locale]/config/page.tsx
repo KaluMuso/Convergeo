@@ -52,6 +52,12 @@ export default async function ConfigHubPage({ params }: PageProps) {
       title: t("platformTitle"),
       body: t("platformBody"),
     },
+    {
+      key: "vendorPlans",
+      href: `/${locale}/config/vendor-plans`,
+      title: t("vendorPlansTitle"),
+      body: t("vendorPlansBody"),
+    },
   ] as const;
 
   return (

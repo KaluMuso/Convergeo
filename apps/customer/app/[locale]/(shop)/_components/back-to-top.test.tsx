@@ -14,14 +14,22 @@ afterEach(() => {
 describe("BackToTop", () => {
   it("appears after scrolling past the threshold and scrolls to top", () => {
     const scrollTo = vi.fn();
-    Object.defineProperty(window, "scrollY", { value: 0, writable: true, configurable: true });
+    Object.defineProperty(window, "scrollY", {
+      value: 0,
+      writable: true,
+      configurable: true,
+    });
     window.scrollTo = scrollTo;
     window.matchMedia = vi.fn().mockReturnValue({ matches: false });
 
     render(<BackToTop label="Back to top" thresholdPx={200} />);
     expect(screen.queryByTestId("back-to-top")).not.toBeInTheDocument();
 
-    Object.defineProperty(window, "scrollY", { value: 240, writable: true, configurable: true });
+    Object.defineProperty(window, "scrollY", {
+      value: 240,
+      writable: true,
+      configurable: true,
+    });
     fireEvent.scroll(window);
     expect(screen.getByTestId("back-to-top")).toBeInTheDocument();
 
@@ -31,7 +39,11 @@ describe("BackToTop", () => {
 
   it("uses instant scroll when reduced motion is preferred", () => {
     const scrollTo = vi.fn();
-    Object.defineProperty(window, "scrollY", { value: 500, writable: true, configurable: true });
+    Object.defineProperty(window, "scrollY", {
+      value: 500,
+      writable: true,
+      configurable: true,
+    });
     window.scrollTo = scrollTo;
     window.matchMedia = vi.fn().mockReturnValue({ matches: true });
 

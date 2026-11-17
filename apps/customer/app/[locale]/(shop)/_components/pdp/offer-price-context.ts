@@ -5,7 +5,8 @@
  * Returns a structured result so ICU messages can be formatted with
  * `t("…", { diff })` on the client (avoid calling `t` without ICU values).
  */
-export type OfferPriceContext = { kind: "lowest" } | { kind: "more"; diffNgwee: number };
+export type OfferPriceContext =
+  { kind: "lowest" } | { kind: "more"; diffNgwee: number };
 
 export function buildOfferPriceContext(
   selectedPriceNgwee: number,

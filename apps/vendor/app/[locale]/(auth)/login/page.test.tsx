@@ -32,6 +32,7 @@ vi.mock("next-intl/server", () => ({
 }));
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   cleanup();
   vi.clearAllMocks();
 });
@@ -48,7 +49,24 @@ import VendorLoginPage from "./page";
  * shell-level unit test that never touches the actual page wiring.
  */
 describe("vendor login page", () => {
-  it("renders phone login by default and keeps email/password reachable via toggle", async () => {
+  it("renders email/password by default while phone OTP is off, with phone reachable via toggle", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PHONE_OTP_ENABLED", "");
+    const user = userEvent.setup();
+    render(
+      await VendorLoginPage({
+        params: Promise.resolve({ locale: "en" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /phone|mobile/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /phone|mobile/i }));
+    expect(screen.getByRole("textbox", { name: /phone|mobile/i })).toBeInTheDocument();
+  });
+
+  it("renders phone login by default once phone OTP is enabled, with email reachable via toggle", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PHONE_OTP_ENABLED", "true");
     const user = userEvent.setup();
     render(
       await VendorLoginPage({

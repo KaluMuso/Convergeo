@@ -14,7 +14,12 @@ it("preserves structured values and zero/false without inventing units", () => {
     blank: " ",
   };
   const rows = specRowsFromJson(JSON.parse(JSON.stringify(input)));
-  expect(rows.map((r) => r.key)).toEqual(["dimensions", "features", "weight", "waterproof"]);
+  expect(rows.map((r) => r.key)).toEqual([
+    "dimensions",
+    "features",
+    "weight",
+    "waterproof",
+  ]);
   expect(JSON.parse(rows[0]!.value)).toEqual(input.dimensions);
   expect(JSON.parse(rows[1]!.value)).toEqual(input.features);
   expect(rows[2]!.value).toBe("0");
@@ -31,9 +36,19 @@ it("renders multiline and untrusted detail text as text, with an accessible empt
       emptyLabel="No details supplied"
     />,
   );
-  expect(screen.getByRole("heading", { name: "Specifications" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Specifications" }),
+  ).toBeInTheDocument();
   expect(container.querySelector("script")).toBeNull();
-  expect(container.querySelector("dd")?.textContent).toBe("<script>alert(1)</script>\nSecond line");
-  rerender(<SpecsTable rows={[]} heading="Specifications" emptyLabel="No details supplied" />);
+  expect(container.querySelector("dd")?.textContent).toBe(
+    "<script>alert(1)</script>\nSecond line",
+  );
+  rerender(
+    <SpecsTable
+      rows={[]}
+      heading="Specifications"
+      emptyLabel="No details supplied"
+    />,
+  );
   expect(screen.getByText("No details supplied")).toBeInTheDocument();
 });

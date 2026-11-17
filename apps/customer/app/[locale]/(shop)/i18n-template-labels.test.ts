@@ -41,10 +41,9 @@ const NO_VALUES_CALL = /\bt[A-Za-z]*\(\s*"([A-Za-z0-9_.]+)"\s*\)/g;
 const HAS_PLACEHOLDER = /\{\s*[A-Za-z_][A-Za-z0-9_]*\s*[,}]/;
 
 function loadNamespaceMessages(namespace: string): Record<string, unknown> {
-  return JSON.parse(readFileSync(join(messagesDir, `${namespace}.json`), "utf8")) as Record<
-    string,
-    unknown
-  >;
+  return JSON.parse(
+    readFileSync(join(messagesDir, `${namespace}.json`), "utf8"),
+  ) as Record<string, unknown>;
 }
 
 function lookupMessage(namespace: string, key: string): string | undefined {
@@ -57,25 +56,36 @@ function lookupMessage(namespace: string, key: string): string | undefined {
 }
 
 describe("discovery slice label producers", () => {
-  it.each(PRODUCERS)("%s reads placeholder messages raw, not via t()", (file, namespace) => {
-    const source = readFileSync(join(here, file), "utf8");
+  it.each(PRODUCERS)(
+    "%s reads placeholder messages raw, not via t()",
+    (file, namespace) => {
+      const source = readFileSync(join(here, file), "utf8");
 
-    const offenders = [...source.matchAll(NO_VALUES_CALL)]
-      .map((match) => match[1] as string)
-      .filter((key) => {
-        const message = lookupMessage(namespace, key);
-        return message !== undefined && HAS_PLACEHOLDER.test(message);
-      });
+      const offenders = [...source.matchAll(NO_VALUES_CALL)]
+        .map((match) => match[1] as string)
+        .filter((key) => {
+          const message = lookupMessage(namespace, key);
+          return message !== undefined && HAS_PLACEHOLDER.test(message);
+        });
 
-    expect([...new Set(offenders)]).toEqual([]);
-  });
+      expect([...new Set(offenders)]).toEqual([]);
+    },
+  );
 
   it("recognises a placeholder-bearing message when it sees one", () => {
     // Sanity check on the detector itself: these are the messages that used to
     // render as key paths in the cart and on search result tabs.
-    expect(HAS_PLACEHOLDER.test(lookupMessage("checkout", "cart.unitPrice") ?? "")).toBe(true);
-    expect(HAS_PLACEHOLDER.test(lookupMessage("checkout", "cart.itemCount") ?? "")).toBe(true);
-    expect(HAS_PLACEHOLDER.test(lookupMessage("search", "tabs.count") ?? "")).toBe(true);
-    expect(HAS_PLACEHOLDER.test(lookupMessage("checkout", "cart.subtotal") ?? "")).toBe(false);
+    expect(
+      HAS_PLACEHOLDER.test(lookupMessage("checkout", "cart.unitPrice") ?? ""),
+    ).toBe(true);
+    expect(
+      HAS_PLACEHOLDER.test(lookupMessage("checkout", "cart.itemCount") ?? ""),
+    ).toBe(true);
+    expect(
+      HAS_PLACEHOLDER.test(lookupMessage("search", "tabs.count") ?? ""),
+    ).toBe(true);
+    expect(
+      HAS_PLACEHOLDER.test(lookupMessage("checkout", "cart.subtotal") ?? ""),
+    ).toBe(false);
   });
 });

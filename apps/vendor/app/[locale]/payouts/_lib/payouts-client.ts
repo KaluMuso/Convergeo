@@ -1,5 +1,6 @@
 import { createApiClient } from "@vergeo/config";
 
+import { actingBranchHeaders } from "../../../../lib/acting-branch";
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
 export type PayoutBalances = {
@@ -56,7 +57,10 @@ export function createPayoutsClient(getToken: () => string | null | Promise<stri
       const response = await fetch(
         `${baseUrl}/vendor/payouts/statement?month=${encodeURIComponent(month)}`,
         {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: {
+            ...actingBranchHeaders(),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
         },
       );
       if (!response.ok) {

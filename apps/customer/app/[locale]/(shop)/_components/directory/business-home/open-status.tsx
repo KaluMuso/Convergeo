@@ -8,7 +8,15 @@ export type DaySchedule = {
   closes: string;
 };
 
-const DAY_KEYS: DaySchedule["day"][] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DAY_KEYS: DaySchedule["day"][] = [
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
+  "sun",
+];
 
 function minutes(value: string): number {
   const [h, m] = value.split(":").map(Number);
@@ -32,7 +40,8 @@ function lusakaNow(at: Date): { dayIndex: number; minute: number } {
  */
 export function isOpenAt(schedule: DaySchedule[], at: Date): boolean {
   const { dayIndex, minute } = lusakaNow(at);
-  const spanFor = (index: number) => schedule.find((entry) => entry.day === DAY_KEYS[index]);
+  const spanFor = (index: number) =>
+    schedule.find((entry) => entry.day === DAY_KEYS[index]);
 
   const today = spanFor(dayIndex);
   if (today) {
@@ -89,7 +98,10 @@ export function OpenStatus({
           : "border border-border bg-bg-2 text-text-2"
       }`}
     >
-      <span aria-hidden className={`h-2 w-2 rounded-full ${open ? "bg-success" : "bg-text-3"}`} />
+      <span
+        aria-hidden
+        className={`h-2 w-2 rounded-full ${open ? "bg-success" : "bg-text-3"}`}
+      />
       {open ? labels.open : labels.closed}
     </span>
   );

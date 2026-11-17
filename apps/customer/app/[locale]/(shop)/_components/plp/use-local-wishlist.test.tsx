@@ -36,7 +36,9 @@ describe("useLocalWishlist", () => {
     });
 
     expect(result.current.isWishlisted).toBe(true);
-    const stored = JSON.parse(window.localStorage.getItem("vergeo5:wishlist:v2") ?? "[]") as Array<{
+    const stored = JSON.parse(
+      window.localStorage.getItem("vergeo5:wishlist:v2") ?? "[]",
+    ) as Array<{
       slug: string;
     }>;
     expect(stored.some((entry) => entry.slug === "tecno-spark")).toBe(true);
@@ -73,7 +75,10 @@ describe("useLocalWishlist", () => {
   });
 
   it("migrates legacy v1 slug arrays", () => {
-    window.localStorage.setItem("vergeo5:wishlist:v1", JSON.stringify(["legacy-phone"]));
+    window.localStorage.setItem(
+      "vergeo5:wishlist:v1",
+      JSON.stringify(["legacy-phone"]),
+    );
     const { result } = renderHook(() => useLocalWishlist("legacy-phone"));
     expect(result.current.isWishlisted).toBe(true);
   });

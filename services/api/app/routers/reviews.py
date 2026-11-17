@@ -11,6 +11,7 @@ from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limi
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.branches.context import scope_owner_vendor_query
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
 
@@ -478,9 +479,10 @@ async def list_vendor_reviews(
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[ReviewResponse]:
     vendor_response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id")
-        .eq("owner_user_id", current_user.id)
+        .eq("owner_user_id", current_user.id))
         .maybe_single()
         .execute()
     )

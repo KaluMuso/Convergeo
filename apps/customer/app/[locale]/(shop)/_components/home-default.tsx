@@ -7,6 +7,7 @@ import Link from "next/link";
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { fetchJson } from "../../../../lib/fetch-json";
 
+import { dealToListing, fetchDeals } from "./deals-data";
 import {
   vendorCommercialTier,
   vendorTrustForCard,
@@ -17,7 +18,7 @@ import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
 
 import type { AdCreative } from "./home-feed/feed-types";
 import type { CategoryRow } from "./merch-data";
-import type { LogisticsPillLabels } from "./plp/logistics-pills";
+import type { ListingCardLabels } from "./plp/listing-card";
 
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
@@ -93,6 +94,8 @@ export type VendorRailItem = {
 };
 
 export type HomeDefaultData = {
+  /** Live flash deals (GET /deals), rendered as the "Today's deals" rail. */
+  deals: CatalogListing[];
   newest: CatalogListing[];
   departmentRails: DepartmentRail[];
   services: ServiceRailItem[];
@@ -231,7 +234,10 @@ export function pickRailDepartments(
   return categories.slice(0, max);
 }
 
-export function hasDefaultHomeContent(categories: CategoryRow[], data: HomeDefaultData): boolean {
+export function hasDefaultHomeContent(
+  categories: CategoryRow[],
+  data: HomeDefaultData,
+): boolean {
   return (
     categories.length > 0 ||
     data.newest.length > 0 ||
@@ -239,9 +245,26 @@ export function hasDefaultHomeContent(categories: CategoryRow[], data: HomeDefau
   );
 }
 
-export async function loadHomeDefaultData(categories: CategoryRow[]): Promise<HomeDefaultData> {
+const DEALS_RAIL_LIMIT = 12;
+
+/** Empty-safe: an unreachable /deals simply hides the rail. */
+async function loadDealListings(): Promise<CatalogListing[]> {
+  const data = await fetchDeals(DEALS_RAIL_LIMIT);
+  return (data?.items ?? []).filter((deal) => deal.listing.in_stock).map(dealToListing);
+}
+
+export async function loadHomeDefaultData(
+  categories: CategoryRow[],
+): Promise<HomeDefaultData> {
+  const [core, deals] = await Promise.all([loadCoreHomeData(categories), loadDealListings()]);
+  return { ...core, deals };
+}
+
+async function loadCoreHomeData(categories: CategoryRow[]): Promise<Omit<HomeDefaultData, "deals">> {
   const departments = pickRailDepartments(categories);
-  const departmentPaths = departments.map((category) => category.path).join(",");
+  const departmentPaths = departments
+    .map((category) => category.path)
+    .join(",");
   const bffUrl = absoluteApiUrl(
     `/discovery/home?newest_limit=${NEW_RAIL_LIMIT}&department_limit=${DEPARTMENT_RAIL_LIMIT}` +
       `&services_limit=${SERVICES_RAIL_LIMIT}&vendors_limit=${VENDORS_RAIL_LIMIT}` +
@@ -265,7 +288,9 @@ export async function loadHomeDefaultData(categories: CategoryRow[]): Promise<Ho
         : (data.services?.items ?? []);
 
       const departmentRails = departments.map((category) => {
-        const rail = data.department_rails?.find((entry) => entry.category_path === category.path);
+        const rail = data.department_rails?.find(
+          (entry) => entry.category_path === category.path,
+        );
         return {
           category,
           listings: (rail?.listings?.items ?? []).map(mapListing),
@@ -351,7 +376,9 @@ type HomeHeroBandProps = {
 };
 
 /** First newest listing with a Cloudinary public id (for the default hero plane). */
-export function pickHeroVisualPublicId(listings: CatalogListing[]): string | null {
+export function pickHeroVisualPublicId(
+  listings: CatalogListing[],
+): string | null {
   for (const listing of listings) {
     if (listing.imagePublicId && listing.imagePublicId.trim()) {
       return listing.imagePublicId;
@@ -382,19 +409,7 @@ export function HomeHeroBand({
   );
 }
 
-type RailLabels = {
-  vendor: string;
-  noReviews: string;
-  reviewCount: string;
-  quickAdd: string;
-  quickAddError?: string;
-  wishlist: string;
-  wishlistRemove?: string;
-  outOfStock: string;
-  logistics?: LogisticsPillLabels;
-  sampleListing?: string;
-  mediaEmpty?: string;
-};
+type RailLabels = ListingCardLabels;
 
 type HomeProductRailProps = {
   id: string;
@@ -425,15 +440,15 @@ export function HomeProductRail({
     <section
       aria-labelledby={id}
       className={[
-        "home-rail flex flex-col gap-3 lg:gap-4",
+        "home-rail flex flex-col gap-2",
         id === "home-rail-new" ? "motion-rise" : "motion-fade",
       ].join(" ")}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id={id} className="font-display text-h2 text-display-ink">
+        <h2 id={id} className="font-display text-h3 font-bold text-display-ink">
           {title}
         </h2>
-        <Link href={viewAllHref} className="shrink-0 text-sm font-medium text-primary">
+        <Link href={viewAllHref} className="-my-3 shrink-0 py-3 text-sm font-medium text-primary">
           {viewAllLabel}
         </Link>
       </div>
@@ -443,6 +458,7 @@ export function HomeProductRail({
         labels={labels}
         priorityCount={priorityCount}
         density="compact"
+        layout="rail"
       />
     </section>
   );
@@ -460,7 +476,10 @@ export function HomeSellCta({ locale, t }: HomeSellCtaProps) {
       className="flex flex-col gap-4 rounded-lg bg-panel p-6 text-panel-text shadow-2 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:p-10"
     >
       <div className="flex flex-col gap-2 lg:max-w-2xl">
-        <h2 id="home-sell-cta-heading" className="font-display text-h2 text-panel-text">
+        <h2
+          id="home-sell-cta-heading"
+          className="font-display text-h2 text-panel-text"
+        >
           {t("home.sellCta.title")}
         </h2>
         <p className="text-body text-panel-muted">{t("home.sellCta.body")}</p>
@@ -508,12 +527,12 @@ export function HomeServicesRail({
   }
 
   return (
-    <section aria-labelledby={id} className="home-rail flex flex-col gap-3 lg:gap-4">
+    <section aria-labelledby={id} className="home-rail flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id={id} className="font-display text-h2 text-display-ink">
+        <h2 id={id} className="font-display text-h3 font-bold text-display-ink">
           {title}
         </h2>
-        <Link href={viewAllHref} className="shrink-0 text-sm font-medium text-primary">
+        <Link href={viewAllHref} className="-my-3 shrink-0 py-3 text-sm font-medium text-primary">
           {viewAllLabel}
         </Link>
       </div>
@@ -526,7 +545,10 @@ export function HomeServicesRail({
           >
             <ServiceCard
               title={service.title}
-              providerLabel={labels.provider.replace("{provider}", service.providerName)}
+              providerLabel={labels.provider.replace(
+                "{provider}",
+                service.providerName,
+              )}
               media={
                 service.imagePublicId ? (
                   <CloudinaryImageStatic
@@ -543,7 +565,9 @@ export function HomeServicesRail({
               reviewCount={0}
               noReviewsLabel={labels.noReviews}
               fromNgwee={service.fromNgwee ?? undefined}
-              fromPriceLabel={service.fromNgwee !== null ? labels.fromPrice : undefined}
+              fromPriceLabel={
+                service.fromNgwee !== null ? labels.fromPrice : undefined
+              }
               ctaLabel={labels.view}
             />
           </Link>
@@ -610,19 +634,21 @@ export function HomeVendorsRail({
   }
 
   return (
-    <section aria-labelledby={id} className="home-rail flex flex-col gap-3 lg:gap-4">
+    <section aria-labelledby={id} className="home-rail flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id={id} className="font-display text-h2 text-display-ink">
+        <h2 id={id} className="font-display text-h3 font-bold text-display-ink">
           {title}
         </h2>
-        <Link href={viewAllHref} className="shrink-0 text-sm font-medium text-primary">
+        <Link href={viewAllHref} className="-my-3 shrink-0 py-3 text-sm font-medium text-primary">
           {viewAllLabel}
         </Link>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {vendors.map((vendor) => {
           const categoryText =
-            vendor.categories.length > 0 ? vendor.categories.join(", ") : labels.listings;
+            vendor.categories.length > 0
+              ? vendor.categories.join(", ")
+              : labels.listings;
           const ratingValue =
             vendor.ratingAvg !== null && vendor.ratingCount > 0
               ? labels.rating
@@ -633,7 +659,10 @@ export function HomeVendorsRail({
             { preferredBadge: vendor.preferredBadge, kycTier: vendor.kycTier },
             labels.trustLabels,
           );
-          const commercial = vendorCommercialTier(vendor.commercialTier, labels.trustLabels);
+          const commercial = vendorCommercialTier(
+            vendor.commercialTier,
+            labels.trustLabels,
+          );
           const trustLabel =
             trust.trust === "preferred"
               ? labels.preferred
@@ -653,7 +682,9 @@ export function HomeVendorsRail({
                 name={vendor.displayName}
                 categoryLabel={categoryText}
                 locationLabel={vendor.landmark ?? labels.location}
-                avatar={vendor.logoUrl ? vendorRailLogo(vendor.logoUrl) : undefined}
+                avatar={
+                  vendor.logoUrl ? vendorRailLogo(vendor.logoUrl) : undefined
+                }
                 trust={trust.trust}
                 trustLabel={trustLabel}
                 tier={commercial.tier}
