@@ -339,6 +339,18 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
       {showForm ? (
         <section className="rounded-lg border border-border bg-surface p-4 shadow-sm">
           <div className="flex flex-col gap-3">
+            <label className="flex items-start gap-2 text-sm text-text">
+              <input
+                type="checkbox"
+                checked={draft.kind === "free_rsvp"}
+                onChange={(event) => handleKindChange(event.target.checked ? "free_rsvp" : "fixed")}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span>
+                <span className="font-medium">{t("tickets.fields.isFreeLabel")}</span>
+                <span className="block text-xs text-text-3">{t("tickets.fields.isFreeHint")}</span>
+              </span>
+            </label>
             <FormField label={t("tickets.fields.kindLabel")}>
               <Select
                 value={draft.kind}

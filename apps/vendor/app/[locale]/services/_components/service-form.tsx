@@ -55,6 +55,7 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
     initialService?.from_price_ngwee ? ngweeToZmwInput(initialService.from_price_ngwee) : "",
   );
   const [bookable, setBookable] = useState(initialService?.bookable ?? false);
+  const [isFree, setIsFree] = useState(initialService?.is_free ?? false);
   const [bookingPrice, setBookingPrice] = useState(
     initialService?.booking_price_ngwee ? ngweeToZmwInput(initialService.booking_price_ngwee) : "",
   );
@@ -83,11 +84,11 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
       setError(ts("vendor.errors.titleInvalid"));
       return;
     }
-    if (fromPrice.trim() && !isValidZmwDecimal(fromPrice)) {
+    if (!isFree && fromPrice.trim() && !isValidZmwDecimal(fromPrice)) {
       setError(tv("listings.fields.priceInvalid"));
       return;
     }
-    if (bookable && !isValidZmwDecimal(bookingPrice)) {
+    if (!isFree && bookable && !isValidZmwDecimal(bookingPrice)) {
       setError(ts("vendor.errors.bookablePrice"));
       return;
     }
@@ -107,9 +108,11 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
       title: trimmedTitle,
       description: description.trim() || null,
       service_area: serviceArea.trim() || null,
-      from_price_ngwee: fromPriceNgwee,
-      bookable,
-      booking_price_ngwee: bookingPriceNgwee,
+      // A free service carries no price and is never bookable (paid deposit path).
+      is_free: isFree,
+      from_price_ngwee: isFree ? null : fromPriceNgwee,
+      bookable: isFree ? false : bookable,
+      booking_price_ngwee: isFree ? null : bookingPriceNgwee,
       status: nextStatus ?? status,
       portfolio_images: initialService?.portfolio_images ?? [],
       includes: includes
@@ -217,6 +220,21 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
         />
       </FormField>
 
+      <label className="flex items-start gap-2 text-sm text-text">
+        <input
+          type="checkbox"
+          checked={isFree}
+          onChange={(event) => setIsFree(event.target.checked)}
+          className="mt-0.5 h-4 w-4"
+        />
+        <span>
+          <span className="font-medium">{ts("vendor.form.isFreeLabel")}</span>
+          <span className="block text-xs text-text-3">{ts("vendor.form.isFreeHint")}</span>
+        </span>
+      </label>
+
+      {isFree ? null : (
+        <>
       <FormField id="from-price" label={ts("vendor.form.fromPriceLabel")}>
         <Input
           id="from-price"
@@ -255,6 +273,8 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
           <p className="-mt-2 text-xs text-text-3">{ts("vendor.form.bookingPriceHint")}</p>
         </>
       ) : null}
+        </>
+      )}
 
       <FormField id="status" label={ts("vendor.form.statusLabel")}>
         <Select

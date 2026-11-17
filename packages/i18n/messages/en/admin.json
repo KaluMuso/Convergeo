@@ -52,7 +52,8 @@
     "accounts": "Admin accounts",
     "auditLog": "Audit log",
     "offers": "Offers",
-    "coupons": "Coupons"
+    "coupons": "Coupons",
+    "branches": "Branch verification"
   },
   "hubs": {
     "moderation": {
@@ -77,7 +78,9 @@
       "categoriesTitle": "Category tree",
       "categoriesBody": "Public catalogue category structure.",
       "platformTitle": "Platform knobs",
-      "platformBody": "Operational limits and platform settings."
+      "platformBody": "Operational limits and platform settings.",
+      "vendorPlansTitle": "Vendor plans",
+      "vendorPlansBody": "Plan prices, listing and photo limits, and per-vendor overrides."
     }
   },
   "translations": {
@@ -154,7 +157,8 @@
       "deliveryZones": "Delivery zones",
       "platform": "Platform knobs",
       "flags": "Feature flags",
-      "categories": "Category tree"
+      "categories": "Category tree",
+      "vendorPlans": "Vendor plans"
     },
     "common": {
       "save": "Save changes",
@@ -211,7 +215,8 @@
       "advanceMinKycTier": "Pre-event advance: minimum KYC tier",
       "advanceMinEvents": "Pre-event advance: minimum successful past events",
       "advanceRepaymentDays": "Pre-event advance: repayment window (days)",
-      "dangerousHint": "COD cap changes affect new checkout eligibility only."
+      "dangerousHint": "COD cap changes affect new checkout eligibility only.",
+      "branchMinDistance": "Min. distance between branches (m)"
     },
     "flags": {
       "title": "Feature flags",
@@ -231,6 +236,10 @@
       "moveChildrenConfirm": "Move with children",
       "orphanWarning": "Cannot move without children — enable move-with-children.",
       "rootOption": "Root (no parent)"
+    },
+    "vendorPlans": {
+      "title": "Vendor plans",
+      "subtitle": "Listing limits, photo limits, features and monthly prices. Changes apply immediately and are audited."
     }
   },
   "business": {
@@ -1887,7 +1896,8 @@
     "working": "Working…",
     "copy": "Copy",
     "copied": "Copied",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "rateLimited": "Too many changes in a short time. Wait a minute and try again."
   },
   "today": {
     "title": "Today",
@@ -2407,6 +2417,219 @@
         "listing": "That listing isn't in your shop.",
         "archived": "Ended coupons can't be restarted. Create a new one."
       }
+    }
+  },
+  "productImages": {
+    "errors": {
+      "full": "A product can have at most 8 photos.",
+      "duplicate": "That photo is already on this product."
+    }
+  },
+  "vendorPlans": {
+    "hint": "Limits count distinct listings, never stock. Leave the listing limit empty for unlimited. Going over a limit never removes listings: vendors only see an upgrade prompt. Billing is not collected yet.",
+    "unlimited": "Unlimited",
+    "default": "Default plan",
+    "vendorCount": "{count, plural, one {# vendor} other {# vendors}}",
+    "summary": "{price}/month · {listings} listings · {images} photos",
+    "makeDefault": "Make default",
+    "delete": "Delete",
+    "createHeading": "New plan",
+    "create": "Create plan",
+    "fields": {
+      "key": "Plan key (lowercase, e.g. market_stall)",
+      "name": "Name",
+      "priceKwacha": "Monthly price (K)",
+      "maxListings": "Listing limit (empty = unlimited)",
+      "maxImages": "Photos per listing (1–8)",
+      "featuredSlots": "Featured slots",
+      "analyticsDepth": "Analytics",
+      "wholesaleTools": "Wholesale tools",
+      "active": "Active",
+      "includedShops": "Shops included (empty = unlimited)",
+      "extraShopPrice": "Extra shop (K/month, empty = not sold)",
+      "staffSeats": "Staff seats (empty = unlimited)",
+      "broadcasts": "WhatsApp broadcasts / month",
+      "adCredit": "Ad credit (K/month)",
+      "integrationsLevel": "Integrations",
+      "payoutSpeed": "Payout speed",
+      "supportLevel": "Support",
+      "officialStoreBadge": "Official store badge",
+      "clickAndCollect": "Click & collect",
+      "multiBranchStock": "Multi-branch stock"
+    },
+    "depth": {
+      "basic": "Basic",
+      "standard": "Standard",
+      "advanced": "Advanced"
+    },
+    "errors": {
+      "nameRequired": "Enter a plan name.",
+      "keyInvalid": "Use 2–32 lowercase letters, numbers or underscores, starting with a letter.",
+      "priceInvalid": "Enter a price in kwacha, for example 49 or 49.50.",
+      "listingsInvalid": "Enter a whole number of listings, or leave it empty for unlimited.",
+      "imagesInvalid": "Photos per listing must be between 1 and 8.",
+      "slotsInvalid": "Featured slots must be between 0 and 100.",
+      "overrideEmpty": "An override must change the listing limit or the photo limit.",
+      "expiryInvalid": "Choose an expiry date in the future, at most one year ahead.",
+      "reasonRequired": "Give a reason for the override.",
+      "vendorIdInvalid": "Enter a vendor ID (UUID).",
+      "vendorNotFound": "Vendor not found.",
+      "saveFailed": "Could not save. Check the values and try again.",
+      "keyTaken": "That plan key already exists.",
+      "defaultInactive": "The default plan must stay active.",
+      "defaultDelete": "The default plan cannot be deleted.",
+      "inUse": "Vendors are on this plan. Deactivate it instead, or move them first.",
+      "planInactive": "That plan is not active.",
+      "shopsInvalid": "Shops included must be a whole number from 1, or empty for unlimited.",
+      "extraShopPriceInvalid": "Enter the extra shop price in kwacha, or leave it empty.",
+      "seatsInvalid": "Staff seats must be a whole number, or empty for unlimited.",
+      "broadcastsInvalid": "Enter a whole number of broadcasts.",
+      "adCreditInvalid": "Enter the ad credit in kwacha."
+    },
+    "vendor": {
+      "heading": "Vendor plan",
+      "hint": "Look up a vendor to assign a plan or give a time-limited exception.",
+      "vendorId": "Vendor ID",
+      "load": "Load",
+      "flagOff": "The vendor_plans flag is off, so these limits are not enforced yet.",
+      "effective": "Plan {plan}: {listings} listings ({count} used), {images} photos per listing",
+      "plan": "Plan",
+      "defaultPlan": "Choose a plan",
+      "note": "Note (optional)",
+      "assign": "Assign plan",
+      "noBilling": "Assigning a plan only records it. No payment is taken.",
+      "none": "default"
+    },
+    "override": {
+      "heading": "Override",
+      "current": "Active: {listings} listings until {expires} ({reason})",
+      "expired": "Expired on {expires}: {listings} listings ({reason})",
+      "unlimited": "Unlimited listings",
+      "expiresOn": "Expires on",
+      "reason": "Reason",
+      "save": "Save override",
+      "remove": "Remove override"
+    },
+    "integrations": {
+      "none": "None",
+      "basic": "Basic",
+      "sheets_webhooks": "Sheets + webhooks",
+      "api": "API"
+    },
+    "payoutSpeed": {
+      "standard": "Standard",
+      "fast": "Fast",
+      "priority": "Priority"
+    },
+    "support": {
+      "community": "Community",
+      "standard": "Standard",
+      "priority": "Priority",
+      "dedicated": "Dedicated"
+    }
+  },
+  "branches": {
+    "title": "Branch verification",
+    "subtitle": "Approve new shops of multi-branch businesses. Every decision is audited.",
+    "status": {
+      "draft": "Draft",
+      "pending_review": "Pending review",
+      "info_requested": "Info requested",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "kind": {
+      "physical": "Physical",
+      "online": "Online"
+    },
+    "queue": {
+      "filter": "Status",
+      "flagsLink": "Duplicate flags",
+      "loading": "Loading branches…",
+      "error": "Could not load branches.",
+      "permissionDenied": "You do not have access to branch verification.",
+      "retry": "Retry",
+      "empty": "No branches here.",
+      "evidence": "{count, plural, one {# evidence file} other {# evidence files}}",
+      "openFlags": "{count, plural, one {# open flag} other {# open flags}}"
+    },
+    "detail": {
+      "back": "Back to queue",
+      "business": "Business",
+      "legalName": "Legal name",
+      "registration": "Registration",
+      "pacraCertificate": "PACRA certificate",
+      "open": "Open",
+      "ownerKyc": "Owner KYC approved",
+      "yes": "Yes",
+      "no": "No",
+      "shop": "Shop",
+      "location": "Location",
+      "address": "Address",
+      "phone": "Phone",
+      "payout": "Payout",
+      "onHold": "on hold",
+      "plan": "Plan",
+      "planAddon": "{plan} · add-on {price}/month",
+      "planIncluded": "{plan} · included",
+      "evidence": "Evidence",
+      "noEvidence": "No evidence uploaded.",
+      "unavailable": "Preview unavailable",
+      "flags": "{count, plural, =0 {Duplicate flags} one {Duplicate flags (# open)} other {Duplicate flags (# open)}}",
+      "siblings": "Other branches of this business",
+      "primary": "main shop",
+      "note": "Note to the vendor (required to request info or reject)",
+      "flagsBlock": "Resolve the open duplicate flags before approving.",
+      "history": "History"
+    },
+    "actions": {
+      "approve": "Approve",
+      "requestInfo": "Request info",
+      "reject": "Reject"
+    },
+    "evidence": {
+      "storefront_photo": "Shopfront photo",
+      "premises_proof": "Proof of premises"
+    },
+    "proof": {
+      "lease": "Lease",
+      "utility_bill": "Utility bill",
+      "council_permit": "Council trading permit"
+    },
+    "flags": {
+      "title": "Duplicate flags",
+      "subtitle": "Possible duplicate shops found by name, phone, payout number, GPS or photo.",
+      "none": "No flags.",
+      "score": "match {score}%",
+      "pair": "{branch} ↔ {matched}",
+      "noteLabel": "Resolution note",
+      "notePlaceholder": "Why is this (not) a duplicate?",
+      "clear": "Not a duplicate",
+      "confirm": "Confirm duplicate"
+    },
+    "flagKind": {
+      "name_similar": "Similar name",
+      "phone_match": "Same phone",
+      "payout_other_owner": "Payout number of another owner",
+      "payout_shared_same_owner": "Shared payout number (same owner)",
+      "gps_near_other_owner": "Another owner at this spot",
+      "image_duplicate": "Same shopfront photo"
+    },
+    "flagStatus": {
+      "open": "Open",
+      "cleared": "Cleared",
+      "confirmed": "Confirmed duplicate"
+    },
+    "errors": {
+      "noteRequired": "Write a short note (at least 3 characters).",
+      "openFlags": "Resolve the open duplicate flags first.",
+      "primary": "The main shop is verified through KYC.",
+      "flagResolved": "This flag is already resolved.",
+      "payoutOtherOwner": "A payout number can never be shared across owners.",
+      "noPacra": "This business has no PACRA number.",
+      "invalidTransition": "This branch is not ready for that decision.",
+      "permission": "You do not have permission for this action.",
+      "saveFailed": "Could not save the decision. Try again."
     }
   }
 }

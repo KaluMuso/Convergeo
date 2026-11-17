@@ -1,6 +1,9 @@
 "use client";
 
-import { CategorySelection, categoryPath } from "@vergeo/ui/src/category-selection";
+import {
+  CategorySelection,
+  categoryPath,
+} from "@vergeo/ui/src/category-selection";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
@@ -8,7 +11,10 @@ import { describeListingError } from "../_lib/listing-errors";
 import { Button, FormField, Input, Spinner } from "../_lib/ui";
 
 import { buildCanonicalSpec, type DetailEntry } from "./canonical-details";
-import { CanonicalDetailsFields, type CanonicalDetailsLabels } from "./canonical-details-fields";
+import {
+  CanonicalDetailsFields,
+  type CanonicalDetailsLabels,
+} from "./canonical-details-fields";
 import { CommissionBanner } from "./commission-banner";
 import {
   DEFAULT_LISTING_FIELDS,
@@ -27,7 +33,10 @@ type ListingClient = ReturnType<typeof createListingClient>;
 type NewCanonicalFormProps = {
   client: ListingClient;
   wholesaleEnabled: boolean;
-  onSuccess: (response: ListingCreateResponse, requiresEvidence: boolean) => void;
+  onSuccess: (
+    response: ListingCreateResponse,
+    requiresEvidence: boolean,
+  ) => void;
   onError: (message: string) => void;
   labels: {
     details: CanonicalDetailsLabels;
@@ -48,6 +57,8 @@ type NewCanonicalFormProps = {
     standaloneRequired: string;
     draftInvalid?: string;
     fieldErrors?: Record<string, string>;
+    /** Listing cap reached (plan or KYC) — friendly upgrade copy. */
+    listingLimit?: string;
     required: string;
   };
 };
@@ -67,7 +78,9 @@ export function NewCanonicalForm({
   const [details, setDetails] = useState<DetailEntry[]>([]);
   const [brand, setBrand] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [fields, setFields] = useState<ListingFieldValues>(DEFAULT_LISTING_FIELDS);
+  const [fields, setFields] = useState<ListingFieldValues>(
+    DEFAULT_LISTING_FIELDS,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -95,10 +108,13 @@ export function NewCanonicalForm({
     };
   }, [client, labels.submitError, onError]);
 
-  const selectedCategory = categories.find((item) => item.id === categoryId) ?? null;
+  const selectedCategory =
+    categories.find((item) => item.id === categoryId) ?? null;
 
   const handleSubmit = async () => {
-    const nextErrors: Record<string, string> = { ...listingFieldErrors(fields, labels.fields) };
+    const nextErrors: Record<string, string> = {
+      ...listingFieldErrors(fields, labels.fields),
+    };
     if (!productName.trim()) nextErrors.product_name = labels.required;
     if (
       !categoryPath(
@@ -156,7 +172,10 @@ export function NewCanonicalForm({
         moq: parsed.moq,
         publish: !requiresListingEvidence(fields),
       });
-      onSuccess(response, response.requires_evidence ?? requiresListingEvidence(fields));
+      onSuccess(
+        response,
+        response.requires_evidence ?? requiresListingEvidence(fields),
+      );
     } catch (caught: unknown) {
       const result = describeListingError(
         caught,
@@ -164,6 +183,7 @@ export function NewCanonicalForm({
           standaloneRequired: labels.standaloneRequired,
           draftInvalid: labels.draftInvalid,
           fieldErrors: labels.fieldErrors,
+          listingLimit: labels.listingLimit,
           fallback: labels.submitError,
         },
         "draft",
@@ -182,7 +202,9 @@ export function NewCanonicalForm({
   return (
     <div className="flex flex-col gap-4">
       <header className="space-y-1">
-        <h2 className="font-display text-h4 text-display-ink">{labels.heading}</h2>
+        <h2 className="font-display text-h4 text-display-ink">
+          {labels.heading}
+        </h2>
         <p className="text-sm text-text-2">{labels.intro}</p>
       </header>
 

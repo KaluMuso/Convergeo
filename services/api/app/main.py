@@ -28,6 +28,7 @@ from app.middleware.security_headers import (
     CORS_ALLOW_METHODS,
     SecureHeadersMiddleware,
 )
+from app.services.branches.context import ActingBranchMiddleware
 from app.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,8 @@ def create_app() -> FastAPI:
         allow_methods=CORS_ALLOW_METHODS,
         allow_headers=CORS_ALLOW_HEADERS,
     )
+    # Multi-branch owners pick the storefront they act on (X-Vendor-Branch).
+    app.add_middleware(ActingBranchMiddleware)
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(SecureHeadersMiddleware)
 
