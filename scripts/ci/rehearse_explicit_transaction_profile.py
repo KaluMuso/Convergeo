@@ -857,7 +857,9 @@ def commit_without_ack(container: str, version: str, body: bytes) -> None:
                         raise RehearsalError(
                             "fixture client finished before acknowledgement was cut"
                         )
-                    process.terminate()
+                    # SIGKILL, not SIGTERM: newer runner docker CLIs exit 0 on
+                    # SIGTERM, which falsely reads as an acknowledged commit.
+                    process.kill()
                     process.wait(timeout=5)
                     if process.returncode == 0:
                         raise RehearsalError(
