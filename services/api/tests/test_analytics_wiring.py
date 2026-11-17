@@ -34,7 +34,8 @@ def _hit(entity_kind: str, entity_id: str) -> SearchHit:
         id=f"row-{entity_id}",
         entity_kind=entity_kind,
         entity_id=entity_id,
-        title="Title",
+        title="Blue Widget",
+        price_min_ngwee=1000,
         rrf_score=1.0,
     )
 

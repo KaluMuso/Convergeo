@@ -32,7 +32,9 @@ export function buildSearchFilterChips(
       id: `category:${state.categoryPath}`,
       kind: "category",
       path: state.categoryPath,
-      label: categoryLabels[state.categoryPath] ?? formatCategoryPathLabel(state.categoryPath),
+      label:
+        categoryLabels[state.categoryPath] ??
+        formatCategoryPathLabel(state.categoryPath),
     });
   }
 
@@ -50,7 +52,9 @@ export function formatCategoryPathLabel(path: string): string {
     .join(" ");
 }
 
-export function decodeSearchFilters(params: URLSearchParams): SearchFilterState {
+export function decodeSearchFilters(
+  params: URLSearchParams,
+): SearchFilterState {
   return {
     minPrice: params.get("min_price") ?? undefined,
     maxPrice: params.get("max_price") ?? undefined,
@@ -110,7 +114,10 @@ export function hrefWithoutSearchFilterChip(
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function clearSearchFiltersHref(pathname: string, searchParams: URLSearchParams): string {
+export function clearSearchFiltersHref(
+  pathname: string,
+  searchParams: URLSearchParams,
+): string {
   const next = new URLSearchParams();
   const preserved = ["q", "kind"] as const;
   for (const key of preserved) {

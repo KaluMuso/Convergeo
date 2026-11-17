@@ -11,7 +11,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const request = vi.fn();
 
 vi.mock("@vergeo/config", async () => {
-  const actual = await vi.importActual<typeof import("@vergeo/config")>("@vergeo/config");
+  const actual =
+    await vi.importActual<typeof import("@vergeo/config")>("@vergeo/config");
   return { ...actual, createApiClient: () => ({ request }) };
 });
 
@@ -64,7 +65,8 @@ function installSpeechRecognition(): { instances: FakeRecognition[] } {
       instances.push(this);
     }
   }
-  (window as unknown as Record<string, unknown>).webkitSpeechRecognition = FakeSpeechRecognition;
+  (window as unknown as Record<string, unknown>).webkitSpeechRecognition =
+    FakeSpeechRecognition;
   return { instances };
 }
 
@@ -90,7 +92,8 @@ const aiMessages = {
       emptyHint: "Type a question to search across Convergeo.",
       citationsTitle: "Related on Convergeo",
       signupCta: "Sign up",
-      networkError: "Couldn't reach Ask Vergeo. Check your connection and try again.",
+      networkError:
+        "Couldn't reach Ask Vergeo. Check your connection and try again.",
       viewProduct: "View product",
       viewEvent: "View event",
       viewVendor: "View shop",
@@ -116,8 +119,14 @@ const aiMessages = {
       nearMeNeedsLocation: "Share your location to see what's near you.",
     },
     faq: {
-      cod: { q: "Can I pay cash on delivery?", a: "Cash on delivery up to K500." },
-      escrow: { q: "Is my money safe?", a: "Held by Convergeo until delivery." },
+      cod: {
+        q: "Can I pay cash on delivery?",
+        a: "Cash on delivery up to K500.",
+      },
+      escrow: {
+        q: "Is my money safe?",
+        a: "Held by Convergeo until delivery.",
+      },
     },
     quota: {
       remainingToday:
@@ -141,33 +150,48 @@ const aiMessages = {
 
 function renderThread(initialQuery = "") {
   return render(
-    <NextIntlClientProvider locale="en" messages={aiMessages} onError={() => {}}>
+    <NextIntlClientProvider
+      locale="en"
+      messages={aiMessages}
+      onError={() => {}}
+    >
       <AskThread locale="en" initialQuery={initialQuery} />
     </NextIntlClientProvider>,
   );
 }
 
-function apiError(details: Record<string, unknown>, code = "ai_quota", message = "err"): ApiError {
+function apiError(
+  details: Record<string, unknown>,
+  code = "ai_quota",
+  message = "err",
+): ApiError {
   return new ApiError(code, message, { status: 429, details });
 }
 
 describe("extractErrorState", () => {
   it("reads quota details.i18n_key and signup_prompt_key", () => {
     const state = extractErrorState(
-      apiError({ i18n_key: "ai.quota.guestExceeded", signup_prompt_key: "ai.quota.signupPrompt" }),
+      apiError({
+        i18n_key: "ai.quota.guestExceeded",
+        signup_prompt_key: "ai.quota.signupPrompt",
+      }),
     );
     expect(state.messageKey).toBe("ai.quota.guestExceeded");
     expect(state.signupPromptKey).toBe("ai.quota.signupPrompt");
   });
 
   it("prefers details.message_key for rate-limit envelopes", () => {
-    const state = extractErrorState(apiError({ message_key: "ai.quota.rateLimited" }));
+    const state = extractErrorState(
+      apiError({ message_key: "ai.quota.rateLimited" }),
+    );
     expect(state.messageKey).toBe("ai.quota.rateLimited");
     expect(state.signupPromptKey).toBeNull();
   });
 
   it("maps network_error code to the network banner", () => {
-    const state = extractErrorState(new ApiError("network_error", "boom", { status: 0 }));
+    const state = extractErrorState(
+      new ApiError("network_error", "boom", { status: 0 }),
+    );
     expect(state.messageKey).toBe("ai.ask.networkError");
   });
 
@@ -180,7 +204,9 @@ describe("extractErrorState", () => {
 describe("QuotaBanner", () => {
   it("renders message only", () => {
     render(<QuotaBanner message="Slow down" />);
-    expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent("Slow down");
+    expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
+      "Slow down",
+    );
     expect(screen.queryByTestId("ask-signup-cta")).not.toBeInTheDocument();
   });
 
@@ -188,10 +214,17 @@ describe("QuotaBanner", () => {
     render(
       <QuotaBanner
         message="Out of questions"
-        signup={{ prompt: "Get 25 free", ctaLabel: "Sign up", href: "/en/login" }}
+        signup={{
+          prompt: "Get 25 free",
+          ctaLabel: "Sign up",
+          href: "/en/login",
+        }}
       />,
     );
-    expect(screen.getByTestId("ask-signup-cta")).toHaveAttribute("href", "/en/login");
+    expect(screen.getByTestId("ask-signup-cta")).toHaveAttribute(
+      "href",
+      "/en/login",
+    );
   });
 });
 
@@ -267,16 +300,26 @@ describe("AskThread", () => {
     await user.type(screen.getByLabelText("Your question"), "fridge");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() => expect(screen.getByTestId("ask-answer")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("ask-answer")).toBeInTheDocument(),
+    );
     expect(request).toHaveBeenCalledWith(
       "/ask",
-      expect.objectContaining({ method: "POST", body: JSON.stringify({ query: "fridge" }) }),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ query: "fridge" }),
+      }),
     );
     const cards = screen.getAllByTestId("ask-citation-card");
     expect(cards).toHaveLength(2);
-    expect(cards[0]).toHaveAttribute("href", "/en/p/solar-fridge?listing=lst-1");
+    expect(cards[0]).toHaveAttribute(
+      "href",
+      "/en/p/solar-fridge?listing=lst-1",
+    );
     expect(cards[1]).toHaveAttribute("href", "/en/e/expo");
-    expect(screen.getByTestId("ask-answer")).toHaveTextContent("AI answers are suggestions");
+    expect(screen.getByTestId("ask-answer")).toHaveTextContent(
+      "AI answers are suggestions",
+    );
   });
 
   it("shows the refusal copy with no citation cards", async () => {
@@ -294,7 +337,9 @@ describe("AskThread", () => {
     await user.type(screen.getByLabelText("Your question"), "spaceship");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() => expect(screen.getByTestId("ask-refusal")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("ask-refusal")).toBeInTheDocument(),
+    );
     expect(screen.getByTestId("ask-refusal")).toHaveTextContent(
       "I couldn't find that on Convergeo.",
     );
@@ -304,29 +349,41 @@ describe("AskThread", () => {
   it("renders the guest-exceeded banner with a signup CTA", async () => {
     const user = userEvent.setup();
     request.mockRejectedValueOnce(
-      apiError({ i18n_key: "ai.quota.guestExceeded", signup_prompt_key: "ai.quota.signupPrompt" }),
+      apiError({
+        i18n_key: "ai.quota.guestExceeded",
+        signup_prompt_key: "ai.quota.signupPrompt",
+      }),
     );
 
     renderThread();
     await user.type(screen.getByLabelText("Your question"), "phones");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() => expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument(),
+    );
     expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
       "You've used your free guest questions.",
     );
-    expect(screen.getByTestId("ask-signup-cta")).toHaveAttribute("href", "/en/login?next=/en/ask");
+    expect(screen.getByTestId("ask-signup-cta")).toHaveAttribute(
+      "href",
+      "/en/login?next=/en/ask",
+    );
   });
 
   it("renders the rate-limit banner from details.message_key", async () => {
     const user = userEvent.setup();
-    request.mockRejectedValueOnce(apiError({ message_key: "ai.quota.rateLimited" }));
+    request.mockRejectedValueOnce(
+      apiError({ message_key: "ai.quota.rateLimited" }),
+    );
 
     renderThread();
     await user.type(screen.getByLabelText("Your question"), "phones");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() => expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument(),
+    );
     expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
       "Too many questions too quickly.",
     );
@@ -343,8 +400,12 @@ describe("AskThread", () => {
     await user.type(screen.getByLabelText("Your question"), "phones");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() => expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument());
-    expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent("Couldn't reach Ask Vergeo.");
+    await waitFor(() =>
+      expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
+      "Couldn't reach Ask Vergeo.",
+    );
   });
 
   it("auto-submits the seeded ?q= query once", async () => {
@@ -394,7 +455,9 @@ describe("ZeroResults Ask Vergeo entry", () => {
 describe("AskVoiceButton", () => {
   it("renders nothing when the Web Speech API is unsupported", () => {
     removeSpeechRecognition();
-    const { container } = render(<AskVoiceButton labels={voiceLabels} onTranscript={() => {}} />);
+    const { container } = render(
+      <AskVoiceButton labels={voiceLabels} onTranscript={() => {}} />,
+    );
     expect(screen.queryByTestId("ask-voice-button")).not.toBeInTheDocument();
     expect(container).toBeEmptyDOMElement();
   });
@@ -413,7 +476,10 @@ describe("AskVoiceButton", () => {
     const recognition = instances[0]!;
     expect(recognition.start).toHaveBeenCalled();
     expect(["en-GB", "en-US"]).toContain(recognition.lang);
-    expect(screen.getByTestId("ask-voice-button")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("ask-voice-button")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     recognition.onresult?.({
       resultIndex: 0,
@@ -454,7 +520,9 @@ describe("Quota display", () => {
   it("parseQuota rejects malformed payloads", () => {
     expect(parseQuota(null)).toBeNull();
     expect(parseQuota({ tier: "guest", daily_limit: "3" })).toBeNull();
-    expect(parseQuota({ tier: "guest", daily_limit: 3, used: 4, remaining: -1 })).toEqual({
+    expect(
+      parseQuota({ tier: "guest", daily_limit: 3, used: 4, remaining: -1 }),
+    ).toEqual({
       tier: "guest",
       daily_limit: 3,
       used: 4,
@@ -480,8 +548,12 @@ describe("Quota display", () => {
     await user.type(screen.getByLabelText("Your question"), "phones");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() => expect(screen.getByTestId("ask-quota-meter")).toBeInTheDocument());
-    expect(screen.getByTestId("ask-quota-meter")).toHaveTextContent("2 AI questions left today");
+    await waitFor(() =>
+      expect(screen.getByTestId("ask-quota-meter")).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("ask-quota-meter")).toHaveTextContent(
+      "2 AI questions left today",
+    );
   });
 });
 
@@ -511,15 +583,29 @@ describe("Workflow + fallback rendering", () => {
     });
 
     renderThread();
-    await user.type(screen.getByLabelText("Your question"), "how much is the itel a70");
+    await user.type(
+      screen.getByLabelText("Your question"),
+      "how much is the itel a70",
+    );
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() => expect(screen.getByTestId("ask-answer")).toBeInTheDocument());
-    expect(screen.getByTestId("ask-answer")).toHaveAttribute("data-source", "workflow");
-    expect(screen.getByTestId("ask-answer")).toHaveTextContent("Itel A70 costs K4,500.00.");
-    expect(screen.getByTestId("ask-citation-card")).toHaveTextContent("In stock");
+    await waitFor(() =>
+      expect(screen.getByTestId("ask-answer")).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("ask-answer")).toHaveAttribute(
+      "data-source",
+      "workflow",
+    );
+    expect(screen.getByTestId("ask-answer")).toHaveTextContent(
+      "Itel A70 costs K4,500.00.",
+    );
+    expect(screen.getByTestId("ask-citation-card")).toHaveTextContent(
+      "In stock",
+    );
     // Disclaimer is only for model-written answers.
-    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent("AI answers are suggestions");
+    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent(
+      "AI answers are suggestions",
+    );
   });
 
   it("renders the AI-unavailable fallback: note, ranked results and FAQ", async () => {
@@ -548,15 +634,22 @@ describe("Workflow + fallback rendering", () => {
       message_key: null,
       source: "fallback",
       notice_key: "ai.fallback.aiUnavailable",
-      faq: [{ id: "cod", question_key: "ai.faq.cod.q", answer_key: "ai.faq.cod.a" }],
+      faq: [
+        { id: "cod", question_key: "ai.faq.cod.q", answer_key: "ai.faq.cod.a" },
+      ],
       quota: { tier: "guest", daily_limit: 3, used: 0, remaining: 3 },
     });
 
     renderThread();
-    await user.type(screen.getByLabelText("Your question"), "phone cash on delivery");
+    await user.type(
+      screen.getByLabelText("Your question"),
+      "phone cash on delivery",
+    );
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() => expect(screen.getByTestId("ask-answer")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("ask-answer")).toBeInTheDocument(),
+    );
     expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
       "Our AI assistant is resting right now.",
     );
@@ -564,11 +657,19 @@ describe("Workflow + fallback rendering", () => {
     const cards = screen.getAllByTestId("ask-citation-card");
     expect(cards).toHaveLength(2);
     expect(cards[1]).toHaveAttribute("href", "/en/v/kabwata-phones");
-    expect(screen.getByTestId("ask-faq")).toHaveTextContent("Can I pay cash on delivery?");
-    expect(screen.getByTestId("ask-faq")).toHaveTextContent("Cash on delivery up to K500.");
+    expect(screen.getByTestId("ask-faq")).toHaveTextContent(
+      "Can I pay cash on delivery?",
+    );
+    expect(screen.getByTestId("ask-faq")).toHaveTextContent(
+      "Cash on delivery up to K500.",
+    );
     // The fallback note replaces the model text; no AI disclaimer.
-    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent("closest matches on Vergeo5");
-    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent("AI answers are suggestions");
+    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent(
+      "closest matches on Vergeo5",
+    );
+    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent(
+      "AI answers are suggestions",
+    );
   });
 
   it("renders the guest daily-quota fallback with a signup CTA", async () => {
@@ -590,17 +691,23 @@ describe("Workflow + fallback rendering", () => {
     await user.type(screen.getByLabelText("Your question"), "phones");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() => expect(screen.getByTestId("ask-signup-cta")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("ask-signup-cta")).toBeInTheDocument(),
+    );
     expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
       "You've used today's free guest questions.",
     );
-    expect(screen.getByTestId("ask-quota-meter")).toHaveTextContent("No AI questions left today");
+    expect(screen.getByTestId("ask-quota-meter")).toHaveTextContent(
+      "No AI questions left today",
+    );
   });
 
   it("offers 'Use my location' for near-me questions and re-asks with rounded coords", async () => {
     const user = userEvent.setup();
     const getCurrentPosition = vi.fn((success: PositionCallback) =>
-      success({ coords: { latitude: -15.416712, longitude: 28.283321 } } as GeolocationPosition),
+      success({
+        coords: { latitude: -15.416712, longitude: 28.283321 },
+      } as GeolocationPosition),
     );
     Object.defineProperty(navigator, "geolocation", {
       configurable: true,
@@ -637,7 +744,11 @@ describe("Workflow + fallback rendering", () => {
     expect(request).toHaveBeenLastCalledWith(
       "/ask",
       expect.objectContaining({
-        body: JSON.stringify({ query: "phones near me", lat: -15.417, lng: 28.283 }),
+        body: JSON.stringify({
+          query: "phones near me",
+          lat: -15.417,
+          lng: 28.283,
+        }),
       }),
     );
   });

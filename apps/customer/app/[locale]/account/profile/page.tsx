@@ -1,11 +1,14 @@
 import { LOCALES, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { buildPageMetadata } from "../../../../lib/page-title";
 import { fetchStorefrontConfig } from "../../../../lib/storefront-config";
 import { createAccountApiClient, type Birthday } from "../_components/account-api";
 import { getAccountAccessToken, getAccountTranslator } from "../_components/account-server";
 import { BirthdayForm, type BirthdayLabels } from "../_components/birthday-form";
 import { ProfileForm } from "../_components/profile-form";
+
+import type { Metadata } from "next";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -13,6 +16,15 @@ type PageProps = {
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "account", "profile.title");
 }
 
 export default async function AccountProfilePage({ params }: PageProps) {

@@ -20,7 +20,10 @@ type HomeTrustStripProps = {
 };
 
 const ITEMS: Array<{
-  key: keyof Pick<HomeTrustStripLabels, "sellers" | "fulfillment" | "returns" | "escrow">;
+  key: keyof Pick<
+    HomeTrustStripLabels,
+    "sellers" | "fulfillment" | "returns" | "escrow"
+  >;
   testId: string;
 }> = [
   { key: "sellers", testId: "home-trust-sellers" },
@@ -31,7 +34,8 @@ const ITEMS: Array<{
 
 /** 24px stroke glyphs — inline so the strip costs no icon-pack bytes. */
 const ICON_PATHS: Record<(typeof ITEMS)[number]["key"], string> = {
-  sellers: "M12 3 4.5 6v5.5c0 4.4 3.1 8.2 7.5 9.5 4.4-1.3 7.5-5.1 7.5-9.5V6L12 3Zm-3 9 2 2 4-4.5",
+  sellers:
+    "M12 3 4.5 6v5.5c0 4.4 3.1 8.2 7.5 9.5 4.4-1.3 7.5-5.1 7.5-9.5V6L12 3Zm-3 9 2 2 4-4.5",
   fulfillment:
     "M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm10 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
   returns: "M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4",
@@ -39,7 +43,11 @@ const ICON_PATHS: Record<(typeof ITEMS)[number]["key"], string> = {
 };
 
 export function HomeTrustStrip({ labels }: HomeTrustStripProps) {
-  const escrowSteps = [labels.escrowStep1, labels.escrowStep2, labels.escrowStep3];
+  const escrowSteps = [
+    labels.escrowStep1,
+    labels.escrowStep2,
+    labels.escrowStep3,
+  ];
 
   return (
     <section

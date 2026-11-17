@@ -23,7 +23,10 @@ import {
   shouldShowSampleListingBadge,
 } from "../demo-listing";
 import { offerBadgeLabel, type OfferBadgeLabels } from "../offers/offer-badge";
-
+import {
+  formatMadeToOrderBadge,
+  type MadeToOrderLabels,
+} from "../sale-quantity";
 
 import {
   ListingLogisticsPills,
@@ -74,6 +77,8 @@ export type ListingCardLabels = {
   logistics?: LogisticsPillLabels;
   /** catalog.delivery.* — renders "Delivery in Lusaka tomorrow" style line. */
   delivery?: DeliveryEstimateLabels;
+  /** catalog.madeToOrder.* — renders the "Made to order · ready within a week" badge. */
+  madeToOrder?: MadeToOrderLabels;
   /** catalog.offers.badge.* — W8 offer pill ("Buy 2 get 1 free"). */
   offerBadge?: OfferBadgeLabels;
 };
@@ -279,6 +284,14 @@ export function ListingCard({
       )
     : null;
 
+  const madeToOrderLine = labels.madeToOrder
+    ? formatMadeToOrderBadge(
+        listing.fulfilmentMode,
+        listing.leadTimeDays,
+        labels.madeToOrder,
+      )
+    : null;
+
   const card = (
     <>
       <ProductCard
@@ -302,8 +315,19 @@ export function ListingCard({
         unavailable={!listing.inStock}
         mediaEmptyLabel={labels.mediaEmpty}
         meta={
-          conditionLabel || labels.logistics || deliveryLine ? (
+          conditionLabel ||
+          labels.logistics ||
+          deliveryLine ||
+          madeToOrderLine ? (
             <div className="flex flex-col gap-1.5">
+              {madeToOrderLine ? (
+                <span
+                  className="font-semibold text-text-2"
+                  data-testid="listing-card-made-to-order"
+                >
+                  {madeToOrderLine}
+                </span>
+              ) : null}
               {deliveryLine ? (
                 <span
                   className="font-semibold text-success"

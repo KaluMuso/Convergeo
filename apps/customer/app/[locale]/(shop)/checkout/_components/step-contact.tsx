@@ -78,7 +78,11 @@ export function ContactStepSkeleton({
   showIntro?: boolean;
 }) {
   return (
-    <div className="space-y-4" data-testid="checkout-loading-skeleton" aria-busy="true">
+    <div
+      className="space-y-4"
+      data-testid="checkout-loading-skeleton"
+      aria-busy="true"
+    >
       <p className="sr-only" aria-live="polite">
         {loadingLabel}
       </p>
@@ -103,7 +107,11 @@ export function ContactStepSkeleton({
   );
 }
 
-export function StepContact({ labels, onComplete, showIntro = true }: StepContactProps) {
+export function StepContact({
+  labels,
+  onComplete,
+  showIntro = true,
+}: StepContactProps) {
   const { session, loading: sessionLoading } = useSession();
   const [phase, setPhase] = useState<"phone" | "otp">("phone");
   const [countryCode] = useState(DEFAULT_COUNTRY_CODE);
@@ -125,7 +133,10 @@ export function StepContact({ labels, onComplete, showIntro = true }: StepContac
   /** Reuse an accepted session on post-auth retries; never resubmit a spent OTP. */
   const acceptedSessionRef = useRef<CustomerSession | null>(null);
 
-  const completeContactStep = async (accessToken: string, contactPhone?: string) => {
+  const completeContactStep = async (
+    accessToken: string,
+    contactPhone?: string,
+  ) => {
     const client = createApiClient({
       baseUrl: getApiBaseUrl(),
       getToken: () => accessToken,
@@ -163,9 +174,13 @@ export function StepContact({ labels, onComplete, showIntro = true }: StepContac
     return (
       <div className="space-y-2">
         {showIntro ? (
-          <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
+          <h2 className="font-display text-h2 text-display-ink">
+            {labels.title}
+          </h2>
         ) : null}
-        <p className="font-body text-sm text-text-2">{labels.skippedLoggedIn}</p>
+        <p className="font-body text-sm text-text-2">
+          {labels.skippedLoggedIn}
+        </p>
       </div>
     );
   }
@@ -194,7 +209,12 @@ export function StepContact({ labels, onComplete, showIntro = true }: StepContac
       if (error) {
         const parsed = parseAuthError(error);
         if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-          setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
+          setErrorMessage(
+            labels.throttled.replace(
+              "{seconds}",
+              String(parsed.retryAfterSeconds),
+            ),
+          );
         } else {
           setErrorMessage(labels.sendFailed);
         }
@@ -243,7 +263,10 @@ export function StepContact({ labels, onComplete, showIntro = true }: StepContac
             setErrorMessage(labels.expired);
           } else if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
             setErrorMessage(
-              labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)),
+              labels.throttled.replace(
+                "{seconds}",
+                String(parsed.retryAfterSeconds),
+              ),
             );
           } else {
             setErrorMessage(labels.generic);
@@ -267,7 +290,10 @@ export function StepContact({ labels, onComplete, showIntro = true }: StepContac
         acceptedSessionRef.current = acceptedSession;
       }
 
-      const readySession = await reconcileCustomerSession(acceptedSession, retryReconciliation);
+      const readySession = await reconcileCustomerSession(
+        acceptedSession,
+        retryReconciliation,
+      );
       if (!mountedRef.current) return;
       if (!readySession?.access_token) throw new Error("auth.session_required");
       await completeContactStep(readySession.access_token, phone);
@@ -292,7 +318,10 @@ export function StepContact({ labels, onComplete, showIntro = true }: StepContac
     return (
       <div className="space-y-4">
         {showIntro ? <ContactStepIntro labels={labels} /> : null}
-        <form className="flex flex-col gap-4" onSubmit={(event) => void handleSendOtp(event)}>
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => void handleSendOtp(event)}
+        >
           <FormField
             label={labels.phoneLabel}
             helpText={labels.phoneHelp}
@@ -324,7 +353,9 @@ export function StepContact({ labels, onComplete, showIntro = true }: StepContac
                 value={nationalNumber}
                 error={Boolean(errorMessage)}
                 onChange={(event) => {
-                  setNationalNumber(normalizeNationalNumber(event.target.value));
+                  setNationalNumber(
+                    normalizeNationalNumber(event.target.value),
+                  );
                 }}
               />
             </div>
@@ -356,7 +387,9 @@ export function StepContact({ labels, onComplete, showIntro = true }: StepContac
           disabled={loading}
           ariaLabel={labels.otpAria}
           getDigitAriaLabel={(index) =>
-            labels.otpDigit.replace("{position}", String(index + 1)).replace("{total}", "6")
+            labels.otpDigit
+              .replace("{position}", String(index + 1))
+              .replace("{total}", "6")
           }
         />
         {errorMessage ? (

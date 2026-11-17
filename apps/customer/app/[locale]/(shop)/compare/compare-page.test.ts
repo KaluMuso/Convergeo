@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import { shouldShowComparison } from "../_components/pdp/comparison-visibility";
 
 /** Mirrors resolveProductSlug in page.tsx for unit coverage. */
-function resolveProductSlug(query: { product?: string; slug?: string }): string | null {
+function resolveProductSlug(query: {
+  product?: string;
+  slug?: string;
+}): string | null {
   const raw = query.product?.trim() || query.slug?.trim();
   if (!raw) {
     return null;

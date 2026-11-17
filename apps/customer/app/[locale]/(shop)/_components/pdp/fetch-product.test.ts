@@ -45,7 +45,10 @@ describe("fetchProduct", () => {
     const result = await fetchProduct("itel-a70");
     expect(result).toEqual({
       kind: "product",
-      data: expect.objectContaining({ slug: "itel-a70", name: "Itel A70 Smartphone" }),
+      data: expect.objectContaining({
+        slug: "itel-a70",
+        name: "Itel A70 Smartphone",
+      }),
     });
     expect(fetch).toHaveBeenCalledWith(
       "https://api.example.test/products/itel-a70",
@@ -64,7 +67,9 @@ describe("fetchProduct", () => {
       }),
     );
 
-    await expect(fetchProduct("does-not-exist")).resolves.toEqual({ kind: "not_found" });
+    await expect(fetchProduct("does-not-exist")).resolves.toEqual({
+      kind: "not_found",
+    });
   });
 
   it("maps API 5xx / network-class failures to unavailable (not a soft-404)", async () => {
@@ -78,7 +83,9 @@ describe("fetchProduct", () => {
       }),
     );
 
-    await expect(fetchProduct("itel-a70")).resolves.toEqual({ kind: "unavailable" });
+    await expect(fetchProduct("itel-a70")).resolves.toEqual({
+      kind: "unavailable",
+    });
   });
 
   it("follows API slug redirect for UUID / merged identities", async () => {
@@ -92,7 +99,9 @@ describe("fetchProduct", () => {
       }),
     );
 
-    await expect(fetchProduct("a0000133-0000-4000-8000-000000000001")).resolves.toEqual({
+    await expect(
+      fetchProduct("a0000133-0000-4000-8000-000000000001"),
+    ).resolves.toEqual({
       kind: "redirect",
       slug: "itel-a70",
     });

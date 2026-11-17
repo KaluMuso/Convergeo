@@ -26,7 +26,9 @@ export async function fetchFeedPage(
   );
   if (!url) throw new Error("api_unavailable");
   return fetchJson<HomeFeedPage>(url, {
-    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    headers: accessToken
+      ? { Authorization: `Bearer ${accessToken}` }
+      : undefined,
   });
 }
 
@@ -42,7 +44,12 @@ export function FeedPages({
   return (
     <>
       {sections.filter(isRenderableSection).map((section) => (
-        <FeedSectionView key={section.id} section={section} locale={locale} labels={labels} />
+        <FeedSectionView
+          key={section.id}
+          section={section}
+          locale={locale}
+          labels={labels}
+        />
       ))}
     </>
   );

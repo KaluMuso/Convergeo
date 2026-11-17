@@ -43,36 +43,53 @@ describe("Phase-1 bem/nya homepage trust + hero escrow", () => {
   it.each([
     ["bem", bemCatalog],
     ["nya", nyaCatalog],
-  ] as const)("%s trust strip uses vernacular (not English)", (locale, messages) => {
-    render(<HomeTrustStrip labels={trustLabels(messages, locale)} />);
-    expect(screen.getByTestId("home-trust-escrow")).toHaveTextContent(messages.home.trust.escrow);
-    expect(screen.getByTestId("home-trust-escrow")).not.toHaveTextContent(
-      "When online payment is available",
-    );
-    expect(messages.home.hero.escrowStep1).not.toBe("You pay");
-    expect(messages.home.hero.escrowStep2).toContain("Convergeo");
-    expect(messages.home.hero.escrowStep3).not.toBe("Released on delivery");
-  });
+  ] as const)(
+    "%s trust strip uses vernacular (not English)",
+    (locale, messages) => {
+      render(<HomeTrustStrip labels={trustLabels(messages, locale)} />);
+      expect(screen.getByTestId("home-trust-escrow")).toHaveTextContent(
+        messages.home.trust.escrow,
+      );
+      expect(screen.getByTestId("home-trust-escrow")).not.toHaveTextContent(
+        "When online payment is available",
+      );
+      // COD-only pilot: the ladder is order -> deliver -> pay on arrival, never "Held by ...".
+      for (const step of [
+        messages.home.hero.escrowStep1,
+        messages.home.hero.escrowStep2,
+        messages.home.hero.escrowStep3,
+      ]) {
+        expect(step.length).toBeGreaterThan(0);
+        expect(step).not.toMatch(/held by|released on delivery/i);
+      }
+    },
+  );
 });
 
 describe("Phase-1 bem/nya PDP purchase copy", () => {
   it.each([
     ["bem", bemCatalog],
     ["nya", nyaCatalog],
-  ] as const)("%s buy-box / seller / returns / escrow strings resolve", (locale, messages) => {
-    const t = createTranslator({
-      locale,
-      messages: { catalog: messages },
-      namespace: "catalog",
-    });
-    expect(t("pdp.buyBox.addToCart")).toBe(messages.pdp.buyBox.addToCart);
-    expect(t("pdp.buyBox.addToCart")).not.toBe("Add to cart");
-    expect(t("pdp.buyBox.quantityLabel")).toBe(messages.pdp.buyBox.quantityLabel);
-    expect(t("pdp.vendor.heading")).toBe(messages.pdp.vendor.heading);
-    expect(t("pdp.trust.returns")).toBe(messages.pdp.trust.returns);
-    expect(t("pdp.trust.escrow")).toContain("Convergeo");
-    expect(formatK(123456, { locale: `${locale}-ZM` })).toMatch(/^K/);
-  });
+  ] as const)(
+    "%s buy-box / seller / returns / escrow strings resolve",
+    (locale, messages) => {
+      const t = createTranslator({
+        locale,
+        messages: { catalog: messages },
+        namespace: "catalog",
+      });
+      expect(t("pdp.buyBox.addToCart")).toBe(messages.pdp.buyBox.addToCart);
+      expect(t("pdp.buyBox.addToCart")).not.toBe("Add to cart");
+      expect(t("pdp.buyBox.quantityLabel")).toBe(
+        messages.pdp.buyBox.quantityLabel,
+      );
+      expect(t("pdp.vendor.heading")).toBe(messages.pdp.vendor.heading);
+      expect(t("pdp.trust.returns")).toBe(messages.pdp.trust.returns);
+      expect(t("pdp.trust.escrow")).toBe(messages.pdp.trust.escrow);
+      expect(t("pdp.trust.escrow")).not.toMatch(/vergeo5/i);
+      expect(formatK(123456, { locale: `${locale}-ZM` })).toMatch(/^K/);
+    },
+  );
 });
 
 describe("Phase-1 bem/nya empty cart", () => {
@@ -92,8 +109,12 @@ describe("Phase-1 bem/nya empty cart", () => {
         data-testid="cart-empty-state"
       />,
     );
-    expect(screen.getByTestId("cart-empty-state")).toHaveTextContent(messages.cart.emptyTitle);
-    expect(screen.getByTestId("cart-empty-state")).toHaveTextContent(messages.cart.emptyBody);
+    expect(screen.getByTestId("cart-empty-state")).toHaveTextContent(
+      messages.cart.emptyTitle,
+    );
+    expect(screen.getByTestId("cart-empty-state")).toHaveTextContent(
+      messages.cart.emptyBody,
+    );
     expect(screen.queryByText("Your cart is empty")).not.toBeInTheDocument();
   });
 });
@@ -102,17 +123,22 @@ describe("Phase-1 bem/nya payment-disabled copy", () => {
   it.each([
     ["bem", bemCheckout],
     ["nya", nyaCheckout],
-  ] as const)("%s paymentsDisabled is vernacular and distinct from EN", (locale, messages) => {
-    const t = createTranslator({
-      locale,
-      messages: { checkout: messages },
-      namespace: "checkout",
-    });
-    const text = t("checkout.payment.paymentsDisabled");
-    expect(text).toBe(messages.checkout.payment.paymentsDisabled);
-    expect(text).not.toBe(
-      "Online payment is temporarily unavailable. Please use Cash on Delivery where available, or try again shortly.",
-    );
-    expect(text.toLowerCase()).toMatch(/cash|delivery|kod|lipil|payment|online/);
-  });
+  ] as const)(
+    "%s paymentsDisabled is vernacular and distinct from EN",
+    (locale, messages) => {
+      const t = createTranslator({
+        locale,
+        messages: { checkout: messages },
+        namespace: "checkout",
+      });
+      const text = t("checkout.payment.paymentsDisabled");
+      expect(text).toBe(messages.checkout.payment.paymentsDisabled);
+      expect(text).not.toBe(
+        "Online payment is temporarily unavailable. Please use Cash on Delivery where available, or try again shortly.",
+      );
+      expect(text.toLowerCase()).toMatch(
+        /cash|delivery|kod|lipil|payment|online/,
+      );
+    },
+  );
 });

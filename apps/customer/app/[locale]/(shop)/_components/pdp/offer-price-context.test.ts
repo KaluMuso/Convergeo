@@ -8,7 +8,9 @@ describe("buildOfferPriceContext", () => {
   });
 
   it("labels the cheapest selected offer", () => {
-    expect(buildOfferPriceContext(90_000, [90_000, 120_000])).toEqual({ kind: "lowest" });
+    expect(buildOfferPriceContext(90_000, [90_000, 120_000])).toEqual({
+      kind: "lowest",
+    });
   });
 
   it("returns a real ngwee delta when the selected offer is higher", () => {

@@ -29,6 +29,7 @@ from app.services.search.query_builder import (
     normalize_page_size,
     paginate,
 )
+from app.services.search.relevance import apply_relevance_guard, has_active_offer
 from app.services.search.search_facets import (
     SearchFacets,
     call_search_query_facets,
@@ -494,6 +495,11 @@ async def run_search(
     # Resolve/filter before totals and pagination so stale listing documents do
     # not inflate counts or leave a short page after enrichment.
     hits = attach_route_slugs(client, hits)
+    # Relevance guard: unrelated fuzzy/semantic neighbours (e.g. event tiers for
+    # "t-shirt") and catalogue products with no active offer are not results.
+    candidates_before_guard = len(hits)
+    hits = apply_relevance_guard(hits, query=trimmed, expanded_query=expanded_query)
+    guard_dropped_hits = len(hits) != candidates_before_guard
 
     kind_totals: SearchKindTotals | None = None
     if include_kind_totals and trimmed:
@@ -511,11 +517,17 @@ async def run_search(
             include_wholesale=include_wholesale,
         )
 
-        facets = call_search_query_facets(
-            client,
-            query=trimmed,
-            embedding=embedding,
-            filters=facet_filters,
+        # The facet RPC scores the raw candidate set; once the guard has removed hits
+        # its counts would disagree with the visible results, so derive them locally.
+        facets = (
+            None
+            if guard_dropped_hits
+            else call_search_query_facets(
+                client,
+                query=trimmed,
+                embedding=embedding,
+                filters=facet_filters,
+            )
         )
         if facets is None:
             facets = compute_search_facets(
@@ -594,6 +606,7 @@ def run_suggest(
         hits = drop_wholesale_listing_hits(client, hits)
     hits = drop_demo_listing_hits(client, hits)
     hits = attach_route_slugs(client, hits)
+    hits = [hit for hit in hits if has_active_offer(hit)]
 
     suggestions: list[SuggestItem] = []
     seen_titles: set[str] = set()

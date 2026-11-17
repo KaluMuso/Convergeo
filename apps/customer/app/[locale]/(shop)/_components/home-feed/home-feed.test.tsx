@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { createTranslator } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,8 +39,12 @@ vi.mock("../../../../../lib/customer-session", () => ({
 
 const fetchFeedPage = vi.fn();
 vi.mock("./feed-pages", async () => {
-  const actual = await vi.importActual<typeof import("./feed-pages")>("./feed-pages");
-  return { ...actual, fetchFeedPage: (...args: unknown[]) => fetchFeedPage(...args) };
+  const actual =
+    await vi.importActual<typeof import("./feed-pages")>("./feed-pages");
+  return {
+    ...actual,
+    fetchFeedPage: (...args: unknown[]) => fetchFeedPage(...args),
+  };
 });
 
 const t = createTranslator({
@@ -104,7 +115,10 @@ class FakeObserver {
   observe() {}
   disconnect() {}
   trigger() {
-    this.cb([{ isIntersecting: true } as IntersectionObserverEntry], this as never);
+    this.cb(
+      [{ isIntersecting: true } as IntersectionObserverEntry],
+      this as never,
+    );
   }
 }
 
@@ -122,9 +136,15 @@ afterEach(() => {
 
 describe("feed-types helpers", () => {
   it("resolves admin text before i18n keys", () => {
-    expect(resolveSectionTitle(section({}), labels)).toBe("Cheap finds under K100");
-    expect(resolveSectionTitle(section({ title: "Custom" }), labels)).toBe("Custom");
-    expect(resolveSectionTitle(section({ title_key: "unknown.key" }), labels)).toBeNull();
+    expect(resolveSectionTitle(section({}), labels)).toBe(
+      "Cheap finds under K100",
+    );
+    expect(resolveSectionTitle(section({ title: "Custom" }), labels)).toBe(
+      "Custom",
+    );
+    expect(
+      resolveSectionTitle(section({ title_key: "unknown.key" }), labels),
+    ).toBeNull();
   });
 
   it("locale-prefixes internal links and passes external through", () => {
@@ -135,7 +155,9 @@ describe("feed-types helpers", () => {
 
   it("treats empty sections and creative-less ad slots as non-renderable", () => {
     expect(isRenderableSection(section({}))).toBe(false);
-    expect(isRenderableSection(section({ section_type: "ad_slot", layout: "ad" }))).toBe(false);
+    expect(
+      isRenderableSection(section({ section_type: "ad_slot", layout: "ad" })),
+    ).toBe(false);
     expect(isRenderableSection(section({ listings: [listing] }))).toBe(true);
   });
 });
@@ -143,10 +165,19 @@ describe("feed-types helpers", () => {
 describe("FeedSectionView", () => {
   it("renders a listing rail with localized view-all", () => {
     render(
-      <FeedSectionView section={section({ listings: [listing] })} locale="en" labels={labels} />,
+      <FeedSectionView
+        section={section({ listings: [listing] })}
+        locale="en"
+        labels={labels}
+      />,
     );
-    expect(screen.getByRole("heading", { name: "Cheap finds under K100" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: labels.viewAll })).toHaveAttribute("href", "/en/c/all");
+    expect(
+      screen.getByRole("heading", { name: "Cheap finds under K100" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: labels.viewAll })).toHaveAttribute(
+      "href",
+      "/en/c/all",
+    );
   });
 
   it("marks sponsored placements accessibly and counts impression + click", () => {
@@ -169,7 +200,9 @@ describe("FeedSectionView", () => {
     vi.runAllTimers();
     vi.useRealTimers();
     const bodies = sendBeacon.mock.calls.map((call) => (call as unknown[])[0]);
-    expect(bodies.every((url) => url === "https://api.test/home/ads/events")).toBe(true);
+    expect(
+      bodies.every((url) => url === "https://api.test/home/ads/events"),
+    ).toBe(true);
     expect(sendBeacon).toHaveBeenCalled();
   });
 
@@ -189,14 +222,23 @@ describe("HomeFeed infinite loading", () => {
   it("loads the next page when the sentinel intersects and shows an end state", async () => {
     fetchFeedPage.mockResolvedValueOnce({
       sections: [
-        section({ id: "s2", key: "trending_now", title: "Trending", listings: [listing] }),
+        section({
+          id: "s2",
+          key: "trending_now",
+          title: "Trending",
+          listings: [listing],
+        }),
       ],
       carousel: [],
       next_cursor: null,
     });
     render(
       <HomeFeed
-        page={{ sections: [section({ listings: [listing] })], carousel: [], next_cursor: "v1.4" }}
+        page={{
+          sections: [section({ listings: [listing] })],
+          carousel: [],
+          next_cursor: "v1.4",
+        }}
         locale="en"
         labels={labels}
       />,
@@ -204,7 +246,9 @@ describe("HomeFeed infinite loading", () => {
     expect(screen.queryByTestId("home-feed-end")).not.toBeInTheDocument();
     await act(async () => FakeObserver.instances.at(-1)?.trigger());
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Trending" })).toBeInTheDocument(),
+      expect(
+        screen.getByRole("heading", { name: "Trending" }),
+      ).toBeInTheDocument(),
     );
     expect(fetchFeedPage).toHaveBeenCalledWith("v1.4", "en", null);
     expect(screen.getByTestId("home-feed-end")).toHaveTextContent(labels.end);
@@ -214,13 +258,21 @@ describe("HomeFeed infinite loading", () => {
     fetchFeedPage.mockRejectedValueOnce(new Error("boom"));
     render(
       <HomeFeed
-        page={{ sections: [section({ listings: [listing] })], carousel: [], next_cursor: "v1.4" }}
+        page={{
+          sections: [section({ listings: [listing] })],
+          carousel: [],
+          next_cursor: "v1.4",
+        }}
         locale="en"
         labels={labels}
       />,
     );
     await act(async () => FakeObserver.instances.at(-1)?.trigger());
-    await waitFor(() => expect(screen.getByText(labels.loadError)).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: labels.retry })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(labels.loadError)).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByRole("button", { name: labels.retry }),
+    ).toBeInTheDocument();
   });
 });

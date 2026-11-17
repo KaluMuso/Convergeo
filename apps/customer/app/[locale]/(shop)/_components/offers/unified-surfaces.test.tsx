@@ -9,7 +9,10 @@ import checkoutMessages from "../../../../../../../packages/i18n/messages/en/che
 import { getCartItemCount } from "../cart/cart-store";
 import { TicketLinesGroup } from "../cart/vendor-groups";
 import { mapFeedListing } from "../home-feed/feed-types";
-import { SearchProductCard, type ResultsTabsLabels } from "../search/results-tabs";
+import {
+  SearchProductCard,
+  type ResultsTabsLabels,
+} from "../search/results-tabs";
 
 import { buildOfferBadgeLabels } from "./offer-badge";
 
@@ -47,7 +50,9 @@ const ticket: CartTicketLine = {
 
 const badgeLabels = buildOfferBadgeLabels((key) => {
   const [, , leaf] = key.split(".");
-  return catalogMessages.offers.badge[leaf as keyof typeof catalogMessages.offers.badge];
+  return catalogMessages.offers.badge[
+    leaf as keyof typeof catalogMessages.offers.badge
+  ];
 });
 
 describe("unified cart: event-ticket group", () => {
@@ -60,13 +65,17 @@ describe("unified cart: event-ticket group", () => {
         onRemove={vi.fn()}
       />,
     );
-    expect(screen.getByTestId("cart-type-event-tickets")).toHaveTextContent("Event tickets");
+    expect(screen.getByTestId("cart-type-event-tickets")).toHaveTextContent(
+      "Event tickets",
+    );
     const line = screen.getByTestId("cart-ticket-line-t1");
     expect(line).toHaveTextContent("Lusaka Jazz Night");
     expect(line).toHaveTextContent("VIP × 2");
     expect(line).toHaveTextContent("K201.67");
     expect(line).toHaveTextContent("K301.00");
-    expect(screen.getByTestId("cart-ticket-prepaid")).toHaveTextContent(/cash on delivery/i);
+    expect(screen.getByTestId("cart-ticket-prepaid")).toHaveTextContent(
+      /cash on delivery/i,
+    );
   });
 
   it("flags an unavailable line and removes a line by id", () => {
@@ -79,14 +88,25 @@ describe("unified cart: event-ticket group", () => {
         onRemove={onRemove}
       />,
     );
-    expect(screen.getByRole("status")).toHaveTextContent(/no longer be bought/i);
-    fireEvent.click(screen.getByRole("button", { name: "Remove tickets for Lusaka Jazz Night" }));
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /no longer be bought/i,
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Remove tickets for Lusaka Jazz Night",
+      }),
+    );
     expect(onRemove).toHaveBeenCalledWith("t1");
   });
 
   it("renders nothing without ticket lines", () => {
     const { container } = render(
-      <TicketLinesGroup lines={[]} unavailableIds={[]} labels={ticketLabels} onRemove={vi.fn()} />,
+      <TicketLinesGroup
+        lines={[]}
+        unavailableIds={[]}
+        labels={ticketLabels}
+        onRemove={vi.fn()}
+      />,
     );
     expect(container).toBeEmptyDOMElement();
   });
@@ -119,7 +139,12 @@ describe("offer badges on new card surfaces (server-side data)", () => {
       rating: 0,
       review_count: 0,
       distance_m: null,
-      offer_badge: { offer_id: "o", offer_type: "buy_n_pay_m", buy_n: 3, pay_m: 2 },
+      offer_badge: {
+        offer_id: "o",
+        offer_type: "buy_n_pay_m",
+        buy_n: 3,
+        pay_m: 2,
+      },
     });
     expect(listing.offerBadge?.offer_id).toBe("o");
     const plain = mapFeedListing({
@@ -166,7 +191,12 @@ describe("offer badges on new card surfaces (server-side data)", () => {
           boost_signals: {},
           rrf_score: 1,
           slug: "kettle",
-          offer_badge: { offer_id: "o", offer_type: "bxgy", buy_qty: 2, get_qty: 1 },
+          offer_badge: {
+            offer_id: "o",
+            offer_type: "bxgy",
+            buy_qty: 2,
+            get_qty: 1,
+          },
         }}
         locale="en"
         labels={labels}

@@ -18,7 +18,7 @@
     "lineTotal": "此行合计：{amount}",
     "unitPrice": "每件 {amount}",
     "unitPriceMeasured": "每 {quantity} {amount}",
-    "madeToOrderLeadTime": "按订单制作 · {days} 天内备妥",
+    "madeToOrderLeadTime": "按订单制作 · {when}备妥",
     "saleUnits": {
       "each": "件",
       "metre": "米",
@@ -101,7 +101,18 @@
       "addFailed": "无法添加这些门票，请重试。",
       "signInRequired": "请登录后再将门票加入购物车。"
     },
-    "mergeWholesaleTerms": "批发最低数量：{moq} 件。"
+    "mergeWholesaleTerms": "批发最低数量：{moq} 件。",
+    "codStep1": "您下单",
+    "codStep2": "我们配送",
+    "codStep3": "送达时付款",
+    "leadTimeWhen": {
+      "oneDay": "一天内",
+      "days": "约 {count} 天内",
+      "oneWeek": "一周内",
+      "weeks": "约 {count} 周内",
+      "oneMonth": "约一个月内",
+      "months": "约 {count} 个月内"
+    }
   },
   "checkout": {
     "pageTitle": "结账",
@@ -117,7 +128,7 @@
       "title": "您的联系方式",
       "subtitle": "我们将用它通过 WhatsApp 或 SMS 发送订单更新。",
       "phoneLabel": "手机号码",
-      "phoneHelp": "MTN、Airtel 或 Zamtel——我们将发送一次性验证码。",
+      "phoneHelp": "MTN、Airtel 或 Zamtel——我们将用它确认您的配送。",
       "phonePlaceholder": "97X XXX XXX",
       "countryCode": "国家/地区代码",
       "nationalNumber": "手机号码",
@@ -243,7 +254,7 @@
       "railMtn": "MTN",
       "railAirtel": "Airtel",
       "payerNumber": "付款人：{number}",
-      "escrowTitle": "您的款项如何受到保护",
+      "escrowTitle": "如何运作",
       "escrowStep1": "您付款",
       "escrowStep2": "由 Convergeo 保管",
       "escrowStep3": "送达后放款",
@@ -276,7 +287,9 @@
       "typeEventTickets": "活动门票",
       "ticketLine": "{type} × {qty}",
       "platformFee": "票务服务费",
-      "discount": "优惠券 {code}"
+      "discount": "优惠券 {code}",
+      "estimatedReady": "预计 {date} 备妥",
+      "estimatedDelivery": "预计 {date} 送达"
     },
     "pending": {
       "pageTitle": "批准付款",

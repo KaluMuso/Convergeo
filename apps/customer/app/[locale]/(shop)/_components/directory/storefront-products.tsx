@@ -4,7 +4,10 @@ import { useMemo, useState } from "react";
 
 import { ListingGrid, type CatalogListing } from "../plp/listing-grid";
 
-import { CompareOtherShopsLink, type StorefrontCompare } from "./business-home/compare-other-shops";
+import {
+  CompareOtherShopsLink,
+  type StorefrontCompare,
+} from "./business-home/compare-other-shops";
 
 export type StorefrontListing = CatalogListing & {
   categorySlug?: string | null;

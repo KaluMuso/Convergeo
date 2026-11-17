@@ -8,7 +8,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import catalogMessages from "../../../../../../../packages/i18n/messages/en/catalog.json";
 import { useSession } from "../../../../../lib/customer-session";
 
-import { RequestQuoteButton, type RequestQuoteLabels } from "./request-quote-button";
+import {
+  RequestQuoteButton,
+  type RequestQuoteLabels,
+} from "./request-quote-button";
 
 const labels = catalogMessages.pdp.requestQuote as RequestQuoteLabels;
 
@@ -66,7 +69,9 @@ describe("RequestQuoteButton", () => {
 
     await user.keyboard("{Escape}");
     await waitFor(() => {
-      expect(screen.queryByTestId("pdp-request-quote-dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("pdp-request-quote-dialog"),
+      ).not.toBeInTheDocument();
     });
     await waitFor(() => {
       expect(document.activeElement).toBe(cta);

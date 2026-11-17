@@ -8,7 +8,9 @@ describe("defaultFulfilment", () => {
   });
 
   it("falls back to pickup when the seller does not offer delivery", () => {
-    expect(defaultFulfilment({ delivery_eligible: true, delivery_offered: false })).toBe("pickup");
+    expect(
+      defaultFulfilment({ delivery_eligible: true, delivery_offered: false }),
+    ).toBe("pickup");
   });
 
   it("picks pickup when delivery is not eligible", () => {

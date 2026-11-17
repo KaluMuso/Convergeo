@@ -78,8 +78,15 @@ export function RelatedProducts({
   }
 
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-3" data-testid="pdp-related">
-      <h2 id={headingId} className="font-display text-lg font-semibold text-text">
+    <section
+      aria-labelledby={headingId}
+      className="flex flex-col gap-3"
+      data-testid="pdp-related"
+    >
+      <h2
+        id={headingId}
+        className="font-display text-lg font-semibold text-text"
+      >
         {labels.heading}
       </h2>
       <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 md:grid-cols-3 lg:grid-cols-4">
@@ -124,7 +131,9 @@ export function RelatedProducts({
                     />
                   </div>
                   <div className="space-y-1 p-3">
-                    <p className="truncate text-sm font-medium text-text">{item.name}</p>
+                    <p className="truncate text-sm font-medium text-text">
+                      {item.name}
+                    </p>
                     <p className="text-xs text-text-2">
                       {item.vendor_name || labels.vendorFallback}
                     </p>

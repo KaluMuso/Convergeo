@@ -90,7 +90,7 @@
   "home": {
     "meta": {
       "title": "发现赞比亚",
-      "description": "在 Convergeo 上选购商品、预订服务并发现赞比亚各地的活动。"
+      "description": "在 Convergeo 比较卖家、预订服务、发现赞比亚各地的活动——货到付款、卢萨卡配送、全国自提。"
     },
     "serviceBar": {
       "ariaLabel": "配送与自提说明",
@@ -106,10 +106,10 @@
         "title": "欢迎来到 Convergeo",
         "subtitle": "随着营销板块上线，您的可配置店面将显示在此处。"
       },
-      "escrowLine": "在线支付可用时提供托管保护——款项由 Convergeo 保管至送达后再放款。",
-      "escrowStep1": "您付款",
-      "escrowStep2": "由 Convergeo 保管",
-      "escrowStep3": "送达后放款",
+      "escrowLine": "订单送达时现金支付。线上支付即将推出。",
+      "escrowStep1": "您下单",
+      "escrowStep2": "我们配送",
+      "escrowStep3": "送达时付款",
       "carousel": {
         "previous": "上一张",
         "next": "下一张",
@@ -140,7 +140,7 @@
       "sellers": "可查看状态的卖家资料",
       "fulfillment": "商品支持时提供卢萨卡配送或全国自提",
       "returns": "符合条件的订单有清晰的退换与退款说明",
-      "escrow": "在线支付可用时，Convergeo 会保管您的款项直至送达"
+      "escrow": "送达时付款——试点期间货到付款"
     },
     "demo": {
       "sampleListing": "示例商品"
@@ -372,7 +372,7 @@
       "delivery": "该卖家支持配送",
       "pickup": "该卖家支持自提",
       "returns": "退货与退款",
-      "escrow": "在线支付可用时，Convergeo 会托管您的款项直至送达。符合条件的订单可能支持货到付款。"
+      "escrow": "符合条件的订单可货到付款。线上支付即将推出。"
     },
     "condition": {
       "new": "全新",
@@ -521,7 +521,7 @@
   "deals": {
     "metaTitle": "今日特惠",
     "title": "今日特惠",
-    "subtitle": "认证卖家的限时价格，托管支付更安心。",
+    "subtitle": "来自认证卖家的限时价格。货到付款。",
     "endsIn": "{time} 后结束",
     "ended": "已结束",
     "off": "-{percent}%",
@@ -578,5 +578,16 @@
       "added": "组合已加入购物车",
       "failed": "无法添加组合，请重试。"
     }
+  },
+  "madeToOrder": {
+    "when": {
+      "oneDay": "一天内",
+      "days": "约 {count} 天内",
+      "oneWeek": "一周内",
+      "weeks": "约 {count} 周内",
+      "oneMonth": "约一个月内",
+      "months": "约 {count} 个月内"
+    },
+    "badge": "按订单制作 · {when}备妥"
   }
 }

@@ -8,7 +8,10 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
-import { catalogDeliveryLabels } from "../_components/plp/delivery-labels";
+import {
+  catalogDeliveryLabels,
+  catalogMadeToOrderLabels,
+} from "../_components/plp/delivery-labels";
 import {
   ListingGrid,
   type CatalogListing,
@@ -171,6 +174,7 @@ export default async function DealsPage({ params }: PageProps) {
               outOfStock: t("plp.card.outOfStock"),
               discount: t.raw("plp.card.discount") as string,
               delivery: catalogDeliveryLabels((key) => t.raw(key)),
+              madeToOrder: catalogMadeToOrderLabels((key) => t.raw(key)),
             }}
           />
         </>

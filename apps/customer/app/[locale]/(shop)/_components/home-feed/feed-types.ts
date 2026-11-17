@@ -78,7 +78,14 @@ export type AdCreative = {
 };
 
 export type FeedSectionType =
-  "category" | "collection" | "rule" | "services" | "events" | "vendors" | "for_you" | "ad_slot";
+  | "category"
+  | "collection"
+  | "rule"
+  | "services"
+  | "events"
+  | "vendors"
+  | "for_you"
+  | "ad_slot";
 
 export type FeedSection = {
   id: string;
@@ -183,7 +190,10 @@ export function mapFeedListing(item: FeedListingWire): CatalogListing {
 const SECTION_KEY_PREFIX = "home.feed.sections.";
 
 /** Per-locale admin text wins; otherwise the i18n key; otherwise no heading. */
-export function resolveSectionTitle(section: FeedSection, labels: FeedLabels): string | null {
+export function resolveSectionTitle(
+  section: FeedSection,
+  labels: FeedLabels,
+): string | null {
   if (section.title) return section.title;
   if (section.title_key?.startsWith(SECTION_KEY_PREFIX)) {
     const short = section.title_key.slice(SECTION_KEY_PREFIX.length);

@@ -30,7 +30,9 @@ const labels = {
 
 describe("HomeRecentlyViewedRail", () => {
   it("renders nothing when history is empty", () => {
-    const { container } = render(<HomeRecentlyViewedRail locale="en" labels={labels} />);
+    const { container } = render(
+      <HomeRecentlyViewedRail locale="en" labels={labels} />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 
@@ -46,7 +48,9 @@ describe("HomeRecentlyViewedRail", () => {
     render(<HomeRecentlyViewedRail locale="en" labels={labels} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("home-recently-viewed-rail")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("home-recently-viewed-rail"),
+      ).toBeInTheDocument();
     });
     expect(screen.getByText("Itel A70")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View all" })).toHaveAttribute(

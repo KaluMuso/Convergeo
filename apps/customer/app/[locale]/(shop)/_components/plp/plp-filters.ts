@@ -21,7 +21,9 @@ export function hasActivePlpFilters(state: PlpFilterState): boolean {
 }
 
 /** Stable chip list for the applied-filter summary bar. */
-export function buildAppliedFilterChips(state: PlpFilterState): AppliedFilterChip[] {
+export function buildAppliedFilterChips(
+  state: PlpFilterState,
+): AppliedFilterChip[] {
   const chips: AppliedFilterChip[] = [];
 
   if (state.minPrice || state.maxPrice) {
@@ -42,7 +44,11 @@ export function buildAppliedFilterChips(state: PlpFilterState): AppliedFilterChi
   }
 
   if (state.minRating) {
-    chips.push({ id: `rating:${state.minRating}`, kind: "rating", value: state.minRating });
+    chips.push({
+      id: `rating:${state.minRating}`,
+      kind: "rating",
+      value: state.minRating,
+    });
   }
 
   if (state.lat && state.lng) {

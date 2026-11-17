@@ -26,7 +26,9 @@
   "noResults": {
     "title": "没有找到“{query}”的结果",
     "suggestionsTitle": "试试搜索",
-    "categoriesTitle": "浏览类别"
+    "categoriesTitle": "浏览类别",
+    "body": "请检查拼写或换一个更通用的词。目前没有卖家提供的商品不会显示。",
+    "reset": "清除筛选和标签"
   },
   "unavailable": {
     "title": "搜索暂不可用",

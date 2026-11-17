@@ -62,7 +62,8 @@ function parseFeaturedMinis(raw: unknown): MegaMenuMini[] {
       return [];
     }
     const priceLabel =
-      typeof record.price_label === "string" && record.price_label.trim().length > 0
+      typeof record.price_label === "string" &&
+      record.price_label.trim().length > 0
         ? record.price_label.trim()
         : undefined;
     return [{ title, href, priceLabel }];
@@ -70,17 +71,22 @@ function parseFeaturedMinis(raw: unknown): MegaMenuMini[] {
 }
 
 /** Parse a `mega_menu` merch_slots payload (admin CMS). */
-export function parseMegaMenuMerchPayload(payload: Record<string, unknown>): MegaMenuMerchPayload {
+export function parseMegaMenuMerchPayload(
+  payload: Record<string, unknown>,
+): MegaMenuMerchPayload {
   const promoText =
-    typeof payload.promo_text === "string" && payload.promo_text.trim().length > 0
+    typeof payload.promo_text === "string" &&
+    payload.promo_text.trim().length > 0
       ? payload.promo_text.trim()
       : null;
   const promoCtaLabel =
-    typeof payload.promo_cta_label === "string" && payload.promo_cta_label.trim().length > 0
+    typeof payload.promo_cta_label === "string" &&
+    payload.promo_cta_label.trim().length > 0
       ? payload.promo_cta_label.trim()
       : null;
   const promoHref =
-    typeof payload.promo_href === "string" && payload.promo_href.trim().length > 0
+    typeof payload.promo_href === "string" &&
+    payload.promo_href.trim().length > 0
       ? payload.promo_href.trim()
       : "/search";
 
@@ -96,7 +102,9 @@ export function pickMegaMenuMerchSlot(
   rows: MerchSlotRow[],
   now: Date = new Date(),
 ): MegaMenuMerchPayload | null {
-  const slot = rows.find((row) => row.slot_key === "mega_menu" && isActiveSlot(row, now));
+  const slot = rows.find(
+    (row) => row.slot_key === "mega_menu" && isActiveSlot(row, now),
+  );
   if (!slot) {
     return null;
   }
@@ -130,7 +138,9 @@ export async function fetchMegaMenuMerchSlot(
       const path = previewToken
         ? `/merch/slots?merch_preview=${encodeURIComponent(previewToken)}`
         : "/merch/slots";
-      const slots = await createApiClient({ baseUrl }).request<MerchSlotRow[]>(path);
+      const slots = await createApiClient({ baseUrl }).request<MerchSlotRow[]>(
+        path,
+      );
       return pickMegaMenuMerchFromResolvedSlots(slots);
     } catch {
       // Fall through to direct Supabase read.

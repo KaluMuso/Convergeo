@@ -5,7 +5,11 @@ import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { catalogSaleUnitLabels, formatListingQuantity, resolveSaleUnit } from "../sale-quantity";
+import {
+  catalogSaleUnitLabels,
+  formatListingQuantity,
+  resolveSaleUnit,
+} from "../sale-quantity";
 
 import {
   clampQuantity,
@@ -117,7 +121,10 @@ export function useListingPurchase(
     setShowMissingOptions(false);
   }, [listingId]);
 
-  const maxQuantity = useMemo(() => (listing ? getMaxQuantity(listing) : null), [listing]);
+  const maxQuantity = useMemo(
+    () => (listing ? getMaxQuantity(listing) : null),
+    [listing],
+  );
   const unitLabels = useMemo(() => catalogSaleUnitLabels(t), [t]);
 
   const stockLabel = useMemo(() => {
@@ -193,7 +200,10 @@ export function useListingPurchase(
         pickup.selectedLocationId || variantId
           ? {
               ...(pickup.selectedLocationId
-                ? { pickupLocationId: pickup.selectedLocationId, fulfilment: "pickup" as const }
+                ? {
+                    pickupLocationId: pickup.selectedLocationId,
+                    fulfilment: "pickup" as const,
+                  }
                 : {}),
               ...(variantId ? { listingVariantId: variantId } : {}),
             }
@@ -206,8 +216,12 @@ export function useListingPurchase(
     })()
       .catch((error: unknown) => {
         const variantErrorKey =
-          error instanceof ApiError ? VARIANT_ERROR_KEYS[error.code] : undefined;
-        setAddError(variantErrorKey ? t(variantErrorKey) : labels.addToCartErrorLabel);
+          error instanceof ApiError
+            ? VARIANT_ERROR_KEYS[error.code]
+            : undefined;
+        setAddError(
+          variantErrorKey ? t(variantErrorKey) : labels.addToCartErrorLabel,
+        );
         emitToastKey("addToCartFailed", { type: "error" });
       })
       .finally(() => {
@@ -232,7 +246,9 @@ export function useListingPurchase(
   useEffect(() => {
     if (variantSatisfied) {
       setShowMissingOptions(false);
-      setAddError((current) => (current === variantMissingLabel ? null : current));
+      setAddError((current) =>
+        current === variantMissingLabel ? null : current,
+      );
     }
   }, [variantSatisfied, variantMissingLabel]);
 

@@ -67,6 +67,8 @@ describe("SearchFilterPanel", () => {
       />,
     );
 
-    expect(screen.getByRole("option", { name: "Electronics (4)" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Electronics (4)" }),
+    ).toBeInTheDocument();
   });
 });

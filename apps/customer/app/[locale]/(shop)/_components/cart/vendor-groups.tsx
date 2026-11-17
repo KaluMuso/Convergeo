@@ -62,11 +62,17 @@ type VendorGroupsProps = {
   freeDeliveryThresholdNgwee?: number | null;
 };
 
-export function deliveryProgress(subtotalNgwee: number, thresholdNgwee: number): number {
+export function deliveryProgress(
+  subtotalNgwee: number,
+  thresholdNgwee: number,
+): number {
   return Math.min(100, Math.round((subtotalNgwee / thresholdNgwee) * 100));
 }
 
-export function remainingForFreeDelivery(subtotalNgwee: number, thresholdNgwee: number): number {
+export function remainingForFreeDelivery(
+  subtotalNgwee: number,
+  thresholdNgwee: number,
+): number {
   return Math.max(0, thresholdNgwee - subtotalNgwee);
 }
 
@@ -82,7 +88,8 @@ export function VendorGroups({
   freeDeliveryThresholdNgwee = null,
 }: VendorGroupsProps) {
   const threshold =
-    typeof freeDeliveryThresholdNgwee === "number" && freeDeliveryThresholdNgwee > 0
+    typeof freeDeliveryThresholdNgwee === "number" &&
+    freeDeliveryThresholdNgwee > 0
       ? freeDeliveryThresholdNgwee
       : null;
   const multiSeller = groups.length > 1;
@@ -90,9 +97,14 @@ export function VendorGroups({
   return (
     <div className="flex flex-col gap-4" data-testid="cart-vendor-groups">
       {groups.map((group, index) => {
-        const progress = threshold === null ? 0 : deliveryProgress(group.subtotal_ngwee, threshold);
+        const progress =
+          threshold === null
+            ? 0
+            : deliveryProgress(group.subtotal_ngwee, threshold);
         const remaining =
-          threshold === null ? 0 : remainingForFreeDelivery(group.subtotal_ngwee, threshold);
+          threshold === null
+            ? 0
+            : remainingForFreeDelivery(group.subtotal_ngwee, threshold);
         const sellerIndexLabel =
           multiSeller && labels.sellerIndex
             ? labels.sellerIndex
@@ -116,7 +128,11 @@ export function VendorGroups({
               <p className="text-sm font-semibold text-text">
                 {labels.vendorGroup}
                 <span
-                  className={group.vendor_name?.trim() ? "text-text-2" : "font-mono text-text-2"}
+                  className={
+                    group.vendor_name?.trim()
+                      ? "text-text-2"
+                      : "font-mono text-text-2"
+                  }
                   data-testid={`cart-vendor-name-${group.vendor_id}`}
                 >
                   {" "}
@@ -124,7 +140,10 @@ export function VendorGroups({
                 </span>
               </p>
               <p className="font-mono text-sm text-text-2">
-                {labels.vendorSubtotal.replace("{amount}", formatK(group.subtotal_ngwee))}
+                {labels.vendorSubtotal.replace(
+                  "{amount}",
+                  formatK(group.subtotal_ngwee),
+                )}
               </p>
             </header>
 
@@ -134,7 +153,10 @@ export function VendorGroups({
             >
               {threshold !== null ? (
                 <p className="text-xs text-text-2">
-                  {labels.deliveryThreshold.replace("{threshold}", formatK(threshold))}
+                  {labels.deliveryThreshold.replace(
+                    "{threshold}",
+                    formatK(threshold),
+                  )}
                 </p>
               ) : null}
               {group.delivery_eligible ? (
@@ -147,7 +169,10 @@ export function VendorGroups({
               ) : threshold === null ? null : (
                 <>
                   <p className="text-sm text-text-2">
-                    {labels.deliveryHint.replace("{amount}", formatK(remaining))}
+                    {labels.deliveryHint.replace(
+                      "{amount}",
+                      formatK(remaining),
+                    )}
                   </p>
                   <div
                     className="h-2 overflow-hidden rounded-pill bg-border"
@@ -173,11 +198,17 @@ export function VendorGroups({
                 </>
               )}
               {group.delivery_eligible ? (
-                <p className="text-xs text-text-3" data-testid="cart-free-delivery-eligible">
+                <p
+                  className="text-xs text-text-3"
+                  data-testid="cart-free-delivery-eligible"
+                >
                   {labels.deliveryEligible}
                 </p>
               ) : null}
-              <p className="text-xs text-text-3" data-testid="cart-delivery-scope-note">
+              <p
+                className="text-xs text-text-3"
+                data-testid="cart-delivery-scope-note"
+              >
                 {labels.deliveryScopeNote}
               </p>
             </div>
@@ -212,7 +243,9 @@ export function VendorGroups({
                           <p className="m-0 text-xs text-text-2">
                             {labels.offerGiftWorth.replace(
                               "{value}",
-                              formatK(gift.qty * gift.reference_unit_price_ngwee),
+                              formatK(
+                                gift.qty * gift.reference_unit_price_ngwee,
+                              ),
                             )}
                           </p>
                         ) : null}
@@ -245,7 +278,13 @@ export type TicketGroupLabels = {
   prepaidOnly: string;
 };
 
-export function ItemTypeCaption({ label, testId }: { label: string; testId: string }) {
+export function ItemTypeCaption({
+  label,
+  testId,
+}: {
+  label: string;
+  testId: string;
+}) {
   return (
     <p
       className="m-0 text-xs font-semibold uppercase tracking-wide text-text-3"
@@ -277,7 +316,10 @@ export function TicketLinesGroup({
       data-testid="cart-ticket-group"
       aria-label={labels.typeEventTickets}
     >
-      <ItemTypeCaption label={labels.typeEventTickets} testId="cart-type-event-tickets" />
+      <ItemTypeCaption
+        label={labels.typeEventTickets}
+        testId="cart-type-event-tickets"
+      />
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {lines.map((line) => {
           const unavailable = unavailableIds.includes(line.id);
@@ -291,21 +333,29 @@ export function TicketLinesGroup({
               data-testid={`cart-ticket-line-${line.id}`}
             >
               <div className="min-w-0">
-                <p className="m-0 break-words text-sm font-medium text-text">{line.event_title}</p>
+                <p className="m-0 break-words text-sm font-medium text-text">
+                  {line.event_title}
+                </p>
                 <p className="m-0 text-xs text-text-2">
                   {labels.line
                     .replace("{type}", line.type_name)
                     .replace("{qty}", String(line.qty))}
                 </p>
                 {unavailable ? (
-                  <p className="m-0 text-xs font-medium text-danger" role="status">
+                  <p
+                    className="m-0 text-xs font-medium text-danger"
+                    role="status"
+                  >
                     {labels.unavailable}
                   </p>
                 ) : null}
                 <button
                   type="button"
                   className="mt-1 min-h-11 text-sm text-text-2 underline"
-                  aria-label={labels.removeLabel.replace("{title}", line.event_title)}
+                  aria-label={labels.removeLabel.replace(
+                    "{title}",
+                    line.event_title,
+                  )}
                   onClick={() => void onRemove(line.id)}
                 >
                   {labels.remove}
@@ -317,7 +367,9 @@ export function TicketLinesGroup({
                     {formatK(line.list_line_total_ngwee ?? 0)}
                   </p>
                 ) : null}
-                <p className="m-0 font-semibold text-text">{formatK(line.line_total_ngwee)}</p>
+                <p className="m-0 font-semibold text-text">
+                  {formatK(line.line_total_ngwee)}
+                </p>
               </div>
             </li>
           );
@@ -330,7 +382,9 @@ export function TicketLinesGroup({
   );
 }
 
-export function indexNoticesByListing(notices: ChangeNotice[]): Record<string, ChangeNotice> {
+export function indexNoticesByListing(
+  notices: ChangeNotice[],
+): Record<string, ChangeNotice> {
   return notices.reduce<Record<string, ChangeNotice>>((acc, notice) => {
     acc[notice.listing_id] = notice;
     return acc;
@@ -396,7 +450,11 @@ export function CartEmptyState({
         body={labels.emptyBody}
         data-testid="cart-empty-state"
         action={
-          <LinkButton href={`/${locale}`} variant="primary" LinkComponent={Link}>
+          <LinkButton
+            href={`/${locale}`}
+            variant="primary"
+            LinkComponent={Link}
+          >
             {labels.browseCta}
           </LinkButton>
         }
@@ -410,7 +468,10 @@ function CartLoadError({
   labels,
   onRetry,
 }: {
-  labels: Pick<CartPageLabels, "loadErrorTitle" | "loadErrorBody" | "loadErrorRetry">;
+  labels: Pick<
+    CartPageLabels,
+    "loadErrorTitle" | "loadErrorBody" | "loadErrorRetry"
+  >;
   onRetry: () => void;
 }) {
   return (
@@ -419,7 +480,9 @@ function CartLoadError({
       data-testid="cart-load-error"
       role="alert"
     >
-      <h2 className="font-display text-lg font-semibold text-text">{labels.loadErrorTitle}</h2>
+      <h2 className="font-display text-lg font-semibold text-text">
+        {labels.loadErrorTitle}
+      </h2>
       <p className="text-sm text-text-2">{labels.loadErrorBody}</p>
       <Button
         type="button"
@@ -443,8 +506,11 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const stockNotice = searchParams.get("notice") === "stock_unavailable";
-  const reservationNotice = searchParams.get("notice") === "reservation_expired";
-  const [freeDeliveryThresholdNgwee, setFreeDeliveryThresholdNgwee] = useState<number | null>(null);
+  const reservationNotice =
+    searchParams.get("notice") === "reservation_expired";
+  const [freeDeliveryThresholdNgwee, setFreeDeliveryThresholdNgwee] = useState<
+    number | null
+  >(null);
 
   useEffect(() => {
     void refresh();
@@ -614,7 +680,10 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
         />
 
         {cart && labels.tickets && cart.vendor_groups.length > 0 ? (
-          <ItemTypeCaption label={labels.tickets.typeProducts} testId="cart-type-products" />
+          <ItemTypeCaption
+            label={labels.tickets.typeProducts}
+            testId="cart-type-products"
+          />
         ) : null}
         {cart ? (
           <VendorGroups
@@ -645,10 +714,15 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
           data-testid="cart-order-summary"
           style={{ borderRadius: "var(--r)" }}
         >
-          <h2 className="font-display text-lg font-semibold text-text">{labels.summaryHeading}</h2>
+          <h2 className="font-display text-lg font-semibold text-text">
+            {labels.summaryHeading}
+          </h2>
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-text-2">{labels.subtotal}</span>
-            <span className="font-mono text-sm text-text" data-testid="cart-subtotal-label">
+            <span
+              className="font-mono text-sm text-text"
+              data-testid="cart-subtotal-label"
+            >
               {formatK(cart.subtotal_ngwee)}
             </span>
           </div>
@@ -657,7 +731,9 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
               className="flex items-center justify-between gap-3"
               data-testid="cart-offer-savings"
             >
-              <span className="text-sm text-success">{labels.offerSavings}</span>
+              <span className="text-sm text-success">
+                {labels.offerSavings}
+              </span>
               <span className="font-mono text-sm text-success">
                 {`-${formatK(cart.savings_ngwee ?? 0)}`}
               </span>
@@ -668,7 +744,9 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
               className="flex items-center justify-between gap-3"
               data-testid="cart-platform-fee"
             >
-              <span className="text-sm text-text-2">{labels.tickets.platformFee}</span>
+              <span className="text-sm text-text-2">
+                {labels.tickets.platformFee}
+              </span>
               <span className="font-mono text-sm text-text">
                 {formatK(cart.platform_fee_ngwee ?? 0)}
               </span>
@@ -691,7 +769,10 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
             {labels.escrowSteps.map((step, index) => (
               <li key={index} className="flex items-center gap-2">
                 {index > 0 ? (
-                  <IconChevronDown aria-hidden className="-rotate-90 text-text-3" />
+                  <IconChevronDown
+                    aria-hidden
+                    className="-rotate-90 text-text-3"
+                  />
                 ) : null}
                 <span className="rounded border border-border bg-bg-2 px-2.5 py-1 text-text-2">
                   {step}

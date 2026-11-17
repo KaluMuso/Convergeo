@@ -28,8 +28,14 @@ export function GroupCheckoutLazy(props: GroupCheckoutProps) {
   return (
     <Suspense
       fallback={
-        <section className="space-y-4 px-4 py-6" data-testid="group-checkout" aria-busy="true">
-          <h1 className="font-display text-h1 text-display-ink">{props.labels.pageTitle}</h1>
+        <section
+          className="space-y-4 px-4 py-6"
+          data-testid="group-checkout"
+          aria-busy="true"
+        >
+          <h1 className="font-display text-h1 text-display-ink">
+            {props.labels.pageTitle}
+          </h1>
           <p className="font-body text-sm text-text-3" aria-live="polite">
             {props.labels.loading}
           </p>

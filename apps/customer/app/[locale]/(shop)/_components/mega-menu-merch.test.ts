@@ -72,6 +72,8 @@ describe("mega-menu-merch", () => {
   it("prefixes locale on root-relative hrefs", () => {
     expect(withLocaleHref("en", "/search")).toBe("/en/search");
     expect(withLocaleHref("bem", "/en/p/phone")).toBe("/en/p/phone");
-    expect(withLocaleHref("nya", "https://vergeo5.com/search")).toBe("https://vergeo5.com/search");
+    expect(withLocaleHref("nya", "https://vergeo5.com/search")).toBe(
+      "https://vergeo5.com/search",
+    );
   });
 });

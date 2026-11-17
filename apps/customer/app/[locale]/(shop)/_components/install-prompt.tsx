@@ -20,7 +20,10 @@ export const INSTALL_DISMISS_KEY = "vergeo:pwa-install-dismissed-at";
 export const INSTALL_REPROMPT_MS = 14 * 24 * 60 * 60 * 1000;
 
 /** Frequency cap: show only if never dismissed, or the cap window has elapsed. */
-export function shouldShowInstallPrompt(lastDismissedAt: number | null, now: number): boolean {
+export function shouldShowInstallPrompt(
+  lastDismissedAt: number | null,
+  now: number,
+): boolean {
   if (lastDismissedAt === null || Number.isNaN(lastDismissedAt)) {
     return true;
   }
@@ -28,7 +31,9 @@ export function shouldShowInstallPrompt(lastDismissedAt: number | null, now: num
 }
 
 /** Ask a waiting service worker to activate — the app then reloads on takeover. */
-export function promptSkipWaiting(registration: ServiceWorkerRegistration): void {
+export function promptSkipWaiting(
+  registration: ServiceWorkerRegistration,
+): void {
   registration.waiting?.postMessage({ type: "SKIP_WAITING" });
 }
 
@@ -63,7 +68,8 @@ export default function InstallPrompt() {
       }
     };
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
-    return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+    return () =>
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
   }, []);
 
   // Safe SW-update detection (never silently activates a new worker).
@@ -77,7 +83,10 @@ export default function InstallPrompt() {
       reloading = true;
       window.location.reload();
     };
-    navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      onControllerChange,
+    );
 
     void navigator.serviceWorker.getRegistration().then((registration) => {
       if (!registration) return;
@@ -89,7 +98,10 @@ export default function InstallPrompt() {
         const installing = registration.installing;
         if (!installing) return;
         installing.addEventListener("statechange", () => {
-          if (installing.state === "installed" && navigator.serviceWorker.controller) {
+          if (
+            installing.state === "installed" &&
+            navigator.serviceWorker.controller
+          ) {
             updateRegRef.current = registration;
             setUpdateVisible(true);
           }
@@ -98,7 +110,10 @@ export default function InstallPrompt() {
     });
 
     return () => {
-      navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        onControllerChange,
+      );
     };
   }, []);
 

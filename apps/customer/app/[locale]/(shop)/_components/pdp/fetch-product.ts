@@ -94,9 +94,14 @@ export function productCacheTag(slug: string): string {
   return `${PRODUCT_CACHE_TAG_PREFIX}${slug}`;
 }
 
-function parseRedirectSlug(location: string, currentSlug: string): string | null {
+function parseRedirectSlug(
+  location: string,
+  currentSlug: string,
+): string | null {
   const pathOnly = location.split("?")[0] ?? location;
-  const redirectedSlug = pathOnly.replace(/^\/products\//, "").replace(/\/$/, "");
+  const redirectedSlug = pathOnly
+    .replace(/^\/products\//, "")
+    .replace(/\/$/, "");
   if (!redirectedSlug || redirectedSlug === currentSlug) {
     return null;
   }
@@ -123,7 +128,11 @@ export async function fetchProduct(slug: string): Promise<ProductFetchResult> {
       redirect: "manual",
     });
 
-    if (response.status === 301 || response.status === 302 || response.status === 308) {
+    if (
+      response.status === 301 ||
+      response.status === 302 ||
+      response.status === 308
+    ) {
       const location = response.headers.get("location");
       if (location) {
         const redirectedSlug = parseRedirectSlug(location, slug);
@@ -148,7 +157,9 @@ export async function fetchProduct(slug: string): Promise<ProductFetchResult> {
     // an unavailable state (never collapse into a soft-404).
     try {
       const client = createApiClient({ baseUrl: getApiBaseUrl() });
-      const data = await client.request<ProductDetail>(`/products/${encodeURIComponent(slug)}`);
+      const data = await client.request<ProductDetail>(
+        `/products/${encodeURIComponent(slug)}`,
+      );
       return { kind: "product", data };
     } catch (error) {
       const status =

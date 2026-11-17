@@ -28,14 +28,18 @@ function fill(template: string, values: Record<string, number>): string {
 }
 
 /** Short badge text, e.g. "Buy 2 get 1 free", "-75% add-ons", "Free gift"; null if unknown. */
-export function offerBadgeLabel(badge: OfferBadge, labels: OfferBadgeLabels): string | null {
+export function offerBadgeLabel(
+  badge: OfferBadge,
+  labels: OfferBadgeLabels,
+): string | null {
   switch (badge.offer_type) {
     case "bxgy":
       return badge.buy_qty && badge.get_qty
         ? fill(labels.bxgy, { buy: badge.buy_qty, get: badge.get_qty })
         : null;
     case "bundle":
-      return badge.bundle_pricing === "addon_percent_off" && badge.addon_percent_off
+      return badge.bundle_pricing === "addon_percent_off" &&
+        badge.addon_percent_off
         ? fill(labels.bundlePercent, { percent: badge.addon_percent_off })
         : labels.bundleFixed;
     case "buy_n_pay_m":
@@ -50,7 +54,9 @@ export function offerBadgeLabel(badge: OfferBadge, labels: OfferBadgeLabels): st
 }
 
 /** Serializable badge labels from a translator scoped to the `catalog` namespace. */
-export function buildOfferBadgeLabels(raw: (key: string) => unknown): OfferBadgeLabels {
+export function buildOfferBadgeLabels(
+  raw: (key: string) => unknown,
+): OfferBadgeLabels {
   return {
     bxgy: String(raw("offers.badge.bxgy")),
     bundlePercent: String(raw("offers.badge.bundlePercent")),

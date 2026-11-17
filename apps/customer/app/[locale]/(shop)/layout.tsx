@@ -6,7 +6,11 @@ import {
   IconOrders,
   IconSearch,
 } from "@vergeo/ui/src/icons";
-import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import {
+  createTranslator,
+  NextIntlClientProvider,
+  type AbstractIntlMessages,
+} from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { NotificationBellIsland } from "../_components/notification-bell-island";
@@ -24,17 +28,21 @@ type ShopLayoutProps = {
   params: Promise<{ locale: string }>;
 };
 
-export default async function ShopLayout({ children, params }: ShopLayoutProps) {
+export default async function ShopLayout({
+  children,
+  params,
+}: ShopLayoutProps) {
   const { locale } = await params;
   setRequestLocale(locale);
 
   const baseMessages = await getMessages();
-  const [catalogMessages, searchMessages, navMessages, checkoutMessages] = await Promise.all([
-    loadNamespace(locale as Locale, "catalog"),
-    loadNamespace(locale as Locale, "search"),
-    loadNamespace(locale as Locale, "nav"),
-    loadNamespace(locale as Locale, "checkout"),
-  ]);
+  const [catalogMessages, searchMessages, navMessages, checkoutMessages] =
+    await Promise.all([
+      loadNamespace(locale as Locale, "catalog"),
+      loadNamespace(locale as Locale, "search"),
+      loadNamespace(locale as Locale, "nav"),
+      loadNamespace(locale as Locale, "checkout"),
+    ]);
   const messages = {
     ...baseMessages,
     catalog: catalogMessages,
@@ -46,7 +54,11 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
   const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
   const tSearch = createTranslator({ locale, messages, namespace: "search" });
-  const tCheckout = createTranslator({ locale, messages, namespace: "checkout" });
+  const tCheckout = createTranslator({
+    locale,
+    messages,
+    namespace: "checkout",
+  });
   const bottomItems = [
     {
       key: "home",

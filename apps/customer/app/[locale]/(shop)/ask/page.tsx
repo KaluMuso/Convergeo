@@ -1,5 +1,9 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
-import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import {
+  createTranslator,
+  NextIntlClientProvider,
+  type AbstractIntlMessages,
+} from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 
 import { AskThread } from "../_components/ask/ask-thread";
@@ -41,11 +45,16 @@ function unflatten(flat: Record<string, string>): Record<string, unknown> {
 }
 
 async function getAiMessages(locale: string): Promise<Record<string, unknown>> {
-  const aiFlat = (await loadNamespace(locale as Locale, "ai")) as Record<string, string>;
+  const aiFlat = (await loadNamespace(locale as Locale, "ai")) as Record<
+    string,
+    string
+  >;
   return unflatten(aiFlat);
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const messages = await getAiMessages(locale);
   const t = createTranslator({
@@ -70,7 +79,10 @@ export default async function AskPage({ params, searchParams }: PageProps) {
   const messages = await getAiMessages(locale);
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages as AbstractIntlMessages}>
+    <NextIntlClientProvider
+      locale={locale}
+      messages={messages as AbstractIntlMessages}
+    >
       <div className="lg:mx-auto lg:w-full lg:max-w-3xl">
         <AskThread locale={locale} initialQuery={q?.trim() ?? ""} />
       </div>

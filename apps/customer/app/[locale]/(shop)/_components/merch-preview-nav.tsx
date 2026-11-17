@@ -15,7 +15,10 @@ function readPreviewToken(): string | null {
 }
 
 /** Append `?merch_preview=` when previewing draft merch across shop navigation. */
-export function withMerchPreviewParam(href: string, token: string | null | undefined): string {
+export function withMerchPreviewParam(
+  href: string,
+  token: string | null | undefined,
+): string {
   if (!token || !href.startsWith("/")) {
     return href;
   }
@@ -43,6 +46,7 @@ type MerchPreviewLinkProps = ComponentProps<typeof Link>;
 /** Internal shop link that preserves `?merch_preview=` while draft previewing. */
 export function MerchPreviewLink({ href, ...props }: MerchPreviewLinkProps) {
   const previewToken = useMerchPreviewToken();
-  const resolvedHref = typeof href === "string" ? withMerchPreviewParam(href, previewToken) : href;
+  const resolvedHref =
+    typeof href === "string" ? withMerchPreviewParam(href, previewToken) : href;
   return <Link href={resolvedHref} {...props} />;
 }

@@ -4,7 +4,9 @@ import { buildTopCategorySuggestions } from "./category-suggestions";
 
 import type { CategoryRow } from "../merch-data";
 
-function row(overrides: Partial<CategoryRow> & Pick<CategoryRow, "slug">): CategoryRow {
+function row(
+  overrides: Partial<CategoryRow> & Pick<CategoryRow, "slug">,
+): CategoryRow {
   return {
     id: overrides.slug,
     name: overrides.slug.toUpperCase(),
@@ -37,6 +39,8 @@ describe("buildTopCategorySuggestions", () => {
 
   it("returns an empty list (graceful empty state) when there are no usable roots", () => {
     expect(buildTopCategorySuggestions([], "en")).toEqual([]);
-    expect(buildTopCategorySuggestions([row({ slug: "x", parent_id: "y" })], "en")).toEqual([]);
+    expect(
+      buildTopCategorySuggestions([row({ slug: "x", parent_id: "y" })], "en"),
+    ).toEqual([]);
   });
 });

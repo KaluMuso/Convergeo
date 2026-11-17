@@ -468,7 +468,9 @@ export default async function EventDetailPage({ params }: PageProps) {
             ticketTypes={event.ticket_types}
             isSoldOut={event.is_sold_out}
             eventAccessProof={eventAccessProof}
-            platformFeePayer={event.platform_fee_payer === "buyer" ? "buyer" : "organiser"}
+            platformFeePayer={
+              event.platform_fee_payer === "buyer" ? "buyer" : "organiser"
+            }
             platformFeeBps={event.platform_fee_bps ?? null}
           />
 

@@ -4,7 +4,11 @@ import { Button } from "@vergeo/ui/src/button";
 import { Modal } from "@vergeo/ui/src/modal";
 import { useState } from "react";
 
-import { FacetPanel, type FacetCounts, type FacetPanelLabels } from "./facet-panel";
+import {
+  FacetPanel,
+  type FacetCounts,
+  type FacetPanelLabels,
+} from "./facet-panel";
 import { hasActivePlpFilters, type PlpFilterState } from "./plp-filters";
 
 type MobileFilterDrawerProps = {
@@ -19,7 +23,11 @@ type MobileFilterDrawerProps = {
 /**
  * Mobile-only filter entry — opens FacetPanel in a modal (desktop uses the sticky sidebar).
  */
-export function MobileFilterDrawer({ labels, facets, initialState }: MobileFilterDrawerProps) {
+export function MobileFilterDrawer({
+  labels,
+  facets,
+  initialState,
+}: MobileFilterDrawerProps) {
   const [open, setOpen] = useState(false);
   const active = hasActivePlpFilters(initialState);
 

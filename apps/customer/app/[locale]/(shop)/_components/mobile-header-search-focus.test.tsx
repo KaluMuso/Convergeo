@@ -21,7 +21,11 @@ vi.mock("./search/search-input", () => ({
     labels: { placeholder: string };
     autoFocus?: boolean;
   }) => (
-    <input aria-label={labels.placeholder} data-testid="mock-search-input" autoFocus={autoFocus} />
+    <input
+      aria-label={labels.placeholder}
+      data-testid="mock-search-input"
+      autoFocus={autoFocus}
+    />
   ),
 }));
 
@@ -66,11 +70,15 @@ describe("MobileHeaderSearch focus handling", () => {
 
     const trigger = screen.getByTestId("mobile-header-search-trigger");
     await user.click(trigger);
-    expect(screen.getByTestId("mobile-header-search-sheet")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("mobile-header-search-sheet"),
+    ).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
 
-    expect(screen.queryByTestId("mobile-header-search-sheet")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("mobile-header-search-sheet"),
+    ).not.toBeInTheDocument();
     expect(document.activeElement).toBe(trigger);
   });
 });

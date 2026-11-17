@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { buildPageMetadata } from "../../../../lib/page-title";
 import { fetchStorefrontConfig } from "../../../../lib/storefront-config";
 import { createAccountApiClient } from "../../account/_components/account-api";
 import {
@@ -16,6 +17,8 @@ import { isOnboardingComplete, resolvePostAuthPath } from "../_components/auth-u
 
 import { WelcomeForm, type WelcomeFormLabels } from "./_components/welcome-form";
 
+import type { Metadata } from "next";
+
 type PageProps = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ next?: string }>;
@@ -23,6 +26,15 @@ type PageProps = {
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "auth", "welcome.title");
 }
 
 export default async function WelcomePage({ params, searchParams }: PageProps) {

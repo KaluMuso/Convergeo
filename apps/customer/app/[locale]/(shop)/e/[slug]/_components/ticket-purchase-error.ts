@@ -35,6 +35,8 @@ const KEY_BY_CODE: Record<string, TicketPurchaseErrorKey> = {
  * `message` is developer English, so an unmapped code falls back to the generic
  * translated line rather than being printed to the buyer.
  */
-export function ticketPurchaseErrorKey(code: string | null | undefined): TicketPurchaseErrorKey {
+export function ticketPurchaseErrorKey(
+  code: string | null | undefined,
+): TicketPurchaseErrorKey {
   return (code && KEY_BY_CODE[code]) || "generic";
 }

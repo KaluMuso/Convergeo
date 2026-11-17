@@ -2,10 +2,19 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { NextIntlClientProvider } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 
+import { buildPageMetadata } from "../../../../../../lib/page-title";
+
+import type { Metadata } from "next";
+
 type LayoutProps = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: LayoutProps): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "events", "transfer.title");
+}
 
 /**
  * Client i18n provider for the ticket-transfer page. The transfer page is a

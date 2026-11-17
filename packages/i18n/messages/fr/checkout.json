@@ -18,7 +18,7 @@
     "lineTotal": "Total de la ligne : {amount}",
     "unitPrice": "{amount} l'unité",
     "unitPriceMeasured": "{amount} par {quantity}",
-    "madeToOrderLeadTime": "Fabriqué sur commande · prêt sous {days} jours",
+    "madeToOrderLeadTime": "Fabriqué sur commande · prêt {when}",
     "saleUnits": {
       "each": "article",
       "metre": "m",
@@ -101,7 +101,18 @@
       "addFailed": "Impossible d'ajouter ces billets. Réessayez.",
       "signInRequired": "Connectez-vous pour ajouter des billets au panier."
     },
-    "mergeWholesaleTerms": "Quantité minimale en gros : {moq} unités."
+    "mergeWholesaleTerms": "Quantité minimale en gros : {moq} unités.",
+    "codStep1": "Vous commandez",
+    "codStep2": "Nous livrons",
+    "codStep3": "Vous payez à l'arrivée",
+    "leadTimeWhen": {
+      "oneDay": "sous 24 heures",
+      "days": "dans environ {count} jours",
+      "oneWeek": "sous une semaine",
+      "weeks": "dans environ {count} semaines",
+      "oneMonth": "dans environ un mois",
+      "months": "dans environ {count} mois"
+    }
   },
   "checkout": {
     "pageTitle": "Paiement",
@@ -117,7 +128,7 @@
       "title": "Vos coordonnées",
       "subtitle": "Nous les utiliserons pour envoyer les mises à jour de commande sur WhatsApp ou SMS.",
       "phoneLabel": "Numéro de mobile",
-      "phoneHelp": "MTN, Airtel ou Zamtel — nous enverrons un code à usage unique.",
+      "phoneHelp": "MTN, Airtel ou Zamtel — nous l'utiliserons pour confirmer votre livraison.",
       "phonePlaceholder": "97X XXX XXX",
       "countryCode": "Indicatif du pays",
       "nationalNumber": "Numéro de mobile",
@@ -243,7 +254,7 @@
       "railMtn": "MTN",
       "railAirtel": "Airtel",
       "payerNumber": "Payeur : {number}",
-      "escrowTitle": "Comment votre paiement est protégé",
+      "escrowTitle": "Comment ça marche",
       "escrowStep1": "Vous payez",
       "escrowStep2": "Conservé par Convergeo",
       "escrowStep3": "Versé à la livraison",
@@ -276,7 +287,9 @@
       "typeEventTickets": "Billets d'événement",
       "ticketLine": "{type} × {qty}",
       "platformFee": "Frais de service billetterie",
-      "discount": "Coupon {code}"
+      "discount": "Coupon {code}",
+      "estimatedReady": "Prêt vers le {date}",
+      "estimatedDelivery": "Livraison estimée vers le {date}"
     },
     "pending": {
       "pageTitle": "Approuver le paiement",
