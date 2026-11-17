@@ -59,7 +59,7 @@ AnalyticsDepth = Literal["basic", "standard", "advanced"]
 IntegrationsLevel = Literal["none", "basic", "sheets_webhooks", "api"]
 PayoutSpeed = Literal["standard", "fast", "priority"]
 SupportLevel = Literal["community", "standard", "priority", "dedicated"]
-# Multi-branch entitlements (20261116120000). Shops and staff seats are enforced
+# Multi-branch entitlements (20261117000000). Shops and staff seats are enforced
 # (flag multi_branch); the rest is stored for later features.
 ENTITLEMENT_COLUMNS = (
     "included_shops, extra_shop_price_ngwee, staff_seats, whatsapp_broadcasts_per_month, "

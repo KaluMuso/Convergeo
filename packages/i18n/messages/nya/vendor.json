@@ -2084,7 +2084,9 @@
       "attendeeNamedBadge": "Dzinas required",
       "perksLabel": "Perks (optional)",
       "perksHelp": "Ziwonetsedwa kwa buyers — lounge, merch, drink tokens. Siyani blank ngati palibe.",
-      "perksPlaceholder": "e.g. Includes one drink token"
+      "perksPlaceholder": "e.g. Includes one drink token",
+      "isFreeLabel": "⚠ This is free",
+      "isFreeHint": "⚠ Guests RSVP instead of paying. They still get a QR ticket and capacity applies."
     },
     "actions": {
       "save": "Save type",

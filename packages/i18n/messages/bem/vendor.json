@@ -2084,7 +2084,9 @@
       "attendeeNamedBadge": "Ishinas required",
       "perksLabel": "Perks (optional)",
       "perksHelp": "Shilaoneshwa ku buyers — lounge, merch, drink tokens. Shileka blank nga takuli.",
-      "perksPlaceholder": "e.g. Includes one drink token"
+      "perksPlaceholder": "e.g. Includes one drink token",
+      "isFreeLabel": "⚠ This is free",
+      "isFreeHint": "⚠ Guests RSVP instead of paying. They still get a QR ticket and capacity applies."
     },
     "actions": {
       "save": "Save type",

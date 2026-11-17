@@ -126,7 +126,9 @@ PENDING_REPAIR_VERSIONS = {
     # Shared canonical photos + sha256 dedup (additive, reversible).
     "20261116110100",
     # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
-    "20261116120000",
+    "20261117000000",
+    # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
+    "20261116130000",
 }
 
 
