@@ -45,6 +45,8 @@ from rehearse_explicit_transaction_profile import (
     started_container_on_network,
     sql,
     target_container,
+    assert_batch_ledger,
+    batch_end,
     visible_prefix,
 )
 
@@ -179,6 +181,37 @@ COMMIT;
             with self.assertRaises(RehearsalError) as changed_copy:
                 source_inventory(workdir)
             self.assertEqual(changed_copy.exception.code, "SOURCE_MISMATCH")
+
+    def test_suffix_batches_cover_non_bound_runs_exactly(self) -> None:
+        files = sorted(
+            (Path(__file__).resolve().parents[2] / "supabase/migrations").glob("*.sql")
+        )
+        first = [p.name for p in files].index(next(iter(BOUND_FILES)))
+        index, covered = first, []
+        while index < len(files):
+            if files[index].name in BOUND_FILES:
+                index += 1
+                continue
+            end = batch_end(files, index)
+            self.assertTrue(
+                all(f.name not in BOUND_FILES for f in files[index : end + 1])
+            )
+            self.assertTrue(end + 1 == len(files) or files[end + 1].name in BOUND_FILES)
+            covered.extend(range(index, end + 1))
+            index = end + 1
+        expected = [
+            i for i in range(first, len(files)) if files[i].name not in BOUND_FILES
+        ]
+        self.assertEqual(covered, expected)
+
+    def test_batch_ledger_requires_exact_order(self) -> None:
+        files = [Path(f"{v}_x.sql") for v in ("001", "002", "003")]
+        good = [["001"], ["002"], ["003"]]
+        assert_batch_ledger(good, files, 2)
+        for bad in ([["001"], ["003"], ["002"]], [["001"], ["002"]], good + [["004"]]):
+            with self.assertRaises(RehearsalError) as caught:
+                assert_batch_ledger(bad, files, 2)
+            self.assertEqual(caught.exception.code, "GUARD_REJECTED")
 
     def test_fault_must_reach_fixture_history_trigger(self) -> None:
         wrong = subprocess.CompletedProcess([], 3, b"", b"earlier SQL error")

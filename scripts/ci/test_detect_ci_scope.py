@@ -69,6 +69,16 @@ class DetectCiScopeTests(unittest.TestCase):
         for key in ("run_typegen", "run_heavy", "run_perf"):
             self.assertFalse(result[key], key)
 
+    def test_typegen_inputs_run_typegen_on_release_prs(self) -> None:
+        for path in (
+            "supabase/migrations/20261101000000_x.sql",
+            "packages/types/src/index.ts",
+            "packages/types/src/db.ts",
+        ):
+            result = pr([path], base="release/2026-11-next")
+            self.assertTrue(result["run_typegen"], path)
+        self.assertFalse(pr(["packages/ui/src/x.tsx"])["run_typegen"])
+
     def test_money_paths_keep_real_stack_on_release_prs(self) -> None:
         for path in (
             "services/api/app/services/ledger/post.py",
