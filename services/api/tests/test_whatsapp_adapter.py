@@ -144,6 +144,18 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
         payload["amount_ngwee"] = 2_000
         payload["min_spend_ngwee"] = 20_000
         payload["valid_days"] = 14
+    elif template_id == "points_earned":
+        payload["points"] = 120
+        payload["balance"] = 480
+        payload["threshold"] = 500
+    elif template_id == "vendor_weekly_digest":
+        payload["shop_name"] = "Kamwala Trading"
+        payload["orders"] = 12
+        payload["sales_ngwee"] = MONEY_NGEWEE
+        payload["top_item"] = "Samsung A15"
+        payload["new_followers"] = 3
+        payload["pending_actions"] = 2
+        payload["next_payout_ngwee"] = MONEY_NGEWEE
     return payload
 
 

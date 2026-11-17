@@ -133,6 +133,8 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `tickets-release.json`            | Ticket hold release                         | no                      | DORMANT                                                               |
 | `reservation-sweeper.json`        | Reservation sweeper                         | no                      | DORMANT                                                               |
 | `admin-digest.json`               | Notifications (founder)                     | no                      | DORMANT                                                               |
+| `points-sweep.json`               | Engagement (points, A1)                     | no                      | DORMANT (added 2026-11-16, inactive; flag `loyalty_points` off)       |
+| `vendor-weekly-digest.json`       | Notifications (vendor, E3)                  | no                      | DORMANT (added 2026-11-16, inactive; flag `vendor_weekly_digest` off) |
 | `daily-summary.json`              | Reporting (n8n webhook)                     | no                      | DORMANT                                                               |
 | `kyc-nudge.json`                  | Notifications                               | no                      | DORMANT                                                               |
 | `payout-failure-alert.json`       | Notifications                               | no                      | DORMANT                                                               |

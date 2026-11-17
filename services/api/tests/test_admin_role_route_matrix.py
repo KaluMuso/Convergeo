@@ -97,6 +97,10 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     ),
     "products.manage": frozenset(
         {
+            # Shared canonical photos (#798).
+            "DELETE /admin/products/{product_id}/images/{image_id}",
+            "GET /admin/products/{product_id}/images",
+            "POST /admin/products/{product_id}/images",
             "GET /admin/products/canonical",
             "GET /admin/products/duplicates",
             "GET /admin/products/search",
@@ -109,6 +113,15 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     ),
     "vendors.manage": frozenset(
         {
+            # Multi-branch review (#807): mapped to vendors.manage in auth.py.
+            "GET /admin/branches",
+            "GET /admin/branches/flags",
+            "GET /admin/branches/{branch_id}",
+            "POST /admin/branches/businesses/{business_id}/pacra",
+            "POST /admin/branches/flags/{flag_id}/resolve",
+            "POST /admin/branches/{branch_id}/approve",
+            "POST /admin/branches/{branch_id}/reject",
+            "POST /admin/branches/{branch_id}/request-info",
             "GET /admin/business",
             "GET /admin/intake",
             "GET /admin/intake/{session_id}",
@@ -228,6 +241,9 @@ MODERATOR_ROUTES: frozenset[str] = frozenset(
         "GET /admin/kyc/{kyc_record_id}",
         "GET /admin/licences",
         "GET /admin/licences/expiring",
+        "DELETE /admin/products/{product_id}/images/{image_id}",
+        "GET /admin/products/{product_id}/images",
+        "POST /admin/products/{product_id}/images",
         "GET /admin/products/canonical",
         "GET /admin/products/duplicates",
         "GET /admin/vendors",
@@ -272,6 +288,15 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "GET /admin/config/delivery-zones",
         "GET /admin/config/flags",
         "GET /admin/config/platform",
+        # Vendor listing plans (#798, flag off): commercial config, unrestricted only.
+        "DELETE /admin/vendor-plans/{plan_key}",
+        "DELETE /admin/vendors/{vendor_id}/plan/override",
+        "GET /admin/vendor-plans",
+        "GET /admin/vendors/{vendor_id}/plan",
+        "PATCH /admin/vendor-plans/{plan_key}",
+        "POST /admin/vendor-plans",
+        "PUT /admin/vendors/{vendor_id}/plan",
+        "PUT /admin/vendors/{vendor_id}/plan/override",
         # Coupons (#792, flag off): platform coupon management stays with the
         # unrestricted roles until a founder decision maps it to a permission.
         "GET /admin/coupons",

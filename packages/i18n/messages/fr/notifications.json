@@ -43,6 +43,12 @@
     "birthday_greeting": {
       "body": "Joyeux anniversaire de la part de Convergeo ! Code {coupon_code} : {amount} de remise dès {min_spend} d'achat, valable {valid_days} jours. Répondez STOP pour vous désabonner."
     },
+    "points_earned": {
+      "body": "Vous avez gagné {points} points. Vous en avez maintenant {balance}. À {threshold}, vous débloquez un coupon de récompense."
+    },
+    "vendor_weekly_digest": {
+      "body": "Votre semaine, {shop_name} : {orders} commandes, {sales} de ventes. Article phare : {top_item}. {new_followers} nouveaux abonnés. {pending_actions} actions en attente. Prochain versement : {next_payout}."
+    },
     "order_cancelled": {
       "body": "Votre commande Convergeo {order_reference} a été annulée. {refund_detail} Répondez STOP pour vous désabonner."
     },
@@ -215,6 +221,7 @@
       "quote_received": "Vous avez reçu un nouveau devis. Comparez-le et acceptez-le dans l'application.",
       "ticket_issued": "Votre billet est prêt. Ouvrez-le pour présenter le QR code à l'entrée.",
       "birthday_greeting": "Joyeux anniversaire ! Utilisez le code {code} pour une surprise dans les {valid_days} prochains jours.",
+      "points_earned": "Vous avez gagné {points} points. Vous en avez maintenant {balance}.",
       "order_cancelled": "La commande {ref} a été annulée. Tout paiement sera remboursé.",
       "order_completed": "La commande {ref} est terminée. Merci d'avoir acheté sur Convergeo !",
       "payment_failed": "Votre paiement n'a pas abouti. Ouvrez vos commandes pour réessayer.",
@@ -229,6 +236,7 @@
       "rfq_received": "Un client vous a demandé un devis.",
       "job_matched": "Une nouvelle mission correspond à vos services.",
       "dispute_opened": "Un client a ouvert un litige sur la commande {ref}. Merci de répondre.",
+      "vendor_weekly_digest": "Votre semaine : {orders} commandes, {sales} de ventes, {followers} nouveaux abonnés.",
       "payout_sent": "Votre versement est en route vers votre numéro mobile money.",
       "payout_failed": "Votre versement n'a pas pu être envoyé. Vérifiez votre numéro de versement.",
       "quote_accepted": "Un client a accepté votre devis. Ouvrez-le pour démarrer le travail."

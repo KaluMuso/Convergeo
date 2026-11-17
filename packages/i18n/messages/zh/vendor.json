@@ -383,7 +383,9 @@
       "uploading": "上传中…",
       "upload_failed": "上传失败",
       "minimum_required": "商品发布期间必须至少保留 {count} 张凭证照片。",
-      "retry": "重试"
+      "retry": "重试",
+      "duplicate": "该照片已在此商品中。",
+      "dedupCanonical": "该照片已是产品主图，买家会在您的商品中看到它，无需重复上传。"
     },
     "meta": {
       "title": "创建商品 —— Convergeo 商家",
@@ -1995,7 +1997,9 @@
       "attendeeNamedBadge": "需要姓名",
       "perksLabel": "权益（可选）",
       "perksHelp": "向买家展示 — 休息室、周边、饮品券。没有则留空。",
-      "perksPlaceholder": "例如含一张饮品券"
+      "perksPlaceholder": "例如含一张饮品券",
+      "isFreeLabel": "这是免费的",
+      "isFreeHint": "来宾无需付款即可报名，仍会获得二维码门票，并受名额限制。"
     },
     "actions": {
       "save": "保存类型",
@@ -2524,6 +2528,159 @@
         "listing": "该商品不属于您的店铺。",
         "archived": "已结束的优惠券不能重新开始，请新建一个。"
       }
+    }
+  },
+  "plans": {
+    "heading": "您的套餐：{name}",
+    "free": "免费",
+    "perMonth": "{price}/月",
+    "usage": "已使用 {count}/{max} 个商品",
+    "usageUnlimited": "{count} 个商品 · 无上限",
+    "kycLimit": "您已达到当前认证等级的商品上限。完成企业认证即可发布更多商品。",
+    "atLimit": "您已用完套餐内的全部商品数量。",
+    "overLimit": "您的商品数量超出了套餐允许的范围。",
+    "keepSelling": "我们不会删除任何内容：您的商品保持上架，仍可编辑和补充库存。如需添加新商品，请升级套餐。",
+    "option": "{name}：{max} 个商品，{price}/月",
+    "optionUnlimited": "{name}：商品数量不限，{price}/月",
+    "howToUpgrade": "如需升级，请联系我们的团队。不会自动扣费。",
+    "limitReachedShort": "您已达到商品数量上限。现有商品保持上架；请查看上方套餐进行升级。",
+    "limitReached": "您已达到套餐的商品数量上限。现有商品保持上架；升级后可添加更多。",
+    "photoLimitReached": "您的套餐每个商品最多 {max} 张照片。升级套餐即可添加更多。",
+    "billingUnavailable": "套餐付款功能暂未开放。我们的团队会协助您升级。"
+  },
+  "branches": {
+    "title": "我的企业与店铺",
+    "intro": "用一个账户管理企业的所有分店。每家店铺都有自己的店面、库存、收款号码和套餐。",
+    "loading": "正在加载您的企业…",
+    "disabled": "多店铺功能暂未开放。",
+    "primary": "主店",
+    "acting": "您正在此店操作",
+    "payoutHold": "在我们的团队核实共用的 MoMo 号码之前，此店铺的提现已暂停。",
+    "reviewNote": "团队备注：{note}",
+    "ownerKycNeeded": "添加店铺前，请先完成店主身份验证（KYC）。",
+    "switcher": {
+      "label": "当前操作的店铺",
+      "withStatus": "{name}（{status}）",
+      "manage": "我的店铺"
+    },
+    "status": {
+      "draft": "草稿",
+      "pending_review": "审核中",
+      "info_requested": "需补充信息",
+      "approved": "已上线",
+      "rejected": "已拒绝"
+    },
+    "allowance": {
+      "used": "已用 {used}/{limit} 家店铺",
+      "usedUnlimited": "{used} 家店铺",
+      "blockedUnregistered": "未注册商户只能经营一家店铺。添加 PACRA 注册信息后可开设更多店铺。",
+      "blockedPlan": "您的套餐已无可用店铺名额。升级套餐即可添加分店。",
+      "nextAddon": "下一家店铺：附加费 {price}/月",
+      "nextIncluded": "下一家店铺已包含在您的套餐中"
+    },
+    "staff": {
+      "seats": "员工席位：{used}/{seats}",
+      "unlimited": "员工席位：{used}（不限）"
+    },
+    "registration": {
+      "title": "企业注册（PACRA）",
+      "help": "已注册的企业可开设多家店铺。我们会核实 PACRA 号码和证书。",
+      "typeLabel": "注册类型",
+      "company": "注册公司",
+      "business_name": "注册商号",
+      "unregistered": "未注册（市场摊主）",
+      "unspecified": "未填写注册信息",
+      "pacraLine": "PACRA {number}",
+      "verified": "PACRA 已核实",
+      "pacraNumber": "PACRA 号码",
+      "certificate": "证书照片",
+      "unregisteredNote": "未注册商户仅限一家店铺。",
+      "save": "保存注册信息",
+      "saved": "注册信息已保存。"
+    },
+    "actions": {
+      "addShop": "添加店铺/分店",
+      "workHere": "切换到此店铺",
+      "submit": "提交审核",
+      "submitting": "提交中…",
+      "saving": "保存中…",
+      "createShop": "创建店铺"
+    },
+    "evidence": {
+      "help": "实体店需要提供店面照片和场所使用证明。",
+      "onlineHelp": "纯线上店铺无需场所证明。准备好后即可提交审核。",
+      "storefront_photo": "店面照片",
+      "premises_proof": "场所证明",
+      "uploaded": "已上传",
+      "proofType": "证明类型",
+      "proof": {
+        "lease": "租赁合同",
+        "utility_bill": "水电费账单",
+        "council_permit": "市政营业许可"
+      }
+    },
+    "form": {
+      "title": "添加店铺/分店",
+      "intro": "每家分店都有自己的店面、库存、收款号码和套餐。上线前由我们的团队审核。",
+      "shop": "店铺",
+      "name": "店铺名称",
+      "kind": "类型",
+      "kindPhysical": "实体店",
+      "kindOnline": "仅线上",
+      "location": "位置",
+      "useMyLocation": "使用我当前的位置",
+      "lat": "纬度",
+      "lng": "经度",
+      "landmark": "地标",
+      "landmarkHelp": "例如：Great East Road 上 Total 加油站对面。",
+      "address": "街道地址（可选）",
+      "mapUrl": "地图链接（可选，https）",
+      "opens": "开门时间",
+      "closes": "关门时间",
+      "sundayClosed": "周日休息",
+      "contacts": "联系方式",
+      "phone": "店铺电话",
+      "whatsapp": "WhatsApp 号码（可选）",
+      "email": "电子邮箱（可选）",
+      "payout": "收款",
+      "payoutNumber": "MoMo 收款号码",
+      "payoutHelp": "不能使用其他企业的号码。您自己的多家店铺共用一个号码需经团队审核。",
+      "rail": "运营商",
+      "reviewNote": "创建店铺后，请上传店面照片和场所证明，然后提交审核。",
+      "priceAddon": "此店铺为付费附加项：套餐每月 {price}。",
+      "priceIncluded": "此店铺已包含在您的套餐中。",
+      "rails": {
+        "mtn": "MTN MoMo",
+        "airtel": "Airtel Money",
+        "zamtel": "Zamtel Kwacha"
+      }
+    },
+    "errors": {
+      "disabled": "多店铺功能暂未开放。",
+      "businessNotFound": "未找到该企业。",
+      "branchNotFound": "未找到该店铺。",
+      "businessSuspended": "该企业已被暂停。",
+      "ownerKycRequired": "请先完成店主身份验证（KYC）。",
+      "locationRequired": "请添加店铺位置和地标。",
+      "slugInvalid": "店铺名称需包含字母或数字。",
+      "unregisteredLimit": "未注册商户只能经营一家店铺。请先添加 PACRA 注册信息。",
+      "planLimit": "您的套餐已无可用店铺名额。请升级后添加分店。",
+      "tooClose": "此店铺距离您的另一家店铺仅 {nearest} 米。分店之间至少相距 {min} 米。",
+      "payoutTaken": "该 MoMo 号码属于其他企业，请使用您自己的号码。",
+      "evidenceRequired": "请先上传店面照片和场所证明。",
+      "evidenceLocked": "提交审核后不能再修改证明材料。",
+      "evidencePath": "该上传无效，请重新上传。",
+      "evidenceFile": "请使用不超过 10 MB 的 JPG、PNG 或 WebP 照片。",
+      "invalidTransition": "此店铺目前无法提交审核。",
+      "pacraRequired": "注册企业需要提供 PACRA 号码和证书。",
+      "pacraTaken": "该 PACRA 号码已被其他企业注册。",
+      "staffSeatLimit": "您的套餐已无空闲员工席位。",
+      "staffDuplicate": "该员工已被邀请。",
+      "rateLimited": "尝试次数过多，请稍等一分钟再试。",
+      "validation": "请检查填写内容后重试。",
+      "network": "网络未连接，请检查数据后重试。",
+      "locationDenied": "无法获取您的位置，请手动输入。",
+      "generic": "出错了，请重试。"
     }
   }
 }

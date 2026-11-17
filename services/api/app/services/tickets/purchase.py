@@ -74,6 +74,11 @@ class RsvpResult:
     order_item_id: str
     ticket_ids: tuple[str, ...]
     commission_snapshot: dict[str, Any]
+    replayed: bool = False
+
+
+#: Abuse cap: free RSVP tickets one user may hold per event (one RSVP per event).
+MAX_RSVP_TICKETS_PER_USER = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -409,6 +414,11 @@ def _build_ticket_commission_snapshot(
         "fee_payer": payer,
         "platform_fee_ngwee": platform_fee,
     }
+    if is_free:
+        # Free orders carry no money: the DB refuses ledger rows / payment intents
+        # for them (private.order_is_free, 20261116130000).
+        snapshot["is_free"] = True
+        snapshot["rate_bps"] = 0
     if claimed_ticket_ids:
         snapshot["ticket_claim_ids"] = list(claimed_ticket_ids)
     if promo_code:
@@ -1121,6 +1131,18 @@ def rsvp(
             details={"message_key": "events.ticketPurchase.errors.paidUseCheckout"},
         )
 
+    if qty > MAX_RSVP_TICKETS_PER_USER:
+        raise AppError(
+            code="tickets.rsvp_cap",
+            message=f"At most {MAX_RSVP_TICKETS_PER_USER} free tickets per person",
+            http_status=422,
+            details={
+                "field": "qty",
+                "max": MAX_RSVP_TICKETS_PER_USER,
+                "message_key": "events.ticketPurchase.errors.rsvpCap",
+            },
+        )
+
     names = _validate_attendee_names(
         attendee_names,
         qty=qty,
@@ -1128,6 +1150,128 @@ def rsvp(
     )
     title = str(ticket_type.get("name") or "RSVP")
     unit_price = 1  # schema requires order_items.unit_price_ngwee > 0
+
+    event_id = str(ctx["event"]["id"])
+    if not _reserve_rsvp(
+        event_id=event_id,
+        customer_id=customer_id,
+        instance_id=instance_id,
+        ticket_type_id=ticket_type_id,
+        qty=qty,
+    ):
+        return _replay_rsvp(event_id=event_id, customer_id=customer_id)
+    try:
+        result = _issue_rsvp(
+            service_client,
+            customer_id=customer_id,
+            instance_id=instance_id,
+            ticket_type_id=ticket_type_id,
+            qty=qty,
+            names=names,
+            title=title,
+            kind=kind,
+            unit_price=unit_price,
+            organiser_vendor_id=ctx["organiser_vendor_id"],
+        )
+    except BaseException:
+        _release_rsvp(event_id=event_id, customer_id=customer_id)
+        raise
+    _bind_rsvp_order(event_id=event_id, customer_id=customer_id, order_id=result.order_id)
+    return result
+
+
+def _reserve_rsvp(
+    *, event_id: str, customer_id: str, instance_id: str, ticket_type_id: str, qty: int
+) -> bool:
+    """Insert the (event, user) RSVP anchor; False when one already exists."""
+    result = run_sql_script(
+        f"""
+INSERT INTO public.event_rsvps (event_id, user_id, instance_id, ticket_type_id, qty)
+VALUES ({sql_uuid(event_id, "event_id")}, {sql_uuid(customer_id, "customer_id")},
+        {sql_uuid(instance_id, "instance_id")}, {sql_uuid(ticket_type_id, "ticket_type_id")},
+        {int(qty)})
+ON CONFLICT (event_id, user_id) DO NOTHING
+RETURNING 'new';
+"""
+    )
+    if not result.ok:
+        raise RuntimeError(f"rsvp reserve failed: {result.error}")
+    return bool(result.rows) and result.rows[0] == "new"
+
+
+def _release_rsvp(*, event_id: str, customer_id: str) -> None:
+    run_sql_script(
+        f"""
+DELETE FROM public.event_rsvps
+WHERE event_id = {sql_uuid(event_id, "event_id")}
+  AND user_id = {sql_uuid(customer_id, "customer_id")}
+  AND order_id IS NULL;
+"""
+    )
+
+
+def _bind_rsvp_order(*, event_id: str, customer_id: str, order_id: str) -> None:
+    result = run_sql_script(
+        f"""
+UPDATE public.event_rsvps SET order_id = {sql_uuid(order_id, "order_id")}
+WHERE event_id = {sql_uuid(event_id, "event_id")}
+  AND user_id = {sql_uuid(customer_id, "customer_id")};
+"""
+    )
+    if not result.ok:
+        raise RuntimeError(f"rsvp bind failed: {result.error}")
+
+
+def _replay_rsvp(*, event_id: str, customer_id: str) -> RsvpResult:
+    """Idempotent duplicate RSVP: return the user's existing order and tickets."""
+    result = run_sql_script(
+        f"""
+SELECT concat_ws('|', o.checkout_group_id, o.id, oi.id,
+                 coalesce(string_agg(t.id::text, ',' ORDER BY t.created_at, t.id), ''))
+FROM public.event_rsvps r
+JOIN public.orders o ON o.id = r.order_id
+JOIN public.order_items oi ON oi.order_id = o.id
+LEFT JOIN public.tickets t ON t.order_item_id = oi.id AND t.status <> 'void'
+WHERE r.event_id = {sql_uuid(event_id, "event_id")}
+  AND r.user_id = {sql_uuid(customer_id, "customer_id")}
+GROUP BY o.checkout_group_id, o.id, oi.id
+LIMIT 1;
+"""
+    )
+    if not result.ok:
+        raise RuntimeError(f"rsvp replay failed: {result.error}")
+    if not result.rows:
+        raise AppError(
+            code="tickets.rsvp_in_progress",
+            message="Your RSVP is already being processed",
+            http_status=409,
+            details={"message_key": "events.ticketPurchase.errors.rsvpInProgress"},
+        )
+    group_id, order_id, item_id, ids = result.rows[0].split("|")
+    return RsvpResult(
+        checkout_group_id=group_id,
+        order_id=order_id,
+        order_item_id=item_id,
+        ticket_ids=tuple(i for i in ids.split(",") if i),
+        commission_snapshot={"is_free": True, "rate_bps": 0},
+        replayed=True,
+    )
+
+
+def _issue_rsvp(
+    service_client: Any,
+    *,
+    customer_id: str,
+    instance_id: str,
+    ticket_type_id: str,
+    qty: int,
+    names: list[str] | None,
+    title: str,
+    kind: str,
+    unit_price: int,
+    organiser_vendor_id: Any,
+) -> RsvpResult:
+    ctx = {"organiser_vendor_id": organiser_vendor_id}
 
     claim = claim_ticket_or_raise(
         service_client,

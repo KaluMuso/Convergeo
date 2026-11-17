@@ -94,6 +94,9 @@ TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
     "price_drop_alert": TemplateClass.MARKETING,
     "back_in_stock_alert": TemplateClass.MARKETING,
     "saved_search_alert": TemplateClass.MARKETING,
+    # Engagement digests (quiet hours + consent apply; in-app always lands).
+    "points_earned": TemplateClass.MARKETING,
+    "vendor_weekly_digest": TemplateClass.MARKETING,
 }
 
 

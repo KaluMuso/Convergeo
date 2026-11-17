@@ -125,7 +125,11 @@
       "serviceQuote": "询价",
       "serviceArea": "服务区域：{area}",
       "browseOtherShops": "查看类似的其他店铺"
-    }
+    },
+    "otherBranches": "其他分店",
+    "otherBranchesAria": "{name} 的其他分店",
+    "partOfBusiness": "隶属于 {name}",
+    "branchWithLandmark": "{name} · {landmark}"
   },
   "listings": {
     "vendor": "由 {vendor} 销售",

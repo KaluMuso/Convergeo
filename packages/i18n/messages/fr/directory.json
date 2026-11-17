@@ -125,7 +125,11 @@
       "serviceQuote": "Demander un prix",
       "serviceArea": "Intervient à {area}",
       "browseOtherShops": "Voir d'autres boutiques similaires"
-    }
+    },
+    "otherBranches": "Autres succursales",
+    "otherBranchesAria": "Autres succursales de {name}",
+    "partOfBusiness": "Fait partie de {name}",
+    "branchWithLandmark": "{name} · {landmark}"
   },
   "listings": {
     "vendor": "Vendu par {vendor}",

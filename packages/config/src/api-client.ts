@@ -31,6 +31,19 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * App-wide default request headers (e.g. the vendor app's acting-branch header
+ * `X-Vendor-Branch`). Registered once by an app; a header set explicitly on a
+ * request always wins. Returns nothing when there is nothing to add.
+ */
+export type ApiDefaultHeadersProvider = () => Record<string, string> | null | undefined;
+
+let defaultHeadersProvider: ApiDefaultHeadersProvider | null = null;
+
+export function setApiDefaultHeaders(provider: ApiDefaultHeadersProvider | null): void {
+  defaultHeadersProvider = provider;
+}
+
 export type ApiClientOptions = {
   baseUrl: string;
   getToken?: () => string | null | Promise<string | null>;
@@ -57,6 +70,15 @@ export function createApiClient(options: ApiClientOptions) {
 
   async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
+
+    const defaults = defaultHeadersProvider?.();
+    if (defaults) {
+      for (const [name, value] of Object.entries(defaults)) {
+        if (!headers.has(name)) {
+          headers.set(name, value);
+        }
+      }
+    }
 
     if (init.body && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");

@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from app.main import create_app
 from app.routers.internal_digest import build_digest
+from app.services.points.ledger import PointsLiability
 from fastapi.testclient import TestClient
 
 INTERNAL_TOKEN = "test-digest-token"
@@ -167,6 +168,10 @@ def fake_service(monkeypatch: pytest.MonkeyPatch) -> FakeSupabaseClient:
     wrapper = MagicMock()
     wrapper.client = fake
     monkeypatch.setattr("app.routers.admin_dashboards.run_sql_script", _fake_order_status_sql(fake))
+    monkeypatch.setattr(
+        "app.routers.internal_digest.read_liability",
+        lambda: PointsLiability(points_outstanding=100, ngwee_per_point=5, liability_ngwee=500),
+    )
     monkeypatch.setattr(
         "app.routers.internal_digest.get_supabase_client",
         lambda: iter([wrapper]),

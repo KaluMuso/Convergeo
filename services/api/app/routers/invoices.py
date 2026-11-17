@@ -28,6 +28,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.invoicing.pdf import invoice_filename, render_invoice_pdf
 from fastapi import APIRouter, Depends, Response
 
@@ -129,9 +130,10 @@ def _load_order(service: _ServiceRoleClient, order_id: str) -> dict[str, Any] | 
 
 def _vendor_id_for_owner(service: _ServiceRoleClient, owner_user_id: str) -> str | None:
     response = (
-        service.client.table("vendors")
+        scope_owner_vendor_query(
+            service.client.table("vendors")
         .select("id, owner_user_id")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )

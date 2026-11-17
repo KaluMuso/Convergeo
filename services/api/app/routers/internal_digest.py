@@ -22,6 +22,7 @@ from app.routers.admin_dashboards import (
     _orders_by_status,
     compute_gmv_ngwee,
 )
+from app.services.points.ledger import PointsError, read_liability
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
@@ -45,6 +46,12 @@ class OrdersDigestOut(BaseModel):
     by_status: OrdersByStatusOut
 
 
+class PointsLiabilityOut(BaseModel):
+    points_outstanding: int
+    ngwee_per_point: int
+    liability_ngwee: int
+
+
 class DigestOut(BaseModel):
     generated_at: datetime
     gmv_ngwee: int
@@ -53,6 +60,9 @@ class DigestOut(BaseModel):
     reconciliation: ReconciliationTileOut
     kyc_queue_depth: int
     flags_pending: int
+    # Convergeo Points liability (outstanding points x points_ngwee_per_point);
+    # null when the points schema is unreachable. Points are never cash.
+    points_liability: PointsLiabilityOut | None = None
 
 
 def _expected_internal_token() -> str:
@@ -120,6 +130,18 @@ def _orders_digest(service_client: ServiceRoleClient) -> OrdersDigestOut:
     return OrdersDigestOut(total=total, by_status=by_status)
 
 
+def _points_liability() -> PointsLiabilityOut | None:
+    try:
+        value = read_liability()
+    except (PointsError, ValueError, TypeError):
+        return None
+    return PointsLiabilityOut(
+        points_outstanding=value.points_outstanding,
+        ngwee_per_point=value.ngwee_per_point,
+        liability_ngwee=value.liability_ngwee,
+    )
+
+
 def build_digest(service_client: ServiceRoleClient) -> DigestOut:
     return DigestOut(
         generated_at=datetime.now(UTC),
@@ -129,6 +151,7 @@ def build_digest(service_client: ServiceRoleClient) -> DigestOut:
         reconciliation=_latest_reconciliation(service_client),
         kyc_queue_depth=_count_with_status(service_client, "kyc_records", PENDING_KYC_STATUS),
         flags_pending=_count_with_status(service_client, "flags", OPEN_FLAG_STATUS),
+        points_liability=_points_liability(),
     )
 
 

@@ -43,6 +43,12 @@
     "birthday_greeting": {
       "body": "Convergeo 祝您生日快乐！使用优惠码 {coupon_code}，满 {min_spend} 立减 {amount}，{valid_days} 天内有效。回复 STOP 退订。"
     },
+    "points_earned": {
+      "body": "您获得了 {points} 积分，当前共有 {balance} 积分。达到 {threshold} 积分即可解锁奖励优惠券。"
+    },
+    "vendor_weekly_digest": {
+      "body": "{shop_name} 本周：{orders} 笔订单，销售额 {sales}。热销商品：{top_item}。新增 {new_followers} 位关注者。{pending_actions} 项待处理。下次结算：{next_payout}。"
+    },
     "order_cancelled": {
       "body": "您的 Convergeo 订单 {order_reference} 已取消。{refund_detail} 回复 STOP 即可退订。"
     },
@@ -215,6 +221,7 @@
       "quote_received": "您收到了新的报价。请在应用中比较并接受。",
       "ticket_issued": "您的门票已就绪。入场时请出示二维码。",
       "birthday_greeting": "生日快乐！在接下来的 {valid_days} 天内使用优惠码 {code} 领取惊喜。",
+      "points_earned": "您获得了 {points} 积分，现在共有 {balance} 积分。",
       "order_cancelled": "订单 {ref} 已取消。已付款项将被退还。",
       "order_completed": "订单 {ref} 已完成。感谢您在 Convergeo 购物！",
       "payment_failed": "您的付款未成功。请打开订单重试。",
@@ -229,6 +236,7 @@
       "rfq_received": "有顾客向您询价。",
       "job_matched": "有新的工作与您的服务匹配。",
       "dispute_opened": "顾客对订单 {ref} 发起了争议，请及时回复。",
+      "vendor_weekly_digest": "本周：{orders} 笔订单，销售额 {sales}，新增 {followers} 位关注者。",
       "payout_sent": "您的提现款项正在汇往您的移动支付号码。",
       "payout_failed": "您的提现款项发送失败。请检查收款号码。",
       "quote_accepted": "有顾客接受了您的报价。打开即可开始工作。"

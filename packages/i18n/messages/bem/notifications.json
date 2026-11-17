@@ -51,6 +51,12 @@
     "birthday_greeting": {
       "body": "Happy birthday from Convergeo! Use code {coupon_code} for {amount} off orders of {min_spend} or more, valid {valid_days} days. Reply STOP to opt out."
     },
+    "points_earned": {
+      "body": "You earned {points} points. You now have {balance}. At {threshold} you unlock a reward coupon."
+    },
+    "vendor_weekly_digest": {
+      "body": "Your week, {shop_name}: {orders} orders, {sales} in sales. Top item: {top_item}. {new_followers} new followers. {pending_actions} actions waiting. Next payout: {next_payout}."
+    },
     "order_cancelled": {
       "body": "⚠ Your Convergeo order {order_reference} was cancelled. {refund_detail} Reply STOP to opt out."
     },
@@ -229,6 +235,7 @@
       "quote_received": "Mwapokelela quote iipya. Linganyeni no kusuminisha mu app.",
       "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi.",
       "birthday_greeting": "Ubushiku busuma ubwa kufyalwa! Bomfyeni kuponi {code} mu nshiku {valid_days}.",
+      "points_earned": "⚠ You earned {points} points. You now have {balance}.",
       "order_cancelled": "⚠ Order {ref} was cancelled. Any payment will be refunded.",
       "order_completed": "⚠ Order {ref} is complete. Thank you for shopping with Convergeo!",
       "payment_failed": "⚠ Your payment did not go through. Open your orders to try again.",
@@ -243,6 +250,7 @@
       "rfq_received": "Kasita alomba quote kuli imwe.",
       "job_matched": "Incito iipya ilinganya na ma-service yenu.",
       "dispute_opened": "Kasita aleta ubwafya pa order {ref}. Mwaiseni mwasuke.",
+      "vendor_weekly_digest": "⚠ Your week: {orders} orders, {sales} in sales, {followers} new followers.",
       "payout_sent": "⚠ Your payout is on its way to your mobile money number.",
       "payout_failed": "⚠ Your payout could not be sent. Check your payout number.",
       "quote_accepted": "⚠ A customer accepted your quote. Open it to start the job."

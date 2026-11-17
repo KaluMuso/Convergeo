@@ -33,7 +33,8 @@
     "accounts": "管理员账户",
     "auditLog": "审计日志",
     "offers": "优惠活动",
-    "coupons": "优惠券"
+    "coupons": "优惠券",
+    "branches": "分店审核"
   },
   "hubs": {
     "moderation": {
@@ -56,7 +57,9 @@
       "categoriesTitle": "分类树",
       "categoriesBody": "公开目录分类结构。",
       "platformTitle": "平台参数",
-      "platformBody": "运营限额与平台设置。"
+      "platformBody": "运营限额与平台设置。",
+      "vendorPlansTitle": "商家套餐",
+      "vendorPlansBody": "套餐价格、商品和照片上限，以及按商家设置的例外。"
     }
   },
   "translations": {
@@ -132,7 +135,8 @@
       "deliveryZones": "配送区域",
       "platform": "平台参数",
       "flags": "功能开关",
-      "categories": "分类树"
+      "categories": "分类树",
+      "vendorPlans": "商家套餐"
     },
     "common": {
       "save": "保存更改",
@@ -189,7 +193,8 @@
       "advanceMinKycTier": "活动前预付：最低 KYC 等级",
       "advanceMinEvents": "活动前预付：最少成功举办的活动数",
       "advanceRepaymentDays": "活动前预付：还款期限（天）",
-      "dangerousHint": "货到付款上限的更改仅影响新的结账资格。"
+      "dangerousHint": "货到付款上限的更改仅影响新的结账资格。",
+      "branchMinDistance": "分店最小间距（米）"
     },
     "flags": {
       "title": "功能开关",
@@ -209,6 +214,10 @@
       "moveChildrenConfirm": "连同子分类一起移动",
       "orphanWarning": "无法在不移动子分类的情况下移动该分类——请启用“连同子分类一起移动”。",
       "rootOption": "根节点（无父级）"
+    },
+    "vendorPlans": {
+      "title": "商家套餐",
+      "subtitle": "商品数量上限、照片上限、功能和月费。修改立即生效并记录审计日志。"
     }
   },
   "business": {
@@ -1540,6 +1549,222 @@
         "listing": "该商品不属于您的店铺。",
         "archived": "已结束的优惠券不能重新开始，请新建一个。"
       }
+    }
+  },
+  "common": {
+    "rateLimited": "短时间内修改过多，请稍等一分钟再试。"
+  },
+  "productImages": {
+    "errors": {
+      "full": "每个产品最多 8 张照片。",
+      "duplicate": "该照片已在此产品中。"
+    }
+  },
+  "vendorPlans": {
+    "hint": "上限按不同商品计算，从不按库存计算。商品上限留空表示不限。超出上限绝不会删除商品，商家只会看到升级提示。目前不收取费用。",
+    "unlimited": "不限",
+    "default": "默认套餐",
+    "vendorCount": "{count, plural, other {# 个商家}}",
+    "summary": "{price}/月 · {listings} 个商品 · {images} 张照片",
+    "makeDefault": "设为默认",
+    "delete": "删除",
+    "createHeading": "新建套餐",
+    "create": "创建套餐",
+    "fields": {
+      "key": "套餐标识（小写，例如 market_stall）",
+      "name": "名称",
+      "priceKwacha": "月费（K）",
+      "maxListings": "商品上限（留空为不限）",
+      "maxImages": "每个商品照片数（1–8）",
+      "featuredSlots": "推荐位",
+      "analyticsDepth": "数据分析",
+      "wholesaleTools": "批发工具",
+      "active": "启用",
+      "includedShops": "包含店铺数（留空 = 不限）",
+      "extraShopPrice": "额外店铺（K/月，留空 = 不提供）",
+      "staffSeats": "员工席位（留空 = 不限）",
+      "broadcasts": "WhatsApp 群发 / 月",
+      "adCredit": "广告额度（K/月）",
+      "integrationsLevel": "集成",
+      "payoutSpeed": "提现速度",
+      "supportLevel": "支持",
+      "officialStoreBadge": "官方店铺徽章",
+      "clickAndCollect": "到店自提",
+      "multiBranchStock": "多分店库存"
+    },
+    "depth": {
+      "basic": "基础",
+      "standard": "标准",
+      "advanced": "高级"
+    },
+    "errors": {
+      "nameRequired": "请输入套餐名称。",
+      "keyInvalid": "请使用 2–32 个小写字母、数字或下划线，并以字母开头。",
+      "priceInvalid": "请输入克瓦查价格，例如 49 或 49.50。",
+      "listingsInvalid": "请输入整数商品数量，或留空表示不限。",
+      "imagesInvalid": "每个商品的照片数必须在 1 到 8 之间。",
+      "slotsInvalid": "推荐位必须在 0 到 100 之间。",
+      "overrideEmpty": "例外必须修改商品上限或照片上限。",
+      "expiryInvalid": "请选择未来的到期日期，最长一年。",
+      "reasonRequired": "请填写例外原因。",
+      "vendorIdInvalid": "请输入商家 ID（UUID）。",
+      "vendorNotFound": "未找到该商家。",
+      "saveFailed": "无法保存，请检查后重试。",
+      "keyTaken": "该套餐标识已存在。",
+      "defaultInactive": "默认套餐必须保持启用。",
+      "defaultDelete": "默认套餐不能删除。",
+      "inUse": "仍有商家使用此套餐。请改为停用，或先迁移这些商家。",
+      "planInactive": "该套餐未启用。",
+      "shopsInvalid": "包含店铺数须为从 1 起的整数，留空表示不限。",
+      "extraShopPriceInvalid": "请输入额外店铺价格（克瓦查），或留空。",
+      "seatsInvalid": "员工席位须为整数，留空表示不限。",
+      "broadcastsInvalid": "请输入群发次数（整数）。",
+      "adCreditInvalid": "请输入广告额度（克瓦查）。"
+    },
+    "vendor": {
+      "heading": "商家套餐",
+      "hint": "查找商家以分配套餐或设置限时例外。",
+      "vendorId": "商家 ID",
+      "load": "加载",
+      "flagOff": "vendor_plans 开关已关闭，以下上限暂未生效。",
+      "effective": "套餐 {plan}：{listings} 个商品（已用 {count}），每个商品 {images} 张照片",
+      "plan": "套餐",
+      "defaultPlan": "选择套餐",
+      "note": "备注（可选）",
+      "assign": "分配套餐",
+      "noBilling": "分配套餐仅作记录，不会收取任何费用。",
+      "none": "默认"
+    },
+    "override": {
+      "heading": "例外",
+      "current": "生效中：{listings} 个商品，至 {expires}（{reason}）",
+      "expired": "已于 {expires} 过期：{listings} 个商品（{reason}）",
+      "unlimited": "商品数量不限",
+      "expiresOn": "到期日期",
+      "reason": "原因",
+      "save": "保存例外",
+      "remove": "移除例外"
+    },
+    "integrations": {
+      "none": "无",
+      "basic": "基础",
+      "sheets_webhooks": "表格 + Webhook",
+      "api": "API"
+    },
+    "payoutSpeed": {
+      "standard": "标准",
+      "fast": "快速",
+      "priority": "优先"
+    },
+    "support": {
+      "community": "社区",
+      "standard": "标准",
+      "priority": "优先",
+      "dedicated": "专属"
+    }
+  },
+  "branches": {
+    "title": "分店审核",
+    "subtitle": "审批多店铺企业的新店铺。每个决定都会记录审计日志。",
+    "status": {
+      "draft": "草稿",
+      "pending_review": "待审核",
+      "info_requested": "已要求补充信息",
+      "approved": "已批准",
+      "rejected": "已拒绝"
+    },
+    "kind": {
+      "physical": "实体店",
+      "online": "线上"
+    },
+    "queue": {
+      "filter": "状态",
+      "flagsLink": "疑似重复",
+      "loading": "正在加载分店…",
+      "error": "无法加载分店。",
+      "permissionDenied": "您没有分店审核权限。",
+      "retry": "重试",
+      "empty": "暂无分店。",
+      "evidence": "{count, plural, other {# 份证明}}",
+      "openFlags": "{count, plural, other {# 个未处理标记}}"
+    },
+    "detail": {
+      "back": "返回队列",
+      "business": "企业",
+      "legalName": "法定名称",
+      "registration": "注册信息",
+      "pacraCertificate": "PACRA 证书",
+      "open": "打开",
+      "ownerKyc": "店主 KYC 已批准",
+      "yes": "是",
+      "no": "否",
+      "shop": "店铺",
+      "location": "位置",
+      "address": "地址",
+      "phone": "电话",
+      "payout": "收款",
+      "onHold": "已暂停",
+      "plan": "套餐",
+      "planAddon": "{plan} · 附加费 {price}/月",
+      "planIncluded": "{plan} · 已包含",
+      "evidence": "证明材料",
+      "noEvidence": "尚未上传证明材料。",
+      "unavailable": "无法预览",
+      "flags": "{count, plural, =0 {疑似重复} other {疑似重复（# 个未处理）}}",
+      "siblings": "该企业的其他分店",
+      "primary": "主店",
+      "note": "给商家的备注（要求补充信息或拒绝时必填）",
+      "flagsBlock": "批准前请先处理未处理的重复标记。",
+      "history": "历史记录"
+    },
+    "actions": {
+      "approve": "批准",
+      "requestInfo": "要求补充信息",
+      "reject": "拒绝"
+    },
+    "evidence": {
+      "storefront_photo": "店面照片",
+      "premises_proof": "场所证明"
+    },
+    "proof": {
+      "lease": "租赁合同",
+      "utility_bill": "水电费账单",
+      "council_permit": "市政营业许可"
+    },
+    "flags": {
+      "title": "疑似重复",
+      "subtitle": "通过名称、电话、收款号码、GPS 或照片发现的可能重复店铺。",
+      "none": "暂无标记。",
+      "score": "匹配度 {score}%",
+      "pair": "{branch} ↔ {matched}",
+      "noteLabel": "处理备注",
+      "notePlaceholder": "为什么是（或不是）重复？",
+      "clear": "不是重复",
+      "confirm": "确认重复"
+    },
+    "flagKind": {
+      "name_similar": "名称相似",
+      "phone_match": "电话相同",
+      "payout_other_owner": "使用其他店主的收款号码",
+      "payout_shared_same_owner": "共用收款号码（同一店主）",
+      "gps_near_other_owner": "同一地点有其他店主",
+      "image_duplicate": "店面照片相同"
+    },
+    "flagStatus": {
+      "open": "未处理",
+      "cleared": "已排除",
+      "confirmed": "已确认重复"
+    },
+    "errors": {
+      "noteRequired": "请填写简短备注（至少 3 个字符）。",
+      "openFlags": "请先处理未处理的重复标记。",
+      "primary": "主店通过 KYC 审核。",
+      "flagResolved": "该标记已处理。",
+      "payoutOtherOwner": "收款号码绝不能在不同店主之间共用。",
+      "noPacra": "该企业没有 PACRA 号码。",
+      "invalidTransition": "该分店尚不能做出此决定。",
+      "permission": "您没有执行此操作的权限。",
+      "saveFailed": "无法保存决定，请重试。"
     }
   }
 }

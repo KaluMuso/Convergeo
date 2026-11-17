@@ -121,8 +121,21 @@ PENDING_REPAIR_VERSIONS = {
     "20261116100000",
     # Coupons: collection net of the coupon + coupon_funding leg (additive).
     "20261116100100",
+    # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
+    "20261116110000",
+    # Shared canonical photos + sha256 dedup (additive, reversible).
+    "20261116110100",
+    # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
+    "20261116130000",
+    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
+    "20261117000000",
+    # Unpaid-order auto-cancel window config row (additive, reversible).
+    "20261117010000",
+    # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
+    "20261117010100",
+    "20261117010200",
     # In-app rows for never-silent lifecycle templates (additive, reversible).
-    "20261116170000",
+    "20261117010300",
 }
 
 

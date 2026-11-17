@@ -8,6 +8,7 @@ from fastapi import Depends
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.branches.context import scope_owner_vendor_query
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,9 +38,10 @@ def _resolve_owned_vendor_id(
     truth used across the vendor surface (kyc, profile, listings, returns).
     """
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id, owner_user_id")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )

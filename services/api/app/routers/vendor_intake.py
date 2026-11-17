@@ -36,6 +36,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.vendor_listings import create_listing_for_vendor
 from app.schemas.base import StrictModel
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.intake import deeplink, handoff, state_machine
 from app.services.intake.canonical_insert import insert_intake_class_a_listing
 from app.services.intake.config import require_lane_open_for
@@ -227,9 +228,10 @@ def _rows(response: Any) -> list[dict[str, Any]]:
 
 def _load_vendor(service_client: ServiceRoleClient, owner_user_id: str) -> dict[str, Any]:
     rows = _rows(
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id, owner_user_id, status, kyc_tier")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )

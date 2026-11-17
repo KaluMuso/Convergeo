@@ -34,6 +34,8 @@ WhatsAppTemplateId = Literal[
     "dispute_resolved",
     "payout_sent",
     "payout_failed",
+    "points_earned",
+    "vendor_weekly_digest",
     "gift_recipient_notice",
     "gift_ready_pickup",
     "birthday_greeting",
@@ -349,6 +351,39 @@ def _map_payout_failed(payload: Mapping[str, Any]) -> tuple[str, ...]:
     )
 
 
+def _non_negative_int(payload: Mapping[str, Any], key: str) -> int:
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        msg = f"payload[{key!r}] must be a non-negative integer"
+        raise TemplateRenderError(msg)
+    return value
+
+
+def _map_points_earned(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    # "You earned {{1}} points. You now have {{2}}. At {{3}} you unlock a reward coupon."
+    return (
+        str(_non_negative_int(payload, "points")),
+        str(_non_negative_int(payload, "balance")),
+        str(_non_negative_int(payload, "threshold")),
+    )
+
+
+def _map_vendor_weekly_digest(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    # "Your week, {{1}}: {{2}} orders, {{3}} in sales. Top item: {{4}}.
+    #  {{5}} new followers. {{6}} actions waiting. Next payout: {{7}}."
+    payout = payload.get("next_payout_ngwee")
+    top = payload.get("top_item")
+    return (
+        _require_str(payload, "shop_name"),
+        str(_non_negative_int(payload, "orders")),
+        format_k(_require_int(payload, "sales_ngwee")),
+        top.strip() if isinstance(top, str) and top.strip() else "-",
+        str(_non_negative_int(payload, "new_followers")),
+        str(_non_negative_int(payload, "pending_actions")),
+        format_k(parse_ngwee(payout)) if payout is not None else "-",
+    )
+
+
 def _map_gift_recipient_notice(payload: Mapping[str, Any]) -> tuple[str, ...]:
     # One message to the gift recipient (ECT Act s.65: a single unsolicited
     # message, naming the sender). The Meta template carries the opt-out line.
@@ -510,6 +545,16 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         template_id="payout_failed",
         meta_template_name="payout_failed",
         map_variables=_map_payout_failed,
+    ),
+    "points_earned": WhatsAppTemplateDefinition(
+        template_id="points_earned",
+        meta_template_name="points_earned",
+        map_variables=_map_points_earned,
+    ),
+    "vendor_weekly_digest": WhatsAppTemplateDefinition(
+        template_id="vendor_weekly_digest",
+        meta_template_name="vendor_weekly_digest",
+        map_variables=_map_vendor_weekly_digest,
     ),
     "gift_recipient_notice": WhatsAppTemplateDefinition(
         template_id="gift_recipient_notice",
