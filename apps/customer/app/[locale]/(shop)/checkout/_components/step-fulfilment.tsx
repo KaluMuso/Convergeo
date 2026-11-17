@@ -30,11 +30,6 @@ import {
   StepContact,
   type ContactStepLabels,
 } from "./step-contact";
-import {
-  StepReview,
-  type ReviewPayment,
-  type ReviewStepLabels,
-} from "./step-review";
 
 import type { CheckoutExtrasLabels } from "./checkout-extras";
 import type {
@@ -42,6 +37,7 @@ import type {
   PaymentStepLabels,
   ValidatedPayment,
 } from "./step-payment";
+import type { ReviewPayment, ReviewStepLabels } from "./step-review";
 import type {
   FulfilmentMode,
   LeadTimePhrases,
@@ -51,6 +47,15 @@ import type {
 /** Lazy — step 3 is only reached after contact + fulfilment; keeps /checkout first-load JS in budget. */
 const StepPayment = dynamic(
   () => import("./step-payment").then((mod) => mod.StepPayment),
+  {
+    ssr: false,
+    loading: () => <div aria-hidden="true" className="min-h-48" />,
+  },
+);
+
+/** Lazy — step 4 (review) is only reached after payment; keeps /checkout first-load JS in budget. */
+const StepReview = dynamic(
+  () => import("./step-review").then((mod) => mod.StepReview),
   {
     ssr: false,
     loading: () => <div aria-hidden="true" className="min-h-48" />,
