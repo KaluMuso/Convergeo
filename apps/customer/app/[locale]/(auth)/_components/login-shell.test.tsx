@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const signInWithOtp = vi.fn(async () => ({ error: null }));
 const exchangeCodeForSession = vi.fn();
@@ -161,6 +161,14 @@ describe("OAuth callback code is exchanged once", () => {
  * login on a portal without a test failing here first.
  */
 describe("AuthLoginShell — per-portal phone/email contract", () => {
+  // Phone-first behaviour applies once SMS OTP is switched on.
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_PHONE_OTP_ENABLED = "true";
+  });
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_PHONE_OTP_ENABLED;
+  });
+
   it("vendor: phone form renders by default and email/password stays reachable via toggle", async () => {
     const user = userEvent.setup();
     render(
@@ -229,6 +237,13 @@ describe("AuthLoginShell — per-portal phone/email contract", () => {
  * /otp. These cases pin the wiring for both portals that render phone login.
  */
 describe("AuthLoginShell — next destination survives the phone OTP leg", () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_PHONE_OTP_ENABLED = "true";
+  });
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_PHONE_OTP_ENABLED;
+  });
+
   it("vendor: the shell's nextParam reaches the OTP URL PhoneForm builds", async () => {
     const user = userEvent.setup();
     render(
@@ -291,4 +306,25 @@ describe("AuthLoginShell — next destination survives the phone OTP leg", () =>
       expect(push).toHaveBeenCalledWith("/en/otp?phone=%2B260971234567");
     });
   });
+});
+
+describe("AuthLoginShell — email is the default tab while phone OTP is off (COD pilot)", () => {
+  it.each(["customer", "vendor"] as const)(
+    "%s: email form first, phone reachable via toggle",
+    (variant) => {
+      render(
+        <AuthLoginShell
+          locale="en"
+          variant={variant}
+          labels={labels}
+          defaultNextPath="/en"
+          showSignupLink={false}
+        />,
+      );
+
+      expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: /phone|mobile/i })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Use phone instead" })).toBeInTheDocument();
+    },
+  );
 });

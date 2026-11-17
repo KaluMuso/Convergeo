@@ -39,6 +39,7 @@ export type Offer = {
   gift_stock_reserved: number;
   gift_stock_available: number | null;
   max_applications_per_order: number;
+  per_customer_limit: number | null;
   paused_by_admin: boolean;
   live: boolean;
   cart_applicable: boolean;
@@ -60,6 +61,7 @@ export type OfferPayload = {
   pay_m?: number | null;
   gift_stock_total?: number | null;
   max_applications_per_order?: number;
+  per_customer_limit?: number | null;
   items: Array<Pick<OfferItem, "role" | "item_kind" | "ref_id" | "qty">>;
 };
 
@@ -92,12 +94,32 @@ export const TYPE_ROLES: Record<
     { role: "trigger", kinds: ["product", "service", "event"], max: 20 },
     { role: "reward", kinds: ["product"], max: 1 },
   ],
+  // Event tickets share the unified cart with products; services do not yet.
   bundle: [
-    { role: "anchor", kinds: ["product"], max: 1 },
-    { role: "addon", kinds: ["product"], max: 5 },
+    { role: "anchor", kinds: ["product", "event"], max: 1 },
+    { role: "addon", kinds: ["product", "event"], max: 5 },
   ],
-  buy_n_pay_m: [{ role: "eligible", kinds: ["product"], max: 20 }],
+  buy_n_pay_m: [{ role: "eligible", kinds: ["product", "event"], max: 20 }],
 };
+
+/** Largest per-customer limit the API accepts (offers_per_customer_limit_check). */
+export const MAX_PER_CUSTOMER_LIMIT = 1000;
+
+/**
+ * Parse the "uses per customer" input: blank = unlimited (null), a whole number
+ * 1..1000 = that limit, anything else = "invalid" (the form blocks saving).
+ */
+export function parsePerCustomerLimit(raw: string): number | null | "invalid" {
+  const value = raw.trim();
+  if (value === "") {
+    return null;
+  }
+  if (!/^\d+$/.test(value)) {
+    return "invalid";
+  }
+  const parsed = Number.parseInt(value, 10);
+  return parsed >= 1 && parsed <= MAX_PER_CUSTOMER_LIMIT ? parsed : "invalid";
+}
 
 /** Strip fields that do not belong to the chosen type (the API rejects them). */
 export function payloadForType(payload: OfferPayload): OfferPayload {
@@ -108,6 +130,7 @@ export function payloadForType(payload: OfferPayload): OfferPayload {
     starts_at: payload.starts_at ?? null,
     ends_at: payload.ends_at ?? null,
     max_applications_per_order: payload.max_applications_per_order ?? 1,
+    per_customer_limit: payload.per_customer_limit ?? null,
     items: payload.items.filter((item) =>
       TYPE_ROLES[payload.offer_type].some((spec) => spec.role === item.role),
     ),

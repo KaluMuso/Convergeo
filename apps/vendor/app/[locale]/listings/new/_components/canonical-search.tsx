@@ -21,7 +21,12 @@ type CanonicalSearchProps = {
   };
 };
 
-export function CanonicalSearch({ client, onSelect, selectedId, labels }: CanonicalSearchProps) {
+export function CanonicalSearch({
+  client,
+  onSelect,
+  selectedId,
+  labels,
+}: CanonicalSearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SuggestItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,7 +80,11 @@ export function CanonicalSearch({ client, onSelect, selectedId, labels }: Canoni
       {!loading && query.trim().length >= 2 && results.length === 0 ? (
         <p className="text-sm text-text-2">{labels.empty}</p>
       ) : null}
-      <ul className="flex flex-col gap-2" role="listbox" aria-label={labels.placeholder}>
+      <ul
+        className="flex flex-col gap-2"
+        role="listbox"
+        aria-label={labels.placeholder}
+      >
         {results.map((item) => {
           const selected = selectedId === item.entity_id;
           return (

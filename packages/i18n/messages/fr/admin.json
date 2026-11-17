@@ -31,7 +31,10 @@
     "homeFeed": "Home feed",
     "advertising": "Advertising",
     "accounts": "Comptes admin",
-    "auditLog": "Journal d'audit"
+    "auditLog": "Journal d'audit",
+    "offers": "Offres",
+    "coupons": "Coupons",
+    "branches": "Vérification des succursales"
   },
   "hubs": {
     "moderation": {
@@ -54,7 +57,9 @@
       "categoriesTitle": "Arborescence des catégories",
       "categoriesBody": "Structure publique du catalogue.",
       "platformTitle": "Réglages de la plateforme",
-      "platformBody": "Limites opérationnelles et paramètres plateforme."
+      "platformBody": "Limites opérationnelles et paramètres plateforme.",
+      "vendorPlansTitle": "Formules vendeurs",
+      "vendorPlansBody": "Prix des formules, limites d'annonces et de photos, et exceptions par vendeur."
     }
   },
   "translations": {
@@ -130,7 +135,8 @@
       "deliveryZones": "Zones de livraison",
       "platform": "Réglages de la plateforme",
       "flags": "Fonctionnalités (drapeaux)",
-      "categories": "Arborescence des catégories"
+      "categories": "Arborescence des catégories",
+      "vendorPlans": "Formules vendeurs"
     },
     "common": {
       "save": "Enregistrer les modifications",
@@ -187,7 +193,8 @@
       "advanceMinKycTier": "Avance avant l'événement : niveau KYC minimum",
       "advanceMinEvents": "Avance avant l'événement : nombre minimum d'événements réussis",
       "advanceRepaymentDays": "Avance avant l'événement : délai de remboursement (jours)",
-      "dangerousHint": "Les modifications du plafond COD n'affectent l'éligibilité que pour les nouvelles commandes."
+      "dangerousHint": "Les modifications du plafond COD n'affectent l'éligibilité que pour les nouvelles commandes.",
+      "branchMinDistance": "Distance min. entre succursales (m)"
     },
     "flags": {
       "title": "Fonctionnalités (drapeaux)",
@@ -207,6 +214,10 @@
       "moveChildrenConfirm": "Déplacer avec les sous-catégories",
       "orphanWarning": "Impossible de déplacer sans les sous-catégories — activez le déplacement avec sous-catégories.",
       "rootOption": "Racine (aucun parent)"
+    },
+    "vendorPlans": {
+      "title": "Formules vendeurs",
+      "subtitle": "Limites d'annonces et de photos, fonctionnalités et prix mensuels. Les changements s'appliquent immédiatement et sont journalisés."
     }
   },
   "business": {
@@ -1410,6 +1421,350 @@
         "operatorUnsupported": "Seuls les numéros MTN et Airtel peuvent recevoir la demande.",
         "required": "La commande doit être payée avant la remise."
       }
+    }
+  },
+  "offers": {
+    "title": "Offres des vendeurs",
+    "subtitle": "Examinez les lots et offres de tous les vendeurs. Une suspension par l'administration arrête l'offre immédiatement et le vendeur ne peut pas la lever.",
+    "loading": "Chargement des offres…",
+    "error": "Impossible de charger les offres.",
+    "permissionDenied": "Vous n'avez pas accès aux offres.",
+    "permissionDeniedHint": "Demandez l'autorisation publicité à un super administrateur.",
+    "retry": "Réessayer",
+    "empty": "Aucune offre ne correspond à ces filtres.",
+    "listLabel": "Offres",
+    "truncated": "Affichage des 200 premières offres. Affinez les filtres pour voir les autres.",
+    "vendor": "Vendeur : {name}",
+    "window": "Du {starts} au {ends}",
+    "windowOpen": "À partir du {starts}, sans date de fin",
+    "perCustomer": "{count, plural, one {# utilisation par client} other {# utilisations par client}}",
+    "perCustomerUnlimited": "Pas de limite par client",
+    "giftStock": "Cadeaux : {reserved} sur {total} utilisés",
+    "note": "Note de l'administration : {note}",
+    "pausedToast": "Offre suspendue.",
+    "unpausedToast": "Suspension levée.",
+    "filters": {
+      "label": "Filtrer les offres",
+      "state": "État",
+      "status": "Statut vendeur",
+      "type": "Type",
+      "search": "Titre",
+      "searchPlaceholder": "Rechercher un titre",
+      "apply": "Rechercher",
+      "all": "Toutes"
+    },
+    "state": {
+      "live": "En cours",
+      "admin_paused": "Suspendue par l'administration",
+      "scheduled": "Programmée",
+      "ended": "Terminée"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "active": "Active",
+      "paused": "Suspendue par le vendeur",
+      "archived": "Archivée"
+    },
+    "type": {
+      "bundle": "Lot",
+      "buy_n_pay_m": "N achetés, M payés",
+      "bxgy": "X achetés, Y offerts",
+      "free_gift": "Cadeau offert"
+    },
+    "actions": {
+      "pause": "Suspendre",
+      "unpause": "Lever la suspension",
+      "pauseTitle": "Suspendre cette offre ?",
+      "unpauseTitle": "Lever la suspension ?",
+      "pauseBody": "« {title} » ne s'applique plus aux paniers et aux paiements, immédiatement. Les commandes déjà passées gardent leur prix.",
+      "unpauseBody": "« {title} » s'appliquera de nouveau si le vendeur l'a toujours activée et si elle est dans ses dates.",
+      "noteLabel": "Note (visible des administrateurs)",
+      "notePlaceholder": "Pourquoi modifiez-vous cette offre ?",
+      "audited": "Cette action est enregistrée dans le journal d'audit.",
+      "cancel": "Annuler",
+      "submitting": "Enregistrement…",
+      "confirmPause": "Suspendre l'offre",
+      "confirmUnpause": "Lever la suspension",
+      "failure": "Impossible de mettre à jour l'offre. Réessayez."
+    }
+  },
+  "coupons": {
+    "manager": {
+      "title": "Coupons de la plateforme",
+      "intro": "Codes payés par Convergeo. Les boutiques reçoivent leur prix complet.",
+      "fundingNote": "Chaque remise de la plateforme est prise sur le budget promotions mensuel. Une fois épuisé, les coupons de la plateforme s'arrêtent jusqu'au mois suivant.",
+      "createTitle": "Nouveau coupon",
+      "code": "Code",
+      "codeHelp": "3 à 32 lettres, chiffres ou tirets, ex. SAVE20.",
+      "kind": "Type de remise",
+      "kindPercent": "Pourcentage",
+      "kindFixed": "Montant en kwacha",
+      "percent": "Pourcentage (ex. 10)",
+      "amount": "Montant en kwacha (ex. 20)",
+      "maxDiscount": "Remise maximale (K, facultatif)",
+      "maxDiscountHelp": "Plafonne un coupon en pourcentage sur les gros paniers.",
+      "minSpend": "Achat minimum (K, facultatif)",
+      "minSpendHelp": "Calculé sur les articles couverts.",
+      "scope": "S'applique à",
+      "scopeAll": "Tout",
+      "scopeShop": "Toute ma boutique",
+      "scopeVendor": "Une boutique",
+      "scopeCategory": "Une catégorie",
+      "scopeListing": "Une annonce",
+      "scopeId": "Identifiant",
+      "scopeIdHelp": "Copiez l'identifiant depuis la page de la boutique, de la catégorie ou de l'annonce.",
+      "startsOn": "Début",
+      "endsOn": "Fin (facultatif)",
+      "endsOnHelp": "Le code fonctionne jusqu'à la fin de ce jour, heure de Lusaka.",
+      "totalLimit": "Utilisations totales (facultatif)",
+      "totalLimitHelp": "Laissez vide pour aucune limite.",
+      "perUserLimit": "Utilisations par client",
+      "create": "Créer le coupon",
+      "creating": "Création…",
+      "created": "Coupon créé.",
+      "listTitle": "Coupons de la plateforme",
+      "empty": "Aucun coupon.",
+      "loading": "Chargement…",
+      "usage": "{used} utilisé(s)",
+      "usageLimited": "{used} sur {limit} utilisé(s)",
+      "summaryOff": "{value} de remise",
+      "summaryMin": "min. {amount}",
+      "statusActive": "Actif",
+      "statusPaused": "En pause",
+      "statusArchived": "Terminé",
+      "pause": "Mettre en pause",
+      "resume": "Reprendre",
+      "archive": "Terminer",
+      "errors": {
+        "generic": "Une erreur est survenue. Réessayez.",
+        "disabled": "Les coupons ne sont pas encore activés.",
+        "forbidden": "Seuls les administrateurs gèrent les coupons de la plateforme.",
+        "code": "Utilisez 3 à 32 lettres, chiffres ou tirets.",
+        "codeTaken": "Ce code est déjà pris.",
+        "percent": "Indiquez un pourcentage entre 1 et 100.",
+        "percentTooHigh": "Ce pourcentage dépasse le maximum autorisé.",
+        "amount": "Indiquez un montant comme 20 ou 12.50.",
+        "dates": "La date de fin doit suivre la date de début et ne pas être passée.",
+        "scope": "Choisissez la cible du coupon et collez son identifiant.",
+        "listing": "Cette annonce n'est pas dans votre boutique.",
+        "archived": "Un coupon terminé ne peut pas reprendre. Créez-en un nouveau."
+      }
+    }
+  },
+  "common": {
+    "rateLimited": "Trop de modifications en peu de temps. Patientez une minute puis réessayez."
+  },
+  "productImages": {
+    "errors": {
+      "full": "Un produit peut avoir au maximum 8 photos.",
+      "duplicate": "Cette photo figure déjà sur ce produit."
+    }
+  },
+  "vendorPlans": {
+    "hint": "Les limites comptent les annonces distinctes, jamais le stock. Laissez la limite d'annonces vide pour l'illimité. Dépasser une limite ne supprime jamais d'annonces : le vendeur voit seulement une invitation à changer de formule. Aucune facturation pour l'instant.",
+    "unlimited": "Illimité",
+    "default": "Formule par défaut",
+    "vendorCount": "{count, plural, one {# vendeur} other {# vendeurs}}",
+    "summary": "{price}/mois · {listings} annonces · {images} photos",
+    "makeDefault": "Définir par défaut",
+    "delete": "Supprimer",
+    "createHeading": "Nouvelle formule",
+    "create": "Créer la formule",
+    "fields": {
+      "key": "Clé de formule (minuscules, ex. market_stall)",
+      "name": "Nom",
+      "priceKwacha": "Prix mensuel (K)",
+      "maxListings": "Limite d'annonces (vide = illimité)",
+      "maxImages": "Photos par annonce (1–8)",
+      "featuredSlots": "Emplacements mis en avant",
+      "analyticsDepth": "Statistiques",
+      "wholesaleTools": "Outils de vente en gros",
+      "active": "Active",
+      "includedShops": "Boutiques incluses (vide = illimité)",
+      "extraShopPrice": "Boutique supplémentaire (K/mois, vide = non vendue)",
+      "staffSeats": "Places employés (vide = illimité)",
+      "broadcasts": "Diffusions WhatsApp / mois",
+      "adCredit": "Crédit publicitaire (K/mois)",
+      "integrationsLevel": "Intégrations",
+      "payoutSpeed": "Vitesse de versement",
+      "supportLevel": "Assistance",
+      "officialStoreBadge": "Badge boutique officielle",
+      "clickAndCollect": "Retrait en magasin",
+      "multiBranchStock": "Stock multi-succursales"
+    },
+    "depth": {
+      "basic": "Essentielles",
+      "standard": "Standard",
+      "advanced": "Avancées"
+    },
+    "errors": {
+      "nameRequired": "Saisissez un nom de formule.",
+      "keyInvalid": "Utilisez de 2 à 32 lettres minuscules, chiffres ou tirets bas, en commençant par une lettre.",
+      "priceInvalid": "Saisissez un prix en kwacha, par exemple 49 ou 49.50.",
+      "listingsInvalid": "Saisissez un nombre entier d'annonces, ou laissez vide pour l'illimité.",
+      "imagesInvalid": "Le nombre de photos par annonce doit être compris entre 1 et 8.",
+      "slotsInvalid": "Les emplacements mis en avant doivent être compris entre 0 et 100.",
+      "overrideEmpty": "Une exception doit modifier la limite d'annonces ou de photos.",
+      "expiryInvalid": "Choisissez une date d'expiration future, au plus dans un an.",
+      "reasonRequired": "Indiquez le motif de l'exception.",
+      "vendorIdInvalid": "Saisissez un identifiant vendeur (UUID).",
+      "vendorNotFound": "Vendeur introuvable.",
+      "saveFailed": "Enregistrement impossible. Vérifiez les valeurs et réessayez.",
+      "keyTaken": "Cette clé de formule existe déjà.",
+      "defaultInactive": "La formule par défaut doit rester active.",
+      "defaultDelete": "La formule par défaut ne peut pas être supprimée.",
+      "inUse": "Des vendeurs utilisent cette formule. Désactivez-la plutôt, ou déplacez-les d'abord.",
+      "planInactive": "Cette formule n'est pas active.",
+      "shopsInvalid": "Les boutiques incluses doivent être un nombre entier à partir de 1, ou vide pour illimité.",
+      "extraShopPriceInvalid": "Saisissez le prix de la boutique supplémentaire en kwacha, ou laissez vide.",
+      "seatsInvalid": "Les places employés doivent être un nombre entier, ou vide pour illimité.",
+      "broadcastsInvalid": "Saisissez un nombre entier de diffusions.",
+      "adCreditInvalid": "Saisissez le crédit publicitaire en kwacha."
+    },
+    "vendor": {
+      "heading": "Formule du vendeur",
+      "hint": "Recherchez un vendeur pour lui attribuer une formule ou une exception temporaire.",
+      "vendorId": "Identifiant vendeur",
+      "load": "Charger",
+      "flagOff": "L'indicateur vendor_plans est désactivé : ces limites ne sont pas encore appliquées.",
+      "effective": "Formule {plan} : {listings} annonces ({count} utilisées), {images} photos par annonce",
+      "plan": "Formule",
+      "defaultPlan": "Choisir une formule",
+      "note": "Note (facultative)",
+      "assign": "Attribuer la formule",
+      "noBilling": "Attribuer une formule l'enregistre seulement. Aucun paiement n'est prélevé.",
+      "none": "par défaut"
+    },
+    "override": {
+      "heading": "Exception",
+      "current": "Active : {listings} annonces jusqu'au {expires} ({reason})",
+      "expired": "Expirée le {expires} : {listings} annonces ({reason})",
+      "unlimited": "Annonces illimitées",
+      "expiresOn": "Expire le",
+      "reason": "Motif",
+      "save": "Enregistrer l'exception",
+      "remove": "Retirer l'exception"
+    },
+    "integrations": {
+      "none": "Aucune",
+      "basic": "Basique",
+      "sheets_webhooks": "Sheets + webhooks",
+      "api": "API"
+    },
+    "payoutSpeed": {
+      "standard": "Standard",
+      "fast": "Rapide",
+      "priority": "Prioritaire"
+    },
+    "support": {
+      "community": "Communauté",
+      "standard": "Standard",
+      "priority": "Prioritaire",
+      "dedicated": "Dédiée"
+    }
+  },
+  "branches": {
+    "title": "Vérification des succursales",
+    "subtitle": "Approuvez les nouvelles boutiques des entreprises multi-sites. Chaque décision est auditée.",
+    "status": {
+      "draft": "Brouillon",
+      "pending_review": "En attente",
+      "info_requested": "Infos demandées",
+      "approved": "Approuvée",
+      "rejected": "Refusée"
+    },
+    "kind": {
+      "physical": "Physique",
+      "online": "En ligne"
+    },
+    "queue": {
+      "filter": "Statut",
+      "flagsLink": "Doublons signalés",
+      "loading": "Chargement des succursales…",
+      "error": "Impossible de charger les succursales.",
+      "permissionDenied": "Vous n'avez pas accès à la vérification des succursales.",
+      "retry": "Réessayer",
+      "empty": "Aucune succursale ici.",
+      "evidence": "{count, plural, one {# justificatif} other {# justificatifs}}",
+      "openFlags": "{count, plural, one {# signalement ouvert} other {# signalements ouverts}}"
+    },
+    "detail": {
+      "back": "Retour à la file",
+      "business": "Entreprise",
+      "legalName": "Raison sociale",
+      "registration": "Enregistrement",
+      "pacraCertificate": "Certificat PACRA",
+      "open": "Ouvrir",
+      "ownerKyc": "KYC du propriétaire approuvé",
+      "yes": "Oui",
+      "no": "Non",
+      "shop": "Boutique",
+      "location": "Emplacement",
+      "address": "Adresse",
+      "phone": "Téléphone",
+      "payout": "Versement",
+      "onHold": "suspendu",
+      "plan": "Forfait",
+      "planAddon": "{plan} · option {price}/mois",
+      "planIncluded": "{plan} · inclus",
+      "evidence": "Justificatifs",
+      "noEvidence": "Aucun justificatif envoyé.",
+      "unavailable": "Aperçu indisponible",
+      "flags": "{count, plural, =0 {Doublons signalés} one {Doublons signalés (# ouvert)} other {Doublons signalés (# ouverts)}}",
+      "siblings": "Autres succursales de cette entreprise",
+      "primary": "boutique principale",
+      "note": "Note au vendeur (obligatoire pour demander des infos ou refuser)",
+      "flagsBlock": "Traitez les doublons ouverts avant d'approuver.",
+      "history": "Historique"
+    },
+    "actions": {
+      "approve": "Approuver",
+      "requestInfo": "Demander des infos",
+      "reject": "Refuser"
+    },
+    "evidence": {
+      "storefront_photo": "Photo de la devanture",
+      "premises_proof": "Preuve des locaux"
+    },
+    "proof": {
+      "lease": "Bail",
+      "utility_bill": "Facture d'eau ou d'électricité",
+      "council_permit": "Permis commercial municipal"
+    },
+    "flags": {
+      "title": "Doublons signalés",
+      "subtitle": "Boutiques potentiellement en double détectées par nom, téléphone, numéro de versement, GPS ou photo.",
+      "none": "Aucun signalement.",
+      "score": "correspondance {score} %",
+      "pair": "{branch} ↔ {matched}",
+      "noteLabel": "Note de résolution",
+      "notePlaceholder": "Pourquoi est-ce (ou non) un doublon ?",
+      "clear": "Pas un doublon",
+      "confirm": "Confirmer le doublon"
+    },
+    "flagKind": {
+      "name_similar": "Nom similaire",
+      "phone_match": "Même téléphone",
+      "payout_other_owner": "Numéro de versement d'un autre propriétaire",
+      "payout_shared_same_owner": "Numéro de versement partagé (même propriétaire)",
+      "gps_near_other_owner": "Un autre propriétaire au même endroit",
+      "image_duplicate": "Même photo de devanture"
+    },
+    "flagStatus": {
+      "open": "Ouvert",
+      "cleared": "Levé",
+      "confirmed": "Doublon confirmé"
+    },
+    "errors": {
+      "noteRequired": "Écrivez une courte note (au moins 3 caractères).",
+      "openFlags": "Traitez d'abord les doublons ouverts.",
+      "primary": "La boutique principale est vérifiée via le KYC.",
+      "flagResolved": "Ce signalement est déjà traité.",
+      "payoutOtherOwner": "Un numéro de versement ne peut jamais être partagé entre propriétaires.",
+      "noPacra": "Cette entreprise n'a pas de numéro PACRA.",
+      "invalidTransition": "Cette succursale n'est pas prête pour cette décision.",
+      "permission": "Vous n'avez pas l'autorisation pour cette action.",
+      "saveFailed": "Impossible d'enregistrer la décision. Réessayez."
     }
   }
 }

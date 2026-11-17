@@ -18,6 +18,8 @@ import {
   sourceIdentity,
   traceDiagnostics,
   INCOMPLETE_LOAD_WARNING,
+  seedCheckoutCart,
+  CHECKOUT_FIXTURE_LISTING_ID,
 } from "./lighthouse-runner.mjs";
 
 const config = JSON.parse(
@@ -40,16 +42,23 @@ const makeReport = (url) => ({
   },
 });
 const allReports = () =>
-  config.ci.collect.url.flatMap((url) => Array.from({ length: 3 }, () => makeReport(url)));
+  config.ci.collect.url.flatMap((url) =>
+    Array.from({ length: 3 }, () => makeReport(url)),
+  );
 
 test("trace diagnostics retain only allowlisted counts and relative frame timings", () => {
-  const privateUrl = "https://private.example/path?token=PRIVATE_TRACE_SENTINEL";
+  const privateUrl =
+    "https://private.example/path?token=PRIVATE_TRACE_SENTINEL";
   const traceEvents = [
     {
       name: "TracingStartedInBrowser",
       cat: "__metadata",
       ts: 100000,
-      args: { data: { frames: [{ frame: "private-main", processId: 9, url: privateUrl }] } },
+      args: {
+        data: {
+          frames: [{ frame: "private-main", processId: 9, url: privateUrl }],
+        },
+      },
     },
     {
       name: "clock_sync",
@@ -99,7 +108,9 @@ test("trace diagnostics retain only allowlisted counts and relative frame timing
   assert.equal(summary.first_offset_ms.main_frame_commit, 8);
   assert.ok(!JSON.stringify(summary).includes("PRIVATE_"));
   assert.deepEqual(traceDiagnostics(undefined), { status: "unavailable" });
-  const noNav = traceDiagnostics(traceEvents.filter((event) => event.name !== "navigationStart"));
+  const noNav = traceDiagnostics(
+    traceEvents.filter((event) => event.name !== "navigationStart"),
+  );
   assert.equal(noNav.counts.navigation_start, 0);
   assert.equal(noNav.counts.main_frame_document_navigation, 0);
   assert.equal(noNav.first_offset_ms.document_navigation, null);
@@ -130,7 +141,10 @@ test("trace frame selection follows sorted first-event and first-root rules", ()
       name: "navigationStart",
       cat: "devtools.timeline",
       ts: 120000,
-      args: { frame: "early-frame", data: { documentLoaderURL: "https://example.test/" } },
+      args: {
+        frame: "early-frame",
+        data: { documentLoaderURL: "https://example.test/" },
+      },
     },
   ];
   const sorted = traceDiagnostics(events);
@@ -145,7 +159,10 @@ test("trace frame selection follows sorted first-event and first-root rules", ()
       ts: 100000,
       args: {
         data: {
-          frames: [{ frame: "incomplete-root" }, { frame: "later-root", processId: 2 }],
+          frames: [
+            { frame: "incomplete-root" },
+            { frame: "later-root", processId: 2 },
+          ],
         },
       },
     },
@@ -162,7 +179,14 @@ test("trace frame selection follows sorted first-event and first-root rules", ()
 
 test("trace navigation fallback does not skip a mismatching first candidate", () => {
   const events = [
-    { name: "ResourceSendRequest", cat: "devtools.timeline", ts: 100000, pid: 1, tid: 1, args: {} },
+    {
+      name: "ResourceSendRequest",
+      cat: "devtools.timeline",
+      ts: 100000,
+      pid: 1,
+      tid: 1,
+      args: {},
+    },
     {
       name: "navigationStart",
       cat: "devtools.timeline",
@@ -171,7 +195,10 @@ test("trace navigation fallback does not skip a mismatching first candidate", ()
       tid: 2,
       args: {
         frame: "unmatched-first",
-        data: { isLoadingMainFrame: true, documentLoaderURL: "https://example.test/" },
+        data: {
+          isLoadingMainFrame: true,
+          documentLoaderURL: "https://example.test/",
+        },
       },
     },
     {
@@ -182,7 +209,10 @@ test("trace navigation fallback does not skip a mismatching first candidate", ()
       tid: 1,
       args: {
         frame: "matched-second",
-        data: { isLoadingMainFrame: true, documentLoaderURL: "https://example.test/" },
+        data: {
+          isLoadingMainFrame: true,
+          documentLoaderURL: "https://example.test/",
+        },
       },
     },
   ];
@@ -200,7 +230,9 @@ const fixtureConfig = (dir) => {
 };
 const metric = (results, url, id) =>
   results.find(
-    (r) => r.url === url && (r.auditProperty ? `categories:${r.auditProperty}` : r.auditId) === id,
+    (r) =>
+      r.url === url &&
+      (r.auditProperty ? `categories:${r.auditProperty}` : r.auditId) === id,
   );
 
 // Explicit expected policy: changing thresholds or aggregation requires a reviewed test change.
@@ -208,7 +240,13 @@ test("all five existing URL policies, mobile profile and three-run contract rema
   assert.equal(config.ci.collect.numberOfRuns, 3);
   assert.deepEqual(
     config.ci.collect.url.map((u) => new URL(u).pathname),
-    ["/en", "/en/c/electronics", "/en/p/smartphone-x1", "/en/search", "/en/checkout"],
+    [
+      "/en",
+      "/en/c/electronics",
+      "/en/p/smartphone-x1",
+      "/en/search",
+      "/en/checkout",
+    ],
   );
   assert.deepEqual(config.ci.collect.settings, {
     formFactor: "mobile",
@@ -243,7 +281,10 @@ test("all five existing URL policies, mobile profile and three-run contract rema
         checkout ? "warn" : "error",
         { minScore: checkout || search ? 0.4 : 0.75 },
       ],
-      "categories:performance": ["error", { minScore: 0.5, aggregationMethod: "median" }],
+      "categories:performance": [
+        "error",
+        { minScore: 0.5, aggregationMethod: "median" },
+      ],
       "largest-contentful-paint": [
         "error",
         {
@@ -263,19 +304,29 @@ for (const url of config.ci.collect.url) {
     const ceiling = url.endsWith("checkout") ? 7200 : 6500;
     runs.forEach((r, i) => {
       r.categories.performance.score = [0.1, 0.5, 0.9][i];
-      r.audits["largest-contentful-paint"].numericValue = [1, ceiling, ceiling + 500][i];
+      r.audits["largest-contentful-paint"].numericValue = [
+        1,
+        ceiling,
+        ceiling + 500,
+      ][i];
       r.categories.accessibility.score = [0, 0, 0.9][i];
     });
     let results = evaluateAssertions(config, reports);
     assert.equal(metric(results, url, "categories:performance").actual, 0.5);
-    assert.equal(metric(results, url, "largest-contentful-paint").actual, ceiling);
+    assert.equal(
+      metric(results, url, "largest-contentful-paint").actual,
+      ceiling,
+    );
     assert.equal(metric(results, url, "categories:accessibility").actual, 0.9);
     assert.ok(results.every((r) => r.passed));
     runs[1].categories.performance.score = 0.49;
     runs[1].audits["largest-contentful-paint"].numericValue = ceiling + 1;
     results = evaluateAssertions(config, reports);
     assert.equal(metric(results, url, "categories:performance").passed, false);
-    assert.equal(metric(results, url, "largest-contentful-paint").passed, false);
+    assert.equal(
+      metric(results, url, "largest-contentful-paint").passed,
+      false,
+    );
   });
 }
 
@@ -283,13 +334,18 @@ test("missing/null audit values and pessimistic aggregation preserve LHCI behavi
   let reports = allReports();
   const url = reports[0].requestedUrl;
   delete reports[0].categories.accessibility;
-  const missing = metric(evaluateAssertions(config, reports), url, "categories:accessibility");
+  const missing = metric(
+    evaluateAssertions(config, reports),
+    url,
+    "categories:accessibility",
+  );
   assert.equal(missing.name, "auditRan");
   assert.equal(missing.passed, false);
   reports = allReports();
   reports[0].categories.performance.score = null;
   assert.equal(
-    metric(evaluateAssertions(config, reports), url, "categories:performance").actual,
+    metric(evaluateAssertions(config, reports), url, "categories:performance")
+      .actual,
     0.8,
   );
   const pessimistic = structuredClone(config);
@@ -297,22 +353,34 @@ test("missing/null audit values and pessimistic aggregation preserve LHCI behavi
     r.assertions["categories:performance"][1].aggregationMethod = "pessimistic";
   });
   assert.equal(
-    metric(evaluateAssertions(pessimistic, reports), url, "categories:performance").passed,
+    metric(
+      evaluateAssertions(pessimistic, reports),
+      url,
+      "categories:performance",
+    ).passed,
     false,
   );
   reports.slice(0, 3).forEach((r) => {
     r.categories.performance.score = null;
   });
   assert.equal(
-    metric(evaluateAssertions(config, reports), url, "categories:performance").passed,
+    metric(evaluateAssertions(config, reports), url, "categories:performance")
+      .passed,
     false,
   );
 });
 
 test("missing runs, unexpected reports, runtime errors and unmatched redirects fail closed", () => {
-  assert.throws(() => evaluateAssertions(config, allReports().slice(1)), /Incomplete/);
   assert.throws(
-    () => evaluateAssertions(config, [...allReports(), makeReport("http://localhost:3000/other")]),
+    () => evaluateAssertions(config, allReports().slice(1)),
+    /Incomplete/,
+  );
+  assert.throws(
+    () =>
+      evaluateAssertions(config, [
+        ...allReports(),
+        makeReport("http://localhost:3000/other"),
+      ]),
     /Unexpected/,
   );
   const bad = allReports();
@@ -331,14 +399,18 @@ test("unsupported policy cannot silently disable assertion coverage", () => {
       c.ci.collect.numberOfRuns = 1;
     },
     (c) => {
-      c.ci.assert.assertMatrix[0].assertions["categories:performance"][0] = "off";
+      c.ci.assert.assertMatrix[0].assertions["categories:performance"][0] =
+        "off";
     },
     (c) => {
-      c.ci.assert.assertMatrix[0].assertions["categories:performance"][1].maxScore = 1;
+      c.ci.assert.assertMatrix[0].assertions[
+        "categories:performance"
+      ][1].maxScore = 1;
     },
     (c) => {
-      c.ci.assert.assertMatrix[0].assertions["categories:performance"][1].aggregationMethod =
-        "made-up";
+      c.ci.assert.assertMatrix[0].assertions[
+        "categories:performance"
+      ][1].aggregationMethod = "made-up";
     },
     (c) => {
       c.ci.assert.assertMatrix.pop();
@@ -386,13 +458,18 @@ for (const scenario of [
         audit: async (url, settings) => {
           calls++;
           assert.deepEqual(settings, config.ci.collect.settings);
-          if (scenario === "collection") throw new Error("fixture Chrome failed");
+          if (scenario === "collection")
+            throw new Error("fixture Chrome failed");
           const lhr = makeReport(url);
-          if (scenario === "warn" && url.endsWith("checkout")) lhr.categories.seo.score = 0;
+          if (scenario === "warn" && url.endsWith("checkout"))
+            lhr.categories.seo.score = 0;
           if (scenario === "threshold") lhr.categories.performance.score = 0.49;
-          if (scenario === "runtime") lhr.runtimeError = { code: "FIXTURE_ERROR" };
-          if (scenario === "notice") lhr.runWarnings = ["Informational fixture notice"];
-          if (scenario === "incomplete-load") lhr.runWarnings = [INCOMPLETE_LOAD_WARNING];
+          if (scenario === "runtime")
+            lhr.runtimeError = { code: "FIXTURE_ERROR" };
+          if (scenario === "notice")
+            lhr.runWarnings = ["Informational fixture notice"];
+          if (scenario === "incomplete-load")
+            lhr.runWarnings = [INCOMPLETE_LOAD_WARNING];
           return {
             lhr,
             browserVersion: "155.0.8059.39",
@@ -401,16 +478,24 @@ for (const scenario of [
               reason: "explicit_synthetic_fixture",
             },
             report:
-              scenario === "missing-html" ? undefined : "<!doctype html><title>fixture</title>",
+              scenario === "missing-html"
+                ? undefined
+                : "<!doctype html><title>fixture</title>",
           };
         },
       });
       const failure = !["pass", "warn", "notice"].includes(scenario);
       assert.equal(result.exitCode, failure ? 1 : 0);
       const output = join(dir, ".lighthouseci");
-      const summary = JSON.parse(await readFile(join(output, "run-summary.json")));
-      const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
-      const assertions = JSON.parse(await readFile(join(output, "assertion-results.json")));
+      const summary = JSON.parse(
+        await readFile(join(output, "run-summary.json")),
+      );
+      const manifest = JSON.parse(
+        await readFile(join(output, "manifest.json")),
+      );
+      const assertions = JSON.parse(
+        await readFile(join(output, "assertion-results.json")),
+      );
       assert.equal(summary.exitCode, result.exitCode);
       assert.equal(summary.puppeteerVersion, "25.13.0");
       assert.match(summary.nodeVersion, /^v\d+\./);
@@ -421,8 +506,13 @@ for (const scenario of [
         assert.equal(manifest.filter((r) => r.isRepresentativeRun).length, 5);
         assert.equal(new Set(manifest.map((r) => r.jsonPath)).size, 15);
         for (const row of manifest) {
-          assert.ok((await readFile(row.htmlPath, "utf8")).startsWith("<!doctype"));
-          assert.equal(JSON.parse(await readFile(row.jsonPath)).requestedUrl, row.url);
+          assert.ok(
+            (await readFile(row.htmlPath, "utf8")).startsWith("<!doctype"),
+          );
+          assert.equal(
+            JSON.parse(await readFile(row.jsonPath)).requestedUrl,
+            row.url,
+          );
         }
       } else {
         assert.equal(calls, 1);
@@ -453,10 +543,15 @@ for (const scenario of [
             messages: [INCOMPLETE_LOAD_WARNING],
           },
         ]);
-        assert.deepEqual(JSON.parse(await readFile(manifest[0].jsonPath)).runWarnings, [
-          INCOMPLETE_LOAD_WARNING,
-        ]);
-        assert.ok((await readFile(manifest[0].htmlPath, "utf8")).startsWith("<!doctype"));
+        assert.deepEqual(
+          JSON.parse(await readFile(manifest[0].jsonPath)).runWarnings,
+          [INCOMPLETE_LOAD_WARNING],
+        );
+        assert.ok(
+          (await readFile(manifest[0].htmlPath, "utf8")).startsWith(
+            "<!doctype",
+          ),
+        );
         assert.match(summary.errors[0].message, /Incomplete collection/);
         assert.deepEqual(assertions, []);
       }
@@ -481,13 +576,16 @@ test("one NO_NAVSTART trace retry retains evidence and all valid budget samples"
         if (calls === 1) {
           lhr.runtimeError = { code: "NO_NAVSTART" };
           lhr.categories.performance.score = null;
-          for (const audit of Object.values(lhr.audits)) audit.numericValue = null;
+          for (const audit of Object.values(lhr.audits))
+            audit.numericValue = null;
         }
         return {
           lhr,
           report: "<!doctype html><title>trace fixture</title>",
           contentReadiness:
-            calls === 1 ? undefined : { passed: true, reason: "explicit_synthetic_fixture" },
+            calls === 1
+              ? undefined
+              : { passed: true, reason: "explicit_synthetic_fixture" },
         };
       },
     });
@@ -496,20 +594,29 @@ test("one NO_NAVSTART trace retry retains evidence and all valid budget samples"
     assert.equal(contexts[0].run, contexts[1].run);
     assert.notEqual(contexts[0].diagnosticsPath, contexts[1].diagnosticsPath);
     const output = join(dir, ".lighthouseci");
-    const summary = JSON.parse(await readFile(join(output, "run-summary.json")));
+    const summary = JSON.parse(
+      await readFile(join(output, "run-summary.json")),
+    );
     const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
     assert.deepEqual(summary.errors, []);
     assert.equal(summary.collectionRetries.length, 1);
     assert.equal(summary.collectionRetries[0].code, "NO_NAVSTART");
     assert.equal(
-      JSON.parse(await readFile(summary.collectionRetries[0].jsonPath)).runtimeError.code,
+      JSON.parse(await readFile(summary.collectionRetries[0].jsonPath))
+        .runtimeError.code,
       "NO_NAVSTART",
     );
-    assert.match(await readFile(summary.collectionRetries[0].htmlPath, "utf8"), /trace fixture/);
+    assert.match(
+      await readFile(summary.collectionRetries[0].htmlPath, "utf8"),
+      /trace fixture/,
+    );
     assert.equal(manifest.length, 15);
     assert.equal(new Set(manifest.map((entry) => entry.jsonPath)).size, 15);
     assert.ok(manifest.every((entry) => entry.summary.performance !== null));
-    assert.equal(JSON.parse(await readFile(join(output, "content-readiness.json"))).length, 15);
+    assert.equal(
+      JSON.parse(await readFile(join(output, "content-readiness.json"))).length,
+      15,
+    );
   } finally {
     if (previous === undefined) delete process.env.CI_PERF_HARNESS;
     else process.env.CI_PERF_HARNESS = previous;
@@ -527,21 +634,28 @@ test("repeated NO_NAVSTART fails after one retry and retains both invalid report
         const lhr = makeReport(url);
         lhr.runtimeError = { code: "NO_NAVSTART" };
         lhr.categories.performance.score = null;
-        for (const audit of Object.values(lhr.audits)) audit.numericValue = null;
+        for (const audit of Object.values(lhr.audits))
+          audit.numericValue = null;
         return { lhr, report: "<!doctype html><title>invalid trace</title>" };
       },
     });
     assert.equal(result.exitCode, 1);
     assert.equal(calls, 2);
     const output = join(dir, ".lighthouseci");
-    const summary = JSON.parse(await readFile(join(output, "run-summary.json")));
+    const summary = JSON.parse(
+      await readFile(join(output, "run-summary.json")),
+    );
     const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
     assert.equal(summary.collectionRetries.length, 1);
     assert.match(summary.errors[0].message, /NO_NAVSTART/);
     assert.equal(manifest.length, 1);
-    assert.equal(JSON.parse(await readFile(manifest[0].jsonPath)).runtimeError.code, "NO_NAVSTART");
     assert.equal(
-      JSON.parse(await readFile(summary.collectionRetries[0].jsonPath)).runtimeError.code,
+      JSON.parse(await readFile(manifest[0].jsonPath)).runtimeError.code,
+      "NO_NAVSTART",
+    );
+    assert.equal(
+      JSON.parse(await readFile(summary.collectionRetries[0].jsonPath))
+        .runtimeError.code,
       "NO_NAVSTART",
     );
   } finally {
@@ -560,7 +674,8 @@ test("a recovered trace still fails the original performance budget", async () =
         if (calls === 1) {
           lhr.runtimeError = { code: "NO_NAVSTART" };
           lhr.categories.performance.score = null;
-          for (const audit of Object.values(lhr.audits)) audit.numericValue = null;
+          for (const audit of Object.values(lhr.audits))
+            audit.numericValue = null;
         } else {
           lhr.categories.performance.score = 0.49;
         }
@@ -568,20 +683,29 @@ test("a recovered trace still fails the original performance budget", async () =
           lhr,
           report: "<!doctype html><title>budget fixture</title>",
           contentReadiness:
-            calls === 1 ? undefined : { passed: true, reason: "explicit_synthetic_fixture" },
+            calls === 1
+              ? undefined
+              : { passed: true, reason: "explicit_synthetic_fixture" },
         };
       },
     });
     assert.equal(result.exitCode, 1);
     assert.equal(calls, 16);
     const output = join(dir, ".lighthouseci");
-    const summary = JSON.parse(await readFile(join(output, "run-summary.json")));
+    const summary = JSON.parse(
+      await readFile(join(output, "run-summary.json")),
+    );
     const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
-    const assertions = JSON.parse(await readFile(join(output, "assertion-results.json")));
+    const assertions = JSON.parse(
+      await readFile(join(output, "assertion-results.json")),
+    );
     assert.deepEqual(summary.errors, []);
     assert.equal(summary.collectionRetries.length, 1);
     assert.equal(manifest.length, 15);
-    assert.equal(assertions.filter((assertion) => assertion.level === "error").length, 5);
+    assert.equal(
+      assertions.filter((assertion) => assertion.level === "error").length,
+      5,
+    );
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -608,20 +732,28 @@ for (const scenario of [
           };
           lhr.categories.performance.score = null;
           if (scenario !== "usable-metric")
-            for (const audit of Object.values(lhr.audits)) audit.numericValue = null;
-          if (scenario === "incomplete-load") lhr.runWarnings = [INCOMPLETE_LOAD_WARNING];
-          if (scenario === "wrong-url") lhr.requestedUrl = "http://localhost:3000/other";
+            for (const audit of Object.values(lhr.audits))
+              audit.numericValue = null;
+          if (scenario === "incomplete-load")
+            lhr.runWarnings = [INCOMPLETE_LOAD_WARNING];
+          if (scenario === "wrong-url")
+            lhr.requestedUrl = "http://localhost:3000/other";
           return {
             lhr,
             report:
-              scenario === "missing-html" ? undefined : "<!doctype html><title>invalid</title>",
-            contentReadiness: scenario === "failed-readiness" ? { passed: false } : undefined,
+              scenario === "missing-html"
+                ? undefined
+                : "<!doctype html><title>invalid</title>",
+            contentReadiness:
+              scenario === "failed-readiness" ? { passed: false } : undefined,
           };
         },
       });
       assert.equal(result.exitCode, 1);
       assert.equal(calls, 1);
-      const summary = JSON.parse(await readFile(join(dir, ".lighthouseci", "run-summary.json")));
+      const summary = JSON.parse(
+        await readFile(join(dir, ".lighthouseci", "run-summary.json")),
+      );
       assert.deepEqual(summary.collectionRetries, []);
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -647,17 +779,31 @@ test("malformed category preserves failed-run summary and partial report artifac
     assert.equal(result.exitCode, 1);
     assert.equal(calls, 1);
     const output = join(dir, ".lighthouseci");
-    const summary = JSON.parse(await readFile(join(output, "run-summary.json")));
+    const summary = JSON.parse(
+      await readFile(join(output, "run-summary.json")),
+    );
     const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
     assert.equal(summary.exitCode, 1);
     assert.match(summary.errors[0].message, /malformed category/);
     assert.equal(manifest.length, 1);
     assert.equal(manifest[0].isRepresentativeRun, true);
     assert.equal(manifest[0].summary.performance, null);
-    assert.equal(JSON.parse(await readFile(manifest[0].jsonPath)).categories.performance, null);
-    assert.match(await readFile(manifest[0].htmlPath, "utf8"), /malformed fixture/);
-    assert.deepEqual(JSON.parse(await readFile(join(output, "assertion-results.json"))), []);
-    assert.deepEqual(JSON.parse(await readFile(join(output, "assertion-results-all.json"))), []);
+    assert.equal(
+      JSON.parse(await readFile(manifest[0].jsonPath)).categories.performance,
+      null,
+    );
+    assert.match(
+      await readFile(manifest[0].htmlPath, "utf8"),
+      /malformed fixture/,
+    );
+    assert.deepEqual(
+      JSON.parse(await readFile(join(output, "assertion-results.json"))),
+      [],
+    );
+    assert.deepEqual(
+      JSON.parse(await readFile(join(output, "assertion-results-all.json"))),
+      [],
+    );
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -690,12 +836,19 @@ for (const ready of [true, false]) {
       assert.equal(result.exitCode, ready ? 0 : 1);
       assert.equal(calls, ready ? 15 : 1);
       const output = join(dir, ".lighthouseci");
-      const readiness = JSON.parse(await readFile(join(output, "content-readiness.json")));
+      const readiness = JSON.parse(
+        await readFile(join(output, "content-readiness.json")),
+      );
       assert.equal(readiness.length, calls);
       assert.equal(readiness[0].passed, ready);
-      const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
+      const manifest = JSON.parse(
+        await readFile(join(output, "manifest.json")),
+      );
       assert.equal(manifest.length, calls);
-      assert.match(await readFile(manifest[0].htmlPath, "utf8"), /retained fixture/);
+      assert.match(
+        await readFile(manifest[0].htmlPath, "utf8"),
+        /retained fixture/,
+      );
     } finally {
       if (previous === undefined) delete process.env.CI_PERF_HARNESS;
       else process.env.CI_PERF_HARNESS = previous;
@@ -723,11 +876,13 @@ function fakeChrome({ events, scenario, stderr = "", capture }) {
     async launch() {
       events.push("launch");
       await writeFile(join(this.options.userDataDir, "chrome-err.log"), stderr);
-      if (scenario === "launch failure") throw new Error("PRIVATE_ERROR_SENTINEL");
+      if (scenario === "launch failure")
+        throw new Error("PRIVATE_ERROR_SENTINEL");
     }
     async kill() {
       events.push("kill");
-      if (scenario === "cleanup failure") throw new Error("PRIVATE_CLEANUP_SENTINEL");
+      if (scenario === "cleanup failure")
+        throw new Error("PRIVATE_CLEANUP_SENTINEL");
     }
   };
 }
@@ -816,7 +971,12 @@ for (const failure of [false, true]) {
   });
 }
 
-for (const scenario of ["success", "engine failure", "launch failure", "cleanup failure"]) {
+for (const scenario of [
+  "success",
+  "engine failure",
+  "launch failure",
+  "cleanup failure",
+]) {
   test(`owned Chrome lifecycle, projected diagnostics and settings: ${scenario}`, async () => {
     const dir = await mkdtemp(join(tmpdir(), "chrome-lifecycle-"));
     const events = [],
@@ -891,7 +1051,8 @@ for (const scenario of ["success", "engine failure", "launch failure", "cleanup 
           events,
           scenario,
           capture,
-          stderr: "PRIVATE_STDERR_SENTINEL No usable sandbox! arbitrary private contents",
+          stderr:
+            "PRIVATE_STDERR_SENTINEL No usable sandbox! arbitrary private contents",
         }),
       },
       {
@@ -906,11 +1067,16 @@ for (const scenario of ["success", "engine failure", "launch failure", "cleanup 
     ];
     try {
       if (scenario === "success")
-        assert.equal(await auditWithChrome(url, config.ci.collect.settings, deps, context), result);
+        assert.equal(
+          await auditWithChrome(url, config.ci.collect.settings, deps, context),
+          result,
+        );
       else
         await assert.rejects(
           auditWithChrome(url, config.ci.collect.settings, deps, context),
-          scenario === "engine failure" ? engineError : /Chrome (launch|cleanup) failed/,
+          scenario === "engine failure"
+            ? engineError
+            : /Chrome (launch|cleanup) failed/,
         );
       assert.deepEqual(
         events,
@@ -918,7 +1084,10 @@ for (const scenario of ["success", "engine failure", "launch failure", "cleanup 
           ? ["path resolved", "launch", "kill"]
           : ["path resolved", "launch", "engine", "kill"],
       );
-      assert.deepEqual(capture.options.chromeFlags, [...safeDefaults, "--headless=new"]);
+      assert.deepEqual(capture.options.chromeFlags, [
+        ...safeDefaults,
+        "--headless=new",
+      ]);
       assert.equal(capture.options.ignoreDefaultFlags, true);
       await assert.rejects(stat(capture.options.userDataDir), {
         code: "ENOENT",
@@ -933,7 +1102,10 @@ for (const scenario of ["success", "engine failure", "launch failure", "cleanup 
       assert.equal(diagnostic.run_id, "123");
       assert.equal(diagnostic.run_attempt, "1");
       assert.equal(diagnostic.config_sha256, "4".repeat(64));
-      assert.equal(diagnostic.exit_code, scenario === "launch failure" ? 17 : null);
+      assert.equal(
+        diagnostic.exit_code,
+        scenario === "launch failure" ? 17 : null,
+      );
       assert.equal(diagnostic.cleanup_failed, scenario === "cleanup failure");
       assert.equal(diagnostic.collection_completed, scenario === "success");
       assert.equal(diagnostic.security_flags_rejected, false);
@@ -991,7 +1163,8 @@ test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () =
         const lhr = makeReport(url);
         lhr.runtimeError = { code: "NO_NAVSTART" };
         lhr.categories.performance.score = null;
-        for (const audit of Object.values(lhr.audits)) audit.numericValue = null;
+        for (const audit of Object.values(lhr.audits))
+          audit.numericValue = null;
         return {
           lhr,
           report: "<!doctype html><title>fixture</title>",
@@ -1014,7 +1187,9 @@ test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () =
               events.push("newPage");
               const page = {
                 evaluate: async () => {
-                  throw new Error("Failed NO_NAVSTART reports must not be inspected for readiness");
+                  throw new Error(
+                    "Failed NO_NAVSTART reports must not be inspected for readiness",
+                  );
                 },
                 close: async () => events.push("page.close"),
               };
@@ -1054,14 +1229,19 @@ test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () =
     ]);
     const output = join(dir, ".lighthouseci");
     for (const suffix of ["", "-retry"]) {
-      const bytes = await readFile(join(output, `chrome-startup-1-1${suffix}.json`), "utf8");
+      const bytes = await readFile(
+        join(output, `chrome-startup-1-1${suffix}.json`),
+        "utf8",
+      );
       const diagnostic = JSON.parse(bytes);
       assert.equal(diagnostic.trace.counts.navigation_start, 0);
       assert.equal(diagnostic.trace.counts.clock_sync, 1);
       assert.equal(diagnostic.trace.main_frame_source, "browser");
       assert.ok(!bytes.includes("PRIVATE_"));
     }
-    const summary = JSON.parse(await readFile(join(output, "run-summary.json"), "utf8"));
+    const summary = JSON.parse(
+      await readFile(join(output, "run-summary.json"), "utf8"),
+    );
     assert.equal(summary.collectionRetries.length, 1);
     assert.match(summary.errors[0].message, /NO_NAVSTART/);
   } finally {
@@ -1157,7 +1337,8 @@ test("launch failure produces no LHR, no retries, safe source-bound diagnostics 
   ];
   try {
     const result = await runPerformance(fixtureConfig(dir), {
-      audit: (url, settings, _deps, context) => auditWithChrome(url, settings, deps, context),
+      audit: (url, settings, _deps, context) =>
+        auditWithChrome(url, settings, deps, context),
       configSha256: "5".repeat(64),
     });
     assert.equal(result.exitCode, 1);
@@ -1168,7 +1349,8 @@ test("launch failure produces no LHR, no retries, safe source-bound diagnostics 
       await readFile(join(dir, ".lighthouseci", "chrome-startup-1-1.json")),
     );
     const identity = await sourceIdentity(process.cwd());
-    for (const [key, value] of Object.entries(identity)) assert.equal(diagnostic[key], value);
+    for (const [key, value] of Object.entries(identity))
+      assert.equal(diagnostic[key], value);
     assert.deepEqual(diagnostic.stderr_reasons, ["unknown"]);
     assert.equal(diagnostic.stage, "launch");
     assert.equal(diagnostic.config_sha256, "5".repeat(64));
@@ -1181,12 +1363,15 @@ test("launch failure produces no LHR, no retries, safe source-bound diagnostics 
 test("stderr projection emits only known categories and never raw contents", () => {
   assert.deepEqual(classifyChromeStderr("PRIVATE_SECRET unknown"), ["unknown"]);
   assert.deepEqual(
-    classifyChromeStderr("PRIVATE_SECRET error while loading shared libraries libprivate.so"),
+    classifyChromeStderr(
+      "PRIVATE_SECRET error while loading shared libraries libprivate.so",
+    ),
     ["missing_shared_library"],
   );
-  assert.deepEqual(classifyChromeStderr("AppArmor user namespace denied PRIVATE_SECRET"), [
-    "user_namespace_policy",
-  ]);
+  assert.deepEqual(
+    classifyChromeStderr("AppArmor user namespace denied PRIVATE_SECRET"),
+    ["user_namespace_policy"],
+  );
 });
 
 test("hosted identity projects only checkout/head/run fields and fails closed on mismatch", async () => {
@@ -1232,7 +1417,10 @@ test("hosted identity projects only checkout/head/run fields and fails closed on
       JSON.stringify({ pull_request: { head: { sha: "private-invalid" } } }),
     );
     await assert.rejects(sourceIdentity(process.cwd(), env), /identity/);
-    await writeFile(eventPath, JSON.stringify({ pull_request: { head: { sha: "1".repeat(40) } } }));
+    await writeFile(
+      eventPath,
+      JSON.stringify({ pull_request: { head: { sha: "1".repeat(40) } } }),
+    );
     await assert.rejects(
       sourceIdentity(process.cwd(), { ...env, GITHUB_SHA: "9".repeat(40) }),
       /identity/,
@@ -1249,9 +1437,33 @@ test("hosted identity projects only checkout/head/run fields and fails closed on
 test("CLI invalid input exits nonzero before browser collection", () => {
   const result = spawnSync(
     process.execPath,
-    [new URL("./lighthouse-runner.mjs", import.meta.url).pathname, "--unsupported"],
+    [
+      new URL("./lighthouse-runner.mjs", import.meta.url).pathname,
+      "--unsupported",
+    ],
     { encoding: "utf8" },
   );
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Usage/);
 });
+
+for (const status of [200, 409]) {
+  test(`checkout measurement seeds one fixture cart item first (status ${status})`, async () => {
+    const calls = [];
+    const page = {
+      goto: async (target, options) => calls.push(["goto", target, options]),
+      evaluate: async (fn, listingId) => {
+        calls.push(["evaluate", listingId]);
+        assert.equal(typeof fn, "function");
+        return status;
+      },
+    };
+    const run = seedCheckoutCart("http://localhost:3000/en/checkout", page);
+    if (status === 200) await run;
+    else await assert.rejects(run, /Checkout cart seed failed \(409\)/);
+    assert.deepEqual(calls, [
+      ["goto", "http://localhost:3000/en", { waitUntil: "domcontentloaded" }],
+      ["evaluate", CHECKOUT_FIXTURE_LISTING_ID],
+    ]);
+  });
+}

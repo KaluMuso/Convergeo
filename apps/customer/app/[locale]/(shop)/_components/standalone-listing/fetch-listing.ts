@@ -43,7 +43,9 @@ export type StandaloneListing = {
 };
 
 export type StandaloneListingFetchResult =
-  { kind: "listing"; data: StandaloneListing } | { kind: "not_found" } | { kind: "unavailable" };
+  | { kind: "listing"; data: StandaloneListing }
+  | { kind: "not_found" }
+  | { kind: "unavailable" };
 
 export function standaloneListingCacheTag(id: string): string {
   return `listing:${id}`;
@@ -87,7 +89,10 @@ export async function fetchStandaloneListing(
       return { kind: "unavailable" };
     }
 
-    return { kind: "listing", data: (await response.json()) as StandaloneListing };
+    return {
+      kind: "listing",
+      data: (await response.json()) as StandaloneListing,
+    };
   } catch {
     return { kind: "unavailable" };
   }

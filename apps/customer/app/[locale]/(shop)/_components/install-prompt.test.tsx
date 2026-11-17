@@ -24,7 +24,11 @@ beforeEach(() => {
 
 function renderPrompt() {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ common: commonMessages }} onError={() => {}}>
+    <NextIntlClientProvider
+      locale="en"
+      messages={{ common: commonMessages }}
+      onError={() => {}}
+    >
       <InstallPrompt />
     </NextIntlClientProvider>,
   );
@@ -50,7 +54,9 @@ describe("install prompt frequency cap", () => {
   it("suppresses within the re-prompt window, re-shows after it", () => {
     const now = 1_000_000_000_000;
     expect(shouldShowInstallPrompt(now - 1000, now)).toBe(false);
-    expect(shouldShowInstallPrompt(now - INSTALL_REPROMPT_MS - 1, now)).toBe(true);
+    expect(shouldShowInstallPrompt(now - INSTALL_REPROMPT_MS - 1, now)).toBe(
+      true,
+    );
   });
 });
 
@@ -87,7 +93,9 @@ describe("safe SW update handshake", () => {
   });
 
   it("no-ops when there is no waiting worker", () => {
-    const registration = { waiting: null } as unknown as ServiceWorkerRegistration;
+    const registration = {
+      waiting: null,
+    } as unknown as ServiceWorkerRegistration;
     expect(() => promptSkipWaiting(registration)).not.toThrow();
   });
 });

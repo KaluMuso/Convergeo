@@ -41,7 +41,11 @@ export function buildStorefrontCompare(input: {
   };
 }
 
-export function CompareOtherShopsLink({ compare }: { compare: StorefrontCompare }) {
+export function CompareOtherShopsLink({
+  compare,
+}: {
+  compare: StorefrontCompare;
+}) {
   return (
     <Link
       href={compare.href}

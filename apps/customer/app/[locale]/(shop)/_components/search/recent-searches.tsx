@@ -21,7 +21,8 @@ export function readRecentSearches(): string[] {
       return [];
     }
     return parsed.filter(
-      (item): item is string => typeof item === "string" && item.trim().length > 0,
+      (item): item is string =>
+        typeof item === "string" && item.trim().length > 0,
     );
   } catch {
     return [];
@@ -33,7 +34,10 @@ export function writeRecentSearches(terms: string[]): void {
     return;
   }
 
-  window.localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(terms.slice(0, MAX_RECENT)));
+  window.localStorage.setItem(
+    RECENT_SEARCHES_KEY,
+    JSON.stringify(terms.slice(0, MAX_RECENT)),
+  );
 }
 
 export function addRecentSearch(term: string): string[] {
@@ -44,7 +48,9 @@ export function addRecentSearch(term: string): string[] {
 
   const next = [
     trimmed,
-    ...readRecentSearches().filter((item) => item.toLowerCase() !== trimmed.toLowerCase()),
+    ...readRecentSearches().filter(
+      (item) => item.toLowerCase() !== trimmed.toLowerCase(),
+    ),
   ];
   writeRecentSearches(next);
   return next.slice(0, MAX_RECENT);
@@ -70,7 +76,12 @@ export type RecentSearchesProps = {
   className?: string;
 };
 
-export function RecentSearches({ locale, labels, query, className }: RecentSearchesProps) {
+export function RecentSearches({
+  locale,
+  labels,
+  query,
+  className,
+}: RecentSearchesProps) {
   const [items, setItems] = useState<string[]>([]);
 
   useEffect(() => {

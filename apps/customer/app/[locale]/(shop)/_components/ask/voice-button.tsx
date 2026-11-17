@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { isSpeechRecognitionSupported, preferredEnglishLang } from "./speech-support";
+import {
+  isSpeechRecognitionSupported,
+  preferredEnglishLang,
+} from "./speech-support";
 
 import type { SpeechSession } from "./speech-session";
 
@@ -123,7 +126,12 @@ export function AskVoiceButton({
           <path d="M12 18v3" />
         </svg>
       </button>
-      <span role="status" aria-live="polite" className="sr-only" data-testid="ask-voice-status">
+      <span
+        role="status"
+        aria-live="polite"
+        className="sr-only"
+        data-testid="ask-voice-status"
+      >
         {listening ? labels.listening : state === "error" ? labels.error : ""}
       </span>
     </span>

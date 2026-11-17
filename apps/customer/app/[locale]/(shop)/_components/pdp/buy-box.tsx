@@ -26,6 +26,7 @@ import {
   resolveSaleUnit,
   type SaleUnit,
   type SaleUnitLabels,
+  translateMadeToOrder,
 } from "../sale-quantity";
 
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
@@ -447,7 +448,7 @@ export function BuyBox({
           className="text-sm font-medium text-text-2"
           data-testid="pdp-lead-time"
         >
-          {t("pdp.leadTime", { days: leadTimeDays })}
+          {translateMadeToOrder(t, leadTimeDays)}
         </p>
       ) : null}
 

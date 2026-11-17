@@ -66,11 +66,11 @@ describe("POST /api/contact email config", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("RESEND_API_KEY", "k");
     vi.stubEnv("CONTACT_INBOX", "a@b.co");
-    vi.stubEnv("CONTACT_FROM", "Vergeo5 <support@vergeo5.com>");
+    vi.stubEnv("CONTACT_FROM", "Convergeo <support@vergeo5.com>");
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
     const res = await POST(req());
     expect(res.status).toBe(200);
-    expect(JSON.parse(fetchMock.mock.calls[0]![1].body).from).toBe("Vergeo5 <support@vergeo5.com>");
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body).from).toBe("Convergeo <support@vergeo5.com>");
   });
 });

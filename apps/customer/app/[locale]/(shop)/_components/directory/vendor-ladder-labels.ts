@@ -54,7 +54,9 @@ export function buildTierStripItems(labels: VendorLadderLabels) {
   }));
 }
 
-export function buildVendorLadderLabels(t: (key: string) => string): VendorLadderLabels {
+export function buildVendorLadderLabels(
+  t: (key: string) => string,
+): VendorLadderLabels {
   const tr = (key: string): string => t(key);
   return {
     trust: {

@@ -8,6 +8,7 @@ from typing import Any, Protocol, cast
 from uuid import uuid4
 
 from app.errors import AppError
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.notifications.dedupe import enqueue_outbox_row
@@ -355,9 +356,10 @@ def _cas_update_return_status(
 
 def _load_vendor_for_owner(service_client: ServiceRoleClient, owner_user_id: str) -> dict[str, Any]:
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id, owner_user_id")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )

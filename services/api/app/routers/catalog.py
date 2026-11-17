@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import logging
 import math
 from typing import Annotated, Any, Literal, cast
 from uuid import UUID
@@ -8,10 +9,15 @@ from uuid import UUID
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.comparison import is_lusaka_delivery_available
+from app.schemas.offers import OfferBadgeOut
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import fetch_demo_listing_ids
+from app.services.vendor_plans.canonical_photos import load_canonical_images
+from app.services.vendor_plans.resolver import shared_photos_enabled
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 
@@ -69,6 +75,9 @@ class CatalogListingItem(BaseModel):
     below_median: bool = False
     delivery_available: bool = False
     pickup_available: bool = False
+    #: W8 live offer this listing takes part in (flag `bundles`); attached
+    #: server-side by surfaces that render cards (home feed, stream).
+    offer_badge: OfferBadgeOut | None = None
 
 
 class CatalogListResponse(BaseModel):
@@ -651,7 +660,34 @@ def _fetch_listings_enriched(
             "image_public_id": _first_image_public_id(images),
             "landmark": _first_landmark(vendor_locations),
         }
+    _fill_canonical_card_images(client, enriched)
     return enriched
+
+
+def _fill_canonical_card_images(client: Any, enriched: dict[str, dict[str, Any]]) -> None:
+    """Cards for attached listings without own photos show the product's photo.
+
+    Zero extra queries in the common case (every card already has an image);
+    flag-gated (`shared_canonical_photos`) and fail-soft.
+    """
+    missing = {
+        listing_id: str(bundle["product"]["id"])
+        for listing_id, bundle in enriched.items()
+        if bundle.get("image_public_id") is None
+        and isinstance(bundle.get("product"), dict)
+        and bundle["product"].get("id")
+    }
+    if not missing or not shared_photos_enabled(client):
+        return
+    try:
+        canonical = load_canonical_images(client, missing.values())
+    except Exception:
+        logger.warning("canonical card photos unavailable", exc_info=True)
+        return
+    for listing_id, product_id in missing.items():
+        photos = canonical.get(product_id)
+        if photos:
+            enriched[listing_id]["image_public_id"] = photos[0]
 
 
 def _fetch_listing_ratings(client: Any, listing_ids: list[str]) -> dict[str, tuple[float, int]]:

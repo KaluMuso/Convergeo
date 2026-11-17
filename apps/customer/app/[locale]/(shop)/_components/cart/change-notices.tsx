@@ -17,7 +17,11 @@ type ChangeNoticesProps = {
   titleByListingId?: Record<string, string>;
 };
 
-function noticeMessage(notice: ChangeNotice, labels: ChangeNoticeLabels, title?: string): string {
+function noticeMessage(
+  notice: ChangeNotice,
+  labels: ChangeNoticeLabels,
+  title?: string,
+): string {
   const itemLabel = title ?? notice.listing_id;
 
   switch (notice.kind) {
@@ -26,7 +30,9 @@ function noticeMessage(notice: ChangeNotice, labels: ChangeNoticeLabels, title?:
         .replace("{oldPrice}", formatK(notice.snapshot_price_ngwee))
         .replace(
           "{newPrice}",
-          notice.current_price_ngwee !== null ? formatK(notice.current_price_ngwee) : "—",
+          notice.current_price_ngwee !== null
+            ? formatK(notice.current_price_ngwee)
+            : "—",
         )
         .concat(title ? ` (${itemLabel})` : "");
     case "out_of_stock":
@@ -41,7 +47,11 @@ function noticeMessage(notice: ChangeNotice, labels: ChangeNoticeLabels, title?:
   }
 }
 
-export function ChangeNotices({ notices, labels, titleByListingId }: ChangeNoticesProps) {
+export function ChangeNotices({
+  notices,
+  labels,
+  titleByListingId,
+}: ChangeNoticesProps) {
   if (notices.length === 0) {
     return null;
   }
@@ -60,7 +70,11 @@ export function ChangeNotices({ notices, labels, titleByListingId }: ChangeNotic
             data-testid={`cart-notice-${notice.kind}-${notice.listing_id}`}
             className="text-sm text-text-2"
           >
-            {noticeMessage(notice, labels, titleByListingId?.[notice.listing_id])}
+            {noticeMessage(
+              notice,
+              labels,
+              titleByListingId?.[notice.listing_id],
+            )}
           </li>
         ))}
       </ul>

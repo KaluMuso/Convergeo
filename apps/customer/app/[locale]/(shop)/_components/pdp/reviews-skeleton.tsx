@@ -14,7 +14,10 @@ export function ReviewsSkeleton() {
       <Skeleton shape="line" width="10rem" height="1.25rem" />
       <div className="flex flex-col gap-3 motion-stagger">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="flex flex-col gap-2 rounded border border-border p-3">
+          <div
+            key={index}
+            className="flex flex-col gap-2 rounded border border-border p-3"
+          >
             <Skeleton shape="line" width="6rem" />
             <Skeleton shape="line" width="90%" />
             <Skeleton shape="line" width="70%" />

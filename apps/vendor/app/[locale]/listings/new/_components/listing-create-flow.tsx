@@ -15,6 +15,7 @@ import {
 import { vendorErrorMessageKey } from "../../../_lib/vendor-errors";
 import { createKycClient } from "../../../onboarding/_lib/kyc-client";
 import { ListingTipsPanel } from "../../_components/listing-guide";
+import { PlanUsageCard } from "../../_components/plan-usage-card";
 import {
   buildListingFieldLabels,
   FIELD_ERRORS_KEY,
@@ -234,6 +235,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
                   draftInvalid: t("listings.errors.draftInvalid"),
                   publishBlocked: t("listings.errors.publishBlocked"),
                   fieldErrors: fieldErrorMessages,
+                  listingLimit: t("plans.limitReachedShort"),
                 }}
               />
             </>
@@ -280,6 +282,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             standaloneRequired: t("listings.errors.standalone_required"),
             draftInvalid: t("listings.errors.draftInvalid"),
             fieldErrors: fieldErrorMessages,
+            listingLimit: t("plans.limitReachedShort"),
             required: t("listings.errors.required"),
           }}
         />
@@ -325,6 +328,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             policyBlocked: t("listings.errors.policyBlocked"),
             draftInvalid: t("listings.errors.draftInvalid"),
             fieldErrors: fieldErrorMessages,
+            listingLimit: t("plans.limitReachedShort"),
             required: t("listings.errors.required"),
           }}
         />
@@ -340,6 +344,8 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
         </h1>
         <p className="text-sm text-text-2">{t("listings.intro")}</p>
       </header>
+
+      <PlanUsageCard />
 
       <ListingTipsPanel defaultOpen />
 

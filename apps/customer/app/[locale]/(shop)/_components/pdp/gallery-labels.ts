@@ -17,14 +17,18 @@ export function formatPdpGalleryIndicator(
   current: number,
   total: number,
 ): string {
-  return template.replaceAll("{current}", String(current)).replaceAll("{total}", String(total));
+  return template
+    .replaceAll("{current}", String(current))
+    .replaceAll("{total}", String(total));
 }
 
 /**
  * Guard used by tests (and callers) to catch RSC-unsafe function props.
  * Mirrors the live failure mode for digest 1378788464.
  */
-export function assertRscSafeGalleryLabels(labels: Record<string, unknown>): void {
+export function assertRscSafeGalleryLabels(
+  labels: Record<string, unknown>,
+): void {
   for (const [key, value] of Object.entries(labels)) {
     if (typeof value === "function") {
       throw new Error(

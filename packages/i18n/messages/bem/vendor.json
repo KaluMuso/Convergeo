@@ -56,7 +56,7 @@
     "inviteOnlyNotice": "Invite fye seller beta. Public self-service selling is not open yet. Invited sellers can continue onboarding with the link they received.",
     "meta": {
       "title": "Gulitseni pa Convergeo — invite-only seller beta",
-      "description": "⚠ Convergeo seller onboarding is invite/concierge-only during beta. Learn about commissions, KYC, and mobile-money payouts — public self-service signup is not open yet."
+      "description": "⚠ Convergeo seller onboarding is invite/concierge-only during the pilot. Learn about commissions and verification — public self-service signup is not open yet."
     },
     "hero": {
       "eyebrow": "Invite fye seller beta",
@@ -114,20 +114,20 @@
       "heading": "How it works",
       "steps": {
         "signup": {
-          "title": "Sign up in minutes",
-          "description": "⚠ Create your vendor account on mobile or desktop — no upfront fees."
+          "title": "⚠ Sign in with your invite",
+          "description": "⚠ Use the invite you received to sign in to the vendor app on mobile or desktop — no upfront fees."
         },
         "kyc": {
           "title": "⚠ Verify your ID",
-          "description": "Upload your NRC and a selfie. We match your mobile-money name. Same-day approval."
+          "description": "⚠ Upload your NRC and a selfie. Same-day approval for most sellers."
         },
         "list": {
           "title": "List your first products",
           "description": "⚠ Attach to our catalog or quick-list. See your commission before you publish."
         },
         "sell": {
-          "title": "Sell and get paid",
-          "description": "⚠ Ama-order flow to your dashboard. Escrow protects buyers; payouts hit your MoMo fast."
+          "title": "⚠ Sell to your customers",
+          "description": "⚠ Orders flow to your dashboard. During the pilot, customers pay cash on delivery. Online payouts are coming soon."
         }
       }
     },
@@ -138,7 +138,7 @@
         "t1": {
           "badge": "T1 · Seller",
           "title": "Same-day selling",
-          "description": "NRC photo + selfie + mobile-money name match. Up to 30 listings; first 5 orders capped at K500 each."
+          "description": "⚠ NRC photo + selfie. Up to 30 listings; first 5 orders capped at K500 each."
         },
         "t2": {
           "badge": "T2 · Verified business",
@@ -158,9 +158,9 @@
       }
     },
     "payout": {
-      "heading": "⚠ Fast mobile-money payouts",
-      "promise": "Paid out in minutes on mobile money — always within 48 hours.",
-      "body": "⚠ Buyer payments are held in escrow until delivery is confirmed (or auto-confirmed after 48 hours). Once released, MTN and Airtel payouts typically arrive in under five minutes. Bank transfers take 24–36 hours."
+      "heading": "⚠ Online payouts: coming soon",
+      "promise": "⚠ During the pilot, customers pay cash on delivery.",
+      "body": "⚠ Mobile-money payouts and buyer protection are coming soon. Until then, orders are paid in cash when they arrive, and we will confirm settlement details with each invited seller."
     },
     "faq": {
       "heading": "Frequently asked questions",
@@ -171,7 +171,7 @@
         },
         "payout": {
           "question": "When do I get paid?",
-          "answer": "⚠ After escrow releases on delivery confirmation. Mobile-money payouts usually arrive in minutes; we guarantee payout within 48 hours."
+          "answer": "⚠ During the pilot, customers pay cash on delivery. Online payouts are coming soon — we will confirm timing with each invited seller."
         },
         "whatCanISell": {
           "question": "What can I sell?",
@@ -179,15 +179,16 @@
         },
         "kyc": {
           "question": "How long does verification take?",
-          "answer": "⚠ T1 sellers with a valid NRC, selfie, and matching MoMo name are typically approved the same day. Nothing goes live until you pass KYC."
+          "answer": "⚠ T1 sellers with a valid NRC and selfie are typically approved the same day. Nothing goes live until you pass KYC."
         }
       }
     },
     "cta": {
       "heading": "Invited to sell on Convergeo?",
-      "body": "⚠ Seller onboarding is concierge/invite-only during beta. If you have an invite, continue below — listing and payout tools unlock only after admin approval.",
+      "body": "⚠ Seller onboarding is concierge/invite-only during the pilot. If you have an invite, continue below — listing tools unlock only after admin approval.",
       "button": "Yendeni pa invite ya seller",
-      "loadingLabel": "Funguleniing invite onboarding"
+      "loadingLabel": "Funguleniing invite onboarding",
+      "haveInviteSignIn": "⚠ I have an invite — sign in"
     }
   },
   "onboarding": {
@@ -348,7 +349,7 @@
           "why": "Matched to your NRC photo so no one else can sell in your name."
         },
         "review": {
-          "title": "Ukulolesha kwa Vergeo5",
+          "title": "Ukulolesha kwa Convergeo",
           "why": "Our team checks everything, usually within 1 working day, and lets you know the result."
         }
       },
@@ -397,7 +398,9 @@
       "uploading": "Uploading…",
       "upload_failed": "Upload failed",
       "minimum_required": "⚠ At least {count} evidence photo must remain attached while this listing is live.",
-      "retry": "Esheni limbi"
+      "retry": "Esheni limbi",
+      "duplicate": "This photo is already on the listing.",
+      "dedupCanonical": "This photo is already the product's main photo, so shoppers see it on your listing. No need to upload it again."
     },
     "meta": {
       "title": "Create listing — Convergeo Vendor",
@@ -1085,7 +1088,7 @@
       "cancel": "Cancel",
       "after": {
         "confirm": "The customer is told you accepted. Next you'll pack it.",
-        "reject": "The order is cancelled and the customer is told why. Vergeo5 handles any refund.",
+        "reject": "The order is cancelled and the customer is told why. Convergeo handles any refund.",
         "pack": "The customer sees that you're preparing their order.",
         "ship": "Tap when the rider has the parcel. Add the rider's name or phone.",
         "ready_for_pickup": "The customer is told to come and collect it from you."
@@ -1126,11 +1129,11 @@
       "headingNow": "Ifyakucita nomba",
       "headingNext": "Ifikonkelepo",
       "scanCta": "Open Scan to hand over",
-      "paidExplainer": "The customer has paid. Vergeo5 holds the money safely until the order is delivered.",
+      "paidExplainer": "The customer has paid. Convergeo holds the money safely until the order is delivered.",
       "unpaidExplainer": "The customer hasn't paid yet. Don't pack or send anything until payment shows as received.",
       "cod": {
         "body": "The customer pays the rider in cash when the order arrives. You don't collect any money yourself.",
-        "settlement": "Vergeo5 settles the order money with you — you don't need to chase the rider or the customer."
+        "settlement": "Convergeo settles the order money with you — you don't need to chase the rider or the customer."
       },
       "steps": {
         "confirm": {
@@ -1447,9 +1450,9 @@
       "body": "You won't receive payouts through this app yet, so there's no balance to show here. That's expected — nothing is wrong with your account.",
       "meanwhileHeading": "How money works during the pilot",
       "meanwhile": {
-        "cod": "Cash on delivery: the customer pays the rider in cash, and Vergeo5 settles with you.",
-        "prepaid": "Paid orders: Vergeo5 holds the customer's money safely until the order is delivered.",
-        "questions": "Questions about money owed to you? Ask the Vergeo5 pilot team."
+        "cod": "Cash on delivery: the customer pays the rider in cash, and Convergeo settles with you.",
+        "prepaid": "Paid orders: Convergeo holds the customer's money safely until the order is delivered.",
+        "questions": "Questions about money owed to you? Ask the Convergeo pilot team."
       },
       "laterHeading": "What you'll see here later",
       "later": {
@@ -2082,7 +2085,9 @@
       "attendeeNamedBadge": "Ishinas required",
       "perksLabel": "Perks (optional)",
       "perksHelp": "Shilaoneshwa ku buyers — lounge, merch, drink tokens. Shileka blank nga takuli.",
-      "perksPlaceholder": "e.g. Includes one drink token"
+      "perksPlaceholder": "e.g. Includes one drink token",
+      "isFreeLabel": "⚠ This is free",
+      "isFreeHint": "⚠ Guests RSVP instead of paying. They still get a QR ticket and capacity applies."
     },
     "actions": {
       "save": "Save type",
@@ -2401,7 +2406,8 @@
       "disputes": "Disputes",
       "intake": "Ama-draft ya WhatsApp",
       "settings": "⚠ Settings",
-      "offers": "⚠ Offers"
+      "offers": "⚠ Offers",
+      "coupons": "Amakuponi"
     }
   },
   "intake": {
@@ -2654,7 +2660,7 @@
       "edit": "⚠ Edit",
       "archive": "⚠ Archive",
       "giftStock": "⚠ Gifts left: {available} of {total}",
-      "notInCart": "⚠ Checkout applies offers to products for now; this one is shown but not yet applied."
+      "notInCart": "⚠ Checkout applies offers to products and event tickets; offers with a service, or a free gift triggered by an event, are shown but not yet applied."
     },
     "types": {
       "bxgy": {
@@ -2729,7 +2735,10 @@
       "status": "⚠ Status",
       "maxApplications": "⚠ Max times per order",
       "save": "⚠ Save offer",
-      "saving": "⚠ Saving…"
+      "saving": "⚠ Saving…",
+      "perCustomerLimit": "⚠ Uses per customer",
+      "perCustomerLimitHint": "⚠ How many orders one customer can use this offer on. Leave blank for no limit.",
+      "perCustomerLimitPlaceholder": "⚠ No limit"
     },
     "status": {
       "draft": "⚠ Draft",
@@ -2769,7 +2778,228 @@
       "tooManyActive": "⚠ You have reached the limit of active offers.",
       "giftStockBelowReserved": "⚠ Gift stock cannot go below the gifts already promised.",
       "typeImmutable": "⚠ The offer type cannot be changed.",
-      "rateLimited": "⚠ Too many changes. Wait a minute and try again."
+      "rateLimited": "⚠ Too many changes. Wait a minute and try again.",
+      "perCustomerLimitInvalid": "⚠ Enter a whole number from 1 to 1,000, or leave it blank."
+    }
+  },
+  "coupons": {
+    "meta": {
+      "title": "Coupons — Convergeo Vendor",
+      "description": "Create discount codes for your shop."
+    },
+    "manager": {
+      "title": "Amakuponi",
+      "intro": "Give your customers a code for money off your items.",
+      "fundingNote": "You pay for the discount: it comes off what you earn on that order, and commission is charged on the lower price.",
+      "createTitle": "New coupon",
+      "code": "Code",
+      "codeHelp": "3–32 letters, numbers or dashes, e.g. SAVE20.",
+      "kind": "Discount type",
+      "kindPercent": "Percent off",
+      "kindFixed": "Kwacha off",
+      "percent": "Percent (e.g. 10)",
+      "amount": "Amount in Kwacha (e.g. 20)",
+      "maxDiscount": "Largest discount (K, optional)",
+      "maxDiscountHelp": "Caps a percent coupon on big baskets.",
+      "minSpend": "Minimum spend (K, optional)",
+      "minSpendHelp": "Counted on the items the coupon covers.",
+      "scope": "Works on",
+      "scopeAll": "Everything",
+      "scopeShop": "My whole shop",
+      "scopeVendor": "One shop",
+      "scopeCategory": "One category",
+      "scopeListing": "One listing",
+      "scopeId": "ID",
+      "scopeIdHelp": "Copy the ID from the shop, category or listing page.",
+      "startsOn": "Starts on",
+      "endsOn": "Ends on (optional)",
+      "endsOnHelp": "The code works until the end of this day, Lusaka time.",
+      "totalLimit": "Total uses (optional)",
+      "totalLimitHelp": "Leave empty for no total limit.",
+      "perUserLimit": "Uses per customer",
+      "create": "Create coupon",
+      "creating": "Creating…",
+      "created": "Coupon created.",
+      "listTitle": "Your coupons",
+      "empty": "No coupons yet.",
+      "loading": "Loading…",
+      "usage": "{used} used",
+      "usageLimited": "{used} of {limit} used",
+      "summaryOff": "{value} off",
+      "summaryMin": "min. {amount}",
+      "statusActive": "Active",
+      "statusPaused": "Paused",
+      "statusArchived": "Ended",
+      "pause": "Pause",
+      "resume": "Resume",
+      "archive": "End coupon",
+      "errors": {
+        "generic": "Something went wrong. Try again.",
+        "disabled": "Coupons aren't switched on yet.",
+        "forbidden": "Only admins can manage platform coupons.",
+        "code": "Use 3–32 letters, numbers or dashes.",
+        "codeTaken": "That code is already taken.",
+        "percent": "Enter a percent between 1 and 100.",
+        "percentTooHigh": "That percent is above the allowed maximum.",
+        "amount": "Enter an amount like 20 or 12.50.",
+        "dates": "The end date must be on or after the start date, and not in the past.",
+        "scope": "Choose what the coupon works on and paste its ID.",
+        "listing": "That listing isn't in your shop.",
+        "archived": "Ended coupons can't be restarted. Create a new one."
+      }
+    }
+  },
+  "plans": {
+    "heading": "Your plan: {name}",
+    "free": "Free",
+    "perMonth": "{price}/month",
+    "usage": "{count} of {max} listings used",
+    "usageUnlimited": "{count} listings · no limit",
+    "kycLimit": "You've reached the listing limit for your verification level. Verify your business to list more.",
+    "atLimit": "You've used all the listings on your plan.",
+    "overLimit": "You have more listings than your plan allows.",
+    "keepSelling": "Nothing has been removed: your listings stay live, and you can keep editing them and adding stock. To add new products, upgrade your plan.",
+    "option": "{name}: {max} listings for {price}/month",
+    "optionUnlimited": "{name}: unlimited listings for {price}/month",
+    "howToUpgrade": "To upgrade, message our team. Nothing is charged automatically.",
+    "limitReachedShort": "You've reached your listing limit. Your existing listings stay live; see your plan above to upgrade.",
+    "limitReached": "You've reached your plan's listing limit. Your listings stay live; upgrade to add more.",
+    "photoLimitReached": "Your plan allows {max} photos per listing. Upgrade your plan to add more.",
+    "billingUnavailable": "Plan payments aren't available yet. Our team will help you upgrade."
+  },
+  "branches": {
+    "title": "My businesses & shops",
+    "intro": "Run every branch of your business from one account. Each shop has its own storefront, stock, payout number and plan.",
+    "loading": "Loading your businesses…",
+    "disabled": "Multiple shops are not available yet.",
+    "primary": "Main shop",
+    "acting": "You are working here",
+    "payoutHold": "Payouts for this shop are on hold until our team checks the shared MoMo number.",
+    "reviewNote": "Note from our team: {note}",
+    "ownerKycNeeded": "Finish your owner verification (KYC) before adding shops.",
+    "switcher": {
+      "label": "Shop you are working on",
+      "withStatus": "{name} ({status})",
+      "manage": "My shops"
+    },
+    "status": {
+      "draft": "Draft",
+      "pending_review": "In review",
+      "info_requested": "Needs info",
+      "approved": "Live",
+      "rejected": "Rejected"
+    },
+    "allowance": {
+      "used": "{used} of {limit} shops",
+      "usedUnlimited": "{used} shops",
+      "blockedUnregistered": "Unregistered traders can run one shop. Add your PACRA registration to open more.",
+      "blockedPlan": "Your plan has no more shops. Upgrade your plan to add a branch.",
+      "nextAddon": "Next shop: {price}/month add-on",
+      "nextIncluded": "Next shop is included in your plan"
+    },
+    "staff": {
+      "seats": "Staff seats: {used} of {seats}",
+      "unlimited": "Staff seats: {used} (unlimited)"
+    },
+    "registration": {
+      "title": "Business registration (PACRA)",
+      "help": "Registered businesses can open more than one shop. We check the PACRA number and certificate.",
+      "typeLabel": "Registration",
+      "company": "Registered company",
+      "business_name": "Registered business name",
+      "unregistered": "Not registered (market trader)",
+      "unspecified": "Registration not set",
+      "pacraLine": "PACRA {number}",
+      "verified": "PACRA checked",
+      "pacraNumber": "PACRA number",
+      "certificate": "Certificate photo",
+      "unregisteredNote": "Unregistered traders are limited to one shop.",
+      "save": "Save registration",
+      "saved": "Registration saved."
+    },
+    "actions": {
+      "addShop": "Add a shop/branch",
+      "workHere": "Work in this shop",
+      "submit": "Send for review",
+      "submitting": "Sending…",
+      "saving": "Saving…",
+      "createShop": "Create shop"
+    },
+    "evidence": {
+      "help": "For a physical shop we need a photo of the shopfront and proof that you use the premises.",
+      "onlineHelp": "Online-only shops need no premises proof. Send it for review when ready.",
+      "storefront_photo": "Shopfront photo",
+      "premises_proof": "Proof of premises",
+      "uploaded": "uploaded",
+      "proofType": "Type of proof",
+      "proof": {
+        "lease": "Lease agreement",
+        "utility_bill": "Utility bill",
+        "council_permit": "Council trading permit"
+      }
+    },
+    "form": {
+      "title": "Add a shop/branch",
+      "intro": "Each branch gets its own storefront, stock, payout number and plan. Our team verifies it before it goes live.",
+      "shop": "Shop",
+      "name": "Shop name",
+      "kind": "Type",
+      "kindPhysical": "Physical shop",
+      "kindOnline": "Online only",
+      "location": "Location",
+      "useMyLocation": "Use my current location",
+      "lat": "Latitude",
+      "lng": "Longitude",
+      "landmark": "Landmark",
+      "landmarkHelp": "For example: opposite Total filling station, Great East Road.",
+      "address": "Street address (optional)",
+      "mapUrl": "Map link (optional, https)",
+      "opens": "Opens",
+      "closes": "Closes",
+      "sundayClosed": "Closed on Sundays",
+      "contacts": "Contacts",
+      "phone": "Shop phone",
+      "whatsapp": "WhatsApp number (optional)",
+      "email": "Email (optional)",
+      "payout": "Payout",
+      "payoutNumber": "MoMo payout number",
+      "payoutHelp": "A number used by another business is not allowed. Sharing a number between your own shops needs a check by our team.",
+      "rail": "Network",
+      "reviewNote": "After creating the shop, add the shopfront photo and proof of premises, then send it for review.",
+      "priceAddon": "This shop is a paid add-on: {price}/month on your plan.",
+      "priceIncluded": "This shop is included in your plan.",
+      "rails": {
+        "mtn": "MTN MoMo",
+        "airtel": "Airtel Money",
+        "zamtel": "Zamtel Kwacha"
+      }
+    },
+    "errors": {
+      "disabled": "Multiple shops are not available yet.",
+      "businessNotFound": "We could not find that business.",
+      "branchNotFound": "We could not find that shop.",
+      "businessSuspended": "This business is suspended.",
+      "ownerKycRequired": "Finish your owner verification (KYC) first.",
+      "locationRequired": "Add the shop location and a landmark.",
+      "slugInvalid": "Use a shop name with letters or numbers.",
+      "unregisteredLimit": "Unregistered traders can run one shop. Add your PACRA registration first.",
+      "planLimit": "Your plan has no more shops. Upgrade to add a branch.",
+      "tooClose": "This shop is {nearest} m from another of your shops. Branches must be at least {min} m apart.",
+      "payoutTaken": "That MoMo number belongs to another business. Use your own number.",
+      "evidenceRequired": "Add the shopfront photo and proof of premises first.",
+      "evidenceLocked": "Evidence can only change before review.",
+      "evidencePath": "That upload is not valid. Please upload again.",
+      "evidenceFile": "Use a JPG, PNG or WebP photo up to 10 MB.",
+      "invalidTransition": "This shop cannot be sent for review right now.",
+      "pacraRequired": "Registered businesses need a PACRA number and certificate.",
+      "pacraTaken": "That PACRA number is already registered to another business.",
+      "staffSeatLimit": "Your plan has no free staff seats.",
+      "staffDuplicate": "That staff member is already invited.",
+      "rateLimited": "Too many attempts. Wait a minute and try again.",
+      "validation": "Check the details and try again.",
+      "network": "No connection. Check your data and try again.",
+      "locationDenied": "We could not read your location. Enter it by hand.",
+      "generic": "Something went wrong. Please try again."
     }
   }
 }

@@ -3311,6 +3311,60 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "offer_gift_reservations": client_invisible(),
+    # Unified cart (20261116090000): ticket lines are read by their cart owner
+    # (RLS-scoped SELECT); every write is service-role only like cart_items, so
+    # client INSERT/UPDATE/DELETE are permission denials. Anon has no grant.
+    # Session ticket holds are service-role only.
+    "cart_ticket_items": {
+        Persona.ANON: deny_all(),
+        **{
+            persona: {"select": "permit", "insert": "deny", "update": "deny", "delete": "deny"}
+            for persona in (
+                Persona.CUSTOMER,
+                Persona.OTHER_CUSTOMER,
+                Persona.VENDOR,
+                Persona.OTHER_VENDOR,
+                Persona.ADMIN,
+            )
+        },
+    },
+    "checkout_ticket_holds": client_invisible(),
+    # Free events / services (#813): SELECT-only grants with owner, organiser /
+    # provider and admin read policies; writes go through the API (service role).
+    "event_rsvps": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "service_free_bookings": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    # Coupons, gift orders, birthdays (#792): SELECT-only grants with owner/admin
+    # read policies; every write goes through the API (service role).
+    "coupons": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "promo_budgets": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "coupon_redemptions": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "gift_details": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "profile_birthdays": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "birthday_greetings": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
     # Web Push subscriptions: API writes for the caller; clients read/delete own.
     "web_push_subscriptions": {
         Persona.ANON: deny_all(),
@@ -3324,6 +3378,54 @@ EXPECTATIONS: TableExpectations = {
                 Persona.ADMIN,
             )
         },
+    },
+    # Vendor plans (20261116110000). Clients read only — active plans, and their
+    # OWN assignment/override (row isolation proven in test_vendor_plans_rls.py);
+    # every write is API-only (service role + admin audit_log). Anon: no grant.
+    **{
+        table: {
+            Persona.ANON: deny_all(),
+            **{
+                persona: select_only()
+                for persona in (
+                    Persona.CUSTOMER,
+                    Persona.OTHER_CUSTOMER,
+                    Persona.VENDOR,
+                    Persona.OTHER_VENDOR,
+                    Persona.ADMIN,
+                )
+            },
+        }
+        for table in ("vendor_plans", "vendor_plan_assignments", "vendor_plan_overrides")
+    },
+    # Shared canonical product photos (20261116110100): public read of ACTIVE
+    # products' photos (same visibility as the product); no client writes.
+    "product_images": {persona: select_only() for persona in Persona},
+    # Multi-branch businesses (20261117000000). Clients read only: owners their
+    # OWN businesses / branch evidence / history / staff; duplicate flags are
+    # admin-only rows (row isolation in test_multi_branch_rls.py). Every write is
+    # API-only (service role + transition_vendor_branch). Anon: no grant.
+    **{
+        table: {
+            Persona.ANON: deny_all(),
+            **{
+                persona: select_only()
+                for persona in (
+                    Persona.CUSTOMER,
+                    Persona.OTHER_CUSTOMER,
+                    Persona.VENDOR,
+                    Persona.OTHER_VENDOR,
+                    Persona.ADMIN,
+                )
+            },
+        }
+        for table in (
+            "vendor_businesses",
+            "vendor_branch_evidence",
+            "vendor_branch_events",
+            "vendor_branch_flags",
+            "vendor_business_staff",
+        )
     },
     # 20261115140200: append-only consent log. Owners read their own rows; the API
     # writes as service_role, so no client holds a write grant.

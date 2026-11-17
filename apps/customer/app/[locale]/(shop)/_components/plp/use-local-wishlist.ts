@@ -54,7 +54,8 @@ export function useLocalWishlist(productSlug: string | null): {
   }, []);
 
   const isWishlisted = Boolean(
-    productSlug && parseWishlistSnapshot(snapshot).some((entry) => entry.slug === productSlug),
+    productSlug &&
+    parseWishlistSnapshot(snapshot).some((entry) => entry.slug === productSlug),
   );
 
   const toggleWishlist = useCallback(() => {

@@ -8,6 +8,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 from app.schemas.base import NgweeInt, StrictModel
+from app.schemas.offers import OfferBadgeOut
 from app.services.analytics.flags import collect_v2_enabled
 from app.services.analytics.search_log import log_search_query, redact_term
 from app.services.listings.demo import drop_demo_listing_hits
@@ -28,6 +29,7 @@ from app.services.search.query_builder import (
     normalize_page_size,
     paginate,
 )
+from app.services.search.relevance import apply_relevance_guard, has_active_offer
 from app.services.search.search_facets import (
     SearchFacets,
     call_search_query_facets,
@@ -67,6 +69,9 @@ class SearchHit(StrictModel):
     # Whether any branch of the resolved vendor is open now (Africa/Lusaka clock).
     # ``None`` when hours are not published — never treated as closed.
     is_open_now: bool | None = None
+    #: W8 live offer on this product (any active listing) or listing; flag
+    #: `bundles`. Attached by the search router, never part of ranking.
+    offer_badge: OfferBadgeOut | None = None
 
 
 class SearchKindTotals(StrictModel):
@@ -490,6 +495,11 @@ async def run_search(
     # Resolve/filter before totals and pagination so stale listing documents do
     # not inflate counts or leave a short page after enrichment.
     hits = attach_route_slugs(client, hits)
+    # Relevance guard: unrelated fuzzy/semantic neighbours (e.g. event tiers for
+    # "t-shirt") and catalogue products with no active offer are not results.
+    candidates_before_guard = len(hits)
+    hits = apply_relevance_guard(hits, query=trimmed, expanded_query=expanded_query)
+    guard_dropped_hits = len(hits) != candidates_before_guard
 
     kind_totals: SearchKindTotals | None = None
     if include_kind_totals and trimmed:
@@ -507,11 +517,17 @@ async def run_search(
             include_wholesale=include_wholesale,
         )
 
-        facets = call_search_query_facets(
-            client,
-            query=trimmed,
-            embedding=embedding,
-            filters=facet_filters,
+        # The facet RPC scores the raw candidate set; once the guard has removed hits
+        # its counts would disagree with the visible results, so derive them locally.
+        facets = (
+            None
+            if guard_dropped_hits
+            else call_search_query_facets(
+                client,
+                query=trimmed,
+                embedding=embedding,
+                filters=facet_filters,
+            )
         )
         if facets is None:
             facets = compute_search_facets(
@@ -590,6 +606,7 @@ def run_suggest(
         hits = drop_wholesale_listing_hits(client, hits)
     hits = drop_demo_listing_hits(client, hits)
     hits = attach_route_slugs(client, hits)
+    hits = [hit for hit in hits if has_active_offer(hit)]
 
     suggestions: list[SuggestItem] = []
     seen_titles: set[str] = set()

@@ -59,7 +59,7 @@ If you prefer one clean band after everything else that is pending, renumber lik
 
 | Old                                                  | New                                                           |
 | ---------------------------------------------------- | ------------------------------------------------------------- |
-| `20261113100000_admin_money_tables_read_only.sql`    | `20261115100000_admin_money_tables_read_only.sql`             |
+| `20261113100000_admin_money_tables_read_only.sql`    | `20261117000000_admin_money_tables_read_only.sql`             |
 | `20261113163000_admin_direct_writes_read_only.sql`   | `20261115100100_admin_direct_writes_read_only.sql`            |
 | `20261113163100_admin_governance_audit_consent.sql`  | `20261115100200_admin_governance_audit_consent.sql`           |
 | `20261113235000` to `20261113235600_analytics_*.sql` | `20261115110000` to `20261115110600`, same suffixes and order |

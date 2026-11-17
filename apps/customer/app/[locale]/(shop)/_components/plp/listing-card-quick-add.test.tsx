@@ -136,6 +136,8 @@ describe("ListingCard quick-add", () => {
         }}
       />,
     );
-    expect(screen.queryByTestId("product-card-quick-add")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("product-card-quick-add"),
+    ).not.toBeInTheDocument();
   });
 });

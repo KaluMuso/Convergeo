@@ -56,7 +56,7 @@
     "inviteOnlyNotice": "Bêta vendeur sur invitation. La vente en libre-service publique n'est pas encore ouverte. Les vendeurs invités peuvent poursuivre l'onboarding avec le lien reçu.",
     "meta": {
       "title": "Vendez sur Convergeo — bêta vendeur sur invitation",
-      "description": "L'onboarding vendeur Convergeo est sur invitation/concierge pendant la bêta. Découvrez commissions, KYC et versements mobile money — l'inscription publique n'est pas encore ouverte."
+      "description": "L'accueil des vendeurs Convergeo se fait sur invitation/concierge pendant le pilote. Découvrez les commissions et la vérification — l'inscription libre n'est pas encore ouverte."
     },
     "hero": {
       "eyebrow": "Bêta vendeur sur invitation",
@@ -113,20 +113,20 @@
       "heading": "Comment ça marche",
       "steps": {
         "signup": {
-          "title": "Inscrivez-vous en quelques minutes",
-          "description": "Créez votre compte vendeur sur mobile ou ordinateur — sans frais initiaux."
+          "title": "Connectez-vous avec votre invitation",
+          "description": "Utilisez l'invitation reçue pour vous connecter à l'application vendeur sur mobile ou ordinateur — sans frais initiaux."
         },
         "kyc": {
           "title": "Vérifiez votre identité",
-          "description": "Téléversez votre NRC et un selfie. Nous vérifions la correspondance avec le nom de votre compte mobile money. Approbation le jour même."
+          "description": "Téléversez votre NRC et un selfie. Approbation le jour même pour la plupart des vendeurs."
         },
         "list": {
           "title": "Publiez vos premiers produits",
           "description": "Rattachez-vous à notre catalogue ou publiez en mode rapide. Consultez votre commission avant de publier."
         },
         "sell": {
-          "title": "Vendez et soyez payé",
-          "description": "Les commandes arrivent dans votre tableau de bord. Le séquestre protège les acheteurs ; les versements arrivent vite sur votre MoMo."
+          "title": "Vendez à vos clients",
+          "description": "Les commandes arrivent dans votre tableau de bord. Pendant le pilote, les clients paient en espèces à la livraison. Les versements en ligne arrivent bientôt."
         }
       }
     },
@@ -137,7 +137,7 @@
         "t1": {
           "badge": "T1 · Vendeur",
           "title": "Vendez le jour même",
-          "description": "Photo du NRC + selfie + correspondance du nom mobile money. Jusqu'à 30 annonces ; les 5 premières commandes plafonnées à K500 chacune."
+          "description": "Photo du NRC + selfie. Jusqu'à 30 annonces ; les 5 premières commandes plafonnées à K500 chacune."
         },
         "t2": {
           "badge": "T2 · Entreprise vérifiée",
@@ -157,9 +157,9 @@
       }
     },
     "payout": {
-      "heading": "Versements mobile money rapides",
-      "promise": "Versé en quelques minutes sur mobile money — toujours sous 48 heures.",
-      "body": "Les paiements des acheteurs sont conservés sous séquestre jusqu'à la confirmation de la livraison (ou la confirmation automatique après 48 heures). Une fois débloqués, les versements MTN et Airtel arrivent généralement en moins de cinq minutes. Les virements bancaires prennent 24 à 36 heures."
+      "heading": "Versements en ligne : bientôt disponibles",
+      "promise": "Pendant le pilote, les clients paient en espèces à la livraison.",
+      "body": "Les versements par mobile money et la protection des acheteurs arrivent bientôt. D'ici là, les commandes sont payées en espèces à la livraison, et nous confirmerons les modalités de règlement avec chaque vendeur invité."
     },
     "faq": {
       "heading": "Questions fréquentes",
@@ -170,7 +170,7 @@
         },
         "payout": {
           "question": "Quand suis-je payé ?",
-          "answer": "Après le déblocage du séquestre à la confirmation de la livraison. Les versements mobile money arrivent généralement en quelques minutes ; nous garantissons le versement sous 48 heures."
+          "answer": "Pendant le pilote, les clients paient en espèces à la livraison. Les versements en ligne arrivent bientôt — nous confirmerons le calendrier avec chaque vendeur invité."
         },
         "whatCanISell": {
           "question": "Que puis-je vendre ?",
@@ -178,15 +178,16 @@
         },
         "kyc": {
           "question": "Combien de temps prend la vérification ?",
-          "answer": "Les vendeurs T1 disposant d'un NRC valide, d'un selfie et d'un nom MoMo correspondant sont généralement approuvés le jour même. Rien n'est publié tant que vous n'avez pas passé le KYC."
+          "answer": "Les vendeurs T1 avec un NRC valide et un selfie sont généralement approuvés le jour même. Rien n'est mis en ligne avant la réussite du KYC."
         }
       }
     },
     "cta": {
       "heading": "Invité à vendre sur Convergeo ?",
-      "body": "L'onboarding vendeur est sur invitation/concierge pendant la bêta. Si vous avez une invitation, continuez ci-dessous — catalogue et versements restent verrouillés jusqu'à l'approbation admin.",
+      "body": "L'accueil des vendeurs se fait sur invitation/concierge pendant le pilote. Si vous avez une invitation, continuez ci-dessous — les outils de publication ne se débloquent qu'après approbation par l'administrateur.",
       "button": "Continuer l'invitation vendeur",
-      "loadingLabel": "Ouverture de l'onboarding invitation"
+      "loadingLabel": "Ouverture de l'onboarding invitation",
+      "haveInviteSignIn": "J'ai une invitation — me connecter"
     }
   },
   "onboarding": {
@@ -334,7 +335,7 @@
           "why": "Comparé à la photo de votre NRC pour que personne ne vende en votre nom."
         },
         "review": {
-          "title": "Contrôle par Vergeo5",
+          "title": "Contrôle par Convergeo",
           "why": "Notre équipe vérifie tout, en général sous 1 jour ouvré, et vous informe du résultat."
         }
       },
@@ -383,7 +384,9 @@
       "uploading": "Envoi en cours…",
       "upload_failed": "Échec de l'envoi",
       "minimum_required": "Au moins {count} photo justificative doit rester jointe tant que cette annonce est publiée.",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "duplicate": "Cette photo figure déjà sur l'annonce.",
+      "dedupCanonical": "Cette photo est déjà la photo principale du produit : les acheteurs la voient sur votre annonce. Inutile de la téléverser à nouveau."
     },
     "meta": {
       "title": "Créer une annonce — Vendeur Convergeo",
@@ -1065,7 +1068,7 @@
       "cancel": "Annuler",
       "after": {
         "confirm": "Le client est informé que vous avez accepté. Ensuite, vous emballerez.",
-        "reject": "La commande est annulée et le client en est informé. Vergeo5 gère l'éventuel remboursement.",
+        "reject": "La commande est annulée et le client en est informé. Convergeo gère l'éventuel remboursement.",
         "pack": "Le client voit que vous préparez sa commande.",
         "ship": "Appuyez quand le coursier a le colis. Ajoutez son nom ou son téléphone.",
         "ready_for_pickup": "Le client est invité à venir la retirer chez vous."
@@ -1091,11 +1094,11 @@
       "headingNow": "À faire maintenant",
       "headingNext": "Et ensuite",
       "scanCta": "Ouvrir Scan pour remettre",
-      "paidExplainer": "Le client a payé. Vergeo5 conserve l'argent en sécurité jusqu'à la livraison.",
+      "paidExplainer": "Le client a payé. Convergeo conserve l'argent en sécurité jusqu'à la livraison.",
       "unpaidExplainer": "Le client n'a pas encore payé. N'emballez et n'envoyez rien avant que le paiement soit reçu.",
       "cod": {
         "body": "Le client paie le coursier en espèces à la livraison. Vous n'encaissez rien vous-même.",
-        "settlement": "Vergeo5 vous règle le montant de la commande — inutile de relancer le coursier ou le client."
+        "settlement": "Convergeo vous règle le montant de la commande — inutile de relancer le coursier ou le client."
       },
       "steps": {
         "confirm": {
@@ -1393,9 +1396,9 @@
       "body": "Vous ne recevrez pas encore de versements via cette application, il n'y a donc aucun solde à afficher. C'est normal — votre compte n'a aucun problème.",
       "meanwhileHeading": "Comment fonctionne l'argent pendant le pilote",
       "meanwhile": {
-        "cod": "Paiement à la livraison : le client paie le coursier en espèces et Vergeo5 vous règle.",
-        "prepaid": "Commandes payées : Vergeo5 conserve l'argent du client en sécurité jusqu'à la livraison.",
-        "questions": "Des questions sur l'argent qui vous est dû ? Contactez l'équipe pilote Vergeo5."
+        "cod": "Paiement à la livraison : le client paie le coursier en espèces et Convergeo vous règle.",
+        "prepaid": "Commandes payées : Convergeo conserve l'argent du client en sécurité jusqu'à la livraison.",
+        "questions": "Des questions sur l'argent qui vous est dû ? Contactez l'équipe pilote Convergeo."
       },
       "laterHeading": "Ce que vous verrez ici plus tard",
       "later": {
@@ -1995,7 +1998,9 @@
       "attendeeNamedBadge": "Noms requis",
       "perksLabel": "Avantages (facultatif)",
       "perksHelp": "Affichés à l'acheteur — lounge, goodies, jetons boisson. Laissez vide s'il n'y en a pas.",
-      "perksPlaceholder": "ex. Inclut un jeton boisson"
+      "perksPlaceholder": "ex. Inclut un jeton boisson",
+      "isFreeLabel": "C'est gratuit",
+      "isFreeHint": "Les invités réservent sans payer. Ils reçoivent quand même un billet QR et la capacité s'applique."
     },
     "actions": {
       "save": "Enregistrer le type",
@@ -2261,7 +2266,8 @@
       "orders": "Commandes",
       "profile": "Profil",
       "settings": "Paramètres",
-      "offers": "Offres"
+      "offers": "Offres",
+      "coupons": "Coupons"
     }
   },
   "intake": {
@@ -2336,7 +2342,7 @@
       "edit": "Modifier",
       "archive": "Archiver",
       "giftStock": "Cadeaux restants : {available} sur {total}",
-      "notInCart": "Pour l'instant, le paiement applique les offres aux produits ; celle-ci est affichée mais pas encore appliquée."
+      "notInCart": "Le paiement applique les offres aux produits et aux billets d'événement ; les offres avec un service, ou un cadeau déclenché par un événement, sont affichées mais pas encore appliquées."
     },
     "types": {
       "bxgy": {
@@ -2411,7 +2417,10 @@
       "status": "Statut",
       "maxApplications": "Nombre max. par commande",
       "save": "Enregistrer l'offre",
-      "saving": "Enregistrement…"
+      "saving": "Enregistrement…",
+      "perCustomerLimit": "Utilisations par client",
+      "perCustomerLimitHint": "Nombre de commandes sur lesquelles un même client peut utiliser cette offre. Laissez vide pour ne pas limiter.",
+      "perCustomerLimitPlaceholder": "Sans limite"
     },
     "status": {
       "draft": "Brouillon",
@@ -2451,7 +2460,228 @@
       "tooManyActive": "Vous avez atteint la limite d'offres actives.",
       "giftStockBelowReserved": "Le stock de cadeaux ne peut pas descendre sous les cadeaux déjà promis.",
       "typeImmutable": "Le type d'offre ne peut pas être modifié.",
-      "rateLimited": "Trop de modifications. Patientez une minute et réessayez."
+      "rateLimited": "Trop de modifications. Patientez une minute et réessayez.",
+      "perCustomerLimitInvalid": "Saisissez un nombre entier de 1 à 1 000, ou laissez vide."
+    }
+  },
+  "coupons": {
+    "meta": {
+      "title": "Coupons — Convergeo Vendeur",
+      "description": "Créez des codes de réduction pour votre boutique."
+    },
+    "manager": {
+      "title": "Coupons",
+      "intro": "Offrez à vos clients un code de réduction sur vos articles.",
+      "fundingNote": "La remise est à votre charge : elle est déduite de vos gains sur la commande, et la commission est calculée sur le prix réduit.",
+      "createTitle": "Nouveau coupon",
+      "code": "Code",
+      "codeHelp": "3 à 32 lettres, chiffres ou tirets, ex. SAVE20.",
+      "kind": "Type de remise",
+      "kindPercent": "Pourcentage",
+      "kindFixed": "Montant en kwacha",
+      "percent": "Pourcentage (ex. 10)",
+      "amount": "Montant en kwacha (ex. 20)",
+      "maxDiscount": "Remise maximale (K, facultatif)",
+      "maxDiscountHelp": "Plafonne un coupon en pourcentage sur les gros paniers.",
+      "minSpend": "Achat minimum (K, facultatif)",
+      "minSpendHelp": "Calculé sur les articles couverts.",
+      "scope": "S'applique à",
+      "scopeAll": "Tout",
+      "scopeShop": "Toute ma boutique",
+      "scopeVendor": "Une boutique",
+      "scopeCategory": "Une catégorie",
+      "scopeListing": "Une annonce",
+      "scopeId": "Identifiant",
+      "scopeIdHelp": "Copiez l'identifiant depuis la page de la boutique, de la catégorie ou de l'annonce.",
+      "startsOn": "Début",
+      "endsOn": "Fin (facultatif)",
+      "endsOnHelp": "Le code fonctionne jusqu'à la fin de ce jour, heure de Lusaka.",
+      "totalLimit": "Utilisations totales (facultatif)",
+      "totalLimitHelp": "Laissez vide pour aucune limite.",
+      "perUserLimit": "Utilisations par client",
+      "create": "Créer le coupon",
+      "creating": "Création…",
+      "created": "Coupon créé.",
+      "listTitle": "Vos coupons",
+      "empty": "Aucun coupon.",
+      "loading": "Chargement…",
+      "usage": "{used} utilisé(s)",
+      "usageLimited": "{used} sur {limit} utilisé(s)",
+      "summaryOff": "{value} de remise",
+      "summaryMin": "min. {amount}",
+      "statusActive": "Actif",
+      "statusPaused": "En pause",
+      "statusArchived": "Terminé",
+      "pause": "Mettre en pause",
+      "resume": "Reprendre",
+      "archive": "Terminer",
+      "errors": {
+        "generic": "Une erreur est survenue. Réessayez.",
+        "disabled": "Les coupons ne sont pas encore activés.",
+        "forbidden": "Seuls les administrateurs gèrent les coupons de la plateforme.",
+        "code": "Utilisez 3 à 32 lettres, chiffres ou tirets.",
+        "codeTaken": "Ce code est déjà pris.",
+        "percent": "Indiquez un pourcentage entre 1 et 100.",
+        "percentTooHigh": "Ce pourcentage dépasse le maximum autorisé.",
+        "amount": "Indiquez un montant comme 20 ou 12.50.",
+        "dates": "La date de fin doit suivre la date de début et ne pas être passée.",
+        "scope": "Choisissez la cible du coupon et collez son identifiant.",
+        "listing": "Cette annonce n'est pas dans votre boutique.",
+        "archived": "Un coupon terminé ne peut pas reprendre. Créez-en un nouveau."
+      }
+    }
+  },
+  "plans": {
+    "heading": "Votre formule : {name}",
+    "free": "Gratuit",
+    "perMonth": "{price}/mois",
+    "usage": "{count} annonces utilisées sur {max}",
+    "usageUnlimited": "{count} annonces · sans limite",
+    "kycLimit": "Vous avez atteint la limite d'annonces de votre niveau de vérification. Faites vérifier votre entreprise pour en publier davantage.",
+    "atLimit": "Vous avez utilisé toutes les annonces de votre formule.",
+    "overLimit": "Vous avez plus d'annonces que votre formule ne le permet.",
+    "keepSelling": "Rien n'a été supprimé : vos annonces restent en ligne, et vous pouvez continuer à les modifier et à ajouter du stock. Pour ajouter de nouveaux produits, passez à une formule supérieure.",
+    "option": "{name} : {max} annonces pour {price}/mois",
+    "optionUnlimited": "{name} : annonces illimitées pour {price}/mois",
+    "howToUpgrade": "Pour changer de formule, écrivez à notre équipe. Aucun prélèvement automatique.",
+    "limitReachedShort": "Vous avez atteint votre limite d'annonces. Vos annonces existantes restent en ligne ; consultez votre formule ci-dessus pour évoluer.",
+    "limitReached": "Vous avez atteint la limite d'annonces de votre formule. Vos annonces restent en ligne ; passez à une formule supérieure pour en ajouter.",
+    "photoLimitReached": "Votre formule autorise {max} photos par annonce. Passez à une formule supérieure pour en ajouter.",
+    "billingUnavailable": "Le paiement des formules n'est pas encore disponible. Notre équipe vous aidera à changer de formule."
+  },
+  "branches": {
+    "title": "Mes entreprises et boutiques",
+    "intro": "Gérez toutes les succursales de votre entreprise depuis un seul compte. Chaque boutique a sa vitrine, son stock, son numéro de paiement et son forfait.",
+    "loading": "Chargement de vos entreprises…",
+    "disabled": "Les boutiques multiples ne sont pas encore disponibles.",
+    "primary": "Boutique principale",
+    "acting": "Vous travaillez ici",
+    "payoutHold": "Les versements de cette boutique sont suspendus jusqu'à ce que notre équipe vérifie le numéro MoMo partagé.",
+    "reviewNote": "Note de notre équipe : {note}",
+    "ownerKycNeeded": "Terminez la vérification du propriétaire (KYC) avant d'ajouter des boutiques.",
+    "switcher": {
+      "label": "Boutique en cours",
+      "withStatus": "{name} ({status})",
+      "manage": "Mes boutiques"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "pending_review": "En vérification",
+      "info_requested": "Infos demandées",
+      "approved": "En ligne",
+      "rejected": "Refusée"
+    },
+    "allowance": {
+      "used": "{used} boutiques sur {limit}",
+      "usedUnlimited": "{used} boutiques",
+      "blockedUnregistered": "Les commerçants non enregistrés peuvent gérer une boutique. Ajoutez votre enregistrement PACRA pour en ouvrir d'autres.",
+      "blockedPlan": "Votre forfait n'inclut plus de boutiques. Passez à un forfait supérieur pour ajouter une succursale.",
+      "nextAddon": "Boutique suivante : option à {price}/mois",
+      "nextIncluded": "La boutique suivante est incluse dans votre forfait"
+    },
+    "staff": {
+      "seats": "Places employés : {used} sur {seats}",
+      "unlimited": "Places employés : {used} (illimité)"
+    },
+    "registration": {
+      "title": "Enregistrement de l'entreprise (PACRA)",
+      "help": "Les entreprises enregistrées peuvent ouvrir plusieurs boutiques. Nous vérifions le numéro et le certificat PACRA.",
+      "typeLabel": "Enregistrement",
+      "company": "Société enregistrée",
+      "business_name": "Nom commercial enregistré",
+      "unregistered": "Non enregistré (commerçant de marché)",
+      "unspecified": "Enregistrement non renseigné",
+      "pacraLine": "PACRA {number}",
+      "verified": "PACRA vérifié",
+      "pacraNumber": "Numéro PACRA",
+      "certificate": "Photo du certificat",
+      "unregisteredNote": "Les commerçants non enregistrés sont limités à une boutique.",
+      "save": "Enregistrer",
+      "saved": "Enregistrement sauvegardé."
+    },
+    "actions": {
+      "addShop": "Ajouter une boutique/succursale",
+      "workHere": "Travailler dans cette boutique",
+      "submit": "Envoyer pour vérification",
+      "submitting": "Envoi…",
+      "saving": "Enregistrement…",
+      "createShop": "Créer la boutique"
+    },
+    "evidence": {
+      "help": "Pour une boutique physique, il nous faut une photo de la devanture et une preuve d'occupation des locaux.",
+      "onlineHelp": "Une boutique en ligne n'a pas besoin de preuve de locaux. Envoyez-la pour vérification quand elle est prête.",
+      "storefront_photo": "Photo de la devanture",
+      "premises_proof": "Preuve des locaux",
+      "uploaded": "envoyée",
+      "proofType": "Type de preuve",
+      "proof": {
+        "lease": "Contrat de bail",
+        "utility_bill": "Facture d'eau ou d'électricité",
+        "council_permit": "Permis commercial municipal"
+      }
+    },
+    "form": {
+      "title": "Ajouter une boutique/succursale",
+      "intro": "Chaque succursale a sa vitrine, son stock, son numéro de paiement et son forfait. Notre équipe la vérifie avant sa mise en ligne.",
+      "shop": "Boutique",
+      "name": "Nom de la boutique",
+      "kind": "Type",
+      "kindPhysical": "Boutique physique",
+      "kindOnline": "En ligne uniquement",
+      "location": "Emplacement",
+      "useMyLocation": "Utiliser ma position",
+      "lat": "Latitude",
+      "lng": "Longitude",
+      "landmark": "Point de repère",
+      "landmarkHelp": "Par exemple : en face de la station Total, Great East Road.",
+      "address": "Adresse (facultatif)",
+      "mapUrl": "Lien de carte (facultatif, https)",
+      "opens": "Ouverture",
+      "closes": "Fermeture",
+      "sundayClosed": "Fermé le dimanche",
+      "contacts": "Contacts",
+      "phone": "Téléphone de la boutique",
+      "whatsapp": "Numéro WhatsApp (facultatif)",
+      "email": "E-mail (facultatif)",
+      "payout": "Versements",
+      "payoutNumber": "Numéro MoMo de versement",
+      "payoutHelp": "Un numéro utilisé par une autre entreprise est interdit. Partager un numéro entre vos propres boutiques nécessite une vérification par notre équipe.",
+      "rail": "Réseau",
+      "reviewNote": "Après la création, ajoutez la photo de la devanture et la preuve des locaux, puis envoyez pour vérification.",
+      "priceAddon": "Cette boutique est une option payante : {price}/mois sur votre forfait.",
+      "priceIncluded": "Cette boutique est incluse dans votre forfait.",
+      "rails": {
+        "mtn": "MTN MoMo",
+        "airtel": "Airtel Money",
+        "zamtel": "Zamtel Kwacha"
+      }
+    },
+    "errors": {
+      "disabled": "Les boutiques multiples ne sont pas encore disponibles.",
+      "businessNotFound": "Entreprise introuvable.",
+      "branchNotFound": "Boutique introuvable.",
+      "businessSuspended": "Cette entreprise est suspendue.",
+      "ownerKycRequired": "Terminez d'abord la vérification du propriétaire (KYC).",
+      "locationRequired": "Ajoutez l'emplacement de la boutique et un point de repère.",
+      "slugInvalid": "Utilisez un nom de boutique avec des lettres ou des chiffres.",
+      "unregisteredLimit": "Les commerçants non enregistrés peuvent gérer une boutique. Ajoutez d'abord votre enregistrement PACRA.",
+      "planLimit": "Votre forfait n'inclut plus de boutiques. Passez à un forfait supérieur.",
+      "tooClose": "Cette boutique est à {nearest} m d'une autre de vos boutiques. Les succursales doivent être espacées d'au moins {min} m.",
+      "payoutTaken": "Ce numéro MoMo appartient à une autre entreprise. Utilisez votre propre numéro.",
+      "evidenceRequired": "Ajoutez d'abord la photo de la devanture et la preuve des locaux.",
+      "evidenceLocked": "Les justificatifs ne peuvent changer qu'avant la vérification.",
+      "evidencePath": "Ce fichier n'est pas valide. Veuillez le renvoyer.",
+      "evidenceFile": "Utilisez une photo JPG, PNG ou WebP de 10 Mo maximum.",
+      "invalidTransition": "Cette boutique ne peut pas être envoyée pour vérification maintenant.",
+      "pacraRequired": "Les entreprises enregistrées ont besoin d'un numéro et d'un certificat PACRA.",
+      "pacraTaken": "Ce numéro PACRA est déjà enregistré pour une autre entreprise.",
+      "staffSeatLimit": "Votre forfait n'a plus de place employé libre.",
+      "staffDuplicate": "Cet employé est déjà invité.",
+      "rateLimited": "Trop de tentatives. Patientez une minute et réessayez.",
+      "validation": "Vérifiez les informations et réessayez.",
+      "network": "Pas de connexion. Vérifiez vos données et réessayez.",
+      "locationDenied": "Impossible de lire votre position. Saisissez-la manuellement.",
+      "generic": "Une erreur est survenue. Veuillez réessayer."
     }
   }
 }

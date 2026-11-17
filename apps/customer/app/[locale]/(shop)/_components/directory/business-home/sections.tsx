@@ -13,13 +13,22 @@ import type { ReactNode } from "react";
 
 function SectionHeading({ id, children }: { id: string; children: ReactNode }) {
   return (
-    <h2 id={id} className="m-0 font-display text-h3 font-semibold text-display-ink">
+    <h2
+      id={id}
+      className="m-0 font-display text-h3 font-semibold text-display-ink"
+    >
       {children}
     </h2>
   );
 }
 
-export function StorySection({ heading, story }: { heading: string; story: string | null }) {
+export function StorySection({
+  heading,
+  story,
+}: {
+  heading: string;
+  story: string | null;
+}) {
   const text = story?.trim();
   if (!text) {
     return null;
@@ -31,7 +40,9 @@ export function StorySection({ heading, story }: { heading: string; story: strin
       className="space-y-2 rounded-lg border border-border bg-surface p-4"
     >
       <SectionHeading id="bh-story">{heading}</SectionHeading>
-      <p className="m-0 max-w-prose whitespace-pre-line text-body text-text-2">{text}</p>
+      <p className="m-0 max-w-prose whitespace-pre-line text-body text-text-2">
+        {text}
+      </p>
     </section>
   );
 }
@@ -69,7 +80,11 @@ export function FindUsSection({
     return null;
   }
   return (
-    <section aria-labelledby="bh-find-us" data-testid="bh-find-us" className="space-y-3">
+    <section
+      aria-labelledby="bh-find-us"
+      data-testid="bh-find-us"
+      className="space-y-3"
+    >
       <SectionHeading id="bh-find-us">{labels.heading}</SectionHeading>
       <ul className="m-0 grid list-none gap-3 p-0 md:grid-cols-2">
         {branches.map((branch, index) => (
@@ -148,14 +163,20 @@ export function ClipsRow({
     return null;
   }
   return (
-    <section aria-labelledby="bh-clips" data-testid="bh-clips" className="space-y-2">
+    <section
+      aria-labelledby="bh-clips"
+      data-testid="bh-clips"
+      className="space-y-2"
+    >
       <SectionHeading id="bh-clips">{labels.heading}</SectionHeading>
       <ul className="-mx-1 m-0 flex list-none gap-2 overflow-x-auto p-0 px-1 [scrollbar-width:none]">
         {clips.map((clip) => (
           <li key={clip.id} className="shrink-0">
             <Link
               href={`/${locale}/clips/${encodeURIComponent(clip.id)}`}
-              aria-label={clip.caption ? `${labels.watch}: ${clip.caption}` : labels.watch}
+              aria-label={
+                clip.caption ? `${labels.watch}: ${clip.caption}` : labels.watch
+              }
               className="relative block h-40 w-24 overflow-hidden rounded-lg bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing"
             >
               {clip.poster_url ? (
@@ -164,7 +185,9 @@ export function ClipsRow({
                 <span
                   aria-hidden
                   className="absolute inset-0 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${JSON.stringify(clip.poster_url)})` }}
+                  style={{
+                    backgroundImage: `url(${JSON.stringify(clip.poster_url)})`,
+                  }}
                 />
               ) : null}
               <svg
@@ -208,7 +231,11 @@ export function OffersSection({
     return null;
   }
   return (
-    <section aria-labelledby="bh-offers" data-testid="bh-offers" className="space-y-2">
+    <section
+      aria-labelledby="bh-offers"
+      data-testid="bh-offers"
+      className="space-y-2"
+    >
       <SectionHeading id="bh-offers">{labels.heading}</SectionHeading>
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {offers.map((offer) => (
@@ -217,7 +244,9 @@ export function OffersSection({
             className="rounded-lg border border-border bg-accent-tint px-4 py-3 text-sm"
           >
             <p className="m-0 font-semibold text-text">{offer.title}</p>
-            {offer.endsLabel ? <p className="m-0 text-text-2">{offer.endsLabel}</p> : null}
+            {offer.endsLabel ? (
+              <p className="m-0 text-text-2">{offer.endsLabel}</p>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -241,7 +270,11 @@ export function ReviewsSection({
 }) {
   const hasRating = ratingAvg !== null && ratingCount > 0;
   return (
-    <section aria-labelledby="bh-reviews" data-testid="bh-reviews" className="space-y-2">
+    <section
+      aria-labelledby="bh-reviews"
+      data-testid="bh-reviews"
+      className="space-y-2"
+    >
       <SectionHeading id="bh-reviews">{labels.heading}</SectionHeading>
       <div className="flex flex-wrap items-center gap-3 text-body text-text-2">
         {hasRating ? (

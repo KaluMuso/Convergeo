@@ -69,7 +69,9 @@ describe("ListingCard condition meta", () => {
         }}
       />,
     );
-    expect(screen.getByTestId("listing-card-condition")).toHaveTextContent("Used");
+    expect(screen.getByTestId("listing-card-condition")).toHaveTextContent(
+      "Used",
+    );
   });
 
   it("shows refurbished condition in the meta slot", () => {
@@ -95,7 +97,9 @@ describe("ListingCard condition meta", () => {
         }}
       />,
     );
-    expect(screen.getByTestId("listing-card-condition")).toHaveTextContent("Refurbished");
+    expect(screen.getByTestId("listing-card-condition")).toHaveTextContent(
+      "Refurbished",
+    );
   });
 
   it("omits condition meta when the value is unknown", () => {
@@ -121,6 +125,8 @@ describe("ListingCard condition meta", () => {
         }}
       />,
     );
-    expect(screen.queryByTestId("listing-card-condition")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("listing-card-condition"),
+    ).not.toBeInTheDocument();
   });
 });

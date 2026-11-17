@@ -13,7 +13,11 @@ afterEach(() => {
 
 function CatalogIndicator() {
   const t = useTranslations("catalog");
-  return <p data-testid="catalog-indicator">{t("pdp.gallery.indicator", { current: 1, total: 3 })}</p>;
+  return (
+    <p data-testid="catalog-indicator">
+      {t("pdp.gallery.indicator", { current: 1, total: 3 })}
+    </p>
+  );
 }
 
 describe("catalog client i18n provider", () => {
@@ -28,8 +32,12 @@ describe("catalog client i18n provider", () => {
       </NextIntlClientProvider>,
     );
 
-    expect(screen.getByTestId("catalog-indicator")).toHaveTextContent("Image 1 of 3");
-    expect(screen.queryByText("catalog.pdp.gallery.indicator")).not.toBeInTheDocument();
+    expect(screen.getByTestId("catalog-indicator")).toHaveTextContent(
+      "Image 1 of 3",
+    );
+    expect(
+      screen.queryByText("catalog.pdp.gallery.indicator"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("pdp.gallery.indicator")).not.toBeInTheDocument();
   });
 
@@ -41,6 +49,8 @@ describe("catalog client i18n provider", () => {
     );
 
     // next-intl falls back to the namespaced key path when messages are absent.
-    expect(screen.getByTestId("catalog-indicator").textContent).toMatch(/gallery\.indicator/);
+    expect(screen.getByTestId("catalog-indicator").textContent).toMatch(
+      /gallery\.indicator/,
+    );
   });
 });

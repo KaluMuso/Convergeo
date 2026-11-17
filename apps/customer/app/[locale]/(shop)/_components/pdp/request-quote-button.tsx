@@ -137,10 +137,15 @@ export function RequestQuoteButton({
             </Link>
           </div>
         ) : status === "success" ? (
-          <div className="mt-4 space-y-2" data-testid="pdp-request-quote-success">
+          <div
+            className="mt-4 space-y-2"
+            data-testid="pdp-request-quote-success"
+          >
             <p className="font-medium text-text">{labels.successTitle}</p>
             <p className="text-sm text-text-2">
-              {reusedExistingThread ? labels.successContinued : labels.successBody}
+              {reusedExistingThread
+                ? labels.successContinued
+                : labels.successBody}
             </p>
             <Button
               type="button"
@@ -159,7 +164,10 @@ export function RequestQuoteButton({
               void handleSubmit();
             }}
           >
-            <FormField label={labels.detailsLabel} errorMessage={errorMessage ?? undefined}>
+            <FormField
+              label={labels.detailsLabel}
+              errorMessage={errorMessage ?? undefined}
+            >
               <Textarea
                 name="details"
                 value={details}

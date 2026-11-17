@@ -37,7 +37,9 @@ describe("MobileHeaderSearch", () => {
     );
 
     await user.click(screen.getByTestId("mobile-header-search-trigger"));
-    expect(screen.getByTestId("mobile-header-search-sheet")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("mobile-header-search-sheet"),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("mock-search-input")).toBeInTheDocument();
   });
 });

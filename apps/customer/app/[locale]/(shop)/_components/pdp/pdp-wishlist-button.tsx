@@ -4,7 +4,10 @@ import { IconHeart } from "@vergeo/ui/src/icons";
 import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useEffect, useState } from "react";
 
-import { isWishlistedLocal, toggleWishlistLocal } from "../../../../../lib/wishlist-local";
+import {
+  isWishlistedLocal,
+  toggleWishlistLocal,
+} from "../../../../../lib/wishlist-local";
 
 /** Fire-and-forget server sync: load the engagement client on demand, outside first-load JS. */
 function syncWishlistWithServer(): Promise<void> {
@@ -58,7 +61,10 @@ export function PdpWishlistButton({
         className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-text transition-colors hover:bg-surface disabled:opacity-50 motion-reduce:transition-none"
         style={{ borderRadius: "var(--r)" }}
       >
-        <IconHeart filled={saved} className={saved ? "text-danger" : "text-text-2"} />
+        <IconHeart
+          filled={saved}
+          className={saved ? "text-danger" : "text-text-2"}
+        />
       </button>
       <span className="sr-only" aria-live="polite">
         {announce}

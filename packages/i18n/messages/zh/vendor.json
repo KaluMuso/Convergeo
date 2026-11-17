@@ -56,7 +56,7 @@
     "inviteOnlyNotice": "邀请制卖家试用。公开自助开店尚未开放。受邀卖家可使用收到的链接继续入驻。",
     "meta": {
       "title": "在 Convergeo 上销售——邀请制卖家试用",
-      "description": "Convergeo 卖家入驻在试用期为邀请/礼宾制。了解佣金、KYC 与移动支付结算——公开自助注册尚未开放。"
+      "description": "试点期间 Convergeo 卖家入驻仅限邀请/礼宾制。了解佣金与认证——公开自助注册尚未开放。"
     },
     "hero": {
       "eyebrow": "邀请制卖家试用",
@@ -113,20 +113,20 @@
       "heading": "运作方式",
       "steps": {
         "signup": {
-          "title": "几分钟即可注册",
-          "description": "在手机或电脑上创建商家账户——无需预付费用。"
+          "title": "使用邀请登录",
+          "description": "使用您收到的邀请，在手机或电脑上登录商家应用——无需预付费用。"
         },
         "kyc": {
           "title": "验证您的身份",
-          "description": "上传您的 NRC 和一张自拍。我们会核对您的移动支付实名信息。当天即可通过。"
+          "description": "上传您的 NRC 和一张自拍。大多数卖家当天即可通过。"
         },
         "list": {
           "title": "上架您的首批商品",
           "description": "关联到我们的商品目录或快速上架。发布前即可查看您的佣金。"
         },
         "sell": {
-          "title": "销售并收款",
-          "description": "订单直接进入您的仪表板。托管保护买家；结算快速到账您的 MoMo。"
+          "title": "向买家销售",
+          "description": "订单直接进入您的仪表板。试点期间买家货到付款。线上结算即将推出。"
         }
       }
     },
@@ -137,7 +137,7 @@
         "t1": {
           "badge": "T1 · 商家",
           "title": "当天开卖",
-          "description": "NRC 照片 + 自拍 + 移动支付实名核对。最多 30 个商品；前 5 笔订单每笔上限 K500。"
+          "description": "NRC 照片 + 自拍。最多 30 个商品；前 5 单每单上限 K500。"
         },
         "t2": {
           "badge": "T2 · 已认证企业",
@@ -157,9 +157,9 @@
       }
     },
     "payout": {
-      "heading": "快速移动支付结算",
-      "promise": "移动支付几分钟结算到账——始终不超过 48 小时。",
-      "body": "买家付款会被托管，直到确认收货（或 48 小时后自动确认）。款项释放后，MTN 和 Airtel 结算通常 5 分钟内到账。银行转账需 24–36 小时。"
+      "heading": "线上结算：即将推出",
+      "promise": "试点期间，买家货到付款。",
+      "body": "移动支付结算与买家保障即将推出。在此之前，订单在送达时以现金支付，我们会与每位受邀卖家确认结算细节。"
     },
     "faq": {
       "heading": "常见问题",
@@ -170,7 +170,7 @@
         },
         "payout": {
           "question": "我什么时候收款？",
-          "answer": "在确认收货、托管款项释放之后。移动支付结算通常几分钟到账；我们保证在 48 小时内结算。"
+          "answer": "试点期间买家货到付款。线上结算即将推出——我们会与每位受邀卖家确认时间。"
         },
         "whatCanISell": {
           "question": "我可以卖什么？",
@@ -178,15 +178,16 @@
         },
         "kyc": {
           "question": "认证需要多长时间？",
-          "answer": "拥有有效 NRC、自拍和匹配 MoMo 实名的 T1 商家通常当天即可通过。在您通过 KYC 之前，任何内容都不会上线。"
+          "answer": "持有有效 NRC 并提交自拍的 T1 卖家通常当天即可通过。通过 KYC 之前不会上线任何内容。"
         }
       }
     },
     "cta": {
       "heading": "已获邀在 Convergeo 开店？",
-      "body": "试用期内卖家入驻为邀请/礼宾制。若您有邀请，请继续下方流程——目录与结算功能仅在管理员批准后解锁。",
+      "body": "试点期间卖家入驻为邀请/礼宾制。若您有邀请，请继续下方流程——上架工具仅在管理员批准后解锁。",
       "button": "继续卖家邀请",
-      "loadingLabel": "正在打开邀请入驻"
+      "loadingLabel": "正在打开邀请入驻",
+      "haveInviteSignIn": "我有邀请——登录"
     }
   },
   "onboarding": {
@@ -334,7 +335,7 @@
           "why": "与您的 NRC 照片比对，防止他人冒用您的名义销售。"
         },
         "review": {
-          "title": "Vergeo5 审核",
+          "title": "Convergeo 审核",
           "why": "我们的团队会核查所有资料，通常在 1 个工作日内完成，并告知您结果。"
         }
       },
@@ -383,7 +384,9 @@
       "uploading": "上传中…",
       "upload_failed": "上传失败",
       "minimum_required": "商品发布期间必须至少保留 {count} 张凭证照片。",
-      "retry": "重试"
+      "retry": "重试",
+      "duplicate": "该照片已在此商品中。",
+      "dedupCanonical": "该照片已是产品主图，买家会在您的商品中看到它，无需重复上传。"
     },
     "meta": {
       "title": "创建商品 —— Convergeo 商家",
@@ -1065,7 +1068,7 @@
       "cancel": "取消",
       "after": {
         "confirm": "系统会通知顾客您已接单。下一步是打包。",
-        "reject": "订单将被取消并告知顾客原因。如需退款由 Vergeo5 处理。",
+        "reject": "订单将被取消并告知顾客原因。如需退款由 Convergeo 处理。",
         "pack": "顾客会看到您正在准备订单。",
         "ship": "骑手取件后点击此处，并填写骑手姓名或电话。",
         "ready_for_pickup": "系统会通知顾客到您店里取货。"
@@ -1091,11 +1094,11 @@
       "headingNow": "现在要做的",
       "headingNext": "接下来会怎样",
       "scanCta": "打开扫码页面交付",
-      "paidExplainer": "顾客已付款。Vergeo5 会妥善保管这笔钱，直到订单送达。",
+      "paidExplainer": "顾客已付款。Convergeo 会妥善保管这笔钱，直到订单送达。",
       "unpaidExplainer": "顾客尚未付款。在显示已收款之前，请不要打包或发货。",
       "cod": {
         "body": "订单送达时，顾客用现金付给骑手。您本人无需收取任何款项。",
-        "settlement": "订单款项由 Vergeo5 与您结算——您无需向骑手或顾客催款。"
+        "settlement": "订单款项由 Convergeo 与您结算——您无需向骑手或顾客催款。"
       },
       "steps": {
         "confirm": {
@@ -1393,9 +1396,9 @@
       "body": "您暂时无法通过本应用收到付款，因此这里没有余额可显示。这是正常的——您的账户没有任何问题。",
       "meanwhileHeading": "试点期间的资金流程",
       "meanwhile": {
-        "cod": "货到付款：顾客用现金付给骑手，再由 Vergeo5 与您结算。",
-        "prepaid": "已付款订单：Vergeo5 会妥善保管顾客的钱，直到订单送达。",
-        "questions": "对应付给您的款项有疑问？请联系 Vergeo5 试点团队。"
+        "cod": "货到付款：顾客用现金付给骑手，再由 Convergeo 与您结算。",
+        "prepaid": "已付款订单：Convergeo 会妥善保管顾客的钱，直到订单送达。",
+        "questions": "对应付给您的款项有疑问？请联系 Convergeo 试点团队。"
       },
       "laterHeading": "以后这里会显示",
       "later": {
@@ -1995,7 +1998,9 @@
       "attendeeNamedBadge": "需要姓名",
       "perksLabel": "权益（可选）",
       "perksHelp": "向买家展示 — 休息室、周边、饮品券。没有则留空。",
-      "perksPlaceholder": "例如含一张饮品券"
+      "perksPlaceholder": "例如含一张饮品券",
+      "isFreeLabel": "这是免费的",
+      "isFreeHint": "来宾无需付款即可报名，仍会获得二维码门票，并受名额限制。"
     },
     "actions": {
       "save": "保存类型",
@@ -2261,7 +2266,8 @@
       "orders": "订单",
       "profile": "资料",
       "settings": "设置",
-      "offers": "优惠"
+      "offers": "优惠",
+      "coupons": "优惠券"
     }
   },
   "intake": {
@@ -2336,7 +2342,7 @@
       "edit": "编辑",
       "archive": "归档",
       "giftStock": "剩余赠品：{available} / {total}",
-      "notInCart": "结账目前只对商品应用优惠；此优惠会展示，但暂不生效。"
+      "notInCart": "结账时会对商品和活动门票应用优惠；含服务的优惠，或由活动触发的赠品，会显示但暂不生效。"
     },
     "types": {
       "bxgy": {
@@ -2411,7 +2417,10 @@
       "status": "状态",
       "maxApplications": "每单最多次数",
       "save": "保存优惠",
-      "saving": "正在保存…"
+      "saving": "正在保存…",
+      "perCustomerLimit": "每位顾客可用次数",
+      "perCustomerLimitHint": "每位顾客可以在多少个订单中使用此优惠。留空表示不限。",
+      "perCustomerLimitPlaceholder": "不限"
     },
     "status": {
       "draft": "草稿",
@@ -2451,7 +2460,228 @@
       "tooManyActive": "进行中的优惠已达上限。",
       "giftStockBelowReserved": "赠品库存不能低于已承诺的数量。",
       "typeImmutable": "优惠类型不能更改。",
-      "rateLimited": "修改过于频繁，请稍候再试。"
+      "rateLimited": "修改过于频繁，请稍候再试。",
+      "perCustomerLimitInvalid": "请输入 1 到 1000 之间的整数，或留空。"
+    }
+  },
+  "coupons": {
+    "meta": {
+      "title": "优惠券 — Convergeo 商家",
+      "description": "为您的店铺创建优惠码。"
+    },
+    "manager": {
+      "title": "优惠券",
+      "intro": "为您的顾客提供店铺商品的优惠码。",
+      "fundingNote": "优惠由您承担：从该订单的收入中扣除，佣金按折后价格计算。",
+      "createTitle": "新建优惠券",
+      "code": "优惠码",
+      "codeHelp": "3–32 个字母、数字或连字符，例如 SAVE20。",
+      "kind": "优惠类型",
+      "kindPercent": "百分比折扣",
+      "kindFixed": "固定金额（克瓦查）",
+      "percent": "百分比（例如 10）",
+      "amount": "金额（克瓦查，例如 20）",
+      "maxDiscount": "最高优惠（K，可选）",
+      "maxDiscountHelp": "限制大额订单的百分比优惠。",
+      "minSpend": "最低消费（K，可选）",
+      "minSpendHelp": "按适用商品计算。",
+      "scope": "适用范围",
+      "scopeAll": "全部",
+      "scopeShop": "我的整个店铺",
+      "scopeVendor": "某个店铺",
+      "scopeCategory": "某个类别",
+      "scopeListing": "某个商品",
+      "scopeId": "ID",
+      "scopeIdHelp": "从店铺、类别或商品页面复制 ID。",
+      "startsOn": "开始日期",
+      "endsOn": "结束日期（可选）",
+      "endsOnHelp": "优惠码在当天结束前有效（卢萨卡时间）。",
+      "totalLimit": "总使用次数（可选）",
+      "totalLimitHelp": "留空表示不限总次数。",
+      "perUserLimit": "每位顾客可用次数",
+      "create": "创建优惠券",
+      "creating": "正在创建…",
+      "created": "优惠券已创建。",
+      "listTitle": "您的优惠券",
+      "empty": "暂无优惠券。",
+      "loading": "正在加载…",
+      "usage": "已使用 {used} 次",
+      "usageLimited": "已使用 {used}/{limit} 次",
+      "summaryOff": "优惠 {value}",
+      "summaryMin": "最低 {amount}",
+      "statusActive": "进行中",
+      "statusPaused": "已暂停",
+      "statusArchived": "已结束",
+      "pause": "暂停",
+      "resume": "恢复",
+      "archive": "结束",
+      "errors": {
+        "generic": "出错了，请重试。",
+        "disabled": "优惠券功能尚未开启。",
+        "forbidden": "只有管理员可以管理平台优惠券。",
+        "code": "请使用 3–32 个字母、数字或连字符。",
+        "codeTaken": "该优惠码已被使用。",
+        "percent": "请输入 1 到 100 之间的百分比。",
+        "percentTooHigh": "该百分比超过允许的上限。",
+        "amount": "请输入金额，例如 20 或 12.50。",
+        "dates": "结束日期须不早于开始日期，且不能是过去的日期。",
+        "scope": "请选择适用范围并粘贴其 ID。",
+        "listing": "该商品不属于您的店铺。",
+        "archived": "已结束的优惠券不能重新开始，请新建一个。"
+      }
+    }
+  },
+  "plans": {
+    "heading": "您的套餐：{name}",
+    "free": "免费",
+    "perMonth": "{price}/月",
+    "usage": "已使用 {count}/{max} 个商品",
+    "usageUnlimited": "{count} 个商品 · 无上限",
+    "kycLimit": "您已达到当前认证等级的商品上限。完成企业认证即可发布更多商品。",
+    "atLimit": "您已用完套餐内的全部商品数量。",
+    "overLimit": "您的商品数量超出了套餐允许的范围。",
+    "keepSelling": "我们不会删除任何内容：您的商品保持上架，仍可编辑和补充库存。如需添加新商品，请升级套餐。",
+    "option": "{name}：{max} 个商品，{price}/月",
+    "optionUnlimited": "{name}：商品数量不限，{price}/月",
+    "howToUpgrade": "如需升级，请联系我们的团队。不会自动扣费。",
+    "limitReachedShort": "您已达到商品数量上限。现有商品保持上架；请查看上方套餐进行升级。",
+    "limitReached": "您已达到套餐的商品数量上限。现有商品保持上架；升级后可添加更多。",
+    "photoLimitReached": "您的套餐每个商品最多 {max} 张照片。升级套餐即可添加更多。",
+    "billingUnavailable": "套餐付款功能暂未开放。我们的团队会协助您升级。"
+  },
+  "branches": {
+    "title": "我的企业与店铺",
+    "intro": "用一个账户管理企业的所有分店。每家店铺都有自己的店面、库存、收款号码和套餐。",
+    "loading": "正在加载您的企业…",
+    "disabled": "多店铺功能暂未开放。",
+    "primary": "主店",
+    "acting": "您正在此店操作",
+    "payoutHold": "在我们的团队核实共用的 MoMo 号码之前，此店铺的提现已暂停。",
+    "reviewNote": "团队备注：{note}",
+    "ownerKycNeeded": "添加店铺前，请先完成店主身份验证（KYC）。",
+    "switcher": {
+      "label": "当前操作的店铺",
+      "withStatus": "{name}（{status}）",
+      "manage": "我的店铺"
+    },
+    "status": {
+      "draft": "草稿",
+      "pending_review": "审核中",
+      "info_requested": "需补充信息",
+      "approved": "已上线",
+      "rejected": "已拒绝"
+    },
+    "allowance": {
+      "used": "已用 {used}/{limit} 家店铺",
+      "usedUnlimited": "{used} 家店铺",
+      "blockedUnregistered": "未注册商户只能经营一家店铺。添加 PACRA 注册信息后可开设更多店铺。",
+      "blockedPlan": "您的套餐已无可用店铺名额。升级套餐即可添加分店。",
+      "nextAddon": "下一家店铺：附加费 {price}/月",
+      "nextIncluded": "下一家店铺已包含在您的套餐中"
+    },
+    "staff": {
+      "seats": "员工席位：{used}/{seats}",
+      "unlimited": "员工席位：{used}（不限）"
+    },
+    "registration": {
+      "title": "企业注册（PACRA）",
+      "help": "已注册的企业可开设多家店铺。我们会核实 PACRA 号码和证书。",
+      "typeLabel": "注册类型",
+      "company": "注册公司",
+      "business_name": "注册商号",
+      "unregistered": "未注册（市场摊主）",
+      "unspecified": "未填写注册信息",
+      "pacraLine": "PACRA {number}",
+      "verified": "PACRA 已核实",
+      "pacraNumber": "PACRA 号码",
+      "certificate": "证书照片",
+      "unregisteredNote": "未注册商户仅限一家店铺。",
+      "save": "保存注册信息",
+      "saved": "注册信息已保存。"
+    },
+    "actions": {
+      "addShop": "添加店铺/分店",
+      "workHere": "切换到此店铺",
+      "submit": "提交审核",
+      "submitting": "提交中…",
+      "saving": "保存中…",
+      "createShop": "创建店铺"
+    },
+    "evidence": {
+      "help": "实体店需要提供店面照片和场所使用证明。",
+      "onlineHelp": "纯线上店铺无需场所证明。准备好后即可提交审核。",
+      "storefront_photo": "店面照片",
+      "premises_proof": "场所证明",
+      "uploaded": "已上传",
+      "proofType": "证明类型",
+      "proof": {
+        "lease": "租赁合同",
+        "utility_bill": "水电费账单",
+        "council_permit": "市政营业许可"
+      }
+    },
+    "form": {
+      "title": "添加店铺/分店",
+      "intro": "每家分店都有自己的店面、库存、收款号码和套餐。上线前由我们的团队审核。",
+      "shop": "店铺",
+      "name": "店铺名称",
+      "kind": "类型",
+      "kindPhysical": "实体店",
+      "kindOnline": "仅线上",
+      "location": "位置",
+      "useMyLocation": "使用我当前的位置",
+      "lat": "纬度",
+      "lng": "经度",
+      "landmark": "地标",
+      "landmarkHelp": "例如：Great East Road 上 Total 加油站对面。",
+      "address": "街道地址（可选）",
+      "mapUrl": "地图链接（可选，https）",
+      "opens": "开门时间",
+      "closes": "关门时间",
+      "sundayClosed": "周日休息",
+      "contacts": "联系方式",
+      "phone": "店铺电话",
+      "whatsapp": "WhatsApp 号码（可选）",
+      "email": "电子邮箱（可选）",
+      "payout": "收款",
+      "payoutNumber": "MoMo 收款号码",
+      "payoutHelp": "不能使用其他企业的号码。您自己的多家店铺共用一个号码需经团队审核。",
+      "rail": "运营商",
+      "reviewNote": "创建店铺后，请上传店面照片和场所证明，然后提交审核。",
+      "priceAddon": "此店铺为付费附加项：套餐每月 {price}。",
+      "priceIncluded": "此店铺已包含在您的套餐中。",
+      "rails": {
+        "mtn": "MTN MoMo",
+        "airtel": "Airtel Money",
+        "zamtel": "Zamtel Kwacha"
+      }
+    },
+    "errors": {
+      "disabled": "多店铺功能暂未开放。",
+      "businessNotFound": "未找到该企业。",
+      "branchNotFound": "未找到该店铺。",
+      "businessSuspended": "该企业已被暂停。",
+      "ownerKycRequired": "请先完成店主身份验证（KYC）。",
+      "locationRequired": "请添加店铺位置和地标。",
+      "slugInvalid": "店铺名称需包含字母或数字。",
+      "unregisteredLimit": "未注册商户只能经营一家店铺。请先添加 PACRA 注册信息。",
+      "planLimit": "您的套餐已无可用店铺名额。请升级后添加分店。",
+      "tooClose": "此店铺距离您的另一家店铺仅 {nearest} 米。分店之间至少相距 {min} 米。",
+      "payoutTaken": "该 MoMo 号码属于其他企业，请使用您自己的号码。",
+      "evidenceRequired": "请先上传店面照片和场所证明。",
+      "evidenceLocked": "提交审核后不能再修改证明材料。",
+      "evidencePath": "该上传无效，请重新上传。",
+      "evidenceFile": "请使用不超过 10 MB 的 JPG、PNG 或 WebP 照片。",
+      "invalidTransition": "此店铺目前无法提交审核。",
+      "pacraRequired": "注册企业需要提供 PACRA 号码和证书。",
+      "pacraTaken": "该 PACRA 号码已被其他企业注册。",
+      "staffSeatLimit": "您的套餐已无空闲员工席位。",
+      "staffDuplicate": "该员工已被邀请。",
+      "rateLimited": "尝试次数过多，请稍等一分钟再试。",
+      "validation": "请检查填写内容后重试。",
+      "network": "网络未连接，请检查数据后重试。",
+      "locationDenied": "无法获取您的位置，请手动输入。",
+      "generic": "出错了，请重试。"
     }
   }
 }

@@ -35,7 +35,8 @@ type PaymentStatus = {
   cod: boolean;
 };
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function TicketCheckout({
   locale,
@@ -108,7 +109,10 @@ export function TicketCheckout({
     let cancelled = false;
     const accessToken = session.session.access_token;
     const userId = session.session.user.id;
-    const api = createApiClient({ baseUrl: getApiBaseUrl(), getToken: () => accessToken });
+    const api = createApiClient({
+      baseUrl: getApiBaseUrl(),
+      getToken: () => accessToken,
+    });
     void (async () => {
       try {
         const db = await getBrowserClient();
@@ -120,7 +124,10 @@ export function TicketCheckout({
             `/payments/status?group=${encodeURIComponent(groupId)}`,
           );
         } catch (cause) {
-          if (!(cause instanceof ApiError && cause.code === "payment.not_found")) throw cause;
+          if (!(
+            cause instanceof ApiError && cause.code === "payment.not_found"
+          ))
+            throw cause;
         }
         if (status) {
           if (
@@ -137,7 +144,10 @@ export function TicketCheckout({
           if (retry && ["cancelled", "expired"].includes(status.status)) {
             // The current claim contract does not permit a new attempt after
             // cancellation/expiry. Keep the buyer on this ticket group without a CTA.
-            if (!cancelled) setError(status.status === "cancelled" ? cancelledLabel : expiredLabel);
+            if (!cancelled)
+              setError(
+                status.status === "cancelled" ? cancelledLabel : expiredLabel,
+              );
             return;
           }
           if (
@@ -150,7 +160,9 @@ export function TicketCheckout({
           } else {
             if (!cancelled) {
               router.replace(
-                status.rail === "card" && status.payment_id && status.status !== "success"
+                status.rail === "card" &&
+                  status.payment_id &&
+                  status.status !== "success"
                   ? `/${locale}/checkout/card/${status.payment_id}?group=${groupId}`
                   : pendingHref,
               );
@@ -158,7 +170,8 @@ export function TicketCheckout({
             return;
           }
         }
-        if (ticket.status !== "pending") throw new Error("Ticket checkout is no longer active");
+        if (ticket.status !== "pending")
+          throw new Error("Ticket checkout is no longer active");
         const options = await api.request<PaymentOptions>(
           `/checkout/steps/payment-options?session_id=${encodeURIComponent(groupId)}`,
         );
@@ -172,9 +185,14 @@ export function TicketCheckout({
         const allowed = (["momo", "card"] as const)
           .filter((m) => options.available_methods.includes(m))
           .filter((m) =>
-            !retry || !status ? true : status.rail === "card" ? m === "card" : m === "momo",
+            !retry || !status
+              ? true
+              : status.rail === "card"
+                ? m === "card"
+                : m === "momo",
           );
-        if (!allowed.length) throw new Error("No online payment method is available");
+        if (!allowed.length)
+          throw new Error("No online payment method is available");
         if (!cancelled) {
           if (retry && (status?.rail === "mtn" || status?.rail === "airtel")) {
             setRail(status.rail);
@@ -223,15 +241,23 @@ export function TicketCheckout({
       sessionRef.current.session?.access_token === token &&
       sessionRef.current.session?.user?.id === buyerId;
     if (method === "momo" && !isValidZambianMobile(number)) {
-      setError(number.trim() ? labels.payment.invalidPayer : labels.payment.required);
+      setError(
+        number.trim() ? labels.payment.invalidPayer : labels.payment.required,
+      );
       return;
     }
     submitting.current = true;
     setBusy(true);
     setError(null);
     try {
-      const api = createApiClient({ baseUrl: getApiBaseUrl(), getToken: () => token });
-      const payer = method === "momo" ? formatE164(DEFAULT_COUNTRY_CODE, number) : undefined;
+      const api = createApiClient({
+        baseUrl: getApiBaseUrl(),
+        getToken: () => token,
+      });
+      const payer =
+        method === "momo"
+          ? formatE164(DEFAULT_COUNTRY_CODE, number)
+          : undefined;
       const validated = await api.request<{
         session_id: string;
         method: string;
@@ -269,7 +295,9 @@ export function TicketCheckout({
           throw new Error("Card session did not match ticket order");
         }
         if (!stillCurrent()) return;
-        router.replace(`/${locale}/checkout/card/${card.payment_id}?group=${order.groupId}`);
+        router.replace(
+          `/${locale}/checkout/card/${card.payment_id}?group=${order.groupId}`,
+        );
       } else {
         const started = await api.request<{
           checkout_group_id: string;
@@ -277,7 +305,11 @@ export function TicketCheckout({
           order_count: number;
         }>("/payments/retry", {
           method: "POST",
-          body: JSON.stringify({ checkout_group_id: order.groupId, payer_number: payer, rail }),
+          body: JSON.stringify({
+            checkout_group_id: order.groupId,
+            payer_number: payer,
+            rail,
+          }),
         });
         if (
           started.checkout_group_id !== order.groupId ||
@@ -396,7 +428,11 @@ export function TicketCheckout({
         </p>
       ) : null}
       <Link
-        href={ready ? `/${locale}/account/orders/${order.orderId}` : `/${locale}/account/orders`}
+        href={
+          ready
+            ? `/${locale}/account/orders/${order.orderId}`
+            : `/${locale}/account/orders`
+        }
       >
         {ordersLabel}
       </Link>

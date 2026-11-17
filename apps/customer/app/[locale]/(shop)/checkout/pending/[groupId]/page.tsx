@@ -2,17 +2,29 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { PendingPaymentShell, type PendingLabels } from "../../_components/ussd-wait";
-import { groupRoutesFromQuery, type SearchParams } from "../../_lib/group-checkout";
+import { buildPageMetadata } from "../../../../../../lib/page-title";
+import {
+  PendingPaymentShell,
+  type PendingLabels,
+} from "../../_components/ussd-wait";
+import {
+  groupRoutesFromQuery,
+  type SearchParams,
+} from "../../_lib/group-checkout";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  robots: {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "checkout", "checkout.pending.pageTitle", {
     index: false,
     follow: false,
-  },
-};
+  });
+}
 
 type PageProps = {
   params: Promise<{ locale: string; groupId: string }>;
@@ -26,7 +38,10 @@ export function generateStaticParams() {
   }));
 }
 
-function buildPendingLabels(locale: string, messages: AbstractIntlMessages): PendingLabels {
+function buildPendingLabels(
+  locale: string,
+  messages: AbstractIntlMessages,
+): PendingLabels {
   const t = createTranslator({ locale, messages, namespace: "checkout" });
 
   return {
@@ -81,7 +96,10 @@ function buildPendingLabels(locale: string, messages: AbstractIntlMessages): Pen
   };
 }
 
-export default async function PendingCheckoutPage({ params, searchParams }: PageProps) {
+export default async function PendingCheckoutPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { locale, groupId } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {

@@ -332,6 +332,8 @@ def _seed_migration_sql() -> str:
             "20261115200000_pay_at_door.sql",
             # Organiser receivable for recovered event advances (provisioned lazily).
             "20261115210000_event_ticket_integrity.sql",
+            # Platform-funded coupon discounts are a marketing expense.
+            "20261116100000_coupons_gifts_birthdays.sql",
         )
     )
 

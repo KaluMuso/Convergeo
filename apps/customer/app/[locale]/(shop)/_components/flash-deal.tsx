@@ -14,7 +14,10 @@ type FlashDealProps = {
   t: CatalogTranslator;
 };
 
-function readString(payload: Record<string, unknown>, key: string): string | undefined {
+function readString(
+  payload: Record<string, unknown>,
+  key: string,
+): string | undefined {
   const value = payload[key];
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
@@ -33,7 +36,8 @@ export function FlashDeal({ slot, locale, t }: FlashDealProps) {
   }
 
   const payload = slot.payload;
-  const endsAt = readString(payload, "ends_at") ?? slot.schedule_to ?? undefined;
+  const endsAt =
+    readString(payload, "ends_at") ?? slot.schedule_to ?? undefined;
   if (!endsAt) {
     return null;
   }
@@ -43,8 +47,10 @@ export function FlashDeal({ slot, locale, t }: FlashDealProps) {
   }
 
   const tag = readString(payload, "tag") ?? t("home.flash.defaultTag");
-  const headline = readString(payload, "headline") ?? t("home.flash.defaultHeadline");
-  const ctaLabel = readString(payload, "cta_label") ?? t("home.flash.defaultCta");
+  const headline =
+    readString(payload, "headline") ?? t("home.flash.defaultHeadline");
+  const ctaLabel =
+    readString(payload, "cta_label") ?? t("home.flash.defaultCta");
   const ctaHref = readString(payload, "cta_href") ?? `/${locale}/search`;
 
   return (
@@ -53,8 +59,13 @@ export function FlashDeal({ slot, locale, t }: FlashDealProps) {
       className="motion-rise flex flex-col gap-4 overflow-hidden rounded-lg bg-panel p-6 text-panel-text shadow-2 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:p-8"
     >
       <div className="flex flex-col gap-2">
-        <p className="text-micro font-semibold uppercase tracking-wide text-accent">{tag}</p>
-        <h2 id="home-flash-heading" className="font-display text-h2 text-panel-text">
+        <p className="text-micro font-semibold uppercase tracking-wide text-accent">
+          {tag}
+        </p>
+        <h2
+          id="home-flash-heading"
+          className="font-display text-h2 text-panel-text"
+        >
           {headline}
         </h2>
       </div>

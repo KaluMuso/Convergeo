@@ -34,12 +34,17 @@ describe("wishlist-storage", () => {
 
   it("shares storage with slug-based PLP wishlist", () => {
     toggleWishlist("prod-uuid", "tecno-spark");
-    const raw = JSON.parse(window.localStorage.getItem(WISHLIST_STORAGE_KEY) ?? "[]") as Array<{
+    const raw = JSON.parse(
+      window.localStorage.getItem(WISHLIST_STORAGE_KEY) ?? "[]",
+    ) as Array<{
       slug: string;
       productId?: string;
     }>;
     expect(
-      raw.some((entry) => entry.slug === "tecno-spark" && entry.productId === "prod-uuid"),
+      raw.some(
+        (entry) =>
+          entry.slug === "tecno-spark" && entry.productId === "prod-uuid",
+      ),
     ).toBe(true);
   });
 });

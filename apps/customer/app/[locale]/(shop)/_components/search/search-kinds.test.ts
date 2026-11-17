@@ -11,7 +11,12 @@ describe("SEARCH_KINDS server-safe export (CUST-SEARCH-01)", () => {
   it("is a real iterable array (regression for digest 3273208722)", () => {
     expect(Array.isArray(SEARCH_KINDS)).toBe(true);
     expect(typeof SEARCH_KINDS[Symbol.iterator]).toBe("function");
-    expect([...SEARCH_KINDS]).toEqual(["products", "services", "events", "vendors"]);
+    expect([...SEARCH_KINDS]).toEqual([
+      "products",
+      "services",
+      "events",
+      "vendors",
+    ]);
   });
 
   it("builds tab kinds via spread without throwing", () => {

@@ -3,7 +3,11 @@ import { formatK } from "@vergeo/i18n";
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 
 import { OfferAddAll, type OfferAddAllLabels } from "./offer-add-all";
-import { offerBadgeLabel, type OfferBadge, type OfferBadgeLabels } from "./offer-badge";
+import {
+  offerBadgeLabel,
+  type OfferBadge,
+  type OfferBadgeLabels,
+} from "./offer-badge";
 
 type PublicOfferItem = {
   role: string;
@@ -41,13 +45,19 @@ export type PdpOfferBoxLabels = {
 };
 
 /** W8: offers this listing takes part in. Empty when `bundles` is off. */
-export async function fetchListingOffers(listingId: string): Promise<PublicOffer[]> {
-  const url = absoluteApiUrl(`/offers/listing/${encodeURIComponent(listingId)}`);
+export async function fetchListingOffers(
+  listingId: string,
+): Promise<PublicOffer[]> {
+  const url = absoluteApiUrl(
+    `/offers/listing/${encodeURIComponent(listingId)}`,
+  );
   if (!url) {
     return [];
   }
   try {
-    const response = await fetch(url, { next: { revalidate: 60, tags: ["offers"] } });
+    const response = await fetch(url, {
+      next: { revalidate: 60, tags: ["offers"] },
+    });
     if (!response.ok) {
       return [];
     }
@@ -83,7 +93,10 @@ export async function PdpOfferBox({
       className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-3 sm:p-4"
       data-testid="pdp-offer-box"
     >
-      <h2 id="pdp-offers-heading" className="m-0 text-base font-semibold text-text">
+      <h2
+        id="pdp-offers-heading"
+        className="m-0 text-base font-semibold text-text"
+      >
         {labels.heading}
       </h2>
       {offers.map((offer) => {
@@ -100,7 +113,8 @@ export async function PdpOfferBox({
                 : item.qty,
         }));
         // Gift offers and buy-N offers: the customer buys one trigger line.
-        const toAdd = offer.offer_type === "bundle" ? addItems : addItems.slice(0, 1);
+        const toAdd =
+          offer.offer_type === "bundle" ? addItems : addItems.slice(0, 1);
         return (
           <article
             key={offer.id}
@@ -117,19 +131,27 @@ export async function PdpOfferBox({
             </div>
             <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm text-text-2">
               {paid.map((item) => (
-                <li key={`${item.role}-${item.listing_id}`} className="flex justify-between gap-2">
+                <li
+                  key={`${item.role}-${item.listing_id}`}
+                  className="flex justify-between gap-2"
+                >
                   <span className="min-w-0 truncate">
                     {fill(labels.itemLine, {
                       title: item.title ?? "",
                       qty: String(item.qty),
                     })}
                   </span>
-                  <span className="shrink-0 font-mono">{formatK(item.unit_price_ngwee)}</span>
+                  <span className="shrink-0 font-mono">
+                    {formatK(item.unit_price_ngwee)}
+                  </span>
                 </li>
               ))}
             </ul>
             {gift && offer.gift_qty > 0 ? (
-              <p className="m-0 text-sm font-medium text-success" data-testid="pdp-offer-gift">
+              <p
+                className="m-0 text-sm font-medium text-success"
+                data-testid="pdp-offer-gift"
+              >
                 {fill(labels.freeGift, {
                   title: gift.title ?? "",
                   qty: String(offer.gift_qty),
@@ -144,11 +166,17 @@ export async function PdpOfferBox({
                   list: formatK(offer.list_total_ngwee),
                 })}{" "}
                 <span className="font-semibold text-success">
-                  {fill(labels.youSave, { amount: formatK(offer.savings_ngwee) })}
+                  {fill(labels.youSave, {
+                    amount: formatK(offer.savings_ngwee),
+                  })}
                 </span>
               </p>
             ) : null}
-            <OfferAddAll offerId={offer.id} items={toAdd} labels={labels.addAll} />
+            <OfferAddAll
+              offerId={offer.id}
+              items={toAdd}
+              labels={labels.addAll}
+            />
           </article>
         );
       })}

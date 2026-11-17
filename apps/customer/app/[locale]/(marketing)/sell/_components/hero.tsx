@@ -3,7 +3,7 @@ import { Pill } from "@vergeo/ui/src/pill";
 import { tokens } from "@vergeo/ui/tokens";
 import Link from "next/link";
 
-import { getVendorPortalUrl, getVendorSignupUrl } from "./vendor-app";
+import { getVendorLoginUrl, getVendorPortalUrl } from "./vendor-app";
 
 type PitchTranslator = {
   (key: string, values?: Record<string, string | number>): string;
@@ -25,7 +25,7 @@ const VERTICAL_COLORS: Record<(typeof VERTICAL_KEYS)[number], string> = {
 };
 
 export function Hero({ locale, t }: HeroProps) {
-  const signupUrl = getVendorSignupUrl(locale);
+  const loginUrl = getVendorLoginUrl(locale);
   const portalUrl = getVendorPortalUrl(locale);
 
   return (
@@ -50,37 +50,28 @@ export function Hero({ locale, t }: HeroProps) {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          {signupUrl ? (
-            <LinkButton
-              href={signupUrl}
-              variant="primary"
-              size="lg"
-              data-testid="vendor-hero-cta"
-              LinkComponent={Link}
-            >
-              {t("hero.primaryCta")}
-            </LinkButton>
-          ) : (
-            <button
-              aria-describedby="hero-vendor-signup-unavailable"
-              aria-disabled="true"
-              className="inline-flex h-12 min-h-12 cursor-not-allowed items-center justify-center rounded bg-primary px-6 text-body font-medium text-surface opacity-60"
-              data-testid="vendor-hero-cta"
-              disabled
-              type="button"
-            >
-              {t("hero.primaryCta")}
-            </button>
-          )}
+          <LinkButton
+            href={loginUrl}
+            variant="primary"
+            size="lg"
+            data-testid="vendor-hero-cta"
+            LinkComponent={Link}
+          >
+            {t("hero.primaryCta")}
+          </LinkButton>
           <LinkButton href="#commissions" variant="secondary" size="lg" LinkComponent={Link}>
             {t("hero.secondaryCta")}
           </LinkButton>
         </div>
-        {signupUrl ? null : (
-          <p id="hero-vendor-signup-unavailable" className="text-sm text-text-3">
-            {t("signupUnavailable")}
-          </p>
-        )}
+        <p className="text-sm text-text-2">
+          <a
+            className="font-medium text-primary underline-offset-2 hover:underline"
+            data-testid="vendor-invite-signin-link"
+            href={loginUrl}
+          >
+            {t("cta.haveInviteSignIn")}
+          </a>
+        </p>
         {portalUrl ? (
           <p className="text-sm text-text-2">
             <a

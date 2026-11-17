@@ -45,6 +45,8 @@ from rehearse_explicit_transaction_profile import (
     started_container_on_network,
     sql,
     target_container,
+    assert_batch_ledger,
+    batch_end,
     visible_prefix,
 )
 
@@ -164,7 +166,7 @@ COMMIT;
                 capture_output=True,
             )
             files, first = source_inventory(workdir)
-            self.assertEqual((len(files), first), (177, 131))
+            self.assertEqual((len(files), first), (184, 131))
             with self.assertRaisesRegex(RuntimeError, "fault"):
                 with visible_prefix(files, first - 1, workdir):
                     self.assertEqual(
@@ -172,13 +174,44 @@ COMMIT;
                     )
                     raise RuntimeError("fault")
             self.assertEqual(
-                len(list((workdir / "supabase/migrations").glob("*.sql"))), 177
+                len(list((workdir / "supabase/migrations").glob("*.sql"))), 184
             )
             copied = workdir / "supabase/migrations" / next(iter(BOUND_FILES))
             copied.write_bytes(copied.read_bytes() + b"\n")
             with self.assertRaises(RehearsalError) as changed_copy:
                 source_inventory(workdir)
             self.assertEqual(changed_copy.exception.code, "SOURCE_MISMATCH")
+
+    def test_suffix_batches_cover_non_bound_runs_exactly(self) -> None:
+        files = sorted(
+            (Path(__file__).resolve().parents[2] / "supabase/migrations").glob("*.sql")
+        )
+        first = [p.name for p in files].index(next(iter(BOUND_FILES)))
+        index, covered = first, []
+        while index < len(files):
+            if files[index].name in BOUND_FILES:
+                index += 1
+                continue
+            end = batch_end(files, index)
+            self.assertTrue(
+                all(f.name not in BOUND_FILES for f in files[index : end + 1])
+            )
+            self.assertTrue(end + 1 == len(files) or files[end + 1].name in BOUND_FILES)
+            covered.extend(range(index, end + 1))
+            index = end + 1
+        expected = [
+            i for i in range(first, len(files)) if files[i].name not in BOUND_FILES
+        ]
+        self.assertEqual(covered, expected)
+
+    def test_batch_ledger_requires_exact_order(self) -> None:
+        files = [Path(f"{v}_x.sql") for v in ("001", "002", "003")]
+        good = [["001"], ["002"], ["003"]]
+        assert_batch_ledger(good, files, 2)
+        for bad in ([["001"], ["003"], ["002"]], [["001"], ["002"]], good + [["004"]]):
+            with self.assertRaises(RehearsalError) as caught:
+                assert_batch_ledger(bad, files, 2)
+            self.assertEqual(caught.exception.code, "GUARD_REJECTED")
 
     def test_fault_must_reach_fixture_history_trigger(self) -> None:
         wrong = subprocess.CompletedProcess([], 3, b"", b"earlier SQL error")
@@ -319,7 +352,7 @@ COMMIT;
     def test_failure_cleanup_requires_stack_ownership(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workdir = Path(directory)
-            files = [workdir / f"{index}.sql" for index in range(177)]
+            files = [workdir / f"{index}.sql" for index in range(184)]
             with (
                 patch(
                     "rehearse_explicit_transaction_profile.LOCK",
@@ -354,7 +387,7 @@ COMMIT;
                 ),
                 patch(
                     "rehearse_explicit_transaction_profile.ledger",
-                    return_value=[[]] * 177,
+                    return_value=[[]] * 184,
                 ),
                 patch("rehearse_explicit_transaction_profile.cli") as cli,
                 redirect_stdout(io.StringIO()),

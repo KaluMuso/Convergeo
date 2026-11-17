@@ -217,6 +217,9 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /cart/merge": STANDARD_WRITE,
     "POST /cart/revalidate": STANDARD_WRITE,
     "POST /cart/rfq/{rfq_id}/accept": STANDARD_WRITE,
+    # Unified cart: event-ticket lines (the price is resolved server-side).
+    "POST /cart/tickets": STANDARD_WRITE,
+    "DELETE /cart/tickets/{line_id}": STANDARD_WRITE,
     "POST /checkout/session": PAYMENT_WRITE,
     "POST /checkout/steps/contact": PAYMENT_WRITE,
     "POST /checkout/steps/fulfilment": PAYMENT_WRITE,
@@ -367,6 +370,31 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /products/merge": ADMIN_WRITE,
     "PATCH /products/canonical/{product_id}/status": ADMIN_WRITE,
     "PUT /products/{product_id}/relations": ADMIN_WRITE,
+    # Vendor plans + canonical product photos (admin sub-routers, un-prefixed
+    # keys). Enforced in-router (admin_vendor_plans._limit, keyed by admin id).
+    # Multi-branch businesses (flag multi_branch). Enforced in-router: vendor
+    # routes keyed by the owner (vendor_branches._limit), admin routes by the
+    # acting admin (admin_branches._limit, un-prefixed admin keys).
+    "PATCH /vendor/businesses/{business_id}": SENSITIVE_WRITE,
+    "POST /vendor/businesses/{business_id}/branches": SENSITIVE_WRITE,
+    "POST /vendor/businesses/{business_id}/evidence/sign": SENSITIVE_WRITE,
+    "PUT /vendor/businesses/{business_id}/branches/{branch_id}/evidence": STANDARD_WRITE,
+    "POST /vendor/businesses/{business_id}/branches/{branch_id}/submit": STANDARD_WRITE,
+    "POST /vendor/businesses/{business_id}/staff": SENSITIVE_WRITE,
+    "DELETE /vendor/businesses/{business_id}/staff/{staff_id}": STANDARD_WRITE,
+    "POST /branches/{branch_id}/approve": ADMIN_WRITE,
+    "POST /branches/{branch_id}/request-info": ADMIN_WRITE,
+    "POST /branches/{branch_id}/reject": ADMIN_WRITE,
+    "POST /branches/flags/{flag_id}/resolve": ADMIN_WRITE,
+    "POST /branches/businesses/{business_id}/pacra": ADMIN_WRITE,
+    "POST /vendor-plans": ADMIN_WRITE,
+    "PATCH /vendor-plans/{plan_key}": ADMIN_WRITE,
+    "DELETE /vendor-plans/{plan_key}": ADMIN_WRITE,
+    "PUT /vendors/{vendor_id}/plan": ADMIN_WRITE,
+    "PUT /vendors/{vendor_id}/plan/override": ADMIN_WRITE,
+    "DELETE /vendors/{vendor_id}/plan/override": ADMIN_WRITE,
+    "POST /products/{product_id}/images": ADMIN_WRITE,
+    "DELETE /products/{product_id}/images/{image_id}": ADMIN_WRITE,
     "POST /quotes/{quote_id}/decline": STANDARD_WRITE,
     "POST /quotes/{quote_id}/withdraw": STANDARD_WRITE,
     "POST /refunds/execute": PAYMENT_WRITE,
@@ -377,6 +405,10 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /service-reviews": STANDARD_WRITE,
     "POST /service-reviews/{review_id}/reply": STANDARD_WRITE,
     "POST /services/{service_id}/book": PAYMENT_WRITE,
+    "POST /services/{service_id}/request-free": STANDARD_WRITE,
+    "POST /me/free-bookings/{booking_id}/cancel": STANDARD_WRITE,
+    "POST /vendor/free-bookings/{booking_id}/accept": STANDARD_WRITE,
+    "POST /vendor/free-bookings/{booking_id}/decline": STANDARD_WRITE,
     "POST /support/send": ADMIN_WRITE,
     "POST /tickets/checkout": PAYMENT_WRITE,
     "POST /tickets/rsvp": PAYMENT_WRITE,
@@ -453,6 +485,21 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PUT /organiser/ticket-types/{ticket_type_id}/allocations": STANDARD_WRITE,
     "PUT /organiser/ticket-types/{ticket_type_id}/early-bird": STANDARD_WRITE,
     "PUT /organiser/ticket-types/{ticket_type_id}/price-tiers": STANDARD_WRITE,
+    # Coupons / gift orders / birthdays (flags coupons, gift_orders, birthday_greetings).
+    # Coupon apply is SENSITIVE (code guessing) and also enforces its own
+    # per-user + per-IP counters in routers/checkout_extras.py.
+    "POST /checkout/steps/coupon": SENSITIVE_WRITE,
+    "DELETE /checkout/steps/coupon": STANDARD_WRITE,
+    "PUT /checkout/steps/gift": STANDARD_WRITE,
+    "DELETE /checkout/steps/gift": STANDARD_WRITE,
+    "POST /admin/coupons": ADMIN_WRITE,
+    "PATCH /admin/coupons/{coupon_id}": ADMIN_WRITE,
+    "POST /vendor/coupons": STANDARD_WRITE,
+    "PATCH /vendor/coupons/{coupon_id}": STANDARD_WRITE,
+    "PUT /account/birthday": SENSITIVE_WRITE,
+    "DELETE /account/birthday": SENSITIVE_WRITE,
+    "POST /internal/birthdays/tick": INTERNAL_CRON,
+    "POST /internal/gifts/redact-tick": INTERNAL_CRON,
 }
 
 

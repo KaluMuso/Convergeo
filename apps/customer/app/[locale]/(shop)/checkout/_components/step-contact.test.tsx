@@ -5,12 +5,13 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { signInWithOtp, verifyOtp, reconcileCustomerSession, contactRequest } = vi.hoisted(() => ({
-  signInWithOtp: vi.fn(),
-  verifyOtp: vi.fn(),
-  reconcileCustomerSession: vi.fn(),
-  contactRequest: vi.fn(),
-}));
+const { signInWithOtp, verifyOtp, reconcileCustomerSession, contactRequest } =
+  vi.hoisted(() => ({
+    signInWithOtp: vi.fn(),
+    verifyOtp: vi.fn(),
+    reconcileCustomerSession: vi.fn(),
+    contactRequest: vi.fn(),
+  }));
 
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: async () => ({
@@ -77,7 +78,9 @@ beforeEach(() => {
     data: { session: { access_token: "real-session-token" } },
     error: null,
   });
-  reconcileCustomerSession.mockResolvedValue({ access_token: "real-session-token" });
+  reconcileCustomerSession.mockResolvedValue({
+    access_token: "real-session-token",
+  });
   contactRequest.mockResolvedValue({ contact_skipped: false });
 });
 
@@ -111,7 +114,12 @@ describe("StepContact authenticated OTP ordering", () => {
     await submitOtp(user);
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledOnce());
-    expect(events).toEqual(["verifyOtp", "cart merge", "contact POST", "onComplete"]);
+    expect(events).toEqual([
+      "verifyOtp",
+      "cart merge",
+      "contact POST",
+      "onComplete",
+    ]);
     expect(reconcileCustomerSession).toHaveBeenCalledWith(
       expect.objectContaining({ access_token: "real-session-token" }),
       false,
@@ -166,7 +174,10 @@ it("does not resume accepted OTP work after the contact surface unmounts", async
   expect(verifyOtp).toHaveBeenCalledOnce();
   view.unmount();
   await act(async () =>
-    finish({ data: { session: { access_token: "old-session-token" } }, error: null }),
+    finish({
+      data: { session: { access_token: "old-session-token" } },
+      error: null,
+    }),
   );
   expect(reconcileCustomerSession).not.toHaveBeenCalled();
   expect(contactRequest).not.toHaveBeenCalled();

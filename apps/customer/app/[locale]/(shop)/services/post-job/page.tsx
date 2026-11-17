@@ -1,6 +1,10 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
 import { buildCanonicalAlternates } from "@vergeo/ui/src/seo/json-ld";
-import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import {
+  createTranslator,
+  NextIntlClientProvider,
+  type AbstractIntlMessages,
+} from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { PostJobForm } from "./post-job-form";
@@ -16,10 +20,15 @@ type ServicesTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
 
-async function getServicesTranslator(locale: string): Promise<ServicesTranslator> {
+async function getServicesTranslator(
+  locale: string,
+): Promise<ServicesTranslator> {
   const baseMessages = await getMessages();
   const servicesMessages = await loadNamespace(locale as Locale, "services");
-  const messages = { ...baseMessages, services: servicesMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    services: servicesMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -28,7 +37,9 @@ async function getServicesTranslator(locale: string): Promise<ServicesTranslator
   }) as unknown as ServicesTranslator;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getServicesTranslator(locale);
   const title = t("postJob.title");
@@ -50,7 +61,10 @@ export default async function PostJobPage({ params, searchParams }: PageProps) {
 
   return (
     <div className="py-6 lg:mx-auto lg:w-full lg:max-w-2xl">
-      <NextIntlClientProvider locale={locale} messages={{ services: servicesMessages }}>
+      <NextIntlClientProvider
+        locale={locale}
+        messages={{ services: servicesMessages }}
+      >
         <PostJobForm locale={locale} initialCategory={category} />
       </NextIntlClientProvider>
     </div>

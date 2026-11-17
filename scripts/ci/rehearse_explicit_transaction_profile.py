@@ -95,6 +95,20 @@ REVIEWED_SUFFIX = (
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500_business_home_offers_flag.sql",
     "20261115235600_business_home_section_flags.sql",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000_unified_cart_event_tickets.sql",
+    # Coupons, gift orders, birthday greetings (additive; flags default off).
+    "20261116100000_coupons_gifts_birthdays.sql",
+    # Coupons: collection net of the coupon + coupon_funding leg (additive).
+    "20261116100100_collection_coupon_funding.sql",
+    # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
+    "20261116110000_vendor_plans.sql",
+    # Shared canonical photos + sha256 dedup (additive, reversible).
+    "20261116110100_shared_canonical_photos.sql",
+    # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
+    "20261116130000_free_events_services.sql",
+    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
+    "20261117000000_multi_branch_businesses.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
@@ -648,9 +662,9 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 177 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 184 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 177 source migrations",
+            "disposable copy does not match 184 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
@@ -733,10 +747,10 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                         raise RehearsalError(
                             "failure cleanup did not restore full history"
                         )
-                    print("failure_cleanup|restored_177|PASS")
+                    print("failure_cleanup|restored_184|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 177 migrations",
+                        "error: disposable failure cleanup could not restore 184 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -779,6 +793,19 @@ def assert_prefix(container: str, expected: list[list[object]], count: int) -> N
         raise RehearsalError(
             "predecessor migration history changed", code="HISTORY_MISMATCH"
         )
+
+
+def batch_end(files: list[Path], start: int) -> int:
+    """Index of the last file in the consecutive non-BOUND run from start."""
+    end = start
+    while end + 1 < len(files) and files[end + 1].name not in BOUND_FILES:
+        end += 1
+    return end
+
+
+def assert_batch_ledger(current: list[list[object]], files: list[Path], end: int) -> None:
+    if [row[0] for row in current] != [p.stem.split("_", 1)[0] for p in files[: end + 1]]:
+        raise RehearsalError("intervening CLI migration order changed")
 
 
 def rejection_trigger(container: str, version: str, *, create: bool) -> None:
@@ -844,7 +871,9 @@ def commit_without_ack(container: str, version: str, body: bytes) -> None:
                         raise RehearsalError(
                             "fixture client finished before acknowledgement was cut"
                         )
-                    process.terminate()
+                    # SIGKILL, not SIGTERM: newer runner docker CLIs exit 0 on
+                    # SIGTERM, which falsely reads as an acknowledged commit.
+                    process.kill()
                     process.wait(timeout=5)
                     if process.returncode == 0:
                         raise RehearsalError(
@@ -974,7 +1003,10 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
                         code="HISTORY_MISMATCH",
                     )
             completed: list[list[object]] = []
+            batched_through = first_index - 1
             for index in range(first_index, len(files)):
+                if index <= batched_through:
+                    continue
                 tracker.enter("suffix_replay")
                 path = files[index]
                 before = ledger(container)
@@ -1034,15 +1066,14 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
                         f"original_body_atomicity|{boundary.version}|PASS|{before_catalog}|{after_catalog}"
                     )
                 else:
-                    # Let pinned CLI apply the two intervening migrations and
-                    # final ACL hardening in order, using the same workdir.
-                    with visible_prefix(files, index, holding):
+                    # One push applies the whole consecutive run of non-BOUND
+                    # migrations in order; the ledger guard is unchanged.
+                    end = batch_end(files, index)
+                    with visible_prefix(files, end, holding):
                         cli(workdir, "push", "--db-url", URL, "--include-all", "--yes")
                     assert_prefix(container, baseline, first_index)
-                    if [row[0] for row in ledger(container)] != [
-                        p.stem.split("_", 1)[0] for p in files[: index + 1]
-                    ]:
-                        raise RehearsalError("intervening CLI migration order changed")
+                    assert_batch_ledger(ledger(container), files, end)
+                    batched_through = end
             tracker.enter("final_ledger")
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
@@ -1089,7 +1120,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 177 migrations"
+                    "normal full replay did not restore 184 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")

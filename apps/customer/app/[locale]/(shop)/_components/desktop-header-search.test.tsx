@@ -39,7 +39,9 @@ describe("DesktopHeaderSearch", () => {
   beforeEach(() => {
     request.mockResolvedValue({
       query: "phone",
-      suggestions: [{ title: "Itel A70", entity_kind: "product", entity_id: "1" }],
+      suggestions: [
+        { title: "Itel A70", entity_kind: "product", entity_id: "1" },
+      ],
     });
   });
 
@@ -50,8 +52,12 @@ describe("DesktopHeaderSearch", () => {
     await user.type(screen.getByRole("combobox"), "phone");
 
     await waitFor(() => {
-      expect(screen.getByRole("listbox", { name: "Search suggestions" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("listbox", { name: "Search suggestions" }),
+      ).toBeInTheDocument();
     });
-    expect(screen.getByRole("option", { name: /Itel A70/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: /Itel A70/i }),
+    ).toBeInTheDocument();
   });
 });

@@ -1,7 +1,14 @@
 "use client";
 
 import { usePrefersReducedData } from "@vergeo/ui/src/use-prefers-reduced-data";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 
 export type ProgressiveLoadStatus = "ready" | "loading" | "error" | "complete";
 
@@ -21,7 +28,10 @@ export type ProgressiveLoadOptions<T extends { id: string }> = {
    * When this changes, items and cursor reset to the initial page.
    */
   resetKey: string;
-  fetchPage: (cursor: string, signal: AbortSignal) => Promise<ProgressivePage<T>>;
+  fetchPage: (
+    cursor: string,
+    signal: AbortSignal,
+  ) => Promise<ProgressivePage<T>>;
   /**
    * When true (default), use IntersectionObserver to trigger one fetch when the
    * sentinel enters the viewport. Disabled when unsupported, when the user has
@@ -41,7 +51,10 @@ export type ProgressiveLoadResult<T extends { id: string }> = {
   sentinelRef: RefObject<HTMLDivElement | null>;
 };
 
-function mergeUniqueById<T extends { id: string }>(existing: T[], incoming: T[]): T[] {
+function mergeUniqueById<T extends { id: string }>(
+  existing: T[],
+  incoming: T[],
+): T[] {
   if (incoming.length === 0) return existing;
   const seen = new Set(existing.map((item) => item.id));
   const appended: T[] = [];
@@ -76,7 +89,9 @@ export function useProgressiveLoad<T extends { id: string }>(
 
   const [items, setItems] = useState(initialItems);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
-  const [status, setStatus] = useState<ProgressiveLoadStatus>(initialCursor ? "ready" : "complete");
+  const [status, setStatus] = useState<ProgressiveLoadStatus>(
+    initialCursor ? "ready" : "complete",
+  );
   const [lastAppendedCount, setLastAppendedCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -141,7 +156,10 @@ export function useProgressiveLoad<T extends { id: string }>(
         });
 
         const nextCursor = page.nextCursor;
-        if (nextCursor && (nextCursor === next || seenCursorsRef.current.has(nextCursor))) {
+        if (
+          nextCursor &&
+          (nextCursor === next || seenCursorsRef.current.has(nextCursor))
+        ) {
           setCursor(null);
           setStatus("complete");
           return;
@@ -155,7 +173,8 @@ export function useProgressiveLoad<T extends { id: string }>(
         if (controller.signal.aborted) return;
         // Allow retry of the same cursor after failure.
         seenCursorsRef.current.delete(next);
-        const message = err instanceof Error ? err.message : "Failed to load more results";
+        const message =
+          err instanceof Error ? err.message : "Failed to load more results";
         setErrorMessage(message);
         setStatus("error");
         setLastAppendedCount(0);
@@ -195,7 +214,14 @@ export function useProgressiveLoad<T extends { id: string }>(
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [enableIntersectionObserver, preferButtonOnly, prefersReducedData, status, cursor, loadMore]);
+  }, [
+    enableIntersectionObserver,
+    preferButtonOnly,
+    prefersReducedData,
+    status,
+    cursor,
+    loadMore,
+  ]);
 
   return {
     items,

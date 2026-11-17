@@ -18,7 +18,7 @@
     "lineTotal": "Total de la ligne : {amount}",
     "unitPrice": "{amount} l'unité",
     "unitPriceMeasured": "{amount} par {quantity}",
-    "madeToOrderLeadTime": "Fabriqué sur commande · prêt sous {days} jours",
+    "madeToOrderLeadTime": "Fabriqué sur commande · prêt {when}",
     "saleUnits": {
       "each": "article",
       "metre": "m",
@@ -81,7 +81,38 @@
     "offerSavings": "Économies sur les offres",
     "offerSaving": "Économie {amount}",
     "offerGift": "Cadeau offert : {title} × {qty}",
-    "offerGiftWorth": "Valeur {value} — offert avec votre offre"
+    "offerGiftWorth": "Valeur {value} — offert avec votre offre",
+    "types": {
+      "products": "Produits",
+      "eventTickets": "Billets d'événement",
+      "services": "Services"
+    },
+    "tickets": {
+      "line": "{type} × {qty}",
+      "remove": "Retirer",
+      "removeLabel": "Retirer les billets pour {title}",
+      "unavailable": "Ces billets ne sont plus en vente. Retirez-les pour payer.",
+      "platformFee": "Frais de service billetterie",
+      "prepaidOnly": "Les billets se paient en ligne (mobile money ou carte) et ne sont pas disponibles en paiement à la livraison.",
+      "oneEvent": "Votre panier contient déjà des billets pour un autre événement ou une autre date. Payez-les d'abord ou retirez-les.",
+      "added": "Billets ajoutés au panier",
+      "addToCart": "Ajouter au panier",
+      "adding": "Ajout…",
+      "addFailed": "Impossible d'ajouter ces billets. Réessayez.",
+      "signInRequired": "Connectez-vous pour ajouter des billets au panier."
+    },
+    "mergeWholesaleTerms": "Quantité minimale en gros : {moq} unités.",
+    "codStep1": "Vous commandez",
+    "codStep2": "Nous livrons",
+    "codStep3": "Vous payez à l'arrivée",
+    "leadTimeWhen": {
+      "oneDay": "sous 24 heures",
+      "days": "dans environ {count} jours",
+      "oneWeek": "sous une semaine",
+      "weeks": "dans environ {count} semaines",
+      "oneMonth": "dans environ un mois",
+      "months": "dans environ {count} mois"
+    }
   },
   "checkout": {
     "pageTitle": "Paiement",
@@ -97,7 +128,7 @@
       "title": "Vos coordonnées",
       "subtitle": "Nous les utiliserons pour envoyer les mises à jour de commande sur WhatsApp ou SMS.",
       "phoneLabel": "Numéro de mobile",
-      "phoneHelp": "MTN, Airtel ou Zamtel — nous enverrons un code à usage unique.",
+      "phoneHelp": "MTN, Airtel ou Zamtel — nous l'utiliserons pour confirmer votre livraison.",
       "phonePlaceholder": "97X XXX XXX",
       "countryCode": "Indicatif du pays",
       "nationalNumber": "Numéro de mobile",
@@ -205,7 +236,8 @@
         "capNote": "Le paiement à la livraison est possible pour les commandes jusqu'à {cap}.",
         "overCap": "Le total de votre commande est de {total}. Pour payer à la livraison, retirez des articles ou passez des commandes séparées de {cap} maximum.",
         "editCart": "Modifier le panier"
-      }
+      },
+      "codNotForTickets": "Le paiement à la livraison n'est pas disponible quand la commande contient des billets."
     },
     "review": {
       "title": "Vérifiez votre commande",
@@ -222,7 +254,7 @@
       "railMtn": "MTN",
       "railAirtel": "Airtel",
       "payerNumber": "Payeur : {number}",
-      "escrowTitle": "Comment votre paiement est protégé",
+      "escrowTitle": "Comment ça marche",
       "escrowStep1": "Vous payez",
       "escrowStep2": "Conservé par Convergeo",
       "escrowStep3": "Versé à la livraison",
@@ -250,7 +282,14 @@
         "label": "Partager mon nom, mon téléphone et mon adresse avec le partenaire de livraison pour livrer cette commande",
         "hint": "Facultatif. Un coursier agréé peut livrer votre commande. Sans cet accord, l'équipe Vergeo5 la livre ou vous appelle d'abord. Modifiable à tout moment dans Compte → Confidentialité.",
         "saveFailed": "Impossible d'enregistrer ce choix. Vous pouvez quand même passer commande."
-      }
+      },
+      "typeProducts": "Produits",
+      "typeEventTickets": "Billets d'événement",
+      "ticketLine": "{type} × {qty}",
+      "platformFee": "Frais de service billetterie",
+      "discount": "Coupon {code}",
+      "estimatedReady": "Prêt vers le {date}",
+      "estimatedDelivery": "Livraison estimée vers le {date}"
     },
     "pending": {
       "pageTitle": "Approuver le paiement",
@@ -318,6 +357,64 @@
       "widgetUnavailable": "Les paiements par carte sont temporairement indisponibles. Essayez le mobile money ou réessayez plus tard.",
       "widgetLabel": "Commande Convergeo",
       "secureNote": "Sécurisé par Lenco — paiement hébergé conforme PCI"
+    },
+    "tickets": {
+      "unavailable": "Un billet de votre panier n'est plus disponible. Vérifiez votre panier."
+    },
+    "coupon": {
+      "toggle": "Vous avez un code promo ?",
+      "label": "Code promo",
+      "apply": "Appliquer",
+      "applying": "Vérification…",
+      "remove": "Retirer",
+      "applied": "{code} appliqué : {amount} de remise",
+      "paidByPlatform": "Convergeo paie cette remise. La boutique reçoit son prix complet.",
+      "paidByShop": "Cette remise est offerte par la boutique.",
+      "prepaidOnly": "Les coupons fonctionnent avec le mobile money ou la carte, pas le paiement à la livraison.",
+      "errors": {
+        "generic": "Ce code n'a pas fonctionné. Vérifiez-le et réessayez.",
+        "not_found": "Code introuvable.",
+        "inactive": "Ce code est suspendu pour le moment.",
+        "not_started": "Ce code n'est pas encore actif.",
+        "expired": "Ce code a expiré.",
+        "min_spend": "Ajoutez un peu plus d'articles éligibles pour utiliser ce code.",
+        "not_applicable": "Ce code ne couvre aucun article de votre panier.",
+        "limit_reached": "Ce code a été entièrement utilisé.",
+        "already_used": "Vous avez déjà utilisé ce code.",
+        "budget_exhausted": "Cette offre est terminée pour ce mois.",
+        "changed": "Votre panier a changé. Appliquez le code à nouveau.",
+        "cod_not_allowed": "Les coupons exigent le mobile money ou la carte.",
+        "tooManyAttempts": "Trop d'essais. Attendez quelques minutes.",
+        "featureUnavailable": "Les coupons ne sont pas encore disponibles."
+      }
+    },
+    "gift": {
+      "toggle": "Envoyer en cadeau",
+      "intro": "Nous livrons à la personne que vous gâtez. Vous restez l'acheteur : tout remboursement vous revient.",
+      "recipientName": "Son nom",
+      "recipientPhone": "Son numéro de téléphone",
+      "recipientPhoneHelp": "Un numéro mobile zambien. Nous lui envoyons un seul message à propos du cadeau.",
+      "message": "Message (facultatif)",
+      "messageHelp": "200 caractères maximum. Pas de liens.",
+      "consent": "Cette personne a accepté de partager son téléphone (et son adresse, pour la livraison) avec Convergeo pour ce cadeau.",
+      "pickupNote": "Retrait : nous lui envoyons le code PIN de retrait, pas à vous.",
+      "deliveryNote": "Livraison : indiquez son repère à l'étape de livraison.",
+      "privacyNote": "Ses données servent uniquement à ce cadeau et sont supprimées ensuite. Son reçu n'affiche aucun prix.",
+      "save": "Enregistrer le cadeau",
+      "saving": "Enregistrement…",
+      "remove": "Ce n'est pas un cadeau",
+      "saved": "Cadeau pour {name} ({phone})",
+      "prepaidOnly": "Les cadeaux exigent le mobile money ou la carte.",
+      "errors": {
+        "generic": "Impossible d'enregistrer le cadeau. Réessayez.",
+        "consent": "Cochez la case pour confirmer son accord.",
+        "name": "Indiquez son nom.",
+        "phone": "Indiquez un numéro mobile zambien, ex. 097 123 4567.",
+        "message": "Le message ne peut pas contenir de liens.",
+        "codNotAllowed": "Les cadeaux exigent le mobile money ou la carte.",
+        "tooMany": "Trop de modifications. Attendez quelques minutes.",
+        "featureUnavailable": "Les cadeaux ne sont pas encore disponibles."
+      }
     }
   },
   "variant": {

@@ -18,7 +18,9 @@ vi.mock("../../_components/directory/follow-vendor-button", () => ({
   ),
 }));
 vi.mock("../../../_components/share-link-button", () => ({
-  ShareLinkButton: ({ label }: { label: string }) => <button type="button">{label}</button>,
+  ShareLinkButton: ({ label }: { label: string }) => (
+    <button type="button">{label}</button>
+  ),
 }));
 vi.mock("../../_components/directory/storefront-products", () => ({
   StorefrontProducts: ({
@@ -140,7 +142,8 @@ const PROFILE = {
   offers_enabled: false,
 };
 
-const params = (slug = "mama-chanda") => Promise.resolve({ locale: "en", slug });
+const params = (slug = "mama-chanda") =>
+  Promise.resolve({ locale: "en", slug });
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -164,9 +167,15 @@ describe("Business Home SEO metadata", () => {
     const metadata = await generateMetadata({ params: params() });
     expect(metadata.title).toBe("Mama Chanda's Kitchen on Convergeo");
     expect(metadata.robots).toEqual({ index: true, follow: true });
-    expect(String(metadata.alternates?.canonical)).toContain("/en/v/mama-chanda");
-    expect(metadata.openGraph?.images).toEqual(["https://res.cloudinary.com/demo/logo.png"]);
-    expect(metadata.openGraph?.description).toBe("Home cooking in Kabwata since 2012.");
+    expect(String(metadata.alternates?.canonical)).toContain(
+      "/en/v/mama-chanda",
+    );
+    expect(metadata.openGraph?.images).toEqual([
+      "https://res.cloudinary.com/demo/logo.png",
+    ]);
+    expect(metadata.openGraph?.description).toBe(
+      "Home cooking in Kabwata since 2012.",
+    );
   });
 
   it("noindexes a missing business", async () => {
@@ -188,11 +197,15 @@ describe("Business Home page", () => {
 
     // Products carry delivery/pickup and a compare action to other shops.
     const products = screen.getByTestId("mock-products");
-    const chikanda = within(products).getByText("Chikanda (500g)").closest("li")!;
+    const chikanda = within(products)
+      .getByText("Chikanda (500g)")
+      .closest("li")!;
     expect(chikanda).toHaveAttribute("data-delivery", "true");
     expect(chikanda).toHaveAttribute("data-pickup", "true");
     expect(
-      within(chikanda).getByRole("link", { name: /Compare with 2 other shops/ }),
+      within(chikanda).getByRole("link", {
+        name: /Compare with 2 other shops/,
+      }),
     ).toHaveAttribute("href", "/en/p/chikanda-500g#compare");
     const relish = within(products).getByText("House relish").closest("li")!;
     expect(within(relish).queryByRole("link")).toBeNull();
@@ -206,16 +219,23 @@ describe("Business Home page", () => {
       "href",
       "https://www.google.com/maps/dir/?api=1&destination=-15.44,28.3",
     );
-    expect(screen.getByRole("region", { name: "Find us" })).toHaveTextContent("08:00–17:00");
+    expect(screen.getByRole("region", { name: "Find us" })).toHaveTextContent(
+      "08:00–17:00",
+    );
     expect(
-      screen.getByText("Only customers who bought here through Convergeo can leave a review."),
+      screen.getByText(
+        "Only customers who bought here through Convergeo can leave a review.",
+      ),
     ).toBeInTheDocument();
     // Flags off / nothing live: no clips row, no offers block, no empty Events tab.
     expect(screen.queryByTestId("bh-clips")).toBeNull();
     expect(screen.queryByTestId("bh-offers")).toBeNull();
     expect(screen.queryByRole("tab", { name: "Events" })).toBeNull();
     // Never trap the customer on one shop.
-    expect(screen.getByTestId("bh-other-shops")).toHaveAttribute("href", "/en/vendors");
+    expect(screen.getByTestId("bh-other-shops")).toHaveAttribute(
+      "href",
+      "/en/vendors",
+    );
     // The vendor's plan tier is never shown to buyers.
     expect(document.body.textContent).not.toMatch(/gold/i);
   });

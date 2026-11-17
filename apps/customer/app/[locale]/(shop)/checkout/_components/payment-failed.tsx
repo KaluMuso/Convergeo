@@ -56,7 +56,10 @@ export function PaymentFailed({
       </div>
 
       {errorMessage ? (
-        <p className="font-body text-sm text-danger" data-testid="payment-failed-error">
+        <p
+          className="font-body text-sm text-danger"
+          data-testid="payment-failed-error"
+        >
           {errorMessage}
         </p>
       ) : null}

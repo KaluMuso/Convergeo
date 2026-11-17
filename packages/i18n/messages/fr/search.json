@@ -26,7 +26,9 @@
   "noResults": {
     "title": "Aucun résultat pour « {query} »",
     "suggestionsTitle": "Essayez de rechercher",
-    "categoriesTitle": "Parcourir les catégories"
+    "categoriesTitle": "Parcourir les catégories",
+    "body": "Vérifiez l'orthographe ou essayez un mot plus général. Les produits qu'aucun vendeur ne propose actuellement ne sont pas affichés.",
+    "reset": "Effacer les filtres et onglets"
   },
   "unavailable": {
     "title": "Recherche indisponible",

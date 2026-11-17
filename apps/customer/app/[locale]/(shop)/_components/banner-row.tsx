@@ -18,7 +18,10 @@ type BannerItem = {
   tag?: string;
 };
 
-function parseBannerItems(payload: Record<string, unknown>, locale: string): BannerItem[] {
+function parseBannerItems(
+  payload: Record<string, unknown>,
+  locale: string,
+): BannerItem[] {
   const rawItems = payload.items;
   if (!Array.isArray(rawItems)) {
     return [];
@@ -44,10 +47,13 @@ function parseBannerItems(payload: Record<string, unknown>, locale: string): Ban
       {
         key: typeof record.key === "string" ? record.key : `banner-${index}`,
         title,
-        subtitle: typeof record.subtitle === "string" ? record.subtitle : undefined,
+        subtitle:
+          typeof record.subtitle === "string" ? record.subtitle : undefined,
         href,
         imagePublicId:
-          typeof record.image_public_id === "string" ? record.image_public_id : undefined,
+          typeof record.image_public_id === "string"
+            ? record.image_public_id
+            : undefined,
         tag: typeof record.tag === "string" ? record.tag : undefined,
       },
     ];
@@ -68,8 +74,14 @@ export function BannerRow({ slot, locale, t }: BannerRowProps) {
   }
 
   return (
-    <section aria-labelledby="home-banner-heading" className="flex flex-col gap-3">
-      <h2 id="home-banner-heading" className="font-display text-h2 text-display-ink">
+    <section
+      aria-labelledby="home-banner-heading"
+      className="flex flex-col gap-3"
+    >
+      <h2
+        id="home-banner-heading"
+        className="font-display text-h2 text-display-ink"
+      >
         {t("home.bannerRow.title")}
       </h2>
       <ul className="grid list-none gap-3 p-0">
@@ -93,7 +105,9 @@ export function BannerRow({ slot, locale, t }: BannerRowProps) {
                     {item.tag}
                   </span>
                 ) : null}
-                <span className="text-h3 font-semibold text-text">{item.title}</span>
+                <span className="text-h3 font-semibold text-text">
+                  {item.title}
+                </span>
                 {item.subtitle ? (
                   <span className="text-sm text-text-2">{item.subtitle}</span>
                 ) : null}

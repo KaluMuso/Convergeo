@@ -7,9 +7,14 @@ export type EventInstanceTime = {
 
 export function effectiveInstanceEndMs(instance: EventInstanceTime): number {
   const startsAtMs = new Date(instance.starts_at).getTime();
-  const endsAtMs = instance.ends_at ? new Date(instance.ends_at).getTime() : Number.NaN;
+  const endsAtMs = instance.ends_at
+    ? new Date(instance.ends_at).getTime()
+    : Number.NaN;
 
-  if (Number.isFinite(endsAtMs) && (!Number.isFinite(startsAtMs) || endsAtMs > startsAtMs)) {
+  if (
+    Number.isFinite(endsAtMs) &&
+    (!Number.isFinite(startsAtMs) || endsAtMs > startsAtMs)
+  ) {
     return endsAtMs;
   }
   if (Number.isFinite(startsAtMs)) {

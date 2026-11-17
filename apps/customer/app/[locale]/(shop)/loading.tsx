@@ -6,7 +6,11 @@ import { Skeleton } from "@vergeo/ui/src/skeleton";
  */
 export default function ShopLoading() {
   return (
-    <div data-testid="shop-loading" className="flex flex-col gap-6 lg:gap-10" aria-busy="true">
+    <div
+      data-testid="shop-loading"
+      className="flex flex-col gap-6 lg:gap-10"
+      aria-busy="true"
+    >
       <div className="motion-fade -mx-4 aspect-[16/9] overflow-hidden bg-bg-2 lg:-mx-6 lg:aspect-[21/9]">
         <Skeleton shape="block" className="h-full w-full" />
       </div>
@@ -17,12 +21,20 @@ export default function ShopLoading() {
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
         {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} shape="block" className="aspect-square w-full rounded-lg" />
+          <Skeleton
+            key={index}
+            shape="block"
+            className="aspect-square w-full rounded-lg"
+          />
         ))}
       </div>
       <div className="motion-stagger grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
         {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton key={index} shape="block" className="aspect-[3/4] w-full rounded-lg" />
+          <Skeleton
+            key={index}
+            shape="block"
+            className="aspect-[3/4] w-full rounded-lg"
+          />
         ))}
       </div>
     </div>

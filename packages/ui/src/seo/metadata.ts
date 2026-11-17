@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { buildAbsoluteUrl, buildLocaleCanonical, getSiteUrl } from "./json-ld";
 
-export const DEFAULT_SITE_NAME = "Vergeo5";
+export const DEFAULT_SITE_NAME = "Convergeo";
 
 export type SocialMetadataInput = {
   title: string;
