@@ -2880,65 +2880,6 @@ export type Database = {
           },
         ]
       }
-      event_rsvps: {
-        Row: {
-          created_at: string
-          event_id: string
-          instance_id: string
-          order_id: string | null
-          qty: number
-          ticket_type_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          event_id: string
-          instance_id: string
-          order_id?: string | null
-          qty: number
-          ticket_type_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          event_id?: string
-          instance_id?: string
-          order_id?: string | null
-          qty?: number
-          ticket_type_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_rsvps_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_rsvps_instance_id_fkey"
-            columns: ["instance_id"]
-            isOneToOne: false
-            referencedRelation: "event_instances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_rsvps_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_rsvps_ticket_type_id_fkey"
-            columns: ["ticket_type_id"]
-            isOneToOne: false
-            referencedRelation: "ticket_types"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       event_promo_redemptions: {
         Row: {
           created_at: string
@@ -3196,6 +3137,65 @@ export type Database = {
             columns: ["organiser_vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_rsvps: {
+        Row: {
+          created_at: string
+          event_id: string
+          instance_id: string
+          order_id: string | null
+          qty: number
+          ticket_type_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          instance_id: string
+          order_id?: string | null
+          qty: number
+          ticket_type_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          instance_id?: string
+          order_id?: string | null
+          qty?: number
+          ticket_type_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_rsvps_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "event_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_rsvps_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_rsvps_ticket_type_id_fkey"
+            columns: ["ticket_type_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_types"
             referencedColumns: ["id"]
           },
         ]
@@ -7194,61 +7194,6 @@ export type Database = {
           },
         ]
       }
-      service_payment_obligations: {
-        Row: {
-          amount_ngwee: number
-          checkout_group_id: string
-          created_at: string
-          id: string
-          job_id: string
-          leg: string
-          order_id: string
-          work_acknowledged_at: string | null
-        }
-        Insert: {
-          amount_ngwee: number
-          checkout_group_id: string
-          created_at?: string
-          id?: string
-          job_id: string
-          leg: string
-          order_id: string
-          work_acknowledged_at?: string | null
-        }
-        Update: {
-          amount_ngwee?: number
-          checkout_group_id?: string
-          created_at?: string
-          id?: string
-          job_id?: string
-          leg?: string
-          order_id?: string
-          work_acknowledged_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "service_payment_obligations_checkout_group_id_fkey"
-            columns: ["checkout_group_id"]
-            isOneToOne: true
-            referencedRelation: "checkout_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_payment_obligations_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_payment_obligations_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       service_free_bookings: {
         Row: {
           created_at: string
@@ -7301,7 +7246,69 @@ export type Database = {
             foreignKeyName: "service_free_bookings_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "service_free_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_payment_obligations: {
+        Row: {
+          amount_ngwee: number
+          checkout_group_id: string
+          created_at: string
+          id: string
+          job_id: string
+          leg: string
+          order_id: string
+          work_acknowledged_at: string | null
+        }
+        Insert: {
+          amount_ngwee: number
+          checkout_group_id: string
+          created_at?: string
+          id?: string
+          job_id: string
+          leg: string
+          order_id: string
+          work_acknowledged_at?: string | null
+        }
+        Update: {
+          amount_ngwee?: number
+          checkout_group_id?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          leg?: string
+          order_id?: string
+          work_acknowledged_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_payment_obligations_checkout_group_id_fkey"
+            columns: ["checkout_group_id"]
+            isOneToOne: true
+            referencedRelation: "checkout_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_payment_obligations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_payment_obligations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -9553,6 +9560,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      transition_service_free_booking: {
+        Args: { p_actor: string; p_booking_id: string; p_to: string }
+        Returns: string
+      }
       transition_vendor_suspend: {
         Args: {
           p_actor: string
@@ -9563,14 +9574,6 @@ export type Database = {
         Returns: string
       }
       vendor_follower_count: { Args: { p_vendor_id: string }; Returns: number }
-      transition_service_free_booking: {
-        Args: {
-          p_actor: string
-          p_booking_id: string
-          p_to: string
-        }
-        Returns: string
-      }
       vendor_licence_is_valid: {
         Args: { p_class: string; p_vendor_id: string }
         Returns: boolean
