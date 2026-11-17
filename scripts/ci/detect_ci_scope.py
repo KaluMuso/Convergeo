@@ -58,6 +58,10 @@ DB = re.compile(
     r"^(?:supabase/|packages/types/src/db\.ts$|scripts/(?:db|seed)/|scripts/seed.*\.py$)"
 )
 
+# Inputs of the typegen/migration-ledger proof. Any PR (including those into
+# release/*) touching these must run "Database / typegen drift".
+TYPEGEN_INPUTS = re.compile(r"^(?:supabase/migrations/|packages/types/)")
+
 API = re.compile(r"^(?:services/|infra/api\.Dockerfile$)")
 
 # Money, auth and migration paths. A change here keeps every real-stack tier on,
@@ -147,7 +151,7 @@ def classify(
     # The 45 minute migration-ledger proof only depends on the schema and typegen
     # inputs. API-only changes cannot alter it, but the final gate into master
     # always runs everything for API changes.
-    run_typegen = db or (api and to_master)
+    run_typegen = db or _any(TYPEGEN_INPUTS, files) or (api and to_master)
     run_heavy = backend and (to_master or money)
     run_perf = (frontend or backend) and (to_master or money)
 
