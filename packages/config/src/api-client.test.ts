@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, createApiClient } from "./api-client";
+import { ApiError, createApiClient, setApiDefaultHeaders } from "./api-client";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -80,5 +80,32 @@ describe("createApiClient", () => {
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(new Headers(init.headers).get("Authorization")).toBe("Bearer secret-token");
+  });
+
+  it("adds registered default headers without overriding explicit ones", async () => {
+    const fetchMock = vi.fn().mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    setApiDefaultHeaders(() => ({ "X-Vendor-Branch": "branch-1" }));
+    try {
+      const client = createApiClient({ baseUrl: "https://api.test" });
+      await client.request("/a");
+      await client.request("/b", { headers: { "X-Vendor-Branch": "explicit" } });
+      const first = new Headers(fetchMock.mock.calls[0]?.[1]?.headers as HeadersInit);
+      const second = new Headers(fetchMock.mock.calls[1]?.[1]?.headers as HeadersInit);
+      expect(first.get("X-Vendor-Branch")).toBe("branch-1");
+      expect(second.get("X-Vendor-Branch")).toBe("explicit");
+      setApiDefaultHeaders(() => null);
+      await client.request("/c");
+      const third = new Headers(fetchMock.mock.calls[2]?.[1]?.headers as HeadersInit);
+      expect(third.has("X-Vendor-Branch")).toBe(false);
+    } finally {
+      setApiDefaultHeaders(null);
+    }
   });
 });

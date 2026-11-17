@@ -25,11 +25,16 @@ type SearchAppliedFilterBarProps = {
   labels: SearchAppliedFilterBarLabels;
 };
 
-function chipLabel(chip: SearchFilterChip, labels: SearchAppliedFilterBarLabels): string {
+function chipLabel(
+  chip: SearchFilterChip,
+  labels: SearchAppliedFilterBarLabels,
+): string {
   switch (chip.kind) {
     case "price":
       if (chip.min && chip.max) {
-        return labels.priceRange.replace("{min}", chip.min).replace("{max}", chip.max);
+        return labels.priceRange
+          .replace("{min}", chip.min)
+          .replace("{max}", chip.max);
       }
       if (chip.min) {
         return labels.minPriceOnly.replace("{min}", chip.min);
@@ -70,7 +75,10 @@ export function SearchAppliedFilterBar({
           {labels.clearAll}
         </Link>
       </div>
-      <ul className="m-0 flex list-none flex-wrap gap-2 p-0" aria-label={labels.ariaLabel}>
+      <ul
+        className="m-0 flex list-none flex-wrap gap-2 p-0"
+        aria-label={labels.ariaLabel}
+      >
         {chips.map((chip) => {
           const label = chipLabel(chip, labels);
           const removeLabel = labels.removeChip.replace("{filter}", label);

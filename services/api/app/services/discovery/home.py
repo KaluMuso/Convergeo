@@ -139,7 +139,6 @@ async def build_home_feed(
         lambda: list_catalog(
             client,
             PlpFilterState(sort="newest", limit=newest_limit),
-            include_wholesale=False,
         ),
         fallback=empty_catalog,
     )
@@ -160,7 +159,6 @@ async def build_home_feed(
             lambda path=path: list_catalog(
                 client,
                 PlpFilterState(category_path=path, sort="newest", limit=department_limit),
-                include_wholesale=False,
             ),
             fallback=empty_catalog,
         )

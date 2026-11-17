@@ -17,4 +17,4 @@ export {
 } from "./consent";
 export { type AnalyticsEventMap, type AnalyticsEventName, type MoneyNgwee } from "./events";
 export { getSessionId } from "./session";
-export { flush, MAX_BATCH, track } from "./track";
+export { flush, isV2Tracking, MAX_BATCH, track, trackPageView } from "./track";

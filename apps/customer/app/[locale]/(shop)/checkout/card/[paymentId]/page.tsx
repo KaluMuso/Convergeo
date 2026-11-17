@@ -73,7 +73,14 @@ declare global {
 }
 
 type ViewState =
-  "loading" | "opening" | "verifying" | "success" | "failed" | "held" | "pending" | "error";
+  | "loading"
+  | "opening"
+  | "verifying"
+  | "success"
+  | "failed"
+  | "held"
+  | "pending"
+  | "error";
 
 function getApiBaseUrl(): string | null {
   return resolveApiBaseUrl();
@@ -129,10 +136,13 @@ export default function CardCheckoutPage() {
   );
   const groupKind = searchParams.get("kind");
   const checkoutPaymentPath = useMemo(() => {
-    if (groupRoutes && groupKind === "service_deposit") return groupRoutes.checkout;
+    if (groupRoutes && groupKind === "service_deposit")
+      return groupRoutes.checkout;
     const group = searchParams.get("group");
     return group &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(group)
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        group,
+      )
       ? `/${locale}/checkout?group=${encodeURIComponent(group)}&retry=1`
       : `/${locale}/checkout`;
   }, [groupKind, groupRoutes, locale, searchParams]);
@@ -155,10 +165,13 @@ export default function CardCheckoutPage() {
         getToken: () => session.access_token,
       });
       try {
-        return await client.request<VerifyResult>(`/payments/card/${paymentId}/verify`, {
-          method: "POST",
-          body: JSON.stringify({ client_status: clientStatus }),
-        });
+        return await client.request<VerifyResult>(
+          `/payments/card/${paymentId}/verify`,
+          {
+            method: "POST",
+            body: JSON.stringify({ client_status: clientStatus }),
+          },
+        );
       } catch {
         setViewState("error");
         return null;
@@ -224,7 +237,9 @@ export default function CardCheckoutPage() {
     const returnStatus = searchParams.get("status");
     if (returnStatus === "success" || returnStatus === "failed") {
       void (async () => {
-        const result = await verifyReturn(returnStatus === "success" ? "success" : "failed");
+        const result = await verifyReturn(
+          returnStatus === "success" ? "success" : "failed",
+        );
         handleVerifyOutcome(result);
       })();
       return;
@@ -348,7 +363,9 @@ export default function CardCheckoutPage() {
           className="w-full px-5 text-sm"
           LinkComponent={Link}
         >
-          {successHref.includes("/account/jobs/") ? tGroup("viewJob") : t("viewOrders")}
+          {successHref.includes("/account/jobs/")
+            ? tGroup("viewJob")
+            : t("viewOrders")}
         </LinkButton>
       ) : null}
 

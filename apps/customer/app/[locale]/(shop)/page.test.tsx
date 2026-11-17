@@ -8,7 +8,9 @@ import { describe, expect, it, vi } from "vitest";
 // as `INVALID_MESSAGE` (5000+ occurrences, see apps/customer/middleware.ts).
 // The page must now bail out via `notFound()` before any of that work runs.
 
-const { loadHomeMerchDataMock } = vi.hoisted(() => ({ loadHomeMerchDataMock: vi.fn() }));
+const { loadHomeMerchDataMock } = vi.hoisted(() => ({
+  loadHomeMerchDataMock: vi.fn(),
+}));
 
 vi.mock("@vergeo/i18n", () => ({
   DEFAULT_LOCALE: "en",
@@ -42,7 +44,9 @@ vi.mock("./_components/directory/vendor-ladder-labels", () => ({
   buildVendorLadderLabels: vi.fn(),
 }));
 vi.mock("./_components/events-row", () => ({ EventsRow: () => null }));
-vi.mock("./_components/featured-collections", () => ({ FeaturedCollections: () => null }));
+vi.mock("./_components/featured-collections", () => ({
+  FeaturedCollections: () => null,
+}));
 vi.mock("./_components/flash-deal", () => ({ FlashDeal: () => null }));
 vi.mock("./_components/hero", () => ({ HomeHero: () => null }));
 vi.mock("./_components/home-default", () => ({
@@ -58,12 +62,16 @@ vi.mock("./_components/home-layout", () => ({ planHomeLayout: vi.fn() }));
 vi.mock("./_components/home-recently-viewed-rail", () => ({
   HomeRecentlyViewedRail: () => null,
 }));
-vi.mock("./_components/home-trust-strip", () => ({ HomeTrustStrip: () => null }));
+vi.mock("./_components/home-trust-strip", () => ({
+  HomeTrustStrip: () => null,
+}));
 vi.mock("./_components/merch-data", () => ({
   loadHomeMerchData: loadHomeMerchDataMock,
   pickSlot: vi.fn(),
 }));
-vi.mock("./_components/merch-preview-banner", () => ({ MerchPreviewBanner: () => null }));
+vi.mock("./_components/merch-preview-banner", () => ({
+  MerchPreviewBanner: () => null,
+}));
 
 import ShopHomePage, { generateMetadata } from "./page";
 

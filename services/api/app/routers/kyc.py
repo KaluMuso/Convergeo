@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.kyc.document_evidence import validate_kyc_document_evidence
 from app.services.kyc.name_match import MomoOperator, resolve_and_score_momo_name
 from app.services.kyc.state_machine import (
@@ -17,6 +18,7 @@ from app.services.kyc.state_machine import (
     transition_resubmit,
     transition_submit,
 )
+from app.services.vendors.slug import is_placeholder_slug, unique_vendor_slug
 from fastapi import APIRouter, Body, Depends
 from pydantic import BaseModel, Field, field_validator
 
@@ -228,12 +230,13 @@ def _find_vendor_for_owner(
     owner_user_id: str,
 ) -> dict[str, Any] | None:
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select(
             "id, owner_user_id, status, kyc_tier, preferred_badge, archetype, "
             "business_archetype, display_name, slug"
         )
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )
@@ -268,6 +271,32 @@ def _draft_slug_for_owner(owner_user_id: str) -> str:
     return f"draft-{compact}"
 
 
+def _readable_slug_if_placeholder(
+    service_client: ServiceRoleClient,
+    vendor_id: str,
+    business_name: str,
+) -> str | None:
+    """A readable slug when the vendor still has the ``draft-...`` placeholder.
+
+    The vendor's one-time slug change (``caps_snapshot.slug_locked``) is not
+    consumed by this system rename.
+    """
+    try:
+        response = (
+            service_client.client.table("vendors")
+            .select("slug")
+            .eq("id", vendor_id)
+            .maybe_single()
+            .execute()
+        )
+    except Exception:
+        return None
+    row = _row_from_response(response)
+    if row is None or not is_placeholder_slug(str(row.get("slug") or "")):
+        return None
+    return unique_vendor_slug(service_client, business_name, vendor_id=vendor_id)
+
+
 def _persist_vendor_basics(
     service_client: ServiceRoleClient,
     vendor_id: str,
@@ -284,14 +313,13 @@ def _persist_vendor_basics(
         patch["archetype"] = archetype
     if business_archetype:
         patch["business_archetype"] = business_archetype
+    if business_name:
+        slug = _readable_slug_if_placeholder(service_client, vendor_id, business_name)
+        if slug is not None:
+            patch["slug"] = slug
     if not patch:
         return None
-    response = (
-        service_client.client.table("vendors")
-        .update(patch)
-        .eq("id", vendor_id)
-        .execute()
-    )
+    response = service_client.client.table("vendors").update(patch).eq("id", vendor_id).execute()
     return _row_from_response(response)
 
 
@@ -319,7 +347,11 @@ def _create_draft_vendor(
 ) -> dict[str, Any]:
     """Insert one draft vendors row for the owner. Never assigns user_roles.vendor."""
     display_name = business_name or _DEFAULT_DRAFT_DISPLAY_NAME
-    slug = _draft_slug_for_owner(owner_user_id)
+    slug = (
+        unique_vendor_slug(service_client, business_name)
+        if business_name
+        else _draft_slug_for_owner(owner_user_id)
+    )
     payload: dict[str, Any] = {
         "owner_user_id": owner_user_id,
         "slug": slug,
@@ -377,9 +409,7 @@ def _serialize_momo_match(payload: dict[str, Any] | None) -> MomoNameMatchRespon
         phone=str(payload.get("phone", "")),
         operator=str(payload.get("operator", "")),
         resolved_name=(
-            str(payload["resolved_name"])
-            if isinstance(payload.get("resolved_name"), str)
-            else None
+            str(payload["resolved_name"]) if isinstance(payload.get("resolved_name"), str) else None
         ),
         legal_name=str(payload.get("legal_name", "")),
         match_score=float(payload.get("match_score", 0.0)),
@@ -406,11 +436,7 @@ def _build_status_response(
         vendor_row=vendor,
     )
     # Never surface a bare stored tier as the capability tier when orphaned.
-    public_tier = (
-        eligibility.effective_tier
-        if eligibility.is_auditable_approved
-        else None
-    )
+    public_tier = eligibility.effective_tier if eligibility.is_auditable_approved else None
     return KycStatusResponse(
         application_status=application_status,
         vendor_status=str(vendor.get("status", "draft")),
@@ -508,16 +534,10 @@ async def update_kyc_draft(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> KycStatusResponse:
     """Persist business basics for the caller's draft/pending application."""
-    if (
-        body.business_name is None
-        and body.archetype is None
-        and body.business_archetype is None
-    ):
+    if body.business_name is None and body.archetype is None and body.business_archetype is None:
         raise AppError(
             code="validation_error",
-            message=(
-                "At least one of business_name, archetype, or business_archetype is required"
-            ),
+            message=("At least one of business_name, archetype, or business_archetype is required"),
             http_status=422,
         )
     vendor = _load_vendor_for_owner(service_client, current_user.id)
@@ -571,7 +591,8 @@ async def submit_kyc(
     return KycSubmitResponse(
         application_status=KycApplicationStatus.SUBMITTED,
         kyc_record_id=kyc_record_id,
-        momo_name_match=_serialize_momo_match(momo_result.to_json()) or MomoNameMatchResponse(
+        momo_name_match=_serialize_momo_match(momo_result.to_json())
+        or MomoNameMatchResponse(
             phone=body.momo_phone,
             operator=momo_result.operator,
             resolved_name=momo_result.resolved_name,
@@ -631,7 +652,8 @@ async def resubmit_kyc(
     return KycSubmitResponse(
         application_status=KycApplicationStatus.SUBMITTED,
         kyc_record_id=str(result["kyc_record"]["id"]),
-        momo_name_match=_serialize_momo_match(momo_result.to_json()) or MomoNameMatchResponse(
+        momo_name_match=_serialize_momo_match(momo_result.to_json())
+        or MomoNameMatchResponse(
             phone=body.momo_phone,
             operator=momo_result.operator,
             resolved_name=momo_result.resolved_name,

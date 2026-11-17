@@ -13,7 +13,10 @@ import {
   catalogDeliveryLabels,
   catalogMadeToOrderLabels,
 } from "../_components/plp/delivery-labels";
-import { ListingGrid, type CatalogListing } from "../_components/plp/listing-grid";
+import {
+  ListingGrid,
+  type CatalogListing,
+} from "../_components/plp/listing-grid";
 
 import { DealCountdown } from "./_components/deal-countdown";
 
@@ -33,7 +36,9 @@ async function getTranslator(locale: string) {
   });
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslator(locale);
   return {
@@ -58,7 +63,9 @@ export default async function DealsPage({ params }: PageProps) {
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 pb-8">
       <div>
-        <h1 className="m-0 font-display text-h1 font-bold text-display-ink">{t("deals.title")}</h1>
+        <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
+          {t("deals.title")}
+        </h1>
         <p className="m-0 mt-1 text-sm text-text-2">{t("deals.subtitle")}</p>
       </div>
 
@@ -69,7 +76,11 @@ export default async function DealsPage({ params }: PageProps) {
           title={t("deals.emptyTitle")}
           body={t("deals.emptyBody")}
           action={
-            <LinkButton href={`/${locale}/c/all`} variant="primary" LinkComponent={Link}>
+            <LinkButton
+              href={`/${locale}/c/all`}
+              variant="primary"
+              LinkComponent={Link}
+            >
               {t("deals.browse")}
             </LinkButton>
           }

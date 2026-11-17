@@ -5,6 +5,7 @@ import { shouldShowSampleListingBadge } from "../demo-listing";
 
 import { ListingCard, type ListingCardLabels } from "./listing-card";
 
+import type { OfferBadge } from "../offers/offer-badge";
 import type { ReactNode } from "react";
 
 export type CatalogListing = {
@@ -30,6 +31,8 @@ export type CatalogListing = {
   productClass?: string;
   fulfilmentMode?: string;
   leadTimeDays?: number | null;
+  /** W8 offers: live offer this listing takes part in (flag `bundles`). */
+  offerBadge?: OfferBadge;
 };
 
 type ListingGridLabels = ListingCardLabels;
@@ -48,9 +51,12 @@ type ListingGridProps = {
    * `rail`: single horizontally scrolling row (deal / department rails).
    */
   layout?: "grid" | "rail";
+  /** Optional per-card action rendered under the card (e.g. storefront compare). */
+  renderFooter?: (listing: CatalogListing) => ReactNode;
 };
 
-const LISTING_MEDIA_SIZES = "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
+const LISTING_MEDIA_SIZES =
+  "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
 
 function GridWrapper({ children }: { children: ReactNode }) {
   return (
@@ -90,6 +96,7 @@ export function ListingGrid({
   showSampleBadge = shouldShowSampleListingBadge(),
   density = "compact",
   layout = "grid",
+  renderFooter,
 }: ListingGridProps) {
   const isRail = layout === "rail";
   const Wrapper = isRail ? RailWrapper : GridWrapper;
@@ -120,7 +127,17 @@ export function ListingGrid({
             density={density}
           />
         );
-        return isRail ? <li key={listing.id}>{card}</li> : card;
+        if (isRail) return <li key={listing.id}>{card}</li>;
+        const footer = renderFooter?.(listing);
+        if (!footer) {
+          return card;
+        }
+        return (
+          <div key={listing.id} className="flex min-w-0 flex-col gap-1.5">
+            {card}
+            {footer}
+          </div>
+        );
       })}
     </Wrapper>
   );

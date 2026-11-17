@@ -26,7 +26,10 @@ const labels = {
 };
 
 function setGeolocation(value: unknown): void {
-  Object.defineProperty(global.navigator, "geolocation", { configurable: true, value });
+  Object.defineProperty(global.navigator, "geolocation", {
+    configurable: true,
+    value,
+  });
 }
 
 afterEach(() => {
@@ -73,8 +76,10 @@ describe("NearMeToggle", () => {
   it("falls back to Lusaka coords when geolocation is denied", async () => {
     const user = userEvent.setup();
     setGeolocation({
-      getCurrentPosition: (_success: PositionCallback, error: PositionErrorCallback) =>
-        error({ code: 1 } as GeolocationPositionError),
+      getCurrentPosition: (
+        _success: PositionCallback,
+        error: PositionErrorCallback,
+      ) => error({ code: 1 } as GeolocationPositionError),
     });
 
     render(<NearMeToggle locale="en" labels={labels} />);

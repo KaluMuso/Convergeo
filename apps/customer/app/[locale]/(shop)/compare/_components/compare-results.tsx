@@ -16,7 +16,11 @@ type CompareResultsProps = {
   logisticsPillLabels: Pick<LogisticsPillLabels, "delivery" | "pickup">;
 };
 
-export function CompareResults({ listings, labels, logisticsPillLabels }: CompareResultsProps) {
+export function CompareResults({
+  listings,
+  labels,
+  logisticsPillLabels,
+}: CompareResultsProps) {
   const [selectedListingId, setSelectedListingId] = useState<string | null>(
     () => listings[0]?.id ?? null,
   );

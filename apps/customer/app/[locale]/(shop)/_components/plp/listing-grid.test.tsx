@@ -56,10 +56,20 @@ describe("ListingGrid", () => {
   });
 
   it("uses a denser five-column marketplace grid at wide desktop", () => {
-    render(<ListingGrid locale="en" listings={[listing()]} labels={labels} density="compact" />);
+    render(
+      <ListingGrid
+        locale="en"
+        listings={[listing()]}
+        labels={labels}
+        density="compact"
+      />,
+    );
     const grid = screen.getByTestId("listing-grid");
     expect(grid).toHaveClass("gap-2", "xl:grid-cols-5");
-    expect(screen.getByTestId("product-card")).toHaveAttribute("data-density", "compact");
+    expect(screen.getByTestId("product-card")).toHaveAttribute(
+      "data-density",
+      "compact",
+    );
   });
 
   it("is 2 columns at 360px and steps up to 6 on wide desktop", () => {
@@ -137,7 +147,13 @@ describe("ListingGrid", () => {
   });
 
   it("links standalone listings by listing id when productSlug is null", () => {
-    render(<ListingGrid locale="en" listings={[listing({ productSlug: null })]} labels={labels} />);
+    render(
+      <ListingGrid
+        locale="en"
+        listings={[listing({ productSlug: null })]}
+        labels={labels}
+      />,
+    );
     expect(screen.getByRole("link")).toHaveAttribute("href", "/en/l/listing-1");
   });
 });

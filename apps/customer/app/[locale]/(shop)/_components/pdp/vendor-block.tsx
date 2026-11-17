@@ -30,7 +30,9 @@ export function VendorBlock({
   viewStoreLabel,
 }: VendorBlockProps) {
   const ratingText =
-    vendor.ratingAvg !== null && vendor.ratingCount > 0 ? ratingLabel : noReviewsLabel;
+    vendor.ratingAvg !== null && vendor.ratingCount > 0
+      ? ratingLabel
+      : noReviewsLabel;
 
   return (
     <section
@@ -38,7 +40,9 @@ export function VendorBlock({
       className="rounded border border-border bg-surface p-4"
       style={{ borderRadius: "var(--r)" }}
     >
-      <h2 className="mb-3 font-display text-lg font-semibold text-text">{heading}</h2>
+      <h2 className="mb-3 font-display text-lg font-semibold text-text">
+        {heading}
+      </h2>
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">

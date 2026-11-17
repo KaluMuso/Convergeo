@@ -37,7 +37,8 @@ export function ForYouSlot({
     let cancelled = false;
     const run = async () => {
       try {
-        const { getReadyCustomerSession } = await import("../../../../../lib/customer-session");
+        const { getReadyCustomerSession } =
+          await import("../../../../../lib/customer-session");
         const session = await getReadyCustomerSession();
         if (!session?.access_token || cancelled) return;
         const [{ fetchFeedPage }, { FeedSectionView }] = await Promise.all([
@@ -47,9 +48,11 @@ export function ForYouSlot({
         const page = await fetchFeedPage("v1.0", locale, session.access_token);
         const section = page.sections.find(
           (candidate) =>
-            candidate.section_type === "for_you" && candidate.explanation?.basis === "personal",
+            candidate.section_type === "for_you" &&
+            candidate.explanation?.basis === "personal",
         );
-        if (section && !cancelled) setPersonal({ section, View: FeedSectionView });
+        if (section && !cancelled)
+          setPersonal({ section, View: FeedSectionView });
       } catch {
         // Keep the guest rail.
       }

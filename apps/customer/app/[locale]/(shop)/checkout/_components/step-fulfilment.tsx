@@ -7,7 +7,13 @@ import { Stepper } from "@vergeo/ui/src/stepper";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import {
@@ -24,17 +30,42 @@ import {
   StepContact,
   type ContactStepLabels,
 } from "./step-contact";
-import { StepReview, type ReviewPayment, type ReviewStepLabels } from "./step-review";
+import {
+  StepReview,
+  type ReviewPayment,
+  type ReviewStepLabels,
+} from "./step-review";
 
-
-import type { PaymentOptions, PaymentStepLabels, ValidatedPayment } from "./step-payment";
-import type { FulfilmentMode, LeadTimePhrases, SaleUnit } from "../../_components/sale-quantity";
+import type { CheckoutExtrasLabels } from "./checkout-extras";
+import type {
+  PaymentOptions,
+  PaymentStepLabels,
+  ValidatedPayment,
+} from "./step-payment";
+import type {
+  FulfilmentMode,
+  LeadTimePhrases,
+  SaleUnit,
+} from "../../_components/sale-quantity";
 
 /** Lazy — step 3 is only reached after contact + fulfilment; keeps /checkout first-load JS in budget. */
-const StepPayment = dynamic(() => import("./step-payment").then((mod) => mod.StepPayment), {
-  ssr: false,
-  loading: () => <div aria-hidden="true" className="min-h-48" />,
-});
+const StepPayment = dynamic(
+  () => import("./step-payment").then((mod) => mod.StepPayment),
+  {
+    ssr: false,
+    loading: () => <div aria-hidden="true" className="min-h-48" />,
+  },
+);
+
+// Coupon + gift options appear only on the review step: keep them out of the
+// checkout entry bundle (customer route budget, bundle guard).
+const CheckoutExtras = dynamic(
+  () => import("./checkout-extras").then((mod) => mod.CheckoutExtras),
+  {
+    ssr: false,
+    loading: () => <div aria-hidden="true" className="min-h-24" />,
+  },
+);
 
 export type PickupLocation = {
   landmark: string;
@@ -64,7 +95,28 @@ export type VendorGroupSession = {
   }>;
   subtotal_ngwee: number;
   delivery_eligible: boolean;
+  /** False when a listing in the group does not offer this route (default true). */
+  delivery_offered?: boolean;
+  pickup_offered?: boolean;
   pickup_location: PickupLocation | null;
+};
+
+/** Unified checkout: an event-ticket line (own order, prepaid only). */
+export type CheckoutTicketLine = {
+  id: string;
+  item_type: "event_ticket";
+  event_id: string;
+  event_title: string;
+  ticket_type_id: string;
+  type_name: string;
+  instance_id: string;
+  starts_at?: string | null;
+  vendor_id: string;
+  qty: number;
+  unit_price_ngwee: number;
+  line_total_ngwee: number;
+  list_line_total_ngwee?: number | null;
+  offer_id?: string | null;
 };
 
 export type CheckoutSession = {
@@ -74,6 +126,10 @@ export type CheckoutSession = {
   vendor_groups: VendorGroupSession[];
   subtotal_ngwee: number;
   contact_skipped: boolean;
+  ticket_lines?: CheckoutTicketLine[];
+  platform_fee_ngwee?: number;
+  total_ngwee?: number;
+  cod_allowed?: boolean;
 };
 
 export type FulfilmentStepLabels = {
@@ -91,6 +147,8 @@ export type FulfilmentStepLabels = {
   pickupAt: (landmark: string) => string;
   pickupHours: (hours: string) => string;
   outsideZone: string;
+  /** Shown when the seller does not offer a hand-over route for an item. */
+  notOffered?: string;
   mixedHint: string;
   continue: string;
   subtotal: string;
@@ -150,7 +208,10 @@ export type FulfilmentTotals = {
 /** Lazy — step 2 is only reached after contact; keeps /checkout first-load JS in budget. */
 const StepFulfilment = dynamic(
   () => import("./step-fulfilment-step").then((mod) => mod.StepFulfilment),
-  { ssr: false, loading: () => <div aria-hidden="true" className="min-h-48" /> },
+  {
+    ssr: false,
+    loading: () => <div aria-hidden="true" className="min-h-48" />,
+  },
 );
 
 export type CheckoutShellLabels = {
@@ -168,13 +229,18 @@ export type CheckoutShellLabels = {
     resendInTemplate: string;
     throttledTemplate: string;
   };
-  fulfilment: Omit<FulfilmentStepLabels, "zoneFee" | "zoneLabel" | "pickupAt" | "pickupHours"> & {
+  fulfilment: Omit<
+    FulfilmentStepLabels,
+    "zoneFee" | "zoneLabel" | "pickupAt" | "pickupHours"
+  > & {
     zoneFeeTemplate: string;
     zoneLabelTemplate: string;
     pickupAtTemplate: string;
     pickupHoursTemplate: string;
   };
-  payment: Omit<PaymentStepLabels, "codIneligible"> & { codIneligibleTemplate: string };
+  payment: Omit<PaymentStepLabels, "codIneligible"> & {
+    codIneligibleTemplate: string;
+  };
   review: {
     title: string;
     subtitle: string;
@@ -203,6 +269,7 @@ export type CheckoutShellLabels = {
     escrowStep3: string;
     consentLabel: string;
     consentRequired: string;
+    deliveryConsent?: { label: string; hint: string; saveFailed: string };
     placeOrder: string;
     loading: string;
     placingOrder: string;
@@ -212,6 +279,11 @@ export type CheckoutShellLabels = {
     nextCard: string;
     nextCod: string;
     codGuide?: ReviewStepLabels["codGuide"];
+    typeProducts?: string;
+    typeEventTickets?: string;
+    ticketLine?: string;
+    platformFee?: string;
+    discount?: string;
   };
   countdown: Omit<CountdownLabels, "ariaLive"> & { ariaLiveTemplate: string };
   reservationExpired: string;
@@ -222,9 +294,14 @@ export type CheckoutShellLabels = {
   backToCart: string;
   /** `{cap}` — shown at checkout start when no payment method can take this total. */
   overCodCapTemplate?: string;
+  /** Coupon + gift disclosures (only rendered when their flags are on). */
+  extras?: CheckoutExtrasLabels;
 };
 
-function fillTemplate(template: string, values: Record<string, string | number>): string {
+function fillTemplate(
+  template: string,
+  values: Record<string, string | number>,
+): string {
   return Object.entries(values).reduce(
     (result, [key, value]) => result.replace(`{${key}}`, String(value)),
     template,
@@ -248,6 +325,7 @@ type ResolvedCheckoutLabels = {
   retry: string;
   backToCart: string;
   overCodCap: ((cap: string) => string) | null;
+  extras?: CheckoutExtrasLabels;
 };
 
 function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
@@ -291,12 +369,17 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       landmarkPlaceholder: messages.fulfilment.landmarkPlaceholder,
       landmarkHelp: messages.fulfilment.landmarkHelp,
       addressLabel: messages.fulfilment.addressLabel,
-      zoneFee: (amount) => fillTemplate(messages.fulfilment.zoneFeeTemplate, { amount }),
+      zoneFee: (amount) =>
+        fillTemplate(messages.fulfilment.zoneFeeTemplate, { amount }),
       zoneFree: messages.fulfilment.zoneFree,
-      zoneLabel: (zone) => fillTemplate(messages.fulfilment.zoneLabelTemplate, { zone }),
-      pickupAt: (landmark) => fillTemplate(messages.fulfilment.pickupAtTemplate, { landmark }),
-      pickupHours: (hours) => fillTemplate(messages.fulfilment.pickupHoursTemplate, { hours }),
+      zoneLabel: (zone) =>
+        fillTemplate(messages.fulfilment.zoneLabelTemplate, { zone }),
+      pickupAt: (landmark) =>
+        fillTemplate(messages.fulfilment.pickupAtTemplate, { landmark }),
+      pickupHours: (hours) =>
+        fillTemplate(messages.fulfilment.pickupHoursTemplate, { hours }),
       outsideZone: messages.fulfilment.outsideZone,
+      notOffered: messages.fulfilment.notOffered,
       mixedHint: messages.fulfilment.mixedHint,
       continue: messages.fulfilment.continue,
       subtotal: messages.fulfilment.subtotal,
@@ -323,7 +406,8 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       countryCode: messages.payment.countryCode,
       nationalNumber: messages.payment.nationalNumber,
       cardExplainer: messages.payment.cardExplainer,
-      codIneligible: (cap) => fillTemplate(messages.payment.codIneligibleTemplate, { cap }),
+      codIneligible: (cap) =>
+        fillTemplate(messages.payment.codIneligibleTemplate, { cap }),
       codUnavailableTitle: messages.payment.codUnavailableTitle,
       selected: messages.payment.selected,
       unavailable: messages.payment.unavailable,
@@ -366,6 +450,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       escrowStep3: messages.review.escrowStep3,
       consentLabel: messages.review.consentLabel,
       consentRequired: messages.review.consentRequired,
+      deliveryConsent: messages.review.deliveryConsent,
       placeOrder: messages.review.placeOrder,
       loading: messages.review.loading,
       placingOrder: messages.review.placingOrder,
@@ -375,11 +460,18 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       nextCard: messages.review.nextCard,
       nextCod: messages.review.nextCod,
       codGuide: messages.review.codGuide,
+      typeProducts: messages.review.typeProducts,
+      typeEventTickets: messages.review.typeEventTickets,
+      ticketLine: messages.review.ticketLine,
+      platformFee: messages.review.platformFee,
+      discount: messages.review.discount,
     },
+    extras: messages.extras,
     countdown: {
       label: messages.countdown.label,
       expired: messages.countdown.expired,
-      ariaLive: (time) => fillTemplate(messages.countdown.ariaLiveTemplate, { time }),
+      ariaLive: (time) =>
+        fillTemplate(messages.countdown.ariaLiveTemplate, { time }),
     },
     reservationExpired: messages.reservationExpired,
     loading: messages.loading,
@@ -398,7 +490,10 @@ type CheckoutShellProps = {
   labels: CheckoutShellLabels;
 };
 
-export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellProps) {
+export function CheckoutShell({
+  locale,
+  labels: messageLabels,
+}: CheckoutShellProps) {
   const identity = useSession();
   // Reset all checkout state (including child stores and order idempotency) at
   // the render boundary. A returning account is still a different generation.
@@ -419,7 +514,12 @@ function IdentityCheckoutShell({
 }: CheckoutShellProps & { identity: ReturnType<typeof useSession> }) {
   const labels = resolveLabels(messageLabels);
   const router = useRouter();
-  const { session, loading: sessionLoading, generation, error: authError } = identity;
+  const {
+    session,
+    loading: sessionLoading,
+    generation,
+    error: authError,
+  } = identity;
   const retrying = useRef(false);
   const mounted = useRef(false);
   const started = useRef(false);
@@ -440,10 +540,15 @@ function IdentityCheckoutShell({
     );
   }, [generation, session?.user.id]);
   const [step, setStep] = useState(0);
-  const [checkoutSession, setCheckoutSession] = useState<CheckoutSession | null>(null);
-  const [fulfilmentTotals, setFulfilmentTotals] = useState<FulfilmentTotals | null>(null);
-  const [paymentSelection, setPaymentSelection] = useState<ValidatedPayment | null>(null);
-  const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(null);
+  const [checkoutSession, setCheckoutSession] =
+    useState<CheckoutSession | null>(null);
+  const [fulfilmentTotals, setFulfilmentTotals] =
+    useState<FulfilmentTotals | null>(null);
+  const [paymentSelection, setPaymentSelection] =
+    useState<ValidatedPayment | null>(null);
+  const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(
+    null,
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(false);
   // Formatted COD cap when this total can be paid no way at all (over the COD
@@ -470,17 +575,29 @@ function IdentityCheckoutShell({
         });
         // Auth may remount this shell before the OTP component resumes. Persist
         // the accepted account phone before asking the server for its snapshot.
-        const contact = await client.request<{ verified: boolean }>("/checkout/steps/contact", {
-          method: "POST",
-          body: JSON.stringify(session?.user.phone ? { phone: session.user.phone } : {}),
-        });
+        const contact = await client.request<{ verified: boolean }>(
+          "/checkout/steps/contact",
+          {
+            method: "POST",
+            body: JSON.stringify(
+              session?.user.phone ? { phone: session.user.phone } : {},
+            ),
+          },
+        );
         if (!isCurrent()) return;
-        if (contact.verified !== true) throw new Error("checkout.contact_unverified");
-        const response = await client.request<CheckoutSession>("/checkout/session", {
-          method: "POST",
-        });
+        if (contact.verified !== true)
+          throw new Error("checkout.contact_unverified");
+        const response = await client.request<CheckoutSession>(
+          "/checkout/session",
+          {
+            method: "POST",
+          },
+        );
         if (!isCurrent()) return;
-        if (!response.vendor_groups.length) {
+        if (
+          !response.vendor_groups.length &&
+          !(response.ticket_lines ?? []).length
+        ) {
           // An empty cart is not an error: send the shopper to the cart, which
           // owns the empty state and the way back into the catalogue.
           started.current = false;
@@ -574,7 +691,9 @@ function IdentityCheckoutShell({
         if (cancelled || !isCurrent()) return;
         const methods = options?.available_methods;
         if (Array.isArray(methods) && methods.length === 0) {
-          setOverCodCap(formatK(options.cod_cap_ngwee, { locale: `${locale}-ZM` }));
+          setOverCodCap(
+            formatK(options.cod_cap_ngwee, { locale: `${locale}-ZM` }),
+          );
         }
       } catch {
         // Advisory only: the payment step still explains what is available.
@@ -616,12 +735,16 @@ function IdentityCheckoutShell({
   // would also run its authenticated completion effect earlier.
   const renderShell = (content: ReactNode) => (
     <div className="space-y-6" aria-busy={busy || undefined}>
-      <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
+      <h1 className="font-display text-h1 text-display-ink">
+        {labels.pageTitle}
+      </h1>
 
       <Stepper
         steps={steps}
         currentStep={step}
-        stepAnnouncement={(current, total) => labels.stepAnnouncement(current, total)}
+        stepAnnouncement={(current, total) =>
+          labels.stepAnnouncement(current, total)
+        }
         doneIndicator={labels.doneIndicator}
         LinkComponent={Link}
       />
@@ -640,7 +763,9 @@ function IdentityCheckoutShell({
   if (cartIsEmpty) {
     return (
       <div className="space-y-4" data-testid="checkout-empty-cart">
-        <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
+        <h1 className="font-display text-h1 text-display-ink">
+          {labels.pageTitle}
+        </h1>
         <p role="status" className="font-body text-body text-text-2">
           {labels.emptyCart}
         </p>
@@ -658,7 +783,10 @@ function IdentityCheckoutShell({
     // Preserve the Stepper and form geometry (Run #68 CLS) while rendering the
     // real public intro immediately instead of revealing the LCP text late.
     return renderShell(
-      <ContactStepSkeleton loadingLabel={labels.loading} showIntro={!showContact} />,
+      <ContactStepSkeleton
+        loadingLabel={labels.loading}
+        showIntro={!showContact}
+      />,
     );
   }
 
@@ -677,7 +805,8 @@ function IdentityCheckoutShell({
               void (async () => {
                 try {
                   if (authError) await getReadyCustomerSession(true);
-                  else if (session?.access_token) await initSession(session.access_token);
+                  else if (session?.access_token)
+                    await initSession(session.access_token);
                 } catch {
                   if (mounted.current) setErrorMessage(labels.error);
                 } finally {
@@ -692,7 +821,11 @@ function IdentityCheckoutShell({
         </div>
       ) : null}
 
-      {step === 0 && !checkoutSession && !authError && !errorMessage && !session?.user.phone ? (
+      {step === 0 &&
+      !checkoutSession &&
+      !authError &&
+      !errorMessage &&
+      !session?.user.phone ? (
         <StepContact
           labels={labels.contact}
           onComplete={() => void handleContactComplete()}
@@ -701,8 +834,14 @@ function IdentityCheckoutShell({
       ) : null}
 
       {step === 1 && overCodCap && labels.overCodCap ? (
-        <div role="status" className="space-y-2" data-testid="checkout-over-cod-cap">
-          <p className="font-body text-sm text-danger">{labels.overCodCap(overCodCap)}</p>
+        <div
+          role="status"
+          className="space-y-2"
+          data-testid="checkout-over-cod-cap"
+        >
+          <p className="font-body text-sm text-danger">
+            {labels.overCodCap(overCodCap)}
+          </p>
           <Link href={cartPath} className="font-body text-sm underline">
             {labels.backToCart}
           </Link>
@@ -757,8 +896,31 @@ function IdentityCheckoutShell({
             landmark: fulfilmentTotals.landmark ?? null,
           }}
           labels={labels.review}
+          extras={
+            labels.extras ? (
+              <CheckoutExtras
+                locale={locale}
+                sessionId={checkoutSession.session_id}
+                accessToken={session.access_token}
+                labels={labels.extras}
+                isCod={paymentSelection.method === "cod"}
+                hasPickup={fulfilmentTotals.groups.some(
+                  (group) => group.fulfilment === "pickup",
+                )}
+                initialCouponCode={paymentOptions.coupon_code ?? null}
+                initialDiscountNgwee={paymentOptions.discount_ngwee ?? 0}
+                onTotals={(totals) => {
+                  if (!isCurrent()) return;
+                  setPaymentOptions((current) =>
+                    current ? { ...current, ...totals } : current,
+                  );
+                }}
+              />
+            ) : null
+          }
           onPlaceOrder={async () => {
-            if (!isCurrent()) throw new Error(labels.review.placeOrderUnavailable);
+            if (!isCurrent())
+              throw new Error(labels.review.placeOrderUnavailable);
             if (!fulfilmentTotals.groups.length) {
               throw new Error(labels.review.placeOrderUnavailable);
             }
@@ -787,7 +949,8 @@ function IdentityCheckoutShell({
               if (failure.kind === "return_to_cart") {
                 // The hold lapsed or the cart moved on: only a fresh checkout can
                 // succeed, so explain it on the cart instead of looping here.
-                if (isCurrent()) router.push(`${cartPath}?notice=${failure.notice}`);
+                if (isCurrent())
+                  router.push(`${cartPath}?notice=${failure.notice}`);
                 return;
               }
               if (failure.kind === "redo_fulfilment") {

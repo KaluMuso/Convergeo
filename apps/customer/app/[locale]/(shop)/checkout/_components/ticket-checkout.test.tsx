@@ -28,8 +28,12 @@ const session: {
 };
 
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
-vi.mock("@vergeo/auth/browser-client-lazy", () => ({ getBrowserClient: async () => ({}) }));
-vi.mock("../../../../../lib/customer-session", () => ({ useSession: () => session }));
+vi.mock("@vergeo/auth/browser-client-lazy", () => ({
+  getBrowserClient: async () => ({}),
+}));
+vi.mock("../../../../../lib/customer-session", () => ({
+  useSession: () => session,
+}));
 vi.mock("@vergeo/config", () => ({
   ApiError: class ApiError extends Error {
     constructor(public code: string) {
@@ -78,26 +82,38 @@ function statusNotFound() {
 beforeEach(() => {
   session.session = { access_token: "test-token", user: { id: "buyer-id" } };
   router.replace = replace;
-  request.mockImplementation(async (path: string, options?: { method?: string }) => {
-    if (path.startsWith("/payments/status")) throw statusNotFound();
-    if (path.startsWith("/checkout/steps/payment-options"))
-      return {
-        session_id: GROUP,
-        total_ngwee: 52_500,
-        available_methods: ["momo", "card", "cod"],
-      };
-    if (path === "/checkout/steps/payment")
-      return {
-        session_id: GROUP,
-        total_ngwee: 52_500,
-        method: JSON.parse(String(options && (options as { body?: string }).body)).method,
-      };
-    if (path === "/payments/card/session")
-      return { checkout_group_id: GROUP, payment_id: PAYMENT, amount_ngwee: 52_500 };
-    if (path === "/payments/retry")
-      return { checkout_group_id: GROUP, payment_id: PAYMENT, order_count: 1 };
-    throw new Error(`Unexpected ${path}`);
-  });
+  request.mockImplementation(
+    async (path: string, options?: { method?: string }) => {
+      if (path.startsWith("/payments/status")) throw statusNotFound();
+      if (path.startsWith("/checkout/steps/payment-options"))
+        return {
+          session_id: GROUP,
+          total_ngwee: 52_500,
+          available_methods: ["momo", "card", "cod"],
+        };
+      if (path === "/checkout/steps/payment")
+        return {
+          session_id: GROUP,
+          total_ngwee: 52_500,
+          method: JSON.parse(
+            String(options && (options as { body?: string }).body),
+          ).method,
+        };
+      if (path === "/payments/card/session")
+        return {
+          checkout_group_id: GROUP,
+          payment_id: PAYMENT,
+          amount_ngwee: 52_500,
+        };
+      if (path === "/payments/retry")
+        return {
+          checkout_group_id: GROUP,
+          payment_id: PAYMENT,
+          order_count: 1,
+        };
+      throw new Error(`Unexpected ${path}`);
+    },
+  );
   loadTicketOrder.mockResolvedValue({
     groupId: GROUP,
     orderId: ORDER,
@@ -115,62 +131,128 @@ afterEach(() => {
 
 describe("ticket checkout mount", () => {
   it("rejects missing or malformed groups before API or payment", async () => {
-    render(<TicketCheckout locale="en" groupId="bad" labels={labels} {...ticketLabels} />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Checkout unavailable");
+    render(
+      <TicketCheckout
+        locale="en"
+        groupId="bad"
+        labels={labels}
+        {...ticketLabels}
+      />,
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Checkout unavailable",
+    );
     expect(request).not.toHaveBeenCalled();
     expect(loadTicketOrder).not.toHaveBeenCalled();
   });
 
   it("fails closed when the existing ticket linkage is missing", async () => {
     loadTicketOrder.mockRejectedValue(new Error("missing item"));
-    render(<TicketCheckout locale="en" groupId={GROUP} labels={labels} {...ticketLabels} />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Checkout unavailable");
-    expect(screen.queryByRole("button", { name: "Get tickets" })).not.toBeInTheDocument();
-    expect(request.mock.calls.some(([path]) => path === "/checkout/steps/payment")).toBe(false);
+    render(
+      <TicketCheckout
+        locale="en"
+        groupId={GROUP}
+        labels={labels}
+        {...ticketLabels}
+      />,
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Checkout unavailable",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Get tickets" }),
+    ).not.toBeInTheDocument();
+    expect(
+      request.mock.calls.some(([path]) => path === "/checkout/steps/payment"),
+    ).toBe(false);
   });
 
   it("does not offer COD and fails closed when only COD is available", async () => {
     request.mockImplementation(async (path: string) => {
       if (path.startsWith("/payments/status")) throw statusNotFound();
-      return { session_id: GROUP, total_ngwee: 52_500, available_methods: ["cod"] };
+      return {
+        session_id: GROUP,
+        total_ngwee: 52_500,
+        available_methods: ["cod"],
+      };
     });
-    render(<TicketCheckout locale="en" groupId={GROUP} labels={labels} {...ticketLabels} />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Checkout unavailable");
+    render(
+      <TicketCheckout
+        locale="en"
+        groupId={GROUP}
+        labels={labels}
+        {...ticketLabels}
+      />,
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Checkout unavailable",
+    );
     expect(screen.queryByText("Cash on Delivery")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Get tickets" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Get tickets" }),
+    ).not.toBeInTheDocument();
   });
 
   it("validates and starts one MoMo attempt for the existing group", async () => {
     const user = userEvent.setup();
-    render(<TicketCheckout locale="en" groupId={GROUP} labels={labels} {...ticketLabels} />);
+    render(
+      <TicketCheckout
+        locale="en"
+        groupId={GROUP}
+        labels={labels}
+        {...ticketLabels}
+      />,
+    );
     const button = await screen.findByRole("button", { name: "Get tickets" });
     await user.click(button);
     expect(screen.getByRole("alert")).toHaveTextContent("Number required");
     await user.type(screen.getByLabelText("Payer number"), "971234567");
     await user.click(button);
     await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith(`/en/checkout/pending/${GROUP}?ticket=1`),
+      expect(replace).toHaveBeenCalledWith(
+        `/en/checkout/pending/${GROUP}?ticket=1`,
+      ),
     );
-    const validation = request.mock.calls.find(([path]) => path === "/checkout/steps/payment");
-    const initiation = request.mock.calls.find(([path]) => path === "/payments/retry");
-    expect(JSON.parse(validation?.[1].body)).toMatchObject({ session_id: GROUP, method: "momo" });
+    const validation = request.mock.calls.find(
+      ([path]) => path === "/checkout/steps/payment",
+    );
+    const initiation = request.mock.calls.find(
+      ([path]) => path === "/payments/retry",
+    );
+    expect(JSON.parse(validation?.[1].body)).toMatchObject({
+      session_id: GROUP,
+      method: "momo",
+    });
     expect(JSON.parse(initiation?.[1].body)).toMatchObject({
       checkout_group_id: GROUP,
       rail: "mtn",
     });
     await user.click(button);
-    expect(request.mock.calls.filter(([path]) => path === "/payments/retry")).toHaveLength(1);
+    expect(
+      request.mock.calls.filter(([path]) => path === "/payments/retry"),
+    ).toHaveLength(1);
   });
 
   it("uses the existing card session route and retains the ticket group", async () => {
     const user = userEvent.setup();
-    render(<TicketCheckout locale="en" groupId={GROUP} labels={labels} {...ticketLabels} />);
+    render(
+      <TicketCheckout
+        locale="en"
+        groupId={GROUP}
+        labels={labels}
+        {...ticketLabels}
+      />,
+    );
     await user.click(await screen.findByLabelText("Card"));
     await user.click(screen.getByRole("button", { name: "Get tickets" }));
     await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith(`/en/checkout/card/${PAYMENT}?group=${GROUP}`),
+      expect(replace).toHaveBeenCalledWith(
+        `/en/checkout/card/${PAYMENT}?group=${GROUP}`,
+      ),
     );
-    expect(request.mock.calls.some(([path]) => path === "/payments/retry")).toBe(false);
+    expect(
+      request.mock.calls.some(([path]) => path === "/payments/retry"),
+    ).toBe(false);
   });
 
   it("resumes an existing attempt on refresh without starting another", async () => {
@@ -183,9 +265,18 @@ describe("ticket checkout mount", () => {
       amount_ngwee: 52_500,
       cod: false,
     });
-    render(<TicketCheckout locale="en" groupId={GROUP} labels={labels} {...ticketLabels} />);
+    render(
+      <TicketCheckout
+        locale="en"
+        groupId={GROUP}
+        labels={labels}
+        {...ticketLabels}
+      />,
+    );
     await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith(`/en/checkout/pending/${GROUP}?ticket=1`),
+      expect(replace).toHaveBeenCalledWith(
+        `/en/checkout/pending/${GROUP}?ticket=1`,
+      ),
     );
     expect(loadTicketOrder).toHaveBeenCalledWith({}, GROUP, "buyer-id", true);
     expect(request).toHaveBeenCalledTimes(1);
@@ -211,13 +302,27 @@ describe("ticket checkout mount", () => {
         };
       throw new Error(`Unexpected ${path}`);
     });
-    render(<TicketCheckout locale="en" groupId={GROUP} retry labels={labels} {...ticketLabels} />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Payment cancelled");
-    expect(screen.queryByRole("button", { name: "Retry payment" })).not.toBeInTheDocument();
-    expect(replace).not.toHaveBeenCalled();
-    expect(request.mock.calls.some(([path]) => path === "/checkout/steps/payment-options")).toBe(
-      false,
+    render(
+      <TicketCheckout
+        locale="en"
+        groupId={GROUP}
+        retry
+        labels={labels}
+        {...ticketLabels}
+      />,
     );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Payment cancelled",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Retry payment" }),
+    ).not.toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
+    expect(
+      request.mock.calls.some(
+        ([path]) => path === "/checkout/steps/payment-options",
+      ),
+    ).toBe(false);
   });
 
   it("keeps the original Airtel rail on a terminal MoMo retry", async () => {
@@ -240,8 +345,18 @@ describe("ticket checkout mount", () => {
         };
       throw new Error(`Unexpected ${path}`);
     });
-    render(<TicketCheckout locale="en" groupId={GROUP} retry labels={labels} {...ticketLabels} />);
-    expect(await screen.findByRole("button", { name: "Retry payment" })).toBeInTheDocument();
+    render(
+      <TicketCheckout
+        locale="en"
+        groupId={GROUP}
+        retry
+        labels={labels}
+        {...ticketLabels}
+      />,
+    );
+    expect(
+      await screen.findByRole("button", { name: "Retry payment" }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("Airtel")).toBeChecked();
     expect(screen.getByLabelText("MTN")).toBeDisabled();
     expect(screen.queryByLabelText("Card")).not.toBeInTheDocument();
@@ -258,8 +373,17 @@ describe("ticket checkout mount", () => {
       amount_ngwee: 52_500,
       cod: false,
     });
-    render(<TicketCheckout locale="en" groupId={GROUP} labels={labels} {...ticketLabels} />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Checkout unavailable");
+    render(
+      <TicketCheckout
+        locale="en"
+        groupId={GROUP}
+        labels={labels}
+        {...ticketLabels}
+      />,
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Checkout unavailable",
+    );
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -283,9 +407,20 @@ describe("ticket checkout mount", () => {
       payment_id: PAYMENT,
       amount_ngwee: 1,
     }));
-    render(<TicketCheckout locale="en" groupId={GROUP} labels={labels} {...ticketLabels} />);
-    await user.click(await screen.findByRole("button", { name: "Get tickets" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Payment failed");
+    render(
+      <TicketCheckout
+        locale="en"
+        groupId={GROUP}
+        labels={labels}
+        {...ticketLabels}
+      />,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Get tickets" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Payment failed",
+    );
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -305,19 +440,40 @@ describe("ticket checkout mount", () => {
     request.mockImplementationOnce(() => validation);
     const user = userEvent.setup();
     const view = render(
-      <TicketCheckout locale="en" groupId={GROUP} labels={labels} {...ticketLabels} />,
+      <TicketCheckout
+        locale="en"
+        groupId={GROUP}
+        labels={labels}
+        {...ticketLabels}
+      />,
     );
-    await user.click(await screen.findByRole("button", { name: "Get tickets" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Get tickets" }),
+    );
     await waitFor(() =>
-      expect(request).toHaveBeenCalledWith("/checkout/steps/payment", expect.anything()),
+      expect(request).toHaveBeenCalledWith(
+        "/checkout/steps/payment",
+        expect.anything(),
+      ),
     );
     session.session = null;
-    view.rerender(<TicketCheckout locale="en" groupId={GROUP} labels={labels} {...ticketLabels} />);
-    expect(screen.queryByRole("button", { name: "Get tickets" })).not.toBeInTheDocument();
+    view.rerender(
+      <TicketCheckout
+        locale="en"
+        groupId={GROUP}
+        labels={labels}
+        {...ticketLabels}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Get tickets" }),
+    ).not.toBeInTheDocument();
     await act(async () => {
       release({ session_id: GROUP, total_ngwee: 52_500, method: "card" });
     });
-    expect(request.mock.calls.some(([path]) => path === "/payments/card/session")).toBe(false);
+    expect(
+      request.mock.calls.some(([path]) => path === "/payments/card/session"),
+    ).toBe(false);
     expect(replace).not.toHaveBeenCalled();
     expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute(
       "href",

@@ -155,11 +155,20 @@ describe("StepPayment", () => {
       />,
     );
 
-    expect(await screen.findByText(checkoutMessages.checkout.payment.momo)).toBeInTheDocument();
-    expect(screen.queryByLabelText(checkoutMessages.checkout.payment.cod)).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(checkoutMessages.checkout.payment.momo),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(checkoutMessages.checkout.payment.cod),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("checkout-cod-unavailable")).toBeInTheDocument();
     expect(
-      screen.getByText(checkoutMessages.checkout.payment.codIneligible.replace("{cap}", "K500.00")),
+      screen.getByText(
+        checkoutMessages.checkout.payment.codIneligible.replace(
+          "{cap}",
+          "K500.00",
+        ),
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(checkoutMessages.checkout.payment.codUnavailableTitle),
@@ -177,9 +186,15 @@ describe("StepPayment", () => {
       />,
     );
 
-    expect(await screen.findByTestId("checkout-payment-methods")).toBeInTheDocument();
-    expect(screen.getByText(checkoutMessages.checkout.payment.momoHelp)).toBeInTheDocument();
-    expect(screen.getByText(checkoutMessages.checkout.payment.cardHelp)).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("checkout-payment-methods"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(checkoutMessages.checkout.payment.momoHelp),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(checkoutMessages.checkout.payment.cardHelp),
+    ).toBeInTheDocument();
   });
 });
 
@@ -208,9 +223,9 @@ describe("StepReview", () => {
       />,
     );
 
-    expect(screen.getByTestId("checkout-lead-time-listing-1")).toHaveTextContent(
-      "Made to order · ready in about 12 days",
-    );
+    expect(
+      screen.getByTestId("checkout-lead-time-listing-1"),
+    ).toHaveTextContent("Made to order · ready in about 12 days");
     expect(screen.getByTestId("checkout-estimate-listing-1")).toHaveTextContent(
       /^Estimated ready by /,
     );
@@ -240,9 +255,9 @@ describe("StepReview", () => {
       />,
     );
 
-    expect(screen.getByTestId("checkout-lead-time-listing-1")).toHaveTextContent(
-      "Made to order · ready within a week",
-    );
+    expect(
+      screen.getByTestId("checkout-lead-time-listing-1"),
+    ).toHaveTextContent("Made to order · ready within a week");
   });
 
   it("requires consent before place order can proceed", async () => {
@@ -265,7 +280,9 @@ describe("StepReview", () => {
     });
     expect(placeOrderButton).toBeDisabled();
 
-    await user.click(screen.getByRole("checkbox", { name: reviewLabels.consentLabel }));
+    await user.click(
+      screen.getByRole("checkbox", { name: reviewLabels.consentLabel }),
+    );
     expect(placeOrderButton).not.toBeDisabled();
 
     await user.click(placeOrderButton);
@@ -293,7 +310,9 @@ describe("StepReview", () => {
       />,
     );
 
-    await user.click(screen.getByRole("checkbox", { name: reviewLabels.consentLabel }));
+    await user.click(
+      screen.getByRole("checkbox", { name: reviewLabels.consentLabel }),
+    );
     const placeOrderButton = screen.getByTestId("checkout-place-order");
     await user.click(placeOrderButton);
 
@@ -325,7 +344,9 @@ describe("StepReview", () => {
       />,
     );
 
-    await user.click(screen.getByRole("checkbox", { name: reviewLabels.consentLabel }));
+    await user.click(
+      screen.getByRole("checkbox", { name: reviewLabels.consentLabel }),
+    );
     const placeOrderButton = screen.getByTestId("checkout-place-order");
     await user.click(placeOrderButton);
 
@@ -344,11 +365,13 @@ describe("StepReview", () => {
       />,
     );
 
-    expect(screen.getByTestId("checkout-place-order-unavailable")).toHaveTextContent(
-      checkoutMessages.checkout.review.placeOrderUnavailable,
-    );
+    expect(
+      screen.getByTestId("checkout-place-order-unavailable"),
+    ).toHaveTextContent(checkoutMessages.checkout.review.placeOrderUnavailable);
     expect(screen.getByTestId("checkout-place-order")).toBeDisabled();
-    expect(screen.getByText(checkoutMessages.checkout.review.nextMomo)).toBeInTheDocument();
+    expect(
+      screen.getByText(checkoutMessages.checkout.review.nextMomo),
+    ).toBeInTheDocument();
   });
 
   it("shows escrow trust copy and COD next-step copy", () => {
@@ -363,9 +386,17 @@ describe("StepReview", () => {
       />,
     );
 
-    expect(screen.getByText(checkoutMessages.checkout.review.escrowStep1)).toBeInTheDocument();
-    expect(screen.getByText(checkoutMessages.checkout.review.escrowStep2)).toBeInTheDocument();
-    expect(screen.getByText(checkoutMessages.checkout.review.escrowStep3)).toBeInTheDocument();
-    expect(screen.getByText(checkoutMessages.checkout.review.nextCod)).toBeInTheDocument();
+    expect(
+      screen.getByText(checkoutMessages.checkout.review.escrowStep1),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(checkoutMessages.checkout.review.escrowStep2),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(checkoutMessages.checkout.review.escrowStep3),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(checkoutMessages.checkout.review.nextCod),
+    ).toBeInTheDocument();
   });
 });

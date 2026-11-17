@@ -4,7 +4,7 @@ from typing import Annotated, Any, Literal
 
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
-from app.errors import AppError
+from app.errors import AppError, field_value_error
 from app.schemas.base import NgweeInt, StrictModel
 from app.schemas.vendor_listing import (
     FulfilmentMode,
@@ -15,17 +15,26 @@ from app.schemas.vendor_listing import (
     VendorListing,
     VendorListingEvidenceImage,
 )
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.inventory.adjustment import adjust_stock, stock_context
 from app.services.kyc.state_machine import ServiceRoleClient
+from app.services.listings.field_errors import (
+    issues_from_validation_error,
+    listing_field_error,
+    map_listing_db_error,
+)
 from app.services.moderation.prohibited import screen_listing
 from app.services.moderation.prohibited_flags import record_prohibited_listing_attempt
 from app.services.stock.revalidate import CartLineSnapshot, RevalidateResult, revalidate_lines
 from fastapi import APIRouter, Depends
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 
 router = APIRouter(prefix="/vendor/listings", tags=["vendor-listings-manage"])
 
 ListingStatus = Literal["draft", "active", "paused"]
+UsedGrade = Literal["used_excellent", "used_good", "used_fair", "parts_not_working"]
+FulfilmentOption = Literal["lusaka_delivery", "pickup_shop", "pickup_nationwide"]
+DEFAULT_FULFILMENT_OPTIONS: tuple[FulfilmentOption, ...] = ("lusaka_delivery", "pickup_shop")
 EDITABLE_LISTING_STATUSES = frozenset({"draft", "active", "paused"})
 OPEN_ORDER_STATUSES = frozenset(
     {"placed", "confirmed", "processing", "ready", "shipped", "delivered"}
@@ -58,6 +67,10 @@ class ListingSummary(StrictModel):
     lead_time_days: int | None
     vendor_capacity_per_week: int | None
     defect_notes: str | None
+    condition_detail: str | None = None
+    fulfilment_options: list[FulfilmentOption] = Field(
+        default_factory=lambda: list(DEFAULT_FULFILMENT_OPTIONS)
+    )
     stock_mode: StockMode
     stock_qty: int | None
     wholesale: bool
@@ -82,6 +95,10 @@ class ListingUpdateRequest(StrictModel):
     lead_time_days: int | None = Field(default=None, ge=1, le=365)
     vendor_capacity_per_week: int | None = Field(default=None, ge=1, le=9999)
     defect_notes: str | None = None
+    condition_detail: UsedGrade | None = None
+    fulfilment_options: list[FulfilmentOption] | None = Field(
+        default=None, min_length=1, max_length=3
+    )
     stock_mode: StockMode | None = None
     stock_qty: int | None = Field(default=None, ge=0)
     wholesale: bool | None = None
@@ -99,10 +116,23 @@ class ListingUpdateRequest(StrictModel):
             raise ValueError(msg)
         return value
 
+    @field_validator("fulfilment_options")
+    @classmethod
+    def fulfilment_options_unique(
+        cls, value: list[FulfilmentOption] | None
+    ) -> list[FulfilmentOption] | None:
+        if value is not None and len(set(value)) != len(value):
+            raise ValueError("fulfilment_options must not repeat an option")
+        return value
+
     @model_validator(mode="after")
     def validate_return_window(self) -> ListingUpdateRequest:
         if self.returnable is True and self.return_window_hours is None:
-            raise ValueError("return_window_hours is required when returnable is true")
+            raise field_value_error(
+                "return_window_hours",
+                "return_window_hours is required when returnable is true",
+                "return_window_required",
+            )
         # When both are supplied together, enforce a positive discount here for a
         # friendly error; the compare-at-only case is checked in _apply_listing_update
         # against the stored price (and the DB check constraint is the backstop).
@@ -111,7 +141,11 @@ class ListingUpdateRequest(StrictModel):
             and self.price_ngwee is not None
             and self.compare_at_ngwee <= self.price_ngwee
         ):
-            raise ValueError("compare_at_ngwee must be greater than price_ngwee")
+            raise field_value_error(
+                "compare_at_ngwee",
+                "compare_at_ngwee must be greater than price_ngwee",
+                "compare_at_too_low",
+            )
         return self
 
 
@@ -175,9 +209,10 @@ def _load_vendor_for_owner(
     owner_user_id: str,
 ) -> dict[str, Any]:
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id, owner_user_id, status, kyc_tier")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )
@@ -259,6 +294,16 @@ def _listing_images(row: dict[str, Any]) -> list[ListingImageSummary]:
     return sorted(images, key=lambda image: image.position)
 
 
+def _row_fulfilment_options(row: dict[str, Any]) -> list[FulfilmentOption]:
+    raw = row.get("fulfilment_options")
+    allowed = ("lusaka_delivery", "pickup_shop", "pickup_nationwide")
+    if isinstance(raw, list):
+        options = [option for option in allowed if option in raw]
+        if options:
+            return options  # type: ignore[return-value]
+    return ["lusaka_delivery", "pickup_shop"]
+
+
 def _to_listing_summary(row: dict[str, Any]) -> ListingSummary:
     return ListingSummary(
         id=str(row["id"]),
@@ -282,6 +327,8 @@ def _to_listing_summary(row: dict[str, Any]) -> ListingSummary:
             else None
         ),
         defect_notes=str(row["defect_notes"]) if row.get("defect_notes") else None,
+        condition_detail=(str(row["condition_detail"]) if row.get("condition_detail") else None),
+        fulfilment_options=_row_fulfilment_options(row),
         stock_mode=str(row["stock_mode"]),  # type: ignore[arg-type]
         stock_qty=int(row["stock_qty"]) if row.get("stock_qty") is not None else None,
         wholesale=bool(row.get("wholesale")),
@@ -307,6 +354,7 @@ def _load_listing(
             "id, vendor_id, product_id, title_override, price_ngwee, compare_at_ngwee, "
             "product_class, condition, sale_unit, unit_step_milli, min_steps, "
             "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
+            "condition_detail, fulfilment_options, "
             "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
             "return_window_hours, status, products(name), "
             "listing_images(id, listing_id, cloudinary_public_id, position)"
@@ -473,16 +521,15 @@ def _validate_strategy_listing(
                 for image in _listing_images(listing)
             ],
         )
-    except ValueError as exc:
-        raise AppError(
-            code="listing_strategy_invalid",
-            message="Listing fields do not satisfy the product-class rules",
-            http_status=422,
-            details={
-                "message_key": "vendor.listings.errors.submitFailed",
-                "reason": str(exc),
-            },
-        ) from exc
+    except ValidationError as exc:
+        status = str(_effective_update_value(body, listing, "status", "draft"))
+        fields = issues_from_validation_error(exc)
+        error = listing_field_error(
+            intent="publish" if status == "active" else "draft",
+            fields=fields,
+        )
+        error.code = "listing_strategy_invalid"
+        raise error from exc
 
 
 def _apply_listing_update(
@@ -579,6 +626,19 @@ def _apply_listing_update(
         update_payload["product_class"] = body.product_class
     if body.condition is not None:
         update_payload["condition"] = body.condition
+    # The grade must always agree with the condition (DB parent check): new and
+    # refurbished mirror it, used keeps a used_* grade (default used_good).
+    effective_condition = body.condition or str(listing.get("condition") or "new")
+    if body.condition is not None or body.condition_detail is not None:
+        if effective_condition in {"new", "refurbished"}:
+            update_payload["condition_detail"] = effective_condition
+        else:
+            current_detail = str(listing.get("condition_detail") or "")
+            update_payload["condition_detail"] = body.condition_detail or (
+                current_detail if current_detail.startswith("used_") else "used_good"
+            )
+    if body.fulfilment_options is not None:
+        update_payload["fulfilment_options"] = list(body.fulfilment_options)
     if body.min_steps is not None:
         update_payload["min_steps"] = body.min_steps
     if body.fulfilment_mode is not None:
@@ -629,13 +689,22 @@ def _apply_listing_update(
         or (body.wholesale is not None and body.wholesale != bool(listing.get("wholesale")))
     )
 
-    response = (
-        service_client.client.table("vendor_listings")
-        .update(update_payload)
-        .eq("id", listing_id)
-        .eq("vendor_id", str(vendor["id"]))
-        .execute()
-    )
+    try:
+        response = (
+            service_client.client.table("vendor_listings")
+            .update(update_payload)
+            .eq("id", listing_id)
+            .eq("vendor_id", str(vendor["id"]))
+            .execute()
+        )
+    except Exception as exc:
+        target_status = body.status or str(listing.get("status") or "draft")
+        mapped = map_listing_db_error(
+            exc, intent="publish" if target_status == "active" else "draft"
+        )
+        if mapped is not None:
+            raise mapped from exc
+        raise
     updated = _single_row(response)
     if updated is None:
         raise AppError(code="not_found", message="Listing not found", http_status=404)
@@ -659,6 +728,7 @@ async def list_vendor_listings(
             "id, vendor_id, product_id, title_override, price_ngwee, compare_at_ngwee, "
             "product_class, condition, sale_unit, unit_step_milli, min_steps, "
             "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
+            "condition_detail, fulfilment_options, "
             "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
             "return_window_hours, status, products(name), "
             "listing_images(id, listing_id, cloudinary_public_id, position)"
@@ -752,6 +822,8 @@ def _stock_owner(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     listing = _load_listing(service_client, listing_id)
     _assert_listing_owned_by_vendor(listing, str(vendor["id"]), listing_id=listing_id)
+    # A removed listing keeps its row for order history but takes no stock moves.
+    _assert_listing_editable(listing, listing_id=listing_id)
     return str(vendor["id"]), current_user.id
 
 

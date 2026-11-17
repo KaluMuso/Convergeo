@@ -75,7 +75,9 @@ const listing: BuyBoxListing = {
   inStock: true,
 };
 
-function makePurchase(overrides: Partial<ListingPurchaseControls> = {}): ListingPurchaseControls {
+function makePurchase(
+  overrides: Partial<ListingPurchaseControls> = {},
+): ListingPurchaseControls {
   return {
     quantity: 3,
     decrease: () => {},
@@ -147,7 +149,11 @@ function SearchHarness() {
 
   return (
     <div style={{ padding: 16 }}>
-      <button type="button" data-testid="evidence-before-trigger" style={{ marginRight: 12 }}>
+      <button
+        type="button"
+        data-testid="evidence-before-trigger"
+        style={{ marginRight: 12 }}
+      >
         {tNav("shop.home")}
       </button>
       <MobileHeaderSearch
@@ -179,7 +185,10 @@ if (rootEl && mode === "sticky-atc") {
   window.__EVIDENCE_READY__ = true;
 } else if (rootEl && mode === "search") {
   createRoot(rootEl).render(
-    <NextIntlClientProvider locale="en" messages={{ nav: navMessages, search: searchMessages }}>
+    <NextIntlClientProvider
+      locale="en"
+      messages={{ nav: navMessages, search: searchMessages }}
+    >
       <SearchHarness />
     </NextIntlClientProvider>,
   );

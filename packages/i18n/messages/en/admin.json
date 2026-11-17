@@ -10,7 +10,17 @@
     "mobileMenuClose": "Close",
     "permissionError": "Unable to verify admin permissions.",
     "permissionChecking": "Checking permissions…",
-    "permissionDenied": "You do not have access to this admin section."
+    "permissionDenied": "You do not have access to this admin section.",
+    "account": {
+      "menuLabel": "Account menu",
+      "unknownUser": "Signed in",
+      "roleLine": "Role: {role}",
+      "roles": {
+        "superadmin": "Super admin",
+        "admin": "Admin",
+        "custom": "Custom role"
+      }
+    }
   },
   "nav": {
     "groups": {
@@ -20,6 +30,7 @@
       "platform": "Platform"
     },
     "home": "Dashboard",
+    "analytics": "Analytics",
     "kyc": "KYC queue",
     "business": "Business",
     "moderation": "Moderation",
@@ -37,7 +48,12 @@
     "services": "Services",
     "inventory": "Inventory",
     "homeFeed": "Home feed",
-    "advertising": "Advertising"
+    "advertising": "Advertising",
+    "accounts": "Admin accounts",
+    "auditLog": "Audit log",
+    "offers": "Offers",
+    "coupons": "Coupons",
+    "branches": "Branch verification"
   },
   "hubs": {
     "moderation": {
@@ -62,7 +78,9 @@
       "categoriesTitle": "Category tree",
       "categoriesBody": "Public catalogue category structure.",
       "platformTitle": "Platform knobs",
-      "platformBody": "Operational limits and platform settings."
+      "platformBody": "Operational limits and platform settings.",
+      "vendorPlansTitle": "Vendor plans",
+      "vendorPlansBody": "Plan prices, listing and photo limits, and per-vendor overrides."
     }
   },
   "translations": {
@@ -98,6 +116,7 @@
     },
     "pages": {
       "common": "All apps — shared UI, navigation, theme",
+      "nav": "All apps — navigation labels",
       "auth": "All apps — sign in and sign up",
       "catalog": "Customer — product listings, detail, comparison",
       "clips": "Customer — Convergeo Clips feed, playback and shoppable overlay",
@@ -138,7 +157,8 @@
       "deliveryZones": "Delivery zones",
       "platform": "Platform knobs",
       "flags": "Feature flags",
-      "categories": "Category tree"
+      "categories": "Category tree",
+      "vendorPlans": "Vendor plans"
     },
     "common": {
       "save": "Save changes",
@@ -191,7 +211,12 @@
       "aiCapUsd": "AI monthly cap (USD)",
       "releaseDelivered": "Auto-release after delivered (hours)",
       "releaseShipped": "Auto-release after shipped (days)",
-      "dangerousHint": "COD cap changes affect new checkout eligibility only."
+      "advanceBps": "Verified organiser pre-event advance (bps, max 5000)",
+      "advanceMinKycTier": "Pre-event advance: minimum KYC tier",
+      "advanceMinEvents": "Pre-event advance: minimum successful past events",
+      "advanceRepaymentDays": "Pre-event advance: repayment window (days)",
+      "dangerousHint": "COD cap changes affect new checkout eligibility only.",
+      "branchMinDistance": "Min. distance between branches (m)"
     },
     "flags": {
       "title": "Feature flags",
@@ -211,6 +236,10 @@
       "moveChildrenConfirm": "Move with children",
       "orphanWarning": "Cannot move without children — enable move-with-children.",
       "rootOption": "Root (no parent)"
+    },
+    "vendorPlans": {
+      "title": "Vendor plans",
+      "subtitle": "Listing limits, photo limits, features and monthly prices. Changes apply immediately and are audited."
     }
   },
   "business": {
@@ -260,6 +289,46 @@
       "threshold": "Threshold {amount}",
       "projected": "Projected GMV {amount}",
       "status": "Status: {status}"
+    },
+    "advanceDebts": {
+      "title": "Organiser advance debts",
+      "subtitle": "Advances paid before an event that was later cancelled. Record cash repayments here; a debt repaid in full before its due date is settled and never triggers suspension.",
+      "loading": "Loading advance debts…",
+      "empty": "No advance debts match these filters.",
+      "error": "Could not load advance debts.",
+      "forbidden": "Permission denied — admin role required.",
+      "event": "Event: {title}",
+      "amounts": "Outstanding {outstanding} of {amount}",
+      "due": "Due {date}",
+      "blacklisted": "Overdue: organiser blacklisted and flagged for legal follow-up.",
+      "filters": {
+        "status": "Status",
+        "all": "All",
+        "organiser": "Organiser ID",
+        "organiserPlaceholder": "Vendor UUID (optional)",
+        "apply": "Apply filters"
+      },
+      "status": {
+        "open": "Open",
+        "settled": "Settled",
+        "written_off": "Written off"
+      },
+      "form": {
+        "title": "Record a cash repayment",
+        "hint": "Only record money finance has confirmed received. Amount in kwacha; the reference is the bank or mobile-money receipt.",
+        "organiser": "Organiser ID",
+        "amount": "Amount (K)",
+        "reference": "Receipt reference",
+        "submit": "Record repayment",
+        "saving": "Saving…",
+        "saved": "Repayment recorded. Still owed: {remaining}.",
+        "failed": "Could not record the repayment.",
+        "exceeds": "That is more than the organiser owes.",
+        "vendorRequired": "Enter the organiser ID.",
+        "amountInvalid": "Enter a positive kwacha amount with at most 2 decimals.",
+        "referenceInvalid": "Reference must be 3–80 letters, digits, dots, dashes or underscores.",
+        "useOrganiser": "Record a repayment for this organiser"
+      }
     }
   },
   "kyc": {
@@ -394,7 +463,9 @@
       "vendorSeesEmpty": "(choose a reason)",
       "noDocuments": "No documents were uploaded.",
       "openFullSize": "Open full size",
-      "refreshDocs": "Refresh links"
+      "refreshDocs": "Refresh links",
+      "notFound": "Not found",
+      "notFoundBody": "This KYC application does not exist or was removed."
     },
     "reasons": {
       "blurry_document": "Document is blurry or unreadable",
@@ -471,7 +542,9 @@
         "submitting": "Saving…",
         "success": "Decision recorded.",
         "failure": "Could not save decision.",
-        "details": "Product details"
+        "details": "Product details",
+        "failureRetryHint": "Nothing was saved. Check your connection and press the button again, or reload the page if it keeps failing.",
+        "failureReference": "Reference: {id}"
       }
     },
     "related": {
@@ -937,9 +1010,9 @@
     "metricsHeading": "Platform metrics",
     "metricsHint": "Catalog health, AI usage, and funnel snapshot.",
     "gmv": {
-      "title": "GMV",
-      "subtitle": "Gross merchandise value (non-cancelled orders)",
-      "empty": "K0.00 — no non-cancelled orders in the ledger-backed aggregate yet."
+      "title": "Order value (not cancelled)",
+      "subtitle": "Items plus delivery for every order that is not cancelled, paid or not. This is not money received or platform revenue.",
+      "empty": "K0.00 — no orders that are not cancelled yet."
     },
     "payoutLiabilities": {
       "title": "Payout liabilities",
@@ -1022,7 +1095,9 @@
       },
       "conversion": "{pct}%",
       "conversionAria": "{pct}% of checkouts started"
-    }
+    },
+    "financeWithheldTitle": "Finance figures hidden",
+    "financeWithheldBody": "Escrow held, payout liabilities and reconciliation need the finance.read permission. Ask a superadmin if your work needs them."
   },
   "disputes": {
     "title": "Disputes console",
@@ -1437,7 +1512,9 @@
     "emptyRoles": "No custom roles found.",
     "emptyAssignments": "No role assignments found.",
     "retry": "Try again",
-    "invalid": "Check the role key, name, permissions, and account UUID."
+    "invalid": "Check the role key, name, permissions, and account UUID.",
+    "deactivateHelp": "To deactivate an administrator, revoke all of their roles (or use Admin accounts → Deactivate). It takes effect on their next request. Their login is not deleted: they keep any customer or vendor access.",
+    "permissionsHelp": "finance.operate moves money (refunds, escrow, dispute decisions, cash on delivery). support.manage sees customers with masked phone numbers. audit.read is never implied by the admin role."
   },
   "oversightUi": {
     "services": "Services",
@@ -1779,6 +1856,39 @@
         "permission": "You do not have permission to manage couriers."
       },
       "zonePriceLine": "{label} {price}"
+    },
+    "doorPayment": {
+      "title": "Pay at the door",
+      "states": {
+        "arrived": "Rider at the door: awaiting payment",
+        "pending": "Payment prompt on the customer's phone",
+        "paid": "Paid by mobile money: code released",
+        "cash": "Cash fallback: code released",
+        "failed": "Payment failed or timed out",
+        "exception": "Payment exception: check the queue"
+      },
+      "actions": {
+        "arrived": "Rider arrived",
+        "request": "Request payment",
+        "poll": "Check payment",
+        "cash": "Take cash instead"
+      },
+      "done": {
+        "arrived": "Arrival recorded",
+        "request": "Payment prompt sent",
+        "poll": "Status refreshed",
+        "cash": "Cash fallback recorded"
+      },
+      "errors": {
+        "inFlight": "A prompt is still live on the customer's phone. Check its status first.",
+        "attemptsExhausted": "No prompts left. Use the cash fallback or return the parcel.",
+        "cashOverCap": "Order total is above the cash limit.",
+        "alreadySettled": "This order is already paid.",
+        "orderNotPayable": "This order can no longer be paid.",
+        "invalidPhone": "Enter a Zambian mobile number.",
+        "operatorUnsupported": "Only MTN and Airtel numbers can receive the prompt.",
+        "required": "The order must be paid before handover."
+      }
     }
   },
   "common": {
@@ -1786,7 +1896,8 @@
     "working": "Working…",
     "copy": "Copy",
     "copied": "Copied",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "rateLimited": "Too many changes in a short time. Wait a minute and try again."
   },
   "today": {
     "title": "Today",
@@ -1820,6 +1931,705 @@
     "notifications": {
       "title": "Failed notifications",
       "hint": "No failed-notification count is available in this console yet. Check the support log for message history."
+    }
+  },
+  "auditLogUi": {
+    "title": "Audit log",
+    "subtitle": "Every recorded admin action, newest first. Read-only: entries cannot be edited or deleted.",
+    "permissionDenied": "You need the audit.read permission to read the audit log.",
+    "filters": "Audit log filters",
+    "actor": "Actor account ID",
+    "action": "Action (end with a dot for a family, e.g. admin.orders.)",
+    "resource": "Resource type",
+    "resourceId": "Resource ID",
+    "outcome": "Outcome",
+    "outcomeAny": "Any outcome",
+    "outcomeSuccess": "Succeeded",
+    "outcomeDenied": "Refused",
+    "outcomeFailed": "Failed",
+    "from": "From date",
+    "to": "To date",
+    "apply": "Apply filters",
+    "reset": "Clear filters",
+    "maskingNote": "Phone numbers, emails, names, addresses and codes are masked.",
+    "loading": "Loading audit entries…",
+    "empty": "No audit entries match these filters.",
+    "loadFailed": "The audit log could not be loaded.",
+    "invalid": "Check the filters: IDs must be full account or record IDs.",
+    "when": "When: {at}",
+    "who": "Who: {actor} ({roles})",
+    "system": "system",
+    "noRoles": "no roles recorded",
+    "what": "What: {resource} {id}",
+    "reason": "Reason: {reason}",
+    "requestId": "Request {id}",
+    "details": "Before and after",
+    "more": "Load older entries"
+  },
+  "accountsUi": {
+    "title": "Admin accounts",
+    "subtitle": "Everyone who holds an admin role, with their name and email.",
+    "deactivateHelp": "Deactivate removes every admin role from the account at once and records your reason in the audit log. It works on their next request. The last superadmin cannot be removed, and you cannot deactivate yourself.",
+    "manageRolesLink": "Assign or revoke a single role",
+    "permissionDenied": "Only a superadmin can manage admin accounts.",
+    "loading": "Loading admin accounts…",
+    "loadFailed": "Admin accounts could not be loaded.",
+    "mutationFailed": "The account was not deactivated. Try again.",
+    "lastSuperadmin": "This is the last superadmin, so it cannot be deactivated.",
+    "retry": "Retry",
+    "empty": "No account holds an admin role.",
+    "noName": "No name on profile",
+    "noEmail": "No email on file",
+    "roles": "Roles: {roles}",
+    "selfNote": "This is your account.",
+    "reason": "Reason for deactivating (required)",
+    "deactivate": "Deactivate",
+    "confirmDeactivate": "Deactivate {name}? This removes these roles: {roles}."
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Aggregated marketplace and shopper behaviour. No individual shoppers or raw search text are shown.",
+    "tabs": {
+      "label": "Analytics sections",
+      "overview": "Overview",
+      "search": "Search & demand",
+      "products": "Products & funnel",
+      "insights": "Insights",
+      "users": "Users",
+      "growth": "Growth",
+      "revenue": "Revenue",
+      "vendors": "Vendors",
+      "servicesEvents": "Services & events",
+      "behaviour": "Behaviour",
+      "performance": "Boost & uproot"
+    },
+    "range": {
+      "label": "Date range",
+      "days": "Last {days} days"
+    },
+    "loading": "Loading analytics…",
+    "error": "Could not load analytics.",
+    "retry": "Retry",
+    "permissionDenied": "Only platform admins can view analytics.",
+    "disabled": {
+      "title": "Analytics is not enabled",
+      "body": "Daily rollups are switched off (feature flag analytics_v2_rollups). Nothing is collected or shown here until it is turned on."
+    },
+    "dataThrough": "Behaviour data through {day} (UTC). Orders and payments are live.",
+    "dataPending": "Behaviour data has not been rolled up yet. Orders and payments are live.",
+    "insufficient": "Not enough data (needs {n}+)",
+    "notAvailable": "—",
+    "empty": "No data for this range.",
+    "delta": {
+      "none": "No previous-period baseline",
+      "value": "{change} vs previous period"
+    },
+    "columns": {
+      "day": "Day",
+      "term": "Search term",
+      "product": "Product",
+      "page": "Page type"
+    },
+    "session": {
+      "rule": "A session ends after 30 minutes without activity.",
+      "activeSpan": "Average active span",
+      "estimatedEnd": "Session end is estimated from the last activity seen, so this is not time on site.",
+      "duration": "{minutes} min {seconds} s"
+    },
+    "overview": {
+      "commercialTitle": "Orders and payments",
+      "commercialHint": "From orders and payments only. Paid means a successful payment.",
+      "behaviourTitle": "Shopper behaviour",
+      "dailyTitle": "Paid GMV by day",
+      "reconciliation": {
+        "mismatch": "Payments do not reconcile with paid checkouts on: {days}. Check the payments before relying on these numbers."
+      },
+      "kpi": {
+        "gmvPaid": "Paid GMV",
+        "ordersPaid": "Paid orders",
+        "aov": "Average paid checkout",
+        "checkoutsStarted": "Checkouts started",
+        "ordersPlacedHint": "{placed} orders placed",
+        "sessions": "Sessions",
+        "visitorDays": "Visitor-days",
+        "bounceRate": "Bounce rate",
+        "searches": "Searches",
+        "zeroResultShare": "Searches with no results"
+      }
+    },
+    "search": {
+      "kNotice": "Terms searched fewer than {k} times in this range are grouped as “other” and never shown.",
+      "zeroResults": "No-result searches",
+      "zeroTitle": "Searched for but not found",
+      "zeroHint": "Demand the catalogue does not meet yet.",
+      "topTitle": "Top search terms",
+      "other": "Other: {terms} terms, {searches} searches"
+    },
+    "products": {
+      "funnelTitle": "Funnel",
+      "funnelHint": "Browsing steps come from sessions; checkout and order steps come from orders and payments.",
+      "shareOfSessions": "{share} of sessions",
+      "steps": {
+        "sessions": "Sessions",
+        "search_sessions": "Sessions with a search",
+        "product_view_sessions": "Sessions with a product view",
+        "cart_adds": "Cart adds",
+        "checkouts_started": "Checkouts started",
+        "orders_placed": "Orders placed",
+        "orders_paid": "Paid orders"
+      },
+      "topTitle": "Most viewed products",
+      "views": "Views",
+      "unnamed": "Unnamed product",
+      "pageViewsTitle": "Page views by page type",
+      "entryTitle": "Entry pages"
+    },
+    "insights": {
+      "placeholder": "Automated insights arrive in a later release. For now this lists data-quality checks.",
+      "none": "No data-quality issues in this range.",
+      "kinds": {
+        "payment_mismatch": "Payments do not reconcile with paid checkouts on {day}.",
+        "rollup_failed": "The daily rollup failed for {day}.",
+        "rollup_stale": "Rollups are behind (latest: {day})."
+      }
+    },
+    "financeWithheld": "Money figures are hidden: they need the finance.read or finance.operate permission.",
+    "financeOnly": "Finance only",
+    "dash": {
+      "subtitle": "Marketplace figures from orders, payments, the ledger, vendors, services and events. Aggregates only.",
+      "lusakaNote": "Days are Africa/Lusaka calendar days. Today and the 7- and 30-day views include today so far.",
+      "noActivity": "No activity in this period.",
+      "daily": "By day",
+      "permissionFinance": "Revenue needs the finance.read or finance.operate permission.",
+      "period": {
+        "today": "Today",
+        "7d": "7 days",
+        "30d": "30 days",
+        "custom": "Custom",
+        "from": "From",
+        "to": "To",
+        "apply": "Apply",
+        "customHint": "Choose a start and end day, then Apply."
+      },
+      "export": {
+        "button": "Export CSV",
+        "working": "Exporting…",
+        "done": "Export downloaded. It has been recorded in the audit log.",
+        "permission": "You do not have permission to export this report.",
+        "error": "The export failed. Try again."
+      },
+      "users": {
+        "title": "Accounts",
+        "hint": "Registered customers exclude deleted accounts. Vendors count every vendor business.",
+        "customers": "Registered customers",
+        "vendors": "Registered vendors",
+        "activeVendors": "{n, plural, one {# active} other {# active}}",
+        "newCustomers": "New customers",
+        "newVendors": "New vendors",
+        "registrations": "New registrations",
+        "activityTitle": "Active users",
+        "activityHint": "Distinct visitors (anonymous) and signed-in accounts in the day, 7 days and 30 days ending on the last day of the period.",
+        "activityOff": "Active-user counts need Analytics v2 data collection, which is switched off. Registrations and purchases below are unaffected.",
+        "dau": "Daily active",
+        "wau": "Weekly active",
+        "mau": "Monthly active",
+        "signedIn": "{n} signed in",
+        "visitors": "Visitors",
+        "cohortsTitle": "Purchase retention",
+        "cohortsHint": "Customers grouped by the month of their first paid order; the share who ordered again in each later month.",
+        "cohort": "First order",
+        "cohortSize": "Customers",
+        "monthN": "Month {n}",
+        "small": "(small)"
+      },
+      "growth": {
+        "title": "Growth",
+        "hint": "Counts only. Paid orders include orders cancelled after payment.",
+        "customers": "New customers",
+        "vendors": "New vendors",
+        "listings": "New listings",
+        "checkouts_started": "Checkouts started",
+        "orders_placed": "Orders placed",
+        "orders_paid": "Paid orders",
+        "checkoutToPaid": "Checkout to paid"
+      },
+      "revenue": {
+        "title": "Platform revenue",
+        "hint": "From the ledger: commission plus delivery fees credited to the platform, net of refund reversals.",
+        "platformRevenue": "Platform revenue",
+        "commission": "Commission",
+        "delivery": "Delivery revenue",
+        "processingFees": "Payment fees",
+        "processingFeesHint": "A cost, not deducted above",
+        "ordersTitle": "Orders",
+        "ordersHint": "Order value is what customers paid for goods and delivery. It is not platform revenue.",
+        "paidOrders": "Paid orders",
+        "paidOrderValue": "Paid order value",
+        "notRevenue": "Not revenue",
+        "averagePaidOrder": "Average paid order",
+        "takeRate": "Take rate",
+        "cancelled": "Cancelled",
+        "paidThenCancelled": "{n} after payment",
+        "placed": "Orders placed",
+        "refundsTitle": "Refunds",
+        "refundsRequested": "Requested",
+        "refundsCompleted": "Completed",
+        "refundsOpen": "In progress",
+        "refundsFailed": "Failed"
+      },
+      "vendors": {
+        "title": "Vendors",
+        "total": "All vendors",
+        "active": "Active",
+        "new": "New in period",
+        "selling": "Selling",
+        "sellingHint": "With a paid order in the period",
+        "kycTitle": "KYC pipeline",
+        "kycHint": "Counts in the period; the bars show each vendor's latest KYC record now.",
+        "kycSubmitted": "Submitted",
+        "kycApproved": "Approved",
+        "kycRejected": "Rejected",
+        "kycDecisionTime": "Average decision time",
+        "hours": "{n, plural, one {# hour} other {# hours}}",
+        "kycCurrent": "Latest KYC status",
+        "statusTitle": "Vendor status",
+        "status": "Status",
+        "count": "Vendors",
+        "topTitle": "Top vendors",
+        "topHint": "By paid orders in the period. Ratings are all published reviews.",
+        "noReviews": "No published reviews in this period.",
+        "ratings": "{n, plural, one {# review} other {# reviews}} in the period, average {avg} / 5",
+        "vendor": "Vendor",
+        "itemSales": "Item sales",
+        "rating": "Rating",
+        "ratingCell": "{avg} ({n})"
+      },
+      "kycStatus": {
+        "submitted": "Submitted",
+        "under_review": "Under review",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "suspended": "Suspended",
+        "revoked": "Revoked"
+      },
+      "vendorStatus": {
+        "draft": "Draft",
+        "pending_kyc": "Pending KYC",
+        "active": "Active",
+        "suspended": "Suspended",
+        "suspended_compliance": "Suspended (compliance)"
+      },
+      "services": {
+        "title": "Services",
+        "hint": "Job requests, quotes, request threads and bookings started in the period.",
+        "activeListings": "Active service listings",
+        "jobsPosted": "Job requests",
+        "quotes": "{submitted} quotes, {accepted} accepted",
+        "rfqOpened": "Quote requests",
+        "rfqProgress": "{quoted} quoted, {accepted} accepted",
+        "bookings": "Bookings",
+        "bookingsPaid": "{n} paid"
+      },
+      "events": {
+        "title": "Events",
+        "hint": "Tickets issued and check-ins in the period. The check-in rate covers events that have started.",
+        "published": "Published events",
+        "instances": "Event dates",
+        "ticketsSold": "Tickets sold",
+        "checkIns": "Check-ins",
+        "checkInRate": "Check-in rate {rate}"
+      },
+      "performance": {
+        "funnelTitle": "Funnel: views to paid orders",
+        "funnelHint": "Product-page views, add-to-cart actions and paid orders in the period, with repeat and returning buyers.",
+        "views": "Views",
+        "carts": "Add to cart",
+        "orders": "Paid orders",
+        "customers": "Buyers",
+        "viewToOrder": "View to order",
+        "cartToOrder": "Cart to order",
+        "rateOfViews": "{rate} of views",
+        "rateOfCarts": "{rate} of carts",
+        "repeatRate": "Repeat rate",
+        "repeatHint": "{n, plural, one {# buyer} other {# buyers}} with 2+ orders in the period",
+        "returningRate": "Returning buyers",
+        "returningHint": "{n, plural, one {# buyer} other {# buyers}} who had ordered before",
+        "cohortsHint": "Monthly cohort retention is on the Users tab.",
+        "contributionTitle": "Contribution per order",
+        "contributionHint": "What the platform keeps from a paid order: commission plus delivery fee, minus the payment fee, the courier and refunds.",
+        "perOrder": "Contribution per order",
+        "contributionTotal": "Total contribution",
+        "margin": "Of order value",
+        "negativeOrders": "Loss-making orders",
+        "ordersCount": "{n, plural, one {# paid order} other {# paid orders}}",
+        "commission": "Commission",
+        "deliveryFee": "Delivery fee charged",
+        "paymentFee": "Payment fee",
+        "courierCost": "Courier cost",
+        "refundLoss": "Lost to refunds",
+        "gaps": "Not yet in these figures: payment fee for {fee, plural, one {# order} other {# orders}}, courier cost for {courier, plural, one {# order} other {# orders}}.",
+        "entities": "{n, plural, =0 {No activity in the period} one {# with activity} other {# with activity}}",
+        "grain": {
+          "categories": "Categories",
+          "products": "Products",
+          "vendors": "Vendors",
+          "clips": "Clips"
+        },
+        "ranking": {
+          "top": "Top: boost what sells",
+          "bottom": "Bottom: attention without sales",
+          "hidden_gems": "Hidden gems: sell when seen"
+        },
+        "rankingHint": {
+          "top": "Most paid orders in the period.",
+          "bottom": "At least {views} views, lowest view-to-order conversion first. Fix, reprice or uproot.",
+          "hidden_gems": "At least {orders} paid orders, highest view-to-order conversion first. Give these more exposure."
+        },
+        "name": "Name",
+        "clipNote": "Clip views are signed-in views of 3 seconds or more. Clip orders are paid orders whose buyer added the product to the cart from the clip in the {days} days before.",
+        "viewsNote": "View counters are kept per UTC day, so at the edges of a period up to two hours of views can fall on the next or previous day."
+      }
+    }
+  },
+  "offers": {
+    "title": "Vendor offers",
+    "subtitle": "Review bundles and offers across vendors. An admin pause stops an offer at once and the vendor cannot lift it.",
+    "loading": "Loading offers…",
+    "error": "Could not load offers.",
+    "permissionDenied": "You do not have access to offers.",
+    "permissionDeniedHint": "Ask a super admin for the advertising permission.",
+    "retry": "Try again",
+    "empty": "No offers match these filters.",
+    "listLabel": "Offers",
+    "truncated": "Showing the first 200 offers. Narrow the filters to see the rest.",
+    "vendor": "Vendor: {name}",
+    "window": "{starts} to {ends}",
+    "windowOpen": "From {starts}, no end date",
+    "perCustomer": "{count, plural, one {# use per customer} other {# uses per customer}}",
+    "perCustomerUnlimited": "No per-customer limit",
+    "giftStock": "Gifts {reserved} of {total} used",
+    "note": "Admin note: {note}",
+    "pausedToast": "Offer paused.",
+    "unpausedToast": "Admin pause lifted.",
+    "filters": {
+      "label": "Filter offers",
+      "state": "State",
+      "status": "Vendor status",
+      "type": "Type",
+      "search": "Title",
+      "searchPlaceholder": "Search titles",
+      "apply": "Search",
+      "all": "All"
+    },
+    "state": {
+      "live": "Live",
+      "admin_paused": "Paused by admin",
+      "scheduled": "Scheduled",
+      "ended": "Ended"
+    },
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "paused": "Paused by vendor",
+      "archived": "Archived"
+    },
+    "type": {
+      "bundle": "Bundle",
+      "buy_n_pay_m": "Buy N pay M",
+      "bxgy": "Buy X get Y",
+      "free_gift": "Free gift"
+    },
+    "actions": {
+      "pause": "Pause",
+      "unpause": "Lift pause",
+      "pauseTitle": "Pause this offer?",
+      "unpauseTitle": "Lift the admin pause?",
+      "pauseBody": "“{title}” stops applying in carts and checkouts straight away. Orders already placed keep their price.",
+      "unpauseBody": "“{title}” applies again if the vendor still has it active and it is within its dates.",
+      "noteLabel": "Note (shown to admins)",
+      "notePlaceholder": "Why are you changing this offer?",
+      "audited": "This action is recorded in the audit log.",
+      "cancel": "Cancel",
+      "submitting": "Saving…",
+      "confirmPause": "Pause offer",
+      "confirmUnpause": "Lift pause",
+      "failure": "Could not update the offer. Try again."
+    }
+  },
+  "coupons": {
+    "manager": {
+      "title": "Platform coupons",
+      "intro": "Codes paid for by Convergeo. Shops still get their full price.",
+      "fundingNote": "Every platform discount comes out of the monthly promotions budget. When it's used up, platform coupons stop working until next month.",
+      "createTitle": "New coupon",
+      "code": "Code",
+      "codeHelp": "3–32 letters, numbers or dashes, e.g. SAVE20.",
+      "kind": "Discount type",
+      "kindPercent": "Percent off",
+      "kindFixed": "Kwacha off",
+      "percent": "Percent (e.g. 10)",
+      "amount": "Amount in Kwacha (e.g. 20)",
+      "maxDiscount": "Largest discount (K, optional)",
+      "maxDiscountHelp": "Caps a percent coupon on big baskets.",
+      "minSpend": "Minimum spend (K, optional)",
+      "minSpendHelp": "Counted on the items the coupon covers.",
+      "scope": "Works on",
+      "scopeAll": "Everything",
+      "scopeShop": "My whole shop",
+      "scopeVendor": "One shop",
+      "scopeCategory": "One category",
+      "scopeListing": "One listing",
+      "scopeId": "ID",
+      "scopeIdHelp": "Copy the ID from the shop, category or listing page.",
+      "startsOn": "Starts on",
+      "endsOn": "Ends on (optional)",
+      "endsOnHelp": "The code works until the end of this day, Lusaka time.",
+      "totalLimit": "Total uses (optional)",
+      "totalLimitHelp": "Leave empty for no total limit.",
+      "perUserLimit": "Uses per customer",
+      "create": "Create coupon",
+      "creating": "Creating…",
+      "created": "Coupon created.",
+      "listTitle": "Platform coupons",
+      "empty": "No coupons yet.",
+      "loading": "Loading…",
+      "usage": "{used} used",
+      "usageLimited": "{used} of {limit} used",
+      "summaryOff": "{value} off",
+      "summaryMin": "min. {amount}",
+      "statusActive": "Active",
+      "statusPaused": "Paused",
+      "statusArchived": "Ended",
+      "pause": "Pause",
+      "resume": "Resume",
+      "archive": "End coupon",
+      "errors": {
+        "generic": "Something went wrong. Try again.",
+        "disabled": "Coupons aren't switched on yet.",
+        "forbidden": "Only admins can manage platform coupons.",
+        "code": "Use 3–32 letters, numbers or dashes.",
+        "codeTaken": "That code is already taken.",
+        "percent": "Enter a percent between 1 and 100.",
+        "percentTooHigh": "That percent is above the allowed maximum.",
+        "amount": "Enter an amount like 20 or 12.50.",
+        "dates": "The end date must be on or after the start date, and not in the past.",
+        "scope": "Choose what the coupon works on and paste its ID.",
+        "listing": "That listing isn't in your shop.",
+        "archived": "Ended coupons can't be restarted. Create a new one."
+      }
+    }
+  },
+  "productImages": {
+    "errors": {
+      "full": "A product can have at most 8 photos.",
+      "duplicate": "That photo is already on this product."
+    }
+  },
+  "vendorPlans": {
+    "hint": "Limits count distinct listings, never stock. Leave the listing limit empty for unlimited. Going over a limit never removes listings: vendors only see an upgrade prompt. Billing is not collected yet.",
+    "unlimited": "Unlimited",
+    "default": "Default plan",
+    "vendorCount": "{count, plural, one {# vendor} other {# vendors}}",
+    "summary": "{price}/month · {listings} listings · {images} photos",
+    "makeDefault": "Make default",
+    "delete": "Delete",
+    "createHeading": "New plan",
+    "create": "Create plan",
+    "fields": {
+      "key": "Plan key (lowercase, e.g. market_stall)",
+      "name": "Name",
+      "priceKwacha": "Monthly price (K)",
+      "maxListings": "Listing limit (empty = unlimited)",
+      "maxImages": "Photos per listing (1–8)",
+      "featuredSlots": "Featured slots",
+      "analyticsDepth": "Analytics",
+      "wholesaleTools": "Wholesale tools",
+      "active": "Active",
+      "includedShops": "Shops included (empty = unlimited)",
+      "extraShopPrice": "Extra shop (K/month, empty = not sold)",
+      "staffSeats": "Staff seats (empty = unlimited)",
+      "broadcasts": "WhatsApp broadcasts / month",
+      "adCredit": "Ad credit (K/month)",
+      "integrationsLevel": "Integrations",
+      "payoutSpeed": "Payout speed",
+      "supportLevel": "Support",
+      "officialStoreBadge": "Official store badge",
+      "clickAndCollect": "Click & collect",
+      "multiBranchStock": "Multi-branch stock"
+    },
+    "depth": {
+      "basic": "Basic",
+      "standard": "Standard",
+      "advanced": "Advanced"
+    },
+    "errors": {
+      "nameRequired": "Enter a plan name.",
+      "keyInvalid": "Use 2–32 lowercase letters, numbers or underscores, starting with a letter.",
+      "priceInvalid": "Enter a price in kwacha, for example 49 or 49.50.",
+      "listingsInvalid": "Enter a whole number of listings, or leave it empty for unlimited.",
+      "imagesInvalid": "Photos per listing must be between 1 and 8.",
+      "slotsInvalid": "Featured slots must be between 0 and 100.",
+      "overrideEmpty": "An override must change the listing limit or the photo limit.",
+      "expiryInvalid": "Choose an expiry date in the future, at most one year ahead.",
+      "reasonRequired": "Give a reason for the override.",
+      "vendorIdInvalid": "Enter a vendor ID (UUID).",
+      "vendorNotFound": "Vendor not found.",
+      "saveFailed": "Could not save. Check the values and try again.",
+      "keyTaken": "That plan key already exists.",
+      "defaultInactive": "The default plan must stay active.",
+      "defaultDelete": "The default plan cannot be deleted.",
+      "inUse": "Vendors are on this plan. Deactivate it instead, or move them first.",
+      "planInactive": "That plan is not active.",
+      "shopsInvalid": "Shops included must be a whole number from 1, or empty for unlimited.",
+      "extraShopPriceInvalid": "Enter the extra shop price in kwacha, or leave it empty.",
+      "seatsInvalid": "Staff seats must be a whole number, or empty for unlimited.",
+      "broadcastsInvalid": "Enter a whole number of broadcasts.",
+      "adCreditInvalid": "Enter the ad credit in kwacha."
+    },
+    "vendor": {
+      "heading": "Vendor plan",
+      "hint": "Look up a vendor to assign a plan or give a time-limited exception.",
+      "vendorId": "Vendor ID",
+      "load": "Load",
+      "flagOff": "The vendor_plans flag is off, so these limits are not enforced yet.",
+      "effective": "Plan {plan}: {listings} listings ({count} used), {images} photos per listing",
+      "plan": "Plan",
+      "defaultPlan": "Choose a plan",
+      "note": "Note (optional)",
+      "assign": "Assign plan",
+      "noBilling": "Assigning a plan only records it. No payment is taken.",
+      "none": "default"
+    },
+    "override": {
+      "heading": "Override",
+      "current": "Active: {listings} listings until {expires} ({reason})",
+      "expired": "Expired on {expires}: {listings} listings ({reason})",
+      "unlimited": "Unlimited listings",
+      "expiresOn": "Expires on",
+      "reason": "Reason",
+      "save": "Save override",
+      "remove": "Remove override"
+    },
+    "integrations": {
+      "none": "None",
+      "basic": "Basic",
+      "sheets_webhooks": "Sheets + webhooks",
+      "api": "API"
+    },
+    "payoutSpeed": {
+      "standard": "Standard",
+      "fast": "Fast",
+      "priority": "Priority"
+    },
+    "support": {
+      "community": "Community",
+      "standard": "Standard",
+      "priority": "Priority",
+      "dedicated": "Dedicated"
+    }
+  },
+  "branches": {
+    "title": "Branch verification",
+    "subtitle": "Approve new shops of multi-branch businesses. Every decision is audited.",
+    "status": {
+      "draft": "Draft",
+      "pending_review": "Pending review",
+      "info_requested": "Info requested",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "kind": {
+      "physical": "Physical",
+      "online": "Online"
+    },
+    "queue": {
+      "filter": "Status",
+      "flagsLink": "Duplicate flags",
+      "loading": "Loading branches…",
+      "error": "Could not load branches.",
+      "permissionDenied": "You do not have access to branch verification.",
+      "retry": "Retry",
+      "empty": "No branches here.",
+      "evidence": "{count, plural, one {# evidence file} other {# evidence files}}",
+      "openFlags": "{count, plural, one {# open flag} other {# open flags}}"
+    },
+    "detail": {
+      "back": "Back to queue",
+      "business": "Business",
+      "legalName": "Legal name",
+      "registration": "Registration",
+      "pacraCertificate": "PACRA certificate",
+      "open": "Open",
+      "ownerKyc": "Owner KYC approved",
+      "yes": "Yes",
+      "no": "No",
+      "shop": "Shop",
+      "location": "Location",
+      "address": "Address",
+      "phone": "Phone",
+      "payout": "Payout",
+      "onHold": "on hold",
+      "plan": "Plan",
+      "planAddon": "{plan} · add-on {price}/month",
+      "planIncluded": "{plan} · included",
+      "evidence": "Evidence",
+      "noEvidence": "No evidence uploaded.",
+      "unavailable": "Preview unavailable",
+      "flags": "{count, plural, =0 {Duplicate flags} one {Duplicate flags (# open)} other {Duplicate flags (# open)}}",
+      "siblings": "Other branches of this business",
+      "primary": "main shop",
+      "note": "Note to the vendor (required to request info or reject)",
+      "flagsBlock": "Resolve the open duplicate flags before approving.",
+      "history": "History"
+    },
+    "actions": {
+      "approve": "Approve",
+      "requestInfo": "Request info",
+      "reject": "Reject"
+    },
+    "evidence": {
+      "storefront_photo": "Shopfront photo",
+      "premises_proof": "Proof of premises"
+    },
+    "proof": {
+      "lease": "Lease",
+      "utility_bill": "Utility bill",
+      "council_permit": "Council trading permit"
+    },
+    "flags": {
+      "title": "Duplicate flags",
+      "subtitle": "Possible duplicate shops found by name, phone, payout number, GPS or photo.",
+      "none": "No flags.",
+      "score": "match {score}%",
+      "pair": "{branch} ↔ {matched}",
+      "noteLabel": "Resolution note",
+      "notePlaceholder": "Why is this (not) a duplicate?",
+      "clear": "Not a duplicate",
+      "confirm": "Confirm duplicate"
+    },
+    "flagKind": {
+      "name_similar": "Similar name",
+      "phone_match": "Same phone",
+      "payout_other_owner": "Payout number of another owner",
+      "payout_shared_same_owner": "Shared payout number (same owner)",
+      "gps_near_other_owner": "Another owner at this spot",
+      "image_duplicate": "Same shopfront photo"
+    },
+    "flagStatus": {
+      "open": "Open",
+      "cleared": "Cleared",
+      "confirmed": "Confirmed duplicate"
+    },
+    "errors": {
+      "noteRequired": "Write a short note (at least 3 characters).",
+      "openFlags": "Resolve the open duplicate flags first.",
+      "primary": "The main shop is verified through KYC.",
+      "flagResolved": "This flag is already resolved.",
+      "payoutOtherOwner": "A payout number can never be shared across owners.",
+      "noPacra": "This business has no PACRA number.",
+      "invalidTransition": "This branch is not ready for that decision.",
+      "permission": "You do not have permission for this action.",
+      "saveFailed": "Could not save the decision. Try again."
     }
   }
 }

@@ -7,7 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import catalogMessages from "../../../../../../packages/i18n/messages/en/catalog.json";
 
-import { HomeHeroBand, HomeProductRail, type HomeDefaultData } from "./home-default";
+import {
+  HomeHeroBand,
+  HomeProductRail,
+  type HomeDefaultData,
+} from "./home-default";
 import { planHomeLayout, resolveHomeLayoutMode } from "./home-layout";
 import {
   hasEffectiveMerchConfig,
@@ -19,10 +23,15 @@ import {
 import type { CatalogListing } from "./plp/listing-grid";
 
 // next/dynamic resolves asynchronously; render the real carousel synchronously in tests.
-vi.mock("./home-hero-carousel-lazy", async () => await import("./home-hero-carousel"));
+vi.mock(
+  "./home-hero-carousel-lazy",
+  async () => await import("./home-hero-carousel"),
+);
 
 vi.mock("@vergeo/ui/src/media/cloudinary-image", () => ({
-  CloudinaryImage: ({ alt }: { alt: string }) => <img alt={alt} data-testid="cloudinary-image" />,
+  CloudinaryImage: ({ alt }: { alt: string }) => (
+    <img alt={alt} data-testid="cloudinary-image" />
+  ),
 }));
 
 beforeEach(() => {
@@ -52,14 +61,20 @@ const t = createTranslator({
   locale: "en",
   messages: { catalog: catalogMessages },
   namespace: "catalog",
-}) as unknown as (key: string, values?: Record<string, string | number>) => string;
+}) as unknown as (
+  key: string,
+  values?: Record<string, string | number>,
+) => string;
 
 const OPERATIONAL_PLACEHOLDER_TITLE = "Welcome to Convergeo";
 const OPERATIONAL_PLACEHOLDER_SUBTITLE =
   "Your config-driven storefront will appear here as merchandising slots go live.";
-const BUYER_FALLBACK_TITLE = "Shop products, services, and events across Zambia";
+const BUYER_FALLBACK_TITLE =
+  "Shop products, services, and events across Zambia";
 
-function makeSeedPlaceholderHero(overrides: Partial<MerchSlotRow> = {}): MerchSlotRow {
+function makeSeedPlaceholderHero(
+  overrides: Partial<MerchSlotRow> = {},
+): MerchSlotRow {
   return {
     id: "seed-hero",
     slot_key: "hero",
@@ -158,7 +173,10 @@ describe("placeholder-only merchandising detection", () => {
         id: "flash-1",
         slot_key: "flash_deal",
         variant_key: "default",
-        payload: { ends_at: "2030-12-31T23:59:59.000Z", headline: "Flash sale" },
+        payload: {
+          ends_at: "2030-12-31T23:59:59.000Z",
+          headline: "Flash sale",
+        },
         schedule_from: null,
         schedule_to: null,
         position: 1,
@@ -184,18 +202,22 @@ describe("placeholder-only merchandising detection", () => {
 
 describe("resolveHomeLayoutMode", () => {
   it("uses the data-driven default when only the seed placeholder hero exists and listings are available", () => {
-    const mode = resolveHomeLayoutMode([makeSeedPlaceholderHero()], [makeCategory()], {
-      ...emptyDefaultData,
-      newest: [makeListing()],
-    });
+    const mode = resolveHomeLayoutMode(
+      [makeSeedPlaceholderHero()],
+      [makeCategory()],
+      {
+        ...emptyDefaultData,
+        newest: [makeListing()],
+      },
+    );
 
     expect(mode).toBe("default");
   });
 
   it("falls back to hero-only when the catalogue is fully empty", () => {
-    expect(resolveHomeLayoutMode([makeSeedPlaceholderHero()], [], emptyDefaultData)).toBe(
-      "hero-only",
-    );
+    expect(
+      resolveHomeLayoutMode([makeSeedPlaceholderHero()], [], emptyDefaultData),
+    ).toBe("hero-only");
   });
 
   it("uses hero-only when there are no slots and no catalogue content", () => {
@@ -204,17 +226,25 @@ describe("resolveHomeLayoutMode", () => {
 
   it("uses default when categories exist even without listings", () => {
     expect(
-      resolveHomeLayoutMode([makeSeedPlaceholderHero()], [makeCategory()], emptyDefaultData),
+      resolveHomeLayoutMode(
+        [makeSeedPlaceholderHero()],
+        [makeCategory()],
+        emptyDefaultData,
+      ),
     ).toBe("default");
   });
 });
 
 describe("default homepage storefront rendering", () => {
   it("renders buyer merch hero and a product rail for placeholder-only seed config", () => {
-    const mode = resolveHomeLayoutMode([makeSeedPlaceholderHero()], [makeCategory()], {
-      ...emptyDefaultData,
-      newest: [makeListing()],
-    });
+    const mode = resolveHomeLayoutMode(
+      [makeSeedPlaceholderHero()],
+      [makeCategory()],
+      {
+        ...emptyDefaultData,
+        newest: [makeListing()],
+      },
+    );
     expect(mode).toBe("default");
 
     render(
@@ -236,15 +266,23 @@ describe("default homepage storefront rendering", () => {
       </NextIntlClientProvider>,
     );
 
-    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Convergeo");
+    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent(
+      "Convergeo",
+    );
     expect(
       screen.getByRole("heading", { level: 1, name: BUYER_FALLBACK_TITLE }),
     ).toBeInTheDocument();
     expect(screen.queryByText("You pay")).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "New on Convergeo" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "New on Convergeo" }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("product-card")).toBeInTheDocument();
-    expect(screen.queryByText(OPERATIONAL_PLACEHOLDER_TITLE)).not.toBeInTheDocument();
-    expect(screen.queryByText(OPERATIONAL_PLACEHOLDER_SUBTITLE)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(OPERATIONAL_PLACEHOLDER_TITLE),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(OPERATIONAL_PLACEHOLDER_SUBTITLE),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps catalogue rails when only a partial campaign module is configured", () => {
@@ -254,7 +292,10 @@ describe("default homepage storefront rendering", () => {
           id: "flash-1",
           slot_key: "flash_deal",
           variant_key: "default",
-          payload: { ends_at: "2030-12-31T23:59:59.000Z", headline: "Flash sale" },
+          payload: {
+            ends_at: "2030-12-31T23:59:59.000Z",
+            headline: "Flash sale",
+          },
           schedule_from: null,
           schedule_to: null,
           position: 1,

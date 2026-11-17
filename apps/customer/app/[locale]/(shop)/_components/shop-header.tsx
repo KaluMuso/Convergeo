@@ -5,12 +5,20 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { BrandLogo } from "./brand-logo";
-import { CartNavTrigger, getCartItemCount, setStoreState, useCartStore } from "./cart/cart-store";
+import {
+  CartNavTrigger,
+  getCartItemCount,
+  setStoreState,
+  useCartStore,
+} from "./cart/cart-store";
 import { CategoryMegaMenu } from "./category-mega-menu";
 import { DesktopHeaderSearch } from "./desktop-header-search";
 import { HeaderThemeToggle } from "./header-theme-toggle";
-import { MerchPreviewLink, useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
-import { useBusinessEligibility } from "./use-business-eligibility";
+import {
+  MerchPreviewLink,
+  useMerchPreviewToken,
+  withMerchPreviewParam,
+} from "./merch-preview-nav";
 
 import type { SearchInputLabels } from "./search/search-input";
 
@@ -33,7 +41,6 @@ export type ShopHeaderLabels = {
   services: string;
   events: string;
   askVergeo: string;
-  supplies: string;
   account: string;
   cart: string;
   cartWithCount: string;
@@ -76,7 +83,6 @@ export function ShopHeader({
 }: ShopHeaderProps) {
   const previewToken = useMerchPreviewToken();
   const { cart } = useCartStore();
-  const eligibleForSupplies = useBusinessEligibility();
 
   useEffect(() => {
     // Defer cart hydration until after first paint so header mount does not
@@ -95,7 +101,10 @@ export function ShopHeader({
     };
     const w = window as Window &
       typeof globalThis & {
-        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        requestIdleCallback?: (
+          cb: () => void,
+          opts?: { timeout: number },
+        ) => number;
         cancelIdleCallback?: (id: number) => void;
       };
     let idleId: number | undefined;
@@ -119,7 +128,10 @@ export function ShopHeader({
   const cartCount = getCartItemCount(cart);
   const cartCountLabel =
     cartCount > 0
-      ? labels.cartWithCount.replace("{count}", String(cartCount > 99 ? 99 : cartCount))
+      ? labels.cartWithCount.replace(
+          "{count}",
+          String(cartCount > 99 ? 99 : cartCount),
+        )
       : undefined;
 
   const [scrolled, setScrolled] = useState(false);
@@ -150,7 +162,6 @@ export function ShopHeader({
     ...link,
     href: withMerchPreviewParam(link.href, previewToken),
   }));
-  const suppliesHref = withMerchPreviewParam(`/${locale}/supplies`, previewToken);
   const accountHref = withMerchPreviewParam(`/${locale}/account`, previewToken);
 
   const logo = (
@@ -200,7 +211,9 @@ export function ShopHeader({
     />
   );
 
-  const themeToggle = labels.theme ? <HeaderThemeToggle labels={labels.theme} /> : null;
+  const themeToggle = labels.theme ? (
+    <HeaderThemeToggle labels={labels.theme} />
+  ) : null;
 
   return (
     <header
@@ -229,7 +242,9 @@ export function ShopHeader({
             {cartTrigger(false)}
           </div>
         </div>
-        {mobileSearchSlot ? <div className="w-full min-w-0">{mobileSearchSlot}</div> : null}
+        {mobileSearchSlot ? (
+          <div className="w-full min-w-0">{mobileSearchSlot}</div>
+        ) : null}
       </nav>
 
       {/* Tablet + desktop (md+), full-bleed. Desktop is one row:
@@ -264,13 +279,6 @@ export function ShopHeader({
                 </Link>
               </li>
             ))}
-            {eligibleForSupplies ? (
-              <li className="shrink-0">
-                <Link href={suppliesHref} className={navLinkClassName}>
-                  {labels.supplies}
-                </Link>
-              </li>
-            ) : null}
           </ul>
         </div>
       </nav>

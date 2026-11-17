@@ -6,8 +6,12 @@ import { parseStringAllowlist, readFeatureFlag } from "./feature-flags";
 const INTAKE_FLAG = "waha_vendor_intake";
 const INTAKE_ALLOWLIST_KEY = "waha_intake_vendor_allowlist";
 const CLIPS_FLAG = "clips";
+const BUNDLES_FLAG = "bundles";
+const COUPONS_FLAG = "coupons";
 
-async function resolveVendorIdForUser(userId: string | null): Promise<string | null> {
+async function resolveVendorIdForUser(
+  userId: string | null,
+): Promise<string | null> {
   if (!userId) {
     return null;
   }
@@ -31,6 +35,17 @@ export async function isClipsRouteAccessible(): Promise<boolean> {
     const cookieStore = await cookies();
     const supabase = createServerClient(cookieStore);
     return await readFeatureFlag(supabase, CLIPS_FLAG);
+  } catch {
+    return false;
+  }
+}
+
+/** Whether the vendor offers (W8 bundles) route may render (server-side, fail closed). */
+export async function isBundlesRouteAccessible(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(cookieStore);
+    return await readFeatureFlag(supabase, BUNDLES_FLAG);
   } catch {
     return false;
   }
@@ -64,6 +79,17 @@ export async function isIntakeRouteAccessible(): Promise<boolean> {
       return false;
     }
     return allowlist.includes(vendorId);
+  } catch {
+    return false;
+  }
+}
+
+/** Whether the vendor coupons page may render (`feature_flags.coupons`, fail closed). */
+export async function isCouponsRouteAccessible(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(cookieStore);
+    return await readFeatureFlag(supabase, COUPONS_FLAG);
   } catch {
     return false;
   }

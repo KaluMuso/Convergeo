@@ -10,7 +10,9 @@ const rows = [
 describe("categoryDisplayName", () => {
   it("uses the category's own name, not a title-cased slug", () => {
     expect(categoryDisplayName(rows, "mens-clothing")).toBe("Men's Clothing");
-    expect(categoryDisplayName(rows, "fashion-beauty")).toBe("Fashion & Beauty");
+    expect(categoryDisplayName(rows, "fashion-beauty")).toBe(
+      "Fashion & Beauty",
+    );
   });
 
   it("falls back to a title-cased slug only for unknown categories", () => {

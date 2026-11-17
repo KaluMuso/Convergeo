@@ -650,6 +650,33 @@ def test_kyc_detail_shows_incomplete_record_without_documents(
     assert response.json()["docs_available"] is False
 
 
+def test_kyc_detail_unknown_id_is_404_when_postgrest_returns_none(
+    admin_kyc_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    """postgrest's maybe_single() returns None (not an empty response) on no match."""
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _seed_single_pending(fake_client)
+    original_execute = FakeQuery.execute
+
+    def execute(self: FakeQuery) -> Any:
+        result = original_execute(self)
+        if self._maybe_single and result.data is None:
+            return None
+        return result
+
+    monkeypatch.setattr(FakeQuery, "execute", execute)
+
+    response = admin_kyc_client.get(
+        "/admin/kyc/99999999-9999-9999-9999-999999999999",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+    )
+    assert response.status_code == 404, response.text
+    assert response.json()["error"]["code"] == "not_found"
+
+
 def test_non_admin_gets_403(
     admin_kyc_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

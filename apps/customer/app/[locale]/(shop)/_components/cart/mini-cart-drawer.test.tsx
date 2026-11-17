@@ -78,7 +78,10 @@ const labels = {
  */
 function renderInIntl(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ checkout: checkoutMessages }}>
+    <NextIntlClientProvider
+      locale="en"
+      messages={{ checkout: checkoutMessages }}
+    >
       {ui}
     </NextIntlClientProvider>,
   );
@@ -124,8 +127,12 @@ describe("MiniCartDrawer a11y", () => {
 
     renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
 
-    expect(screen.getByTestId("mini-cart-live")).toHaveTextContent("Added to cart");
-    expect(screen.getByRole("dialog", { name: labels.title })).toBeInTheDocument();
+    expect(screen.getByTestId("mini-cart-live")).toHaveTextContent(
+      "Added to cart",
+    );
+    expect(
+      screen.getByRole("dialog", { name: labels.title }),
+    ).toBeInTheDocument();
     const close = screen.getByTestId("mini-cart-close");
     expect(close).toHaveClass("min-h-11");
     await user.click(close);
@@ -143,7 +150,9 @@ describe("MiniCartDrawer a11y", () => {
 
     renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
 
-    expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("mini-cart-load-error"),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId("mini-cart-empty")).not.toBeInTheDocument();
   });
 
@@ -152,7 +161,9 @@ describe("MiniCartDrawer a11y", () => {
     openMiniCart();
     renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
 
-    expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("mini-cart-load-error"),
+    ).toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -160,7 +171,10 @@ describe("MiniCartDrawer a11y", () => {
     const user = userEvent.setup();
     renderInIntl(
       <>
-        <CartNavTrigger labels={{ openCart: labels.openCart }} cartIcon={<span>Cart</span>} />
+        <CartNavTrigger
+          labels={{ openCart: labels.openCart }}
+          cartIcon={<span>Cart</span>}
+        />
         <MiniCartDrawer locale="en" labels={labels} />
       </>,
     );
@@ -168,7 +182,9 @@ describe("MiniCartDrawer a11y", () => {
     const trigger = screen.getByTestId("cart-nav-trigger");
     expect(trigger).toHaveClass("min-h-11");
     await user.click(trigger);
-    expect(screen.getByRole("dialog", { name: labels.title })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: labels.title }),
+    ).toBeInTheDocument();
   });
 
   it("shows made-to-order lead time in the cart summary", async () => {
@@ -201,8 +217,8 @@ describe("MiniCartDrawer a11y", () => {
 
     renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
 
-    expect(await screen.findByTestId("mini-cart-lead-time-listing-1")).toHaveTextContent(
-      "Made to order · ready in about 10 days",
-    );
+    expect(
+      await screen.findByTestId("mini-cart-lead-time-listing-1"),
+    ).toHaveTextContent("Made to order · ready in about 10 days");
   });
 });

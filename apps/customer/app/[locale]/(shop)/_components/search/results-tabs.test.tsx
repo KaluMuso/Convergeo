@@ -5,7 +5,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { resetLocalWishlistStoreForTests } from "../plp/use-local-wishlist";
 
-import { SearchProductCard, type ResultsTabsLabels, type SearchHit } from "./results-tabs";
+import {
+  SearchProductCard,
+  type ResultsTabsLabels,
+  type SearchHit,
+} from "./results-tabs";
 
 const LABELS: ResultsTabsLabels = {
   loadMore: "Load more",
@@ -78,7 +82,9 @@ describe("SearchProductCard price mapping", () => {
     render(<SearchProductCard hit={baseHit} locale="en" labels={LABELS} />);
     expect(screen.queryByTestId("price-block")).not.toBeInTheDocument();
     expect(screen.queryByText(/K0\.00/)).not.toBeInTheDocument();
-    expect(screen.getByText("Synthetic multiseller product A")).toBeInTheDocument();
+    expect(
+      screen.getByText("Synthetic multiseller product A"),
+    ).toBeInTheDocument();
   });
 
   it("renders the real price when price_min_ngwee is populated (the confirmed defect case)", () => {

@@ -127,6 +127,48 @@ def test_database_release_policy_denial_is_actionable_without_sql_diagnostics(
         "/vendor/listings", headers=_auth_headers(), json=_base_payload()
     )
     assert response.status_code == 422
-    assert response.json()["error"]["code"] == "listing_policy_blocked"
+    error = response.json()["error"]
+    # Publishing is what trips release policy, so the wording and code say so and
+    # the response names the field the vendor must change.
+    assert error["code"] == "listing_publish_blocked"
+    assert error["details"]["intent"] == "publish"
+    assert error["details"]["fields"][0]["field"] == "product_class"
+    assert error["details"]["fields"][0]["code"] == "class_not_released"
     assert "private SQL" not in response.text
     assert fake_client.tables["vendor_listings"].rows == []
+
+
+def test_database_rejection_of_a_draft_is_never_reported_as_release_policy(
+    listing_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from postgrest.exceptions import APIError
+
+    original = FakeQuery.execute
+
+    def execute(query: FakeQuery) -> MagicMock:
+        if query._pending_op == "insert" and query._parent is fake_client.tables["vendor_listings"]:
+            raise APIError(
+                {
+                    "code": "23514",
+                    "message": (
+                        'new row violates check constraint '
+                        '"vendor_listings_condition_detail_parent_check"'
+                    ),
+                    "details": "private SQL",
+                    "hint": "",
+                }
+            )
+        return original(query)
+
+    monkeypatch.setattr(FakeQuery, "execute", execute)
+    payload = {**_base_payload(), "publish": False}
+    response = listing_client.post("/vendor/listings", headers=_auth_headers(), json=payload)
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "listing_draft_invalid"
+    assert error["details"]["intent"] == "draft"
+    assert error["details"]["fields"][0]["field"] == "condition_detail"
+    assert "release" not in error["message"].lower()
+    assert "private SQL" not in response.text

@@ -28,6 +28,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.invoicing.pdf import invoice_filename, render_invoice_pdf
 from fastapi import APIRouter, Depends, Response
 
@@ -79,9 +80,7 @@ def verify_invoice_token(token: str, *, order_id: str) -> tuple[str, str]:
     try:
         payload = base64.urlsafe_b64decode(encoded + padding).decode("utf-8")
     except (ValueError, UnicodeDecodeError) as exc:
-        raise AppError(
-            code="forbidden", message="Invalid download token", http_status=403
-        ) from exc
+        raise AppError(code="forbidden", message="Invalid download token", http_status=403) from exc
     expected = hmac.new(
         _signing_secret().encode("utf-8"), payload.encode("utf-8"), hashlib.sha256
     ).hexdigest()
@@ -96,9 +95,7 @@ def verify_invoice_token(token: str, *, order_id: str) -> tuple[str, str]:
     try:
         expires_at = int(expires_raw)
     except ValueError as exc:
-        raise AppError(
-            code="forbidden", message="Invalid download token", http_status=403
-        ) from exc
+        raise AppError(code="forbidden", message="Invalid download token", http_status=403) from exc
     if expires_at < int(time.time()):
         raise AppError(code="forbidden", message="Download link expired", http_status=403)
     return subject_id, role
@@ -133,9 +130,10 @@ def _load_order(service: _ServiceRoleClient, order_id: str) -> dict[str, Any] | 
 
 def _vendor_id_for_owner(service: _ServiceRoleClient, owner_user_id: str) -> str | None:
     response = (
-        service.client.table("vendors")
+        scope_owner_vendor_query(
+            service.client.table("vendors")
         .select("id, owner_user_id")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )
@@ -168,9 +166,7 @@ def _load_invoice_snapshot(
     kind: str | None,
 ) -> dict[str, Any]:
     query = (
-        service.client.table("invoices")
-        .select("id, series, no, snapshot")
-        .eq("order_id", order_id)
+        service.client.table("invoices").select("id, series, no, snapshot").eq("order_id", order_id)
     )
     if kind is not None:
         series = _KIND_TO_SERIES.get(kind)

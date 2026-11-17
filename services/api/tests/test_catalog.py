@@ -19,7 +19,6 @@ from app.routers.catalog import (
     haversine_m,
     list_catalog,
 )
-from app.services.business.access import BusinessAccess, get_business_access
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -844,53 +843,12 @@ def test_standalone_listing_endpoint_hides_wholesale_from_guests(
     assert response.json()["error"]["code"] == "listing.not_found"
 
 
-def test_standalone_listing_endpoint_allows_wholesale_for_verified_business(
-    fake_client: FakeSupabaseClient,
-) -> None:
-    from app.deps import get_supabase_client
-
-    class FakeServiceClient:
-        def __init__(self, client: FakeSupabaseClient) -> None:
-            self.client = client
-
-    app: FastAPI = create_app()
-    app.dependency_overrides[get_supabase_client] = lambda: FakeServiceClient(fake_client)
-    app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
-        user_id="11111111-1111-1111-1111-111111111111",
-        status="verified",
-        eligible=True,
-    )
-    try:
-        with TestClient(app, raise_server_exceptions=False) as client:
-            response = client.get(
-                f"/catalog/listings/{WHOLESALE_STANDALONE_LISTING_ID}"
-            )
-    finally:
-        app.dependency_overrides.clear()
-
-    assert response.status_code == 200
-    assert response.json()["wholesale"] is True
-
-
 def test_list_catalog_hides_wholesale_by_default(fake_client: FakeSupabaseClient) -> None:
     response = list_catalog(fake_client, PlpFilterState(category_path="electronics"))
     ids = {item.id for item in response.items}
     assert WHOLESALE_LISTING_ID not in ids
     # Facet counts must also ignore the hidden wholesale listing.
     assert response.total == 2
-
-
-def test_list_catalog_includes_wholesale_when_eligible(
-    fake_client: FakeSupabaseClient,
-) -> None:
-    response = list_catalog(
-        fake_client,
-        PlpFilterState(category_path="electronics"),
-        include_wholesale=True,
-    )
-    ids = {item.id for item in response.items}
-    assert WHOLESALE_LISTING_ID in ids
-    assert response.total == 3
 
 
 def test_catalog_endpoint_guest_excludes_wholesale(catalog_client: TestClient) -> None:
@@ -900,34 +858,6 @@ def test_catalog_endpoint_guest_excludes_wholesale(catalog_client: TestClient) -
     assert response.status_code == 200
     ids = {item["id"] for item in response.json()["items"]}
     assert WHOLESALE_LISTING_ID not in ids
-
-
-def test_catalog_endpoint_verified_business_sees_wholesale(
-    fake_client: FakeSupabaseClient,
-) -> None:
-    from app.deps import get_supabase_client
-
-    class FakeServiceClient:
-        def __init__(self, client: FakeSupabaseClient) -> None:
-            self.client = client
-
-    app: FastAPI = create_app()
-    app.dependency_overrides[get_supabase_client] = lambda: FakeServiceClient(fake_client)
-    app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
-        user_id="11111111-1111-1111-1111-111111111111",
-        status="verified",
-        eligible=True,
-    )
-    try:
-        with TestClient(app, raise_server_exceptions=False) as client:
-            response = client.get(
-                "/catalog/listings", params={"category_path": "electronics"}
-            )
-    finally:
-        app.dependency_overrides.clear()
-    assert response.status_code == 200
-    ids = {item["id"] for item in response.json()["items"]}
-    assert WHOLESALE_LISTING_ID in ids
 
 
 def test_haversine_zero_distance() -> None:

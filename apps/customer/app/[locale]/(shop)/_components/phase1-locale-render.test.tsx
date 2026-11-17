@@ -59,21 +59,26 @@ describe("Phase-1 bem/nya PDP purchase copy", () => {
   it.each([
     ["bem", bemCatalog],
     ["nya", nyaCatalog],
-  ] as const)("%s buy-box / seller / returns / escrow strings resolve", (locale, messages) => {
-    const t = createTranslator({
-      locale,
-      messages: { catalog: messages },
-      namespace: "catalog",
-    });
-    expect(t("pdp.buyBox.addToCart")).toBe(messages.pdp.buyBox.addToCart);
-    expect(t("pdp.buyBox.addToCart")).not.toBe("Add to cart");
-    expect(t("pdp.buyBox.quantityLabel")).toBe(messages.pdp.buyBox.quantityLabel);
-    expect(t("pdp.vendor.heading")).toBe(messages.pdp.vendor.heading);
-    expect(t("pdp.trust.returns")).toBe(messages.pdp.trust.returns);
-    expect(t("pdp.trust.escrow")).toBe(messages.pdp.trust.escrow);
-    expect(t("pdp.trust.escrow")).not.toMatch(/vergeo5/i);
-    expect(formatK(123456, { locale: `${locale}-ZM` })).toMatch(/^K/);
-  });
+  ] as const)(
+    "%s buy-box / seller / returns / escrow strings resolve",
+    (locale, messages) => {
+      const t = createTranslator({
+        locale,
+        messages: { catalog: messages },
+        namespace: "catalog",
+      });
+      expect(t("pdp.buyBox.addToCart")).toBe(messages.pdp.buyBox.addToCart);
+      expect(t("pdp.buyBox.addToCart")).not.toBe("Add to cart");
+      expect(t("pdp.buyBox.quantityLabel")).toBe(
+        messages.pdp.buyBox.quantityLabel,
+      );
+      expect(t("pdp.vendor.heading")).toBe(messages.pdp.vendor.heading);
+      expect(t("pdp.trust.returns")).toBe(messages.pdp.trust.returns);
+      expect(t("pdp.trust.escrow")).toBe(messages.pdp.trust.escrow);
+      expect(t("pdp.trust.escrow")).not.toMatch(/vergeo5/i);
+      expect(formatK(123456, { locale: `${locale}-ZM` })).toMatch(/^K/);
+    },
+  );
 });
 
 describe("Phase-1 bem/nya empty cart", () => {
@@ -93,8 +98,12 @@ describe("Phase-1 bem/nya empty cart", () => {
         data-testid="cart-empty-state"
       />,
     );
-    expect(screen.getByTestId("cart-empty-state")).toHaveTextContent(messages.cart.emptyTitle);
-    expect(screen.getByTestId("cart-empty-state")).toHaveTextContent(messages.cart.emptyBody);
+    expect(screen.getByTestId("cart-empty-state")).toHaveTextContent(
+      messages.cart.emptyTitle,
+    );
+    expect(screen.getByTestId("cart-empty-state")).toHaveTextContent(
+      messages.cart.emptyBody,
+    );
     expect(screen.queryByText("Your cart is empty")).not.toBeInTheDocument();
   });
 });
@@ -103,17 +112,22 @@ describe("Phase-1 bem/nya payment-disabled copy", () => {
   it.each([
     ["bem", bemCheckout],
     ["nya", nyaCheckout],
-  ] as const)("%s paymentsDisabled is vernacular and distinct from EN", (locale, messages) => {
-    const t = createTranslator({
-      locale,
-      messages: { checkout: messages },
-      namespace: "checkout",
-    });
-    const text = t("checkout.payment.paymentsDisabled");
-    expect(text).toBe(messages.checkout.payment.paymentsDisabled);
-    expect(text).not.toBe(
-      "Online payment is temporarily unavailable. Please use Cash on Delivery where available, or try again shortly.",
-    );
-    expect(text.toLowerCase()).toMatch(/cash|delivery|kod|lipil|payment|online/);
-  });
+  ] as const)(
+    "%s paymentsDisabled is vernacular and distinct from EN",
+    (locale, messages) => {
+      const t = createTranslator({
+        locale,
+        messages: { checkout: messages },
+        namespace: "checkout",
+      });
+      const text = t("checkout.payment.paymentsDisabled");
+      expect(text).toBe(messages.checkout.payment.paymentsDisabled);
+      expect(text).not.toBe(
+        "Online payment is temporarily unavailable. Please use Cash on Delivery where available, or try again shortly.",
+      );
+      expect(text.toLowerCase()).toMatch(
+        /cash|delivery|kod|lipil|payment|online/,
+      );
+    },
+  );
 });

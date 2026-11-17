@@ -23,7 +23,11 @@ const request = (path: string, init?: RequestInit) =>
 describe("finite CI API proxy", () => {
   const fixture = "b1000000-0000-0000-0000-000000000001";
   const session = "12345678-1234-4234-8234-123456789abc";
-  const post = (path: string, body?: unknown, extra: Record<string, string> = {}) =>
+  const post = (
+    path: string,
+    body?: unknown,
+    extra: Record<string, string> = {},
+  ) =>
     request(path, {
       method: "POST",
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
@@ -34,11 +38,12 @@ describe("finite CI API proxy", () => {
       },
     });
   const jsonTransport = () =>
-    vi
-      .fn()
-      .mockImplementation(
-        async () => new Response("{}", { headers: { "Content-Type": "application/json" } }),
-      );
+    vi.fn().mockImplementation(
+      async () =>
+        new Response("{}", {
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
 
   it("forwards genuinely empty cart revalidation with only caller cart credentials", async () => {
     const transport = jsonTransport();
@@ -62,7 +67,10 @@ describe("finite CI API proxy", () => {
       authorization: "Bearer caller-token",
       cookie: "vergeo_guest_cart=signed.jwt",
     });
-    expect((await handleCiPerfProxy(post("cart/revalidate", {}), env, transport)).status).toBe(400);
+    expect(
+      (await handleCiPerfProxy(post("cart/revalidate", {}), env, transport))
+        .status,
+    ).toBe(400);
     for (const body of ["\uFEFF", " "]) {
       expect(
         (
@@ -131,7 +139,12 @@ describe("finite CI API proxy", () => {
       { session_id: "not-a-session", listing_id: fixture },
       {},
     ],
-    ["other listing", "telemetry/views", { session_id: session, listing_id: session }, {}],
+    [
+      "other listing",
+      "telemetry/views",
+      { session_id: session, listing_id: session },
+      {},
+    ],
     [
       "mixed batch",
       "telemetry/views",
@@ -150,7 +163,12 @@ describe("finite CI API proxy", () => {
       { session_id: session, listing_id: fixture, secret: "excluded" },
       {},
     ],
-    ["empty batch", "telemetry/views", { session_id: session, listing_ids: [] }, {}],
+    [
+      "empty batch",
+      "telemetry/views",
+      { session_id: session, listing_ids: [] },
+      {},
+    ],
     [
       "wrong content type",
       "telemetry/views",
@@ -172,7 +190,12 @@ describe("finite CI API proxy", () => {
     [
       "unbounded stack",
       "telemetry/frontend-errors",
-      { application: "customer", boundary: "route", message: "error", stack: "x".repeat(8001) },
+      {
+        application: "customer",
+        boundary: "route",
+        message: "error",
+        stack: "x".repeat(8001),
+      },
       {},
     ],
     [
@@ -193,7 +216,8 @@ describe("finite CI API proxy", () => {
     it(`refuses ${name} without an upstream request`, async () => {
       const transport = jsonTransport();
       expect(
-        (await handleCiPerfProxy(post(path, body, headers), env, transport)).status,
+        (await handleCiPerfProxy(post(path, body, headers), env, transport))
+          .status,
       ).toBeGreaterThanOrEqual(400);
       expect(transport).not.toHaveBeenCalled();
     });
@@ -203,7 +227,10 @@ describe("finite CI API proxy", () => {
     const transport = jsonTransport();
     const huge = request("telemetry/views", {
       method: "POST",
-      headers: { Origin: "http://localhost:3000", "Content-Type": "application/json" },
+      headers: {
+        Origin: "http://localhost:3000",
+        "Content-Type": "application/json",
+      },
       body: "x".repeat(16_385),
     });
     expect((await handleCiPerfProxy(huge, env, transport)).status).toBe(413);
@@ -211,14 +238,21 @@ describe("finite CI API proxy", () => {
       "not-json",
       "null",
       "[]",
-      '{"__proto__":{},"session_id":"' + session + '","listing_id":"' + fixture + '"}',
+      '{"__proto__":{},"session_id":"' +
+        session +
+        '","listing_id":"' +
+        fixture +
+        '"}',
     ]) {
       expect(
         (
           await handleCiPerfProxy(
             request("telemetry/views", {
               method: "POST",
-              headers: { Origin: "http://localhost:3000", "Content-Type": "application/json" },
+              headers: {
+                Origin: "http://localhost:3000",
+                "Content-Type": "application/json",
+              },
               body,
             }),
             env,
@@ -228,23 +262,112 @@ describe("finite CI API proxy", () => {
       ).toBe(400);
     }
     expect(
-      (await handleCiPerfProxy(request("cart/revalidate", { method: "POST" }), env, transport))
-        .status,
+      (
+        await handleCiPerfProxy(
+          request("cart/revalidate", { method: "POST" }),
+          env,
+          transport,
+        )
+      ).status,
     ).toBe(403);
     expect(
-      (await handleCiPerfProxy(post("cart/revalidate"), { ...env, CI_PERF_HARNESS: "" }, transport))
-        .status,
+      (
+        await handleCiPerfProxy(
+          post("cart/revalidate"),
+          { ...env, CI_PERF_HARNESS: "" },
+          transport,
+        )
+      ).status,
     ).toBe(404);
-    expect((await handleCiPerfProxy(request("telemetry/views"), env, transport)).status).toBe(405);
+    expect(
+      (await handleCiPerfProxy(request("telemetry/views"), env, transport))
+        .status,
+    ).toBe(405);
     expect(transport).not.toHaveBeenCalled();
   });
+
+  it("serves the seeded cart write as POST only", async () => {
+    const transport = jsonTransport();
+    expect(
+      (await handleCiPerfProxy(request("cart/items"), env, transport)).status,
+    ).toBe(405);
+    expect(transport).not.toHaveBeenCalled();
+  });
+
+  it("forwards the one fixture cart item used to seed the checkout measurement", async () => {
+    const transport = vi.fn().mockResolvedValue(
+      new Response('{"items":[]}', {
+        headers: {
+          "Content-Type": "application/json",
+          "Set-Cookie":
+            "vergeo_guest_cart=signed.jwt; HttpOnly; SameSite=lax; Path=/",
+        },
+      }),
+    );
+    const response = await handleCiPerfProxy(
+      post(
+        "cart/items",
+        { listing_id: fixture, qty: 1 },
+        { "Idempotency-Key": "ci-perf-checkout-1" },
+      ),
+      env,
+      transport,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain("vergeo_guest_cart=");
+    const [url, options] = transport.mock.calls[0]!;
+    expect(url).toBe("http://10.1.2.3:8000/cart/items");
+    expect(options.method).toBe("POST");
+    expect(JSON.parse(options.body)).toEqual({ listing_id: fixture, qty: 1 });
+    expect(Object.fromEntries(options.headers)).toEqual({
+      accept: "application/json",
+      "content-type": "application/json",
+      "idempotency-key": "ci-perf-checkout-1",
+    });
+  });
+
+  for (const [name, body, headers] of [
+    [
+      "another listing",
+      { listing_id: session, qty: 1 },
+      { "Idempotency-Key": "k" },
+    ],
+    [
+      "another quantity",
+      { listing_id: fixture, qty: 2 },
+      { "Idempotency-Key": "k" },
+    ],
+    [
+      "extra fields",
+      { listing_id: fixture, qty: 1, clip_id: session },
+      { "Idempotency-Key": "k" },
+    ],
+    ["no idempotency key", { listing_id: fixture, qty: 1 }, {}],
+    [
+      "unsafe idempotency key",
+      { listing_id: fixture, qty: 1 },
+      { "Idempotency-Key": "a b" },
+    ],
+  ] as const) {
+    it(`refuses a seeded cart write with ${name} without an upstream request`, async () => {
+      const transport = jsonTransport();
+      const response = await handleCiPerfProxy(
+        post("cart/items", body, headers),
+        env,
+        transport,
+      );
+      expect(response.status).toBe(400);
+      expect(transport).not.toHaveBeenCalled();
+    });
+  }
 
   it("forwards an exact allowed GET and only caller cart authentication headers", async () => {
     const transport = vi.fn().mockResolvedValue(
       new Response('{"items":[]}', {
         headers: {
           "Content-Type": "application/json",
-          "Set-Cookie": "vergeo_guest_cart=signed.jwt; HttpOnly; SameSite=lax; Path=/",
+          "Set-Cookie":
+            "vergeo_guest_cart=signed.jwt; HttpOnly; SameSite=lax; Path=/",
           "X-Secret": "excluded",
         },
       }),
@@ -275,11 +398,12 @@ describe("finite CI API proxy", () => {
     expect(response.headers.get("set-cookie")).toContain("vergeo_guest_cart=");
   });
   it("allows the exact product and category query without forwarding authentication", async () => {
-    const transport = vi
-      .fn()
-      .mockImplementation(
-        async () => new Response("{}", { headers: { "Content-Type": "application/json" } }),
-      );
+    const transport = vi.fn().mockImplementation(
+      async () =>
+        new Response("{}", {
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
     for (const path of [
       "products/smartphone-x1",
       "catalog/listings?category_path=electronics&limit=3&sort=newest",
@@ -288,7 +412,10 @@ describe("finite CI API proxy", () => {
         (
           await handleCiPerfProxy(
             request(path, {
-              headers: { Authorization: "Bearer excluded", Cookie: "vergeo_guest_cart=excluded" },
+              headers: {
+                Authorization: "Bearer excluded",
+                Cookie: "vergeo_guest_cart=excluded",
+              },
             }),
             env,
             transport,
@@ -306,7 +433,7 @@ describe("finite CI API proxy", () => {
     "constructor",
     "__proto__",
     "healthz",
-    "cart/items",
+    "cart/items/b1000000-0000-0000-0000-000000000001",
     "products/other",
     "catalog/listings?limit=100",
     "catalog/listings?category_path=all",
@@ -317,16 +444,19 @@ describe("finite CI API proxy", () => {
   ]) {
     it(`rejects unknown or ambiguous request ${path}`, async () => {
       const transport = vi.fn();
-      expect((await handleCiPerfProxy(request(path), env, transport)).status).toBe(404);
+      expect(
+        (await handleCiPerfProxy(request(path), env, transport)).status,
+      ).toBe(404);
       expect(transport).not.toHaveBeenCalled();
     });
   }
   for (const method of ["POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]) {
     it(`rejects ${method} inside CI and returns404 outside CI`, async () => {
       const transport = vi.fn();
-      expect((await handleCiPerfProxy(request("cart", { method }), env, transport)).status).toBe(
-        405,
-      );
+      expect(
+        (await handleCiPerfProxy(request("cart", { method }), env, transport))
+          .status,
+      ).toBe(405);
       expect(
         (
           await handleCiPerfProxy(
@@ -342,17 +472,31 @@ describe("finite CI API proxy", () => {
   it("does not transport outside CI, on a different frontend, on redirect/error or nonJSON", async () => {
     const transport = vi.fn();
     expect(
-      (await handleCiPerfProxy(request("cart"), { ...env, GITHUB_ACTIONS: undefined }, transport))
-        .status,
+      (
+        await handleCiPerfProxy(
+          request("cart"),
+          { ...env, GITHUB_ACTIONS: undefined },
+          transport,
+        )
+      ).status,
     ).toBe(404);
     expect(
-      (await handleCiPerfProxy(new Request("http://other.test/api/ci-perf/cart"), env, transport))
-        .status,
+      (
+        await handleCiPerfProxy(
+          new Request("http://other.test/api/ci-perf/cart"),
+          env,
+          transport,
+        )
+      ).status,
     ).toBe(404);
     expect(transport).not.toHaveBeenCalled();
     transport.mockRejectedValue(new Error("redirect blocked"));
-    expect((await handleCiPerfProxy(request("cart"), env, transport)).status).toBe(502);
+    expect(
+      (await handleCiPerfProxy(request("cart"), env, transport)).status,
+    ).toBe(502);
     transport.mockResolvedValue(new Response("notJSON"));
-    expect((await handleCiPerfProxy(request("cart"), env, transport)).status).toBe(502);
+    expect(
+      (await handleCiPerfProxy(request("cart"), env, transport)).status,
+    ).toBe(502);
   });
 });

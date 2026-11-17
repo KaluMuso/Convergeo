@@ -2,14 +2,24 @@
 
 import { isValidUnitDecimal, unitDecimalToMilli } from "../_lib/measure";
 import { isValidZmwDecimal, zmwDecimalToNgwee } from "../_lib/money";
-import { FormField, Input, Select, Switch, Textarea } from "../_lib/ui";
+import { FULFILMENT_OPTIONS, USED_GRADES } from "../_lib/types";
+import {
+  Checkbox,
+  FormField,
+  Input,
+  Select,
+  Switch,
+  Textarea,
+} from "../_lib/ui";
 
 import type {
   FulfilmentMode,
+  FulfilmentOption,
   ListingCondition,
   ProductClass,
   SaleUnit,
   StockMode,
+  UsedGrade,
 } from "../_lib/types";
 import type { ChangeEvent } from "react";
 
@@ -20,7 +30,9 @@ export type ListingFieldValues = {
   unitStep: string;
   minSteps: string;
   condition: ListingCondition;
+  conditionDetail: UsedGrade;
   defectNotes: string;
+  fulfilmentOptions: FulfilmentOption[];
   fulfilmentMode: FulfilmentMode;
   leadTimeDays: string;
   vendorCapacityPerWeek: string;
@@ -37,7 +49,9 @@ export const DEFAULT_LISTING_FIELDS: ListingFieldValues = {
   unitStep: "1",
   minSteps: "1",
   condition: "new",
+  conditionDetail: "used_good",
   defectNotes: "",
+  fulfilmentOptions: ["lusaka_delivery", "pickup_shop"],
   fulfilmentMode: "stocked",
   leadTimeDays: "",
   vendorCapacityPerWeek: "",
@@ -60,6 +74,8 @@ export type ListingFieldLabels = {
   classD: string;
   classE: string;
   standaloneClassHint: string;
+  classHintD: string;
+  classHintE: string;
   saleUnitLabel: string;
   unitEach: string;
   unitMetre: string;
@@ -75,6 +91,12 @@ export type ListingFieldLabels = {
   conditionNew: string;
   conditionRefurbished: string;
   conditionUsed: string;
+  conditionUsedHint: string;
+  conditionGradeLabel: string;
+  gradeExcellent: string;
+  gradeGood: string;
+  gradeFair: string;
+  gradeParts: string;
   defectNotesLabel: string;
   defectNotesPlaceholder: string;
   defectNotesHelp: string;
@@ -82,6 +104,13 @@ export type ListingFieldLabels = {
   fulfilmentLabel: string;
   fulfilmentStocked: string;
   fulfilmentMadeToOrder: string;
+  fulfilmentLockedHint: string;
+  fulfilmentOptionsLabel: string;
+  fulfilmentOptionsHelp: string;
+  fulfilmentOptionsInvalid: string;
+  optionLusakaDelivery: string;
+  optionPickupShop: string;
+  optionPickupNationwide: string;
   leadTimeLabel: string;
   leadTimeHelp: string;
   leadTimeInvalid: string;
@@ -91,6 +120,7 @@ export type ListingFieldLabels = {
   stockModeLabel: string;
   stockTracked: string;
   stockAlways: string;
+  stockLockedHint: string;
   stockQtyLabel: string;
   wholesaleLabel: string;
   wholesaleHelp: string;
@@ -109,6 +139,8 @@ type ListingFieldsProps = {
   labels: ListingFieldLabels;
   allowStandaloneClasses?: boolean;
   inventoryReadOnly?: boolean;
+  /** Server (or client) field messages keyed by API field name. */
+  errors?: Record<string, string>;
 };
 
 const POSITIVE_INTEGER_PATTERN = /^[1-9]\d*$/;
@@ -144,9 +176,6 @@ export function applyListingFieldPatch(
     next.vendorCapacityPerWeek = "";
   }
 
-  if (next.productClass === "D") {
-    next.condition = "used";
-  }
   if (next.productClass === "E") {
     next.fulfilmentMode = "made_to_order";
     next.stockMode = "always_available";
@@ -159,8 +188,9 @@ export function applyListingFieldPatch(
   return next;
 }
 
+/** Only second-hand stock needs photo evidence; a new Class D item does not. */
 export function requiresListingEvidence(values: ListingFieldValues): boolean {
-  return values.productClass === "D" || values.condition === "used";
+  return values.condition === "used";
 }
 
 export function parseListingFieldValues(values: ListingFieldValues): {
@@ -168,6 +198,7 @@ export function parseListingFieldValues(values: ListingFieldValues): {
   unitStepMilli: number;
   minSteps: number;
   defectNotes: string | null;
+  conditionDetail: UsedGrade | null;
   leadTimeDays: number | null;
   vendorCapacityPerWeek: number | null;
   stockQty: number | null;
@@ -175,10 +206,16 @@ export function parseListingFieldValues(values: ListingFieldValues): {
 } {
   return {
     priceNgwee: zmwDecimalToNgwee(values.priceZmw),
-    unitStepMilli: values.saleUnit === "each" ? 1_000 : unitDecimalToMilli(values.unitStep),
+    unitStepMilli:
+      values.saleUnit === "each" ? 1_000 : unitDecimalToMilli(values.unitStep),
     minSteps: values.saleUnit === "each" ? 1 : Number(values.minSteps),
     defectNotes: values.condition === "used" ? values.defectNotes.trim() : null,
-    leadTimeDays: values.fulfilmentMode === "made_to_order" ? Number(values.leadTimeDays) : null,
+    conditionDetail:
+      values.condition === "used" ? values.conditionDetail : null,
+    leadTimeDays:
+      values.fulfilmentMode === "made_to_order"
+        ? Number(values.leadTimeDays)
+        : null,
     vendorCapacityPerWeek:
       values.productClass === "E" ? Number(values.vendorCapacityPerWeek) : null,
     stockQty: values.stockMode === "tracked" ? Number(values.stockQty) : null,
@@ -195,7 +232,8 @@ export function validateListingFields(
   }
   if (
     values.saleUnit !== "each" &&
-    (!isValidUnitDecimal(values.unitStep) || unitDecimalToMilli(values.unitStep) < 1)
+    (!isValidUnitDecimal(values.unitStep) ||
+      unitDecimalToMilli(values.unitStep) < 1)
   ) {
     return labels.unitStepInvalid;
   }
@@ -204,9 +242,6 @@ export function validateListingFields(
     !isSafeIntegerInput(values.minSteps, POSITIVE_INTEGER_PATTERN)
   ) {
     return labels.required;
-  }
-  if (values.productClass === "D" && values.condition !== "used") {
-    return labels.defectNotesInvalid;
   }
   if (values.condition === "used" && values.defectNotes.trim().length < 10) {
     return labels.defectNotesInvalid;
@@ -220,7 +255,10 @@ export function validateListingFields(
   }
   if (
     values.productClass === "E" &&
-    (!isSafeIntegerInput(values.vendorCapacityPerWeek, POSITIVE_INTEGER_PATTERN) ||
+    (!isSafeIntegerInput(
+      values.vendorCapacityPerWeek,
+      POSITIVE_INTEGER_PATTERN,
+    ) ||
       Number(values.vendorCapacityPerWeek) > 9_999)
   ) {
     return labels.capacityInvalid;
@@ -234,10 +272,69 @@ export function validateListingFields(
   if (values.wholesale && values.saleUnit !== "each") {
     return labels.wholesaleMeasureUnavailable;
   }
-  if (values.wholesale && !isSafeIntegerInput(values.moq, POSITIVE_INTEGER_PATTERN)) {
+  if (
+    values.wholesale &&
+    !isSafeIntegerInput(values.moq, POSITIVE_INTEGER_PATTERN)
+  ) {
     return labels.required;
   }
+  if (values.fulfilmentOptions.length === 0) {
+    return labels.fulfilmentOptionsInvalid;
+  }
   return null;
+}
+
+/** Field-level client validation, so each problem shows next to its input. */
+export function listingFieldErrors(
+  values: ListingFieldValues,
+  labels: ListingFieldLabels,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (!isValidZmwDecimal(values.priceZmw))
+    errors.price_ngwee = labels.priceInvalid;
+  if (
+    values.saleUnit !== "each" &&
+    (!isValidUnitDecimal(values.unitStep) ||
+      unitDecimalToMilli(values.unitStep) < 1)
+  ) {
+    errors.unit_step_milli = labels.unitStepInvalid;
+  }
+  if (values.condition === "used" && values.defectNotes.trim().length < 10) {
+    errors.defect_notes = labels.defectNotesInvalid;
+  }
+  if (
+    values.fulfilmentMode === "made_to_order" &&
+    (!isSafeIntegerInput(values.leadTimeDays, POSITIVE_INTEGER_PATTERN) ||
+      Number(values.leadTimeDays) > 365)
+  ) {
+    errors.lead_time_days = labels.leadTimeInvalid;
+  }
+  if (
+    values.productClass === "E" &&
+    (!isSafeIntegerInput(
+      values.vendorCapacityPerWeek,
+      POSITIVE_INTEGER_PATTERN,
+    ) ||
+      Number(values.vendorCapacityPerWeek) > 9_999)
+  ) {
+    errors.vendor_capacity_per_week = labels.capacityInvalid;
+  }
+  if (
+    values.stockMode === "tracked" &&
+    !isSafeIntegerInput(values.stockQty, NON_NEGATIVE_INTEGER_PATTERN)
+  ) {
+    errors.stock_qty = labels.required;
+  }
+  if (
+    values.wholesale &&
+    !isSafeIntegerInput(values.moq, POSITIVE_INTEGER_PATTERN)
+  ) {
+    errors.moq = labels.required;
+  }
+  if (values.fulfilmentOptions.length === 0) {
+    errors.fulfilment_options = labels.fulfilmentOptionsInvalid;
+  }
+  return errors;
 }
 
 export function ListingFields({
@@ -247,9 +344,12 @@ export function ListingFields({
   labels,
   allowStandaloneClasses = true,
   inventoryReadOnly = false,
+  errors = {},
 }: ListingFieldsProps) {
   const priceError =
-    values.priceZmw && !isValidZmwDecimal(values.priceZmw) ? labels.priceInvalid : undefined;
+    values.priceZmw && !isValidZmwDecimal(values.priceZmw)
+      ? labels.priceInvalid
+      : errors.price_ngwee;
   const evidenceRequired = requiresListingEvidence(values);
   const handleChange = (patch: Partial<ListingFieldValues>) => {
     onChange(applyListingFieldPatch(values, patch));
@@ -257,7 +357,10 @@ export function ListingFields({
 
   return (
     <div className="flex flex-col gap-4">
-      <FormField label={labels.productClassLabel}>
+      <FormField
+        label={labels.productClassLabel}
+        errorMessage={errors.product_class}
+      >
         <Select
           disabled={inventoryReadOnly}
           value={values.productClass}
@@ -282,6 +385,16 @@ export function ListingFields({
           {labels.standaloneClassHint}
         </p>
       ) : null}
+      {values.productClass === "D" ? (
+        <p className="text-xs text-text-2" role="note">
+          {labels.classHintD}
+        </p>
+      ) : null}
+      {values.productClass === "E" ? (
+        <p className="text-xs text-text-2" role="note">
+          {labels.classHintE}
+        </p>
+      ) : null}
 
       <FormField label={labels.saleUnitLabel}>
         <Select
@@ -302,7 +415,11 @@ export function ListingFields({
 
       {values.saleUnit !== "each" ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label={labels.unitStepLabel} helpText={labels.unitStepHelp}>
+          <FormField
+            label={labels.unitStepLabel}
+            helpText={labels.unitStepHelp}
+            errorMessage={errors.unit_step_milli}
+          >
             <Input
               inputMode="decimal"
               disabled={inventoryReadOnly}
@@ -312,7 +429,10 @@ export function ListingFields({
               }
             />
           </FormField>
-          <FormField label={labels.minStepsLabel}>
+          <FormField
+            label={labels.minStepsLabel}
+            errorMessage={errors.min_steps}
+          >
             <Input
               inputMode="numeric"
               disabled={inventoryReadOnly}
@@ -329,7 +449,11 @@ export function ListingFields({
 
       <FormField
         label={labels.priceLabel}
-        helpText={values.saleUnit === "each" ? labels.priceHelp : labels.pricePerStepHelp}
+        helpText={
+          values.saleUnit === "each"
+            ? labels.priceHelp
+            : labels.pricePerStepHelp
+        }
         errorMessage={priceError}
       >
         <Input
@@ -343,34 +467,64 @@ export function ListingFields({
         />
       </FormField>
 
-      <FormField label={labels.conditionLabel}>
+      <FormField label={labels.conditionLabel} errorMessage={errors.condition}>
         <Select
           value={values.condition}
           onChange={(event: ChangeEvent<HTMLSelectElement>) =>
             handleChange({ condition: event.target.value as ListingCondition })
           }
         >
-          <option value="new" disabled={values.productClass === "D"}>
-            {labels.conditionNew}
-          </option>
-          <option value="refurbished" disabled={values.productClass === "D"}>
-            {labels.conditionRefurbished}
-          </option>
+          <option value="new">{labels.conditionNew}</option>
+          <option value="refurbished">{labels.conditionRefurbished}</option>
           <option value="used">{labels.conditionUsed}</option>
         </Select>
       </FormField>
 
       {values.condition === "used" ? (
-        <FormField label={labels.defectNotesLabel} helpText={labels.defectNotesHelp}>
-          <Textarea
-            value={values.defectNotes}
-            maxLength={2_000}
-            placeholder={labels.defectNotesPlaceholder}
-            onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
-              handleChange({ defectNotes: event.target.value })
-            }
-          />
-        </FormField>
+        <>
+          <p className="text-xs text-text-2" role="note">
+            {labels.conditionUsedHint}
+          </p>
+          <FormField
+            label={labels.conditionGradeLabel}
+            errorMessage={errors.condition_detail}
+          >
+            <Select
+              value={values.conditionDetail}
+              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                handleChange({
+                  conditionDetail: event.target.value as UsedGrade,
+                })
+              }
+            >
+              {USED_GRADES.map((grade) => (
+                <option key={grade} value={grade}>
+                  {grade === "used_excellent"
+                    ? labels.gradeExcellent
+                    : grade === "used_good"
+                      ? labels.gradeGood
+                      : grade === "used_fair"
+                        ? labels.gradeFair
+                        : labels.gradeParts}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField
+            label={labels.defectNotesLabel}
+            helpText={labels.defectNotesHelp}
+            errorMessage={errors.defect_notes}
+          >
+            <Textarea
+              value={values.defectNotes}
+              maxLength={2_000}
+              placeholder={labels.defectNotesPlaceholder}
+              onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                handleChange({ defectNotes: event.target.value })
+              }
+            />
+          </FormField>
+        </>
       ) : null}
 
       {evidenceRequired ? (
@@ -382,7 +536,10 @@ export function ListingFields({
         </p>
       ) : null}
 
-      <FormField label={labels.fulfilmentLabel}>
+      <FormField
+        label={labels.fulfilmentLabel}
+        errorMessage={errors.fulfilment_mode}
+      >
         <Select
           disabled={inventoryReadOnly}
           value={values.fulfilmentMode}
@@ -399,8 +556,18 @@ export function ListingFields({
         </Select>
       </FormField>
 
+      {values.productClass === "E" ? (
+        <p className="text-xs text-text-2" role="note">
+          {labels.fulfilmentLockedHint}
+        </p>
+      ) : null}
+
       {values.fulfilmentMode === "made_to_order" ? (
-        <FormField label={labels.leadTimeLabel} helpText={labels.leadTimeHelp}>
+        <FormField
+          label={labels.leadTimeLabel}
+          helpText={labels.leadTimeHelp}
+          errorMessage={errors.lead_time_days}
+        >
           <Input
             inputMode="numeric"
             min={1}
@@ -415,7 +582,11 @@ export function ListingFields({
       ) : null}
 
       {values.productClass === "E" ? (
-        <FormField label={labels.capacityLabel} helpText={labels.capacityHelp}>
+        <FormField
+          label={labels.capacityLabel}
+          helpText={labels.capacityHelp}
+          errorMessage={errors.vendor_capacity_per_week}
+        >
           <Input
             inputMode="numeric"
             min={1}
@@ -431,7 +602,10 @@ export function ListingFields({
 
       {!inventoryReadOnly ? (
         <>
-          <FormField label={labels.stockModeLabel}>
+          <FormField
+            label={labels.stockModeLabel}
+            errorMessage={errors.stock_mode}
+          >
             <Select
               value={values.stockMode}
               onChange={(event: ChangeEvent<HTMLSelectElement>) =>
@@ -445,8 +619,17 @@ export function ListingFields({
             </Select>
           </FormField>
 
+          {values.productClass === "E" ? (
+            <p className="text-xs text-text-2" role="note">
+              {labels.stockLockedHint}
+            </p>
+          ) : null}
+
           {values.stockMode === "tracked" ? (
-            <FormField label={labels.stockQtyLabel}>
+            <FormField
+              label={labels.stockQtyLabel}
+              errorMessage={errors.stock_qty}
+            >
               <Input
                 inputMode="numeric"
                 min={0}
@@ -461,21 +644,60 @@ export function ListingFields({
         </>
       ) : null}
 
+      <FormField
+        asGroup
+        label={labels.fulfilmentOptionsLabel}
+        helpText={labels.fulfilmentOptionsHelp}
+        errorMessage={errors.fulfilment_options}
+      >
+        <div className="flex flex-col">
+          {FULFILMENT_OPTIONS.map((option) => (
+            <Checkbox
+              key={option}
+              label={
+                option === "lusaka_delivery"
+                  ? labels.optionLusakaDelivery
+                  : option === "pickup_shop"
+                    ? labels.optionPickupShop
+                    : labels.optionPickupNationwide
+              }
+              checked={values.fulfilmentOptions.includes(option)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const next = event.target.checked
+                  ? [...values.fulfilmentOptions, option]
+                  : values.fulfilmentOptions.filter(
+                      (current) => current !== option,
+                    );
+                handleChange({
+                  fulfilmentOptions: FULFILMENT_OPTIONS.filter((candidate) =>
+                    next.includes(candidate),
+                  ),
+                });
+              }}
+            />
+          ))}
+        </div>
+      </FormField>
+
       {wholesaleEnabled && values.saleUnit === "each" ? (
         <div className="space-y-3 rounded-lg border border-border p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-text">{labels.wholesaleLabel}</p>
+              <p className="text-sm font-medium text-text">
+                {labels.wholesaleLabel}
+              </p>
               <p className="text-xs text-text-2">{labels.wholesaleHelp}</p>
             </div>
             <Switch
               label={labels.wholesaleLabel}
               checked={values.wholesale}
-              onChange={(event) => handleChange({ wholesale: event.target.checked })}
+              onChange={(event) =>
+                handleChange({ wholesale: event.target.checked })
+              }
             />
           </div>
           {values.wholesale ? (
-            <FormField label={labels.moqLabel}>
+            <FormField label={labels.moqLabel} errorMessage={errors.moq}>
               <Input
                 inputMode="numeric"
                 min={1}

@@ -10,6 +10,7 @@ const allowedQueries: Record<string, Record<string, RegExp>> = {
     limit: /^([1-9]|1[0-9]|20)$/,
   },
   "cart/revalidate": {},
+  "cart/items": {},
   "telemetry/views": {},
   "telemetry/frontend-errors": {},
 };
@@ -20,7 +21,10 @@ export async function handleCiPerfProxy(
   transport: typeof fetch = fetch,
 ): Promise<Response> {
   const unavailable = () =>
-    new Response(null, { status: 404, headers: { "Cache-Control": "no-store" } });
+    new Response(null, {
+      status: 404,
+      headers: { "Cache-Control": "no-store" },
+    });
   if (!ciPerfServerEnabled(env)) return unavailable();
   const url = new URL(request.url);
   if (url.origin !== env.NEXT_PUBLIC_SITE_URL) return unavailable();
@@ -28,7 +32,11 @@ export async function handleCiPerfProxy(
   if (!url.pathname.startsWith(prefix)) return unavailable();
   const path = url.pathname.slice(prefix.length);
   const queryRules = allowedQueries[path];
-  if (!queryRules || !Object.hasOwn(allowedQueries, path) || /[%\\]/.test(url.pathname))
+  if (
+    !queryRules ||
+    !Object.hasOwn(allowedQueries, path) ||
+    /[%\\]/.test(url.pathname)
+  )
     return unavailable();
   for (const [key, value] of url.searchParams) {
     if (
@@ -40,10 +48,17 @@ export async function handleCiPerfProxy(
   }
   const post = CI_PERF_POST_PATHS.includes(path);
   if (request.method !== (post ? "POST" : "GET"))
-    return new Response(null, { status: 405, headers: { "Cache-Control": "no-store" } });
+    return new Response(null, {
+      status: 405,
+      headers: { "Cache-Control": "no-store" },
+    });
   let body: string | undefined;
   if (post) {
-    const validated = await readCiPerfPostBody(path, request, env.NEXT_PUBLIC_SITE_URL!);
+    const validated = await readCiPerfPostBody(
+      path,
+      request,
+      env.NEXT_PUBLIC_SITE_URL!,
+    );
     if ("status" in validated)
       return new Response(null, {
         status: validated.status,
@@ -52,10 +67,22 @@ export async function handleCiPerfProxy(
     body = validated.body;
   }
   const headers = new Headers({ Accept: "application/json" });
-  if (post && path !== "cart/revalidate") headers.set("Content-Type", "application/json");
-  const cart = path === "cart" || path === "cart/revalidate";
+  if (post && path !== "cart/revalidate")
+    headers.set("Content-Type", "application/json");
+  const cart =
+    path === "cart" || path === "cart/revalidate" || path === "cart/items";
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (path === "cart/items") {
+    if (!idempotencyKey || !/^[A-Za-z0-9._:-]{1,128}$/.test(idempotencyKey))
+      return new Response(null, {
+        status: 400,
+        headers: { "Cache-Control": "no-store" },
+      });
+    headers.set("Idempotency-Key", idempotencyKey);
+  }
   const authorization = request.headers.get("authorization");
-  if (cart && authorization?.startsWith("Bearer ")) headers.set("Authorization", authorization);
+  if (cart && authorization?.startsWith("Bearer "))
+    headers.set("Authorization", authorization);
   const guestCookie = request.headers
     .get("cookie")
     ?.split(";")
@@ -63,22 +90,31 @@ export async function handleCiPerfProxy(
     .find((cookie) => /^vergeo_guest_cart=[A-Za-z0-9_.-]+$/.test(cookie));
   if (cart && guestCookie) headers.set("Cookie", guestCookie);
   try {
-    const upstream = await transport(`${env.CI_PERF_UPSTREAM_ORIGIN}/${path}${url.search}`, {
-      method: request.method,
-      ...(post ? { body } : {}),
-      headers,
-      cache: "no-store",
-      redirect: "error",
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!(upstream.headers.get("content-type") ?? "").includes("application/json"))
+    const upstream = await transport(
+      `${env.CI_PERF_UPSTREAM_ORIGIN}/${path}${url.search}`,
+      {
+        method: request.method,
+        ...(post ? { body } : {}),
+        headers,
+        cache: "no-store",
+        redirect: "error",
+        signal: AbortSignal.timeout(10_000),
+      },
+    );
+    if (
+      !(upstream.headers.get("content-type") ?? "").includes("application/json")
+    )
       throw new Error("Invalid upstream content");
     const responseHeaders = new Headers({
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
     });
     const cookie = upstream.headers.get("set-cookie");
-    if (cart && cookie?.startsWith("vergeo_guest_cart=") && !/;\s*domain=/i.test(cookie)) {
+    if (
+      cart &&
+      cookie?.startsWith("vergeo_guest_cart=") &&
+      !/;\s*domain=/i.test(cookie)
+    ) {
       responseHeaders.set("Set-Cookie", cookie);
     }
     return new Response(await upstream.text(), {
@@ -86,6 +122,9 @@ export async function handleCiPerfProxy(
       headers: responseHeaders,
     });
   } catch {
-    return new Response(null, { status: 502, headers: { "Cache-Control": "no-store" } });
+    return new Response(null, {
+      status: 502,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 }

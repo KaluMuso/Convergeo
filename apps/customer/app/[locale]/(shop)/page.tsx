@@ -1,4 +1,9 @@
-import { DEFAULT_LOCALE, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import {
+  DEFAULT_LOCALE,
+  loadNamespace,
+  LOCALES,
+  type Locale,
+} from "@vergeo/i18n";
 import {
   buildAbsoluteUrl,
   buildCanonicalAlternates,
@@ -43,15 +48,23 @@ import {
 import { planHomeLayout } from "./_components/home-layout";
 import { HomeRecentlyViewedRail } from "./_components/home-recently-viewed-rail";
 import { HomeTrustStrip } from "./_components/home-trust-strip";
-import { loadHomeMerchData, pickSlot, type HomeSectionKey } from "./_components/merch-data";
+import {
+  loadHomeMerchData,
+  pickSlot,
+  type HomeSectionKey,
+} from "./_components/merch-data";
 import { MerchPreviewBanner } from "./_components/merch-preview-banner";
 import { catalogDeliveryLabels, catalogMadeToOrderLabels } from "./_components/plp/delivery-labels";
+import { buildOfferBadgeLabels } from "./_components/offers/offer-badge";
 
 import type { Metadata } from "next";
 
 export const revalidate = 60;
 
-type CatalogTranslator = (key: string, values?: Record<string, string | number>) => string;
+type CatalogTranslator = (
+  key: string,
+  values?: Record<string, string | number>,
+) => string;
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -66,7 +79,9 @@ function readMerchPreviewParam(
     return raw.trim();
   }
   if (Array.isArray(raw)) {
-    const first = raw.find((value) => typeof value === "string" && value.trim().length > 0);
+    const first = raw.find(
+      (value) => typeof value === "string" && value.trim().length > 0,
+    );
     return first?.trim() ?? null;
   }
   return null;
@@ -87,7 +102,10 @@ async function getCatalogTranslator(locale: string) {
   return createTranslator({ locale, messages, namespace: "catalog" });
 }
 
-export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   if (!LOCALES.includes(locale as Locale)) {
     notFound();
@@ -125,18 +143,40 @@ function renderCampaignSection(
 ) {
   switch (sectionKey) {
     case "hero":
-      return <HomeHero key={sectionKey} slot={pickSlot(slots, "hero")} locale={locale} t={t} />;
+      return (
+        <HomeHero
+          key={sectionKey}
+          slot={pickSlot(slots, "hero")}
+          locale={locale}
+          t={t}
+        />
+      );
     case "banner_row":
       return (
-        <BannerRow key={sectionKey} slot={pickSlot(slots, "banner_row")} locale={locale} t={t} />
+        <BannerRow
+          key={sectionKey}
+          slot={pickSlot(slots, "banner_row")}
+          locale={locale}
+          t={t}
+        />
       );
     case "flash_deal":
       return (
-        <FlashDeal key={sectionKey} slot={pickSlot(slots, "flash_deal")} locale={locale} t={t} />
+        <FlashDeal
+          key={sectionKey}
+          slot={pickSlot(slots, "flash_deal")}
+          locale={locale}
+          t={t}
+        />
       );
     case "events_row":
       return (
-        <EventsRow key={sectionKey} slot={pickSlot(slots, "events_row")} locale={locale} t={t} />
+        <EventsRow
+          key={sectionKey}
+          slot={pickSlot(slots, "events_row")}
+          locale={locale}
+          t={t}
+        />
       );
     case "featured_collections":
       return (
@@ -162,7 +202,10 @@ function renderCampaignSection(
   }
 }
 
-export default async function ShopHomePage({ params, searchParams }: PageProps) {
+export default async function ShopHomePage({
+  params,
+  searchParams,
+}: PageProps) {
   const { locale } = await params;
   // Belt-and-suspenders alongside the root layout's own guard: React can start
   // rendering this segment concurrently with the layout, so relying solely on
@@ -177,14 +220,15 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   setRequestLocale(locale);
 
-  const [tRaw, merch, baseMessages, directoryMessages, feedPage, streamPage] = await Promise.all([
-    getCatalogTranslator(locale),
-    loadHomeMerchData({ merchPreview }),
-    getMessages(),
-    loadNamespace(locale as Locale, "directory"),
-    loadHomeFeedFirstPage(locale),
-    loadHomeStreamFirstPage(),
-  ]);
+  const [tRaw, merch, baseMessages, directoryMessages, feedPage, streamPage] =
+    await Promise.all([
+      getCatalogTranslator(locale),
+      loadHomeMerchData({ merchPreview }),
+      getMessages(),
+      loadNamespace(locale as Locale, "directory"),
+      loadHomeFeedFirstPage(locale),
+      loadHomeStreamFirstPage(),
+    ]);
   const t = tRaw as unknown as CatalogTranslator;
   // Card/rail labels cross into client components as serializable strings and are
   // interpolated there, so messages holding `{…}` placeholders are read raw —
@@ -237,6 +281,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
       delivery: t("plp.card.pill.delivery"),
       pickup: t("plp.card.pill.pickup"),
     },
+    offerBadge: buildOfferBadgeLabels(raw),
   };
 
   // Admin-governed feed (home_feed_sections) supersedes the hard-coded default
@@ -276,7 +321,9 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   return (
     <div className="flex flex-col gap-4 lg:gap-6">
       <JsonLdScript data={[organizationJsonLd, websiteJsonLd]} />
-      {merch.isPreviewMode ? <MerchPreviewBanner message={t("home.merchPreview.banner")} /> : null}
+      {merch.isPreviewMode ? (
+        <MerchPreviewBanner message={t("home.merchPreview.banner")} />
+      ) : null}
       {plan.useCampaignHero ? (
         renderCampaignSection("hero", locale, t, merch.slots, merch.categories)
       ) : (
@@ -315,7 +362,13 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
       />
 
       {earlyCampaignKeys.map((sectionKey) =>
-        renderCampaignSection(sectionKey, locale, t, merch.slots, merch.categories),
+        renderCampaignSection(
+          sectionKey,
+          locale,
+          t,
+          merch.slots,
+          merch.categories,
+        ),
       )}
 
       <HomeRecentlyViewedRail
@@ -358,7 +411,13 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
       ) : null}
 
       {showEventsRow
-        ? renderCampaignSection("events_row", locale, t, merch.slots, merch.categories)
+        ? renderCampaignSection(
+            "events_row",
+            locale,
+            t,
+            merch.slots,
+            merch.categories,
+          )
         : null}
 
       {plan.showDefaultRails && !useAdminFeed ? (

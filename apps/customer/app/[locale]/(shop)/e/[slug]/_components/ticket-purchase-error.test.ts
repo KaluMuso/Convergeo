@@ -14,16 +14,21 @@ describe("ticketPurchaseErrorKey", () => {
     ["promo_exhausted", "promoInvalid"],
     ["promo_inactive", "promoInvalid"],
     ["promo_not_started", "promoInvalid"],
+    ["tickets.rsvp_cap", "rsvpCap"],
+    ["tickets.rsvp_in_progress", "rsvpInProgress"],
+    ["rate_limited", "rateLimited"],
   ])("maps %s to the translated %s line", (code, key) => {
     expect(ticketPurchaseErrorKey(code)).toBe(key);
   });
 
-  it.each(["organiser_gmv_cap_exceeded", "tickets.event_not_published", "validation_error", ""])(
-    "never surfaces the API's English for %j",
-    (code) => {
-      expect(ticketPurchaseErrorKey(code)).toBe("generic");
-    },
-  );
+  it.each([
+    "organiser_gmv_cap_exceeded",
+    "tickets.event_not_published",
+    "validation_error",
+    "",
+  ])("never surfaces the API's English for %j", (code) => {
+    expect(ticketPurchaseErrorKey(code)).toBe("generic");
+  });
 
   it("handles a response with no error envelope", () => {
     expect(ticketPurchaseErrorKey(null)).toBe("generic");

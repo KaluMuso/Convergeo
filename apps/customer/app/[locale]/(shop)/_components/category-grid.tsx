@@ -30,11 +30,16 @@ const CATEGORY_ICON_PATHS = [
 ] as const;
 
 function pastelForIndex(index: number): string {
-  return CATEGORY_PASTELS[index % CATEGORY_PASTELS.length] ?? "var(--cat-beauty)";
+  return (
+    CATEGORY_PASTELS[index % CATEGORY_PASTELS.length] ?? "var(--cat-beauty)"
+  );
 }
 
 function iconPathForIndex(index: number): string {
-  return CATEGORY_ICON_PATHS[index % CATEGORY_ICON_PATHS.length] ?? CATEGORY_ICON_PATHS[0];
+  return (
+    CATEGORY_ICON_PATHS[index % CATEGORY_ICON_PATHS.length] ??
+    CATEGORY_ICON_PATHS[0]
+  );
 }
 
 /**
@@ -51,7 +56,9 @@ export function readCategoryImageMap(
 
   const images = payload.images;
   if (images && typeof images === "object" && !Array.isArray(images)) {
-    for (const [slug, value] of Object.entries(images as Record<string, unknown>)) {
+    for (const [slug, value] of Object.entries(
+      images as Record<string, unknown>,
+    )) {
       if (typeof value === "string" && value.trim().length > 0) {
         map.set(slug, value.trim());
       }
@@ -103,13 +110,22 @@ function CategoryFallbackMark({ index }: { index: number }) {
         strokeWidth="1.75"
         aria-hidden
       >
-        <path d={iconPathForIndex(index)} strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d={iconPathForIndex(index)}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     </span>
   );
 }
 
-export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps) {
+export function CategoryGrid({
+  slot,
+  categories,
+  locale,
+  t,
+}: CategoryGridProps) {
   if (categories.length === 0) {
     return null;
   }
@@ -137,7 +153,8 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
       >
         {categories.map((category, index) => {
           const fill = pastelForIndex(index);
-          const imagePublicId = imageMap.get(category.slug) ?? defaultCategoryImage(category.slug);
+          const imagePublicId =
+            imageMap.get(category.slug) ?? defaultCategoryImage(category.slug);
 
           return (
             <li
@@ -155,7 +172,10 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
                   style={{ backgroundColor: fill }}
                 >
                   {imagePublicId ? (
-                    <span className="absolute inset-0" data-testid="category-image">
+                    <span
+                      className="absolute inset-0"
+                      data-testid="category-image"
+                    >
                       <CloudinaryImageStatic
                         publicId={imagePublicId}
                         alt=""

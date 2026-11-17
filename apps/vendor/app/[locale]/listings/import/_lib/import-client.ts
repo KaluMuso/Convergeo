@@ -1,5 +1,6 @@
 import { ApiError } from "@vergeo/config";
 
+import { actingBranchHeaders } from "../../../../../lib/acting-branch";
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
 export type RowImportResult = {
@@ -46,7 +47,7 @@ async function authHeaders(
   getToken: () => string | null | Promise<string | null>,
   contentType: string,
 ): Promise<Headers> {
-  const headers = new Headers({ "Content-Type": contentType });
+  const headers = new Headers({ "Content-Type": contentType, ...actingBranchHeaders() });
   const token = await getToken();
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);

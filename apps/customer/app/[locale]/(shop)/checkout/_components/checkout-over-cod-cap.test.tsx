@@ -17,7 +17,10 @@ import zhMessages from "../../../../../../../packages/i18n/messages/zh/checkout.
 import type { CheckoutShellLabels } from "./step-fulfilment";
 
 const state = vi.hoisted(() => ({
-  session: { access_token: "token", user: { id: "buyer", phone: "+260971000001" } },
+  session: {
+    access_token: "token",
+    user: { id: "buyer", phone: "+260971000001" },
+  },
   loading: false,
   generation: 1,
   error: null,
@@ -33,7 +36,8 @@ vi.mock("@vergeo/config", () => ({
   ApiError: class ApiError extends Error {},
   createApiClient: () => ({
     request: (path: string) => {
-      if (path === "/checkout/steps/contact") return Promise.resolve({ verified: true });
+      if (path === "/checkout/steps/contact")
+        return Promise.resolve({ verified: true });
       if (path === "/checkout/session") {
         return Promise.resolve({
           session_id: "over-cap",
@@ -101,25 +105,36 @@ afterEach(() => {
 
 describe("checkout start over the COD cap", () => {
   it("says up front that nothing can take this total while online payment is off", async () => {
-    options.current = { ...payable, cod_eligible: false, available_methods: [] };
+    options.current = {
+      ...payable,
+      cod_eligible: false,
+      available_methods: [],
+    };
     render(<CheckoutShell locale="en" labels={labelsFor(enMessages)} />);
 
     const notice = await screen.findByTestId("checkout-over-cod-cap");
-    expect(notice).toHaveTextContent(enMessages.checkout.overCodCap.replace("{cap}", "K500.00"));
-    expect(notice).toHaveRole("status");
-    expect(screen.getByRole("link", { name: enMessages.checkout.backToCart })).toHaveAttribute(
-      "href",
-      "/en/cart",
+    expect(notice).toHaveTextContent(
+      enMessages.checkout.overCodCap.replace("{cap}", "K500.00"),
     );
+    expect(notice).toHaveRole("status");
+    expect(
+      screen.getByRole("link", { name: enMessages.checkout.backToCart }),
+    ).toHaveAttribute("href", "/en/cart");
     expect(await screen.findByText("Kalingalinga Fabrics")).toBeInTheDocument();
   });
 
   it("stays quiet when some payment method can still take the order", async () => {
-    options.current = { ...payable, cod_eligible: false, available_methods: ["momo", "card"] };
+    options.current = {
+      ...payable,
+      cod_eligible: false,
+      available_methods: ["momo", "card"],
+    };
     render(<CheckoutShell locale="en" labels={labelsFor(enMessages)} />);
 
     expect(await screen.findByText("Kalingalinga Fabrics")).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByTestId("checkout-over-cod-cap")).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByTestId("checkout-over-cod-cap")).toBeNull(),
+    );
   });
 
   it.each([

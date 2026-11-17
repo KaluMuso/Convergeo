@@ -37,13 +37,20 @@ describe("lead time in words", () => {
 
   it("builds the made-to-order label and ignores in-stock listings", () => {
     const template = "Made to order · ready {when}";
-    expect(formatMadeToOrderLeadTime("made_to_order", 7, template, phrases)).toBe(
-      "Made to order · ready within a week",
-    );
-    expect(formatMadeToOrderLeadTime("in_stock", 7, template, phrases)).toBeNull();
-    expect(formatMadeToOrderLeadTime("made_to_order", null, template, phrases)).toBeNull();
-    expect(formatMadeToOrderBadge("made_to_order", 7, { badge: template, when: phrases })).toBe(
-      "Made to order · ready within a week",
-    );
+    expect(
+      formatMadeToOrderLeadTime("made_to_order", 7, template, phrases),
+    ).toBe("Made to order · ready within a week");
+    expect(
+      formatMadeToOrderLeadTime("in_stock", 7, template, phrases),
+    ).toBeNull();
+    expect(
+      formatMadeToOrderLeadTime("made_to_order", null, template, phrases),
+    ).toBeNull();
+    expect(
+      formatMadeToOrderBadge("made_to_order", 7, {
+        badge: template,
+        when: phrases,
+      }),
+    ).toBe("Made to order · ready within a week");
   });
 });

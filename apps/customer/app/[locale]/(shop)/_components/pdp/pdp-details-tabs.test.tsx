@@ -52,7 +52,9 @@ describe("PdpDetailsTabs", () => {
       />,
     );
 
-    expect(screen.queryByRole("tab", { name: "Overview" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "Overview" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Spec copy")).toBeVisible();
   });
 });

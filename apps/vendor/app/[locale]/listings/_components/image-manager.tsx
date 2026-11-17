@@ -1,6 +1,6 @@
 "use client";
 
-import { createApiClient } from "@vergeo/config";
+import { ApiError, createApiClient } from "@vergeo/config";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -33,6 +33,37 @@ type CloudinaryUploadResponse = {
   public_id: string;
   secure_url?: string;
 };
+
+export type DedupCheckResponse = {
+  enabled: boolean;
+  match: "none" | "listing" | "own" | "canonical";
+  cloudinary_public_id: string | null;
+};
+
+function blobBytes(blob: Blob): Promise<ArrayBuffer> {
+  if (typeof blob.arrayBuffer === "function") return blob.arrayBuffer();
+  // Older WebViews: FileReader is universally available.
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(reader.error ?? new Error("read_failed"));
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
+/** sha256 of the exact bytes we would upload (lowercase hex), or null if unavailable. */
+export async function sha256Hex(blob: Blob): Promise<string | null> {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) return null;
+  try {
+    const digest = await subtle.digest("SHA-256", new Uint8Array(await blobBytes(blob)));
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(
+      "",
+    );
+  } catch {
+    return null;
+  }
+}
 
 export type ImageManagerProps = {
   listingId: string;
@@ -176,6 +207,20 @@ export async function uploadWithRetry(
   throw lastError ?? new Error("Upload failed");
 }
 
+type Translate = ReturnType<typeof useTranslations<"vendor">>;
+
+/** Plan photo cap / duplicate refusals get a friendly message, not "upload failed". */
+export function imageErrorNotice(error: unknown, t: Translate): string | null {
+  if (!(error instanceof ApiError)) return null;
+  if (error.code === "duplicate_image") return t("listings.images.duplicate");
+  if (error.code !== "image_limit_reached") return null;
+  const max = typeof error.details.max_images === "number" ? error.details.max_images : null;
+  if (error.details.upgrade_available === true && max !== null) {
+    return t("plans.photoLimitReached", { max });
+  }
+  return t("listings.images.limit_reached");
+}
+
 function sortByPosition(images: ListingImageRecord[]): ListingImageRecord[] {
   return [...images].sort((left, right) => left.position - right.position);
 }
@@ -277,24 +322,62 @@ export function ImageManager({
 
         try {
           const downscaled = await downscaleImageFile(sourceFile);
-          const signed = await apiClient.request<SignUploadResponse>("/media/sign", {
-            method: "POST",
-            body: JSON.stringify({
-              resource_kind: "listing",
-              file_size_bytes: downscaled.size,
-            }),
-          });
-
-          const uploaded = await uploadWithRetry(downscaled, signed, updateProgress);
+          // Dedup (flag `shared_canonical_photos`): skip bytes we already hold.
+          const contentSha256 = await sha256Hex(downscaled);
+          let publicId: string | null = null;
+          if (contentSha256) {
+            const dedup = await apiClient
+              .request<DedupCheckResponse>(
+                `/vendor/listings/${listingId}/images/dedup?sha256=${contentSha256}`,
+              )
+              .catch(() => null);
+            if (dedup?.enabled && (dedup.match === "listing" || dedup.match === "canonical")) {
+              setRejectNotice(
+                t(
+                  dedup.match === "canonical"
+                    ? "listings.images.dedupCanonical"
+                    : "listings.images.duplicate",
+                ),
+              );
+              updateProgress(100);
+              continue;
+            }
+            if (dedup?.enabled && dedup.match === "own" && dedup.cloudinary_public_id) {
+              publicId = dedup.cloudinary_public_id;
+              updateProgress(100);
+            }
+          }
+          if (publicId === null) {
+            const signed = await apiClient.request<SignUploadResponse>("/media/sign", {
+              method: "POST",
+              body: JSON.stringify({
+                resource_kind: "listing",
+                file_size_bytes: downscaled.size,
+              }),
+            });
+            const uploaded = await uploadWithRetry(downscaled, signed, updateProgress);
+            publicId = uploaded.public_id;
+          }
           const metadata = await apiClient.request<ListingImageRecord>(
             `/vendor/listings/${listingId}/images`,
             {
               method: "POST",
-              body: JSON.stringify({ cloudinary_public_id: uploaded.public_id }),
+              body: JSON.stringify({
+                cloudinary_public_id: publicId,
+                ...(contentSha256 ? { content_sha256: contentSha256 } : {}),
+              }),
             },
           );
           attached.push(metadata);
-        } catch {
+        } catch (caught) {
+          const limitNotice = imageErrorNotice(caught, t);
+          if (limitNotice) {
+            setRejectNotice(limitNotice);
+            setPendingUploads([]);
+            setPendingFiles([]);
+            if (attached.length > 0) syncImages([...localImages, ...attached]);
+            return;
+          }
           setPendingUploads((current) =>
             current.map((item, itemIndex) =>
               itemIndex === index

@@ -20,7 +20,6 @@
     "products": "商品",
     "services": "服务",
     "events": "活动",
-    "supplies": "供应",
     "vendors": "商家",
     "count": "{label} ({count})"
   },

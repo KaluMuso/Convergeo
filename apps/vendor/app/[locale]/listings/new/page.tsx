@@ -13,10 +13,14 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const vendorMessages = await loadNamespace(locale as Locale, "vendor");
-  const listings = vendorMessages.listings as { meta: { title: string; description: string } };
+  const listings = vendorMessages.listings as {
+    meta: { title: string; description: string };
+  };
   return {
     title: listings.meta.title,
     description: listings.meta.description,
@@ -29,7 +33,7 @@ export default async function NewListingPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
+    <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
       <ListingCreateFlow locale={locale} />
     </main>
   );

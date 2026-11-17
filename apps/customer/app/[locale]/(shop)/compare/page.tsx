@@ -1,7 +1,10 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { LinkButton } from "@vergeo/ui/src/link-button";
-import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import {
+  buildCanonicalAlternates,
+  buildLocaleCanonical,
+} from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -13,7 +16,10 @@ import { catalogLogisticsLabels } from "../_components/plp/logistics-pills";
 
 import { CompareResults } from "./_components/compare-results";
 
-import type { ComparisonLabels, ComparisonListing } from "../_components/pdp/comparison";
+import type {
+  ComparisonLabels,
+  ComparisonListing,
+} from "../_components/pdp/comparison";
 import type { ListingCondition } from "../_components/pdp/condition-badge";
 import type { Metadata } from "next";
 
@@ -56,10 +62,15 @@ type ComparisonApiResponse = {
   listings: ComparisonApiListing[];
 };
 
-async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
+async function getCatalogTranslator(
+  locale: string,
+): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const messages = { ...baseMessages, catalog: catalogMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    catalog: catalogMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -68,7 +79,10 @@ async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> 
   }) as unknown as CatalogTranslator;
 }
 
-function resolveProductSlug(query: { product?: string; slug?: string }): string | null {
+function resolveProductSlug(query: {
+  product?: string;
+  slug?: string;
+}): string | null {
   const raw = query.product?.trim() || query.slug?.trim();
   if (!raw) {
     return null;
@@ -80,15 +94,23 @@ function resolveProductSlug(query: { product?: string; slug?: string }): string 
   return raw;
 }
 
-async function fetchComparison(slug: string): Promise<ComparisonApiResponse | null> {
+async function fetchComparison(
+  slug: string,
+): Promise<ComparisonApiResponse | null> {
   const apiBase = resolveApiBaseUrl();
   if (!apiBase) {
     return null;
   }
   try {
-    const response = await fetch(`${apiBase}/products/${encodeURIComponent(slug)}/comparison`, {
-      next: { revalidate, tags: ["products", "comparison", `product:${slug}`] },
-    });
+    const response = await fetch(
+      `${apiBase}/products/${encodeURIComponent(slug)}/comparison`,
+      {
+        next: {
+          revalidate,
+          tags: ["products", "comparison", `product:${slug}`],
+        },
+      },
+    );
     if (!response.ok) {
       return null;
     }
@@ -98,7 +120,9 @@ async function fetchComparison(slug: string): Promise<ComparisonApiResponse | nu
   }
 }
 
-function toComparisonListings(response: ComparisonApiResponse): ComparisonListing[] {
+function toComparisonListings(
+  response: ComparisonApiResponse,
+): ComparisonListing[] {
   return response.listings.map((listing) => ({
     id: listing.id,
     priceNgwee: listing.price_ngwee,
@@ -151,7 +175,9 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getCatalogTranslator(locale);
 
@@ -183,10 +209,15 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
     return (
       <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-3xl">
         <header className="space-y-2">
-          <h1 className="font-display text-h1 text-display-ink">{t("comparePage.title")}</h1>
+          <h1 className="font-display text-h1 text-display-ink">
+            {t("comparePage.title")}
+          </h1>
           <p className="text-body text-text-2">{t("comparePage.subtitle")}</p>
         </header>
-        <EmptyState title={t("comparePage.noProductTitle")} body={t("comparePage.noProductBody")} />
+        <EmptyState
+          title={t("comparePage.noProductTitle")}
+          body={t("comparePage.noProductBody")}
+        />
         <LinkButton
           href={`/${locale}/search`}
           variant="primary"
@@ -204,7 +235,9 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
     return (
       <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-3xl">
         <header className="space-y-2">
-          <h1 className="font-display text-h1 text-display-ink">{t("comparePage.title")}</h1>
+          <h1 className="font-display text-h1 text-display-ink">
+            {t("comparePage.title")}
+          </h1>
         </header>
         <EmptyState
           title={t("comparePage.unavailableTitle")}
@@ -236,7 +269,9 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
             {t("comparePage.backToProduct")}
           </Link>
         </p>
-        <h1 className="font-display text-h1 text-display-ink">{t("comparePage.title")}</h1>
+        <h1 className="font-display text-h1 text-display-ink">
+          {t("comparePage.title")}
+        </h1>
         <p className="text-body text-text-2">{t("comparePage.subtitle")}</p>
       </header>
 

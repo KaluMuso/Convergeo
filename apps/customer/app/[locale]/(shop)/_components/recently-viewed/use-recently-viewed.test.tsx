@@ -67,7 +67,10 @@ describe("useRecentlyViewed", () => {
     });
 
     const { result } = renderHook(() => useRecentlyViewed());
-    expect(result.current.entries.map((entry) => entry.slug)).toEqual(["itel-a70", "tecno-spark"]);
+    expect(result.current.entries.map((entry) => entry.slug)).toEqual([
+      "itel-a70",
+      "tecno-spark",
+    ]);
 
     act(() => {
       result.current.clear();

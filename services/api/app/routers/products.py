@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import logging
 import re
-from typing import Annotated, Any, Protocol
+from typing import Annotated, Any, Literal, Protocol
 
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.services.business.access import BusinessAccess, get_business_access
 from app.services.cart.store import fetch_listing
 from app.services.inventory.location_stock import (
     fetch_branch_stock_rows,
@@ -20,6 +20,11 @@ from app.services.listings.variants import (
     variant_available_qty,
     variant_in_stock,
 )
+from app.services.vendor_plans.canonical_photos import (
+    load_canonical_images,
+    merge_listing_gallery,
+)
+from app.services.vendor_plans.resolver import shared_photos_enabled
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -43,6 +48,8 @@ class _ServiceClient(Protocol):
     def client(self) -> Any: ...
 
 
+logger = logging.getLogger(__name__)
+
 MAX_GALLERY_IMAGES = 8
 
 
@@ -50,6 +57,9 @@ class ProductImageResponse(BaseModel):
     public_id: str
     position: int
     listing_id: str
+    # "canonical" = shared product photo (flag `shared_canonical_photos`); its
+    # listing_id is the page's primary listing so existing clients keep working.
+    source: Literal["listing", "canonical"] = "listing"
 
 
 class VendorLocationResponse(BaseModel):
@@ -314,6 +324,49 @@ def _collect_images(
     return images
 
 
+def _canonical_public_ids(client: Any, product_id: str) -> list[str]:
+    """Shared canonical photos for the PDP, or [] when the flag is off.
+
+    Fail-soft: the PDP must render from listing photos if this read fails.
+    """
+    if not shared_photos_enabled(client):
+        return []
+    try:
+        return load_canonical_images(client, [product_id]).get(product_id, [])
+    except Exception:
+        logger.warning("canonical product photos unavailable", exc_info=True)
+        return []
+
+
+def _merge_canonical_gallery(
+    canonical_public_ids: list[str],
+    listing_gallery: list[ProductImageResponse],
+    *,
+    primary_listing_id: str,
+) -> list[ProductImageResponse]:
+    """Canonical photos lead the PDP gallery; listing photos fill the rest (≤8)."""
+    merged: list[ProductImageResponse] = []
+    seen: set[str] = set()
+    for public_id in canonical_public_ids:
+        if public_id in seen:
+            continue
+        seen.add(public_id)
+        merged.append(
+            ProductImageResponse(
+                public_id=public_id,
+                position=len(merged) + 1,
+                listing_id=primary_listing_id,
+                source="canonical",
+            )
+        )
+    for image in listing_gallery:
+        if image.public_id in seen:
+            continue
+        seen.add(image.public_id)
+        merged.append(image.model_copy(update={"position": len(merged) + 1}))
+    return merged[:MAX_GALLERY_IMAGES]
+
+
 def _maybe_single_row(response: Any) -> dict[str, Any] | None:
     """Normalize postgrest ``maybe_single().execute()`` empty results.
 
@@ -437,8 +490,6 @@ def _variant_payload(
 def build_product_detail(
     client: Any,
     slug: str,
-    *,
-    include_wholesale: bool = False,
 ) -> ProductDetailResponse | RedirectResponse:
     product = _fetch_product_by_slug(client, slug)
     if product is None and _UUID_RE.match(slug):
@@ -489,20 +540,15 @@ def build_product_detail(
         .execute()
     )
     listing_rows = listings_response.data or []
-    if not include_wholesale:
-        # Wholesale-only listings are B2B supplies: hidden from the consumer
-        # product page (gallery, vendor comparison, count) unless the caller is
-        # a verified business buyer.
-        retail_rows = [row for row in listing_rows if not row.get("wholesale")]
-        # D36: when the filter empties the page, the product is wholesale-only
-        # for this caller and must be indistinguishable from one that does not
-        # exist. Rendering a listing-less page would confirm the product is
-        # real and merely withheld, which is the disclosure D36 forbids — an id
-        # enumerator could map the B2B catalogue without ever qualifying as a
-        # buyer. Same treatment the demo filter already applies below.
-        if listing_rows and not retail_rows:
-            raise AppError("product.not_found", "Product not found", 404)
-        listing_rows = retail_rows
+    # Wholesale prices live only in the vendor app: wholesale listings never
+    # reach the customer product page (gallery, vendor comparison, count).
+    retail_rows = [row for row in listing_rows if not row.get("wholesale")]
+    # When the filter empties the page, the product is wholesale-only and must
+    # be indistinguishable from one that does not exist (D36): a listing-less
+    # page would confirm the product is real and merely withheld.
+    if listing_rows and not retail_rows:
+        raise AppError("product.not_found", "Product not found", 404)
+    listing_rows = retail_rows
 
     listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
     # D25 / VC-P06: hide demo seed inventory on the public PDP. When every
@@ -548,6 +594,11 @@ def build_product_detail(
         images_by_listing,
         primary_listing_id=primary_listing_id,
     )
+    canonical_public_ids = _canonical_public_ids(client, product_id)
+    if canonical_public_ids:
+        gallery_images = _merge_canonical_gallery(
+            canonical_public_ids, gallery_images, primary_listing_id=primary_listing_id or ""
+        )
 
     listings: list[ListingResponse] = []
     for row in listing_rows:
@@ -582,6 +633,22 @@ def build_product_detail(
             )
             if image_row.get("cloudinary_public_id")
         ][:MAX_GALLERY_IMAGES]
+        if canonical_public_ids:
+            # Own photos always show; canonical ones fill the free slots (≤8).
+            merged = merge_listing_gallery(
+                [image.public_id for image in listing_images],
+                canonical_public_ids,
+                cap=MAX_GALLERY_IMAGES,
+            )
+            listing_images = [
+                ProductImageResponse(
+                    public_id=public_id,
+                    position=index + 1,
+                    listing_id=listing_id,
+                    source=source,
+                )
+                for index, (public_id, source) in enumerate(merged)
+            ]
         option_groups, variants = _variant_payload(row, variant_sets.get(listing_id))
         listing_in_stock = is_listing_available(
             stock_mode,
@@ -857,14 +924,13 @@ class PickupLocationsResponse(BaseModel):
 async def get_pickup_locations(
     listing_id: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
-    access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> PickupLocationsResponse:
     """Active branches carrying a branch-tracked listing — the Customer PDP's
     required-pickup-branch selector reads this before Add to Cart.
 
     Same existence/visibility rule cart mutations already enforce (D36): an
     id the caller isn't eligible to see is answered as though it never
-    existed, so this never leaks whether a wholesale-gated listing exists.
+    existed, so this never leaks whether a wholesale listing exists.
 
     `branch_tracked=false` (legacy pooled listing) always returns an empty
     `locations` list — the PDP needs no selection for those. A genuinely
@@ -872,7 +938,7 @@ async def get_pickup_locations(
     an empty list with `branch_tracked=true`, so the caller can render an
     honest "no pickup branch available" state instead of a fabricated one.
     """
-    fetch_listing(listing_id, business_eligible=access.eligible)
+    fetch_listing(listing_id)
 
     if not is_branch_tracked(listing_id):
         return PickupLocationsResponse(listing_id=listing_id, branch_tracked=False, locations=[])
@@ -910,9 +976,8 @@ async def get_pickup_locations(
 async def get_product(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
-    access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> ProductDetailResponse | RedirectResponse:
-    result = build_product_detail(supabase.client, slug, include_wholesale=access.eligible)
+    result = build_product_detail(supabase.client, slug)
     if isinstance(result, RedirectResponse):
         return result
     return result

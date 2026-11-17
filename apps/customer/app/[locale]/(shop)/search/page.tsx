@@ -17,6 +17,7 @@ import {
   fetchCategoriesResult,
   type CategoryRow,
 } from "../_components/merch-data";
+import { buildOfferBadgeLabels } from "../_components/offers/offer-badge";
 import { buildTopCategorySuggestions } from "../_components/search/category-suggestions";
 import { NearMeToggle } from "../_components/search/near-me-toggle";
 import { PopularSearches } from "../_components/search/popular-searches";
@@ -400,6 +401,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     mediaEmpty: tCatalog("plp.card.mediaEmpty"),
     noReviews: tCatalog("plp.card.noReviews"),
     reviewCount: String(tCatalog.raw("plp.card.reviewCount")),
+    offerBadge: buildOfferBadgeLabels((key) => tCatalog.raw(key)),
     productGridAria: t("results.productGridAria"),
     loadMore: t("pagination.loadMore"),
     loading: t("pagination.loading"),

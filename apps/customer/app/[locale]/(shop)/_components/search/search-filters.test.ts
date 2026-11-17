@@ -40,14 +40,20 @@ describe("search-filters", () => {
       categoryPath: "electronics/phones",
     };
     expect(hasActiveSearchFilters(state)).toBe(true);
-    const chips = buildSearchFilterChips(state, { "electronics/phones": "Phones" });
+    const chips = buildSearchFilterChips(state, {
+      "electronics/phones": "Phones",
+    });
     expect(chips).toHaveLength(2);
 
-    const base = new URLSearchParams("q=phone&min_price=10&category_path=electronics/phones");
+    const base = new URLSearchParams(
+      "q=phone&min_price=10&category_path=electronics/phones",
+    );
     expect(hrefWithoutSearchFilterChip("/en/search", base, chips[0]!)).toBe(
       "/en/search?q=phone&category_path=electronics%2Fphones",
     );
-    expect(clearSearchFiltersHref("/en/search", base)).toBe("/en/search?q=phone");
+    expect(clearSearchFiltersHref("/en/search", base)).toBe(
+      "/en/search?q=phone",
+    );
   });
 
   it("formats category path labels", () => {

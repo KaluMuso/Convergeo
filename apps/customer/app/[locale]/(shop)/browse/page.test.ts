@@ -16,14 +16,14 @@ import BrowsePage from "./page";
 
 describe("/[locale]/browse", () => {
   it("redirects to the category index instead of 404ing", async () => {
-    await expect(BrowsePage({ params: Promise.resolve({ locale: "en" }) })).rejects.toThrow(
-      "REDIRECT:/en/categories",
-    );
+    await expect(
+      BrowsePage({ params: Promise.resolve({ locale: "en" }) }),
+    ).rejects.toThrow("REDIRECT:/en/categories");
   });
 
   it("404s for an unknown locale", async () => {
-    await expect(BrowsePage({ params: Promise.resolve({ locale: "xx" }) })).rejects.toThrow(
-      "NOT_FOUND",
-    );
+    await expect(
+      BrowsePage({ params: Promise.resolve({ locale: "xx" }) }),
+    ).rejects.toThrow("NOT_FOUND");
   });
 });

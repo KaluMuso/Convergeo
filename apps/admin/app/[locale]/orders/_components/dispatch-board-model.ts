@@ -76,12 +76,30 @@ export type Dispatch = {
   order_status: string;
   delivery_zone: string | null;
   handover_locked: boolean;
+  /** Pay at the door (flag `pay_at_door`); null when not started or flag off. */
+  door_payment_state?: DoorPaymentBoardState | null;
 };
+
+export type DoorPaymentBoardState =
+  "arrived" | "pending" | "paid" | "cash" | "failed" | "exception";
+
+/** Door-payment actions ops can take for the rider (COD parcel, rider picked up). */
+export function doorPaymentActions(
+  dispatch: Pick<Dispatch, "status" | "cod_amount_ngwee" | "door_payment_state">,
+): Array<"arrived" | "request" | "poll" | "cash"> {
+  if (dispatch.status !== "picked_up" || dispatch.cod_amount_ngwee <= 0) return [];
+  const state = dispatch.door_payment_state ?? null;
+  if (state === "paid" || state === "cash" || state === "exception") return [];
+  if (state === "pending") return ["poll"];
+  if (state === null) return ["arrived", "request", "cash"];
+  return ["request", "cash"];
+}
 
 export type DeliveryZone = { zone_key: string; label: string; fee_ngwee: number };
 
 export type Board = {
   flag_enabled: boolean;
+  door_payment_enabled?: boolean;
   ready_orders: ReadyOrder[];
   dispatches: Dispatch[];
   couriers: Courier[];

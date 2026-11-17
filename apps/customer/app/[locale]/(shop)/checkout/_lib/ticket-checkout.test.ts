@@ -10,8 +10,15 @@ const OTHER = "00000000-0000-4000-8000-000000000009";
 
 function database(overrides: Record<string, unknown> = {}) {
   const rows: Record<string, unknown> = {
-    checkout_groups: { id: GROUP, customer_id: USER, status: "pending", total_ngwee: 52_500 },
-    orders: [{ id: ORDER, checkout_group_id: GROUP, customer_id: USER, cod: false }],
+    checkout_groups: {
+      id: GROUP,
+      customer_id: USER,
+      status: "pending",
+      total_ngwee: 52_500,
+    },
+    orders: [
+      { id: ORDER, checkout_group_id: GROUP, customer_id: USER, cod: false },
+    ],
     order_items: [
       {
         id: ITEM,
@@ -39,7 +46,8 @@ function database(overrides: Record<string, unknown> = {}) {
         return query;
       },
       maybeSingle: async () => result,
-      then: (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve),
+      then: (resolve: (value: typeof result) => unknown) =>
+        Promise.resolve(result).then(resolve),
     };
     return query;
   });
@@ -60,12 +68,19 @@ describe("ticket checkout source contract", () => {
     expect(eq).toHaveBeenCalledWith("checkout_groups", "customer_id", USER);
     expect(eq).toHaveBeenCalledWith("orders", "checkout_group_id", GROUP);
     expect(eq).toHaveBeenCalledWith("order_items", "order_id", ORDER);
-    expect(eq).toHaveBeenCalledWith("order_item_tickets", "order_item_id", ITEM);
+    expect(eq).toHaveBeenCalledWith(
+      "order_item_tickets",
+      "order_item_id",
+      ITEM,
+    );
   });
 
   it.each([
     ["missing group", { checkout_groups: null }],
-    ["completed group", { checkout_groups: { status: "completed", total_ngwee: 52_500 } }],
+    [
+      "completed group",
+      { checkout_groups: { status: "completed", total_ngwee: 52_500 } },
+    ],
     ["free group", { checkout_groups: { status: "pending", total_ngwee: 0 } }],
     ["no order", { orders: [] }],
     [
@@ -78,32 +93,71 @@ describe("ticket checkout source contract", () => {
       },
     ],
     ["COD order", { orders: [{ id: ORDER, cod: true }] }],
-    ["product line", { order_items: [{ item_kind: "product", qty: 1, unit_price_ngwee: 10 }] }],
+    [
+      "product line",
+      { order_items: [{ item_kind: "product", qty: 1, unit_price_ngwee: 10 }] },
+    ],
     ["multiple lines", { order_items: [{ id: ITEM }, { id: "other" }] }],
     ["missing ticket detail", { order_item_tickets: null }],
     [
       "different group ID",
-      { checkout_groups: { id: OTHER, customer_id: USER, status: "pending", total_ngwee: 52_500 } },
+      {
+        checkout_groups: {
+          id: OTHER,
+          customer_id: USER,
+          status: "pending",
+          total_ngwee: 52_500,
+        },
+      },
     ],
     [
       "different group owner",
       {
-        checkout_groups: { id: GROUP, customer_id: OTHER, status: "pending", total_ngwee: 52_500 },
+        checkout_groups: {
+          id: GROUP,
+          customer_id: OTHER,
+          status: "pending",
+          total_ngwee: 52_500,
+        },
       },
     ],
     [
       "order in another group",
-      { orders: [{ id: ORDER, checkout_group_id: OTHER, customer_id: USER, cod: false }] },
+      {
+        orders: [
+          {
+            id: ORDER,
+            checkout_group_id: OTHER,
+            customer_id: USER,
+            cod: false,
+          },
+        ],
+      },
     ],
     [
       "order owned by another buyer",
-      { orders: [{ id: ORDER, checkout_group_id: GROUP, customer_id: OTHER, cod: false }] },
+      {
+        orders: [
+          {
+            id: ORDER,
+            checkout_group_id: GROUP,
+            customer_id: OTHER,
+            cod: false,
+          },
+        ],
+      },
     ],
     [
       "item in another order",
       {
         order_items: [
-          { id: ITEM, order_id: OTHER, item_kind: "ticket", qty: 2, unit_price_ngwee: 25_000 },
+          {
+            id: ITEM,
+            order_id: OTHER,
+            item_kind: "ticket",
+            qty: 2,
+            unit_price_ngwee: 25_000,
+          },
         ],
       },
     ],
@@ -130,12 +184,19 @@ describe("ticket checkout source contract", () => {
 
   it("can verify a completed ticket group for read-only payment resumption", async () => {
     const { db } = database({
-      checkout_groups: { id: GROUP, customer_id: USER, status: "completed", total_ngwee: 52_500 },
+      checkout_groups: {
+        id: GROUP,
+        customer_id: USER,
+        status: "completed",
+        total_ngwee: 52_500,
+      },
     });
-    await expect(loadTicketOrder(db, GROUP, USER, true)).resolves.toMatchObject({
-      groupId: GROUP,
-      orderId: ORDER,
-      status: "completed",
-    });
+    await expect(loadTicketOrder(db, GROUP, USER, true)).resolves.toMatchObject(
+      {
+        groupId: GROUP,
+        orderId: ORDER,
+        status: "completed",
+      },
+    );
   });
 });

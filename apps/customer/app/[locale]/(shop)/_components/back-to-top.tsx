@@ -13,7 +13,10 @@ type BackToTopProps = {
  * Fixed return-to-top control for long browse surfaces (PLP, search).
  * Sits above the shop bottom nav + safe area.
  */
-export function BackToTop({ label, thresholdPx = DEFAULT_THRESHOLD_PX }: BackToTopProps) {
+export function BackToTop({
+  label,
+  thresholdPx = DEFAULT_THRESHOLD_PX,
+}: BackToTopProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -26,8 +29,13 @@ export function BackToTop({ label, thresholdPx = DEFAULT_THRESHOLD_PX }: BackToT
   }, [thresholdPx]);
 
   const scrollToTop = useCallback(() => {
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    window.scrollTo({
+      top: 0,
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
   }, []);
 
   if (!visible) {

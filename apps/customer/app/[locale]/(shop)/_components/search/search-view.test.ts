@@ -61,12 +61,18 @@ describe("normalizeSearchQuery", () => {
   });
 
   it("accepts a harmless query", () => {
-    expect(normalizeSearchQuery(" phone ")).toEqual({ status: "ok", query: "phone" });
+    expect(normalizeSearchQuery(" phone ")).toEqual({
+      status: "ok",
+      query: "phone",
+    });
   });
 
   it("rejects oversized input as invalid (not as API empty)", () => {
     const tooLong = "a".repeat(MAX_SEARCH_QUERY_LENGTH + 1);
-    expect(normalizeSearchQuery(tooLong)).toEqual({ status: "invalid", reason: "too_long" });
+    expect(normalizeSearchQuery(tooLong)).toEqual({
+      status: "invalid",
+      reason: "too_long",
+    });
   });
 });
 

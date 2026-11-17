@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.tickets.purchase import (
@@ -60,6 +62,7 @@ class RsvpResponse(BaseModel):
     order_item_id: str
     ticket_count: int
     redirect_to: str
+    replayed: bool = False
 
 
 def _expected_internal_token() -> str:
@@ -119,12 +122,35 @@ async def ticket_checkout(
     return _to_checkout_response(result)
 
 
+def _rate_limit_rsvp(request: Request, user_id: str, service: Any) -> None:
+    """Free RSVPs cost nothing, so throttle them per IP and per user."""
+    for scope, key, limit in (
+        ("ticket_rsvp_ip", get_client_ip(request), 20),
+        ("ticket_rsvp_user", user_id, 10),
+    ):
+        allowed, retry = bump_rate_counter(
+            scope=scope,
+            key=key,
+            window=timedelta(minutes=10),
+            limit=limit,
+            client=service.client,
+        )
+        if not allowed:
+            raise_rate_limited(
+                retry_after=retry,
+                message_key="events.ticketPurchase.errors.rateLimited",
+                message="Too many RSVP requests",
+            )
+
+
 @router.post("/tickets/rsvp", response_model=RsvpResponse)
 async def ticket_rsvp(
     body: TicketPurchaseRequest,
+    request: Request,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service: Annotated[Any, Depends(get_supabase_client)],
 ) -> RsvpResponse:
+    _rate_limit_rsvp(request, current_user.id, service)
     result = rsvp(
         service,
         customer_id=current_user.id,
@@ -140,6 +166,7 @@ async def ticket_rsvp(
         order_item_id=result.order_item_id,
         ticket_count=len(result.ticket_ids),
         redirect_to=f"/account/orders/{result.order_id}",
+        replayed=result.replayed,
     )
 
 

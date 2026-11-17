@@ -16,6 +16,11 @@ const PLATFORM_LABEL_KEYS: Record<string, string> = {
   ai_monthly_cap_usd: "platform.aiCapUsd",
   release_after_delivered_hours: "platform.releaseDelivered",
   release_after_shipped_days: "platform.releaseShipped",
+  branch_min_sibling_distance_m: "platform.branchMinDistance",
+  event_verified_organiser_advance_bps: "platform.advanceBps",
+  event_advance_min_kyc_tier: "platform.advanceMinKycTier",
+  event_advance_min_successful_events: "platform.advanceMinEvents",
+  event_advance_repayment_days: "platform.advanceRepaymentDays",
 };
 
 const DANGEROUS_KEYS = new Set(["cod_cap_ngwee"]);
@@ -26,13 +31,19 @@ export function PlatformEditor() {
   const [drafts, setDrafts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<{ key: string; from: number; to: number } | null>(null);
+  const [pending, setPending] = useState<{
+    key: string;
+    from: number;
+    to: number;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await configApi.request<PlatformConfigEntry[]>("/admin/config/platform");
+      const data = await configApi.request<PlatformConfigEntry[]>(
+        "/admin/config/platform",
+      );
       setRows(data);
       setDrafts(Object.fromEntries(data.map((row) => [row.key, row.value])));
     } catch {
@@ -114,7 +125,10 @@ export function PlatformEditor() {
                 className="min-h-11 w-32 rounded-md border border-border px-2 font-mono"
                 value={drafts[row.key] ?? row.value}
                 onChange={(event) =>
-                  setDrafts((prev) => ({ ...prev, [row.key]: Number(event.target.value) }))
+                  setDrafts((prev) => ({
+                    ...prev,
+                    [row.key]: Number(event.target.value),
+                  }))
                 }
               />
               <button

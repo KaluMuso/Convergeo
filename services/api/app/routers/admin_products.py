@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, Protocol
 from uuid import UUID
@@ -9,9 +10,13 @@ from app.core.auth import CurrentUser, require_moderator, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
+from app.services.vendor_plans.canonical_photos import seed_canonical_images_from_listings
+from app.services.vendor_plans.resolver import shared_photos_enabled
 from app.settings import get_settings
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field, model_validator
+
+logger = logging.getLogger(__name__)
 
 DUPLICATE_SIMILARITY_THRESHOLD = 0.3
 MAX_DUPLICATE_PAIRS = 100
@@ -73,9 +78,7 @@ class ProductRelationsResponse(BaseModel):
 
 
 class SetProductRelationsRequest(BaseModel):
-    related_product_ids: list[UUID] = Field(
-        default_factory=list, max_length=MAX_RELATED_PRODUCTS
-    )
+    related_product_ids: list[UUID] = Field(default_factory=list, max_length=MAX_RELATED_PRODUCTS)
 
 
 class ProductMergeError(AppError):
@@ -174,19 +177,12 @@ def _load_product_relations(
         .execute()
     )
     rows = _rows(relations)
-    related_ids = [
-        str(row["related_product_id"])
-        for row in rows
-        if row.get("related_product_id")
-    ]
+    related_ids = [str(row["related_product_id"]) for row in rows if row.get("related_product_id")]
     if not related_ids:
         return []
 
     products_response = (
-        _table(client, "products")
-        .select("id, name, slug")
-        .in_("id", related_ids)
-        .execute()
+        _table(client, "products").select("id, name, slug").in_("id", related_ids).execute()
     )
     product_by_id = {str(row["id"]): row for row in _rows(products_response)}
 
@@ -358,9 +354,7 @@ def transition_product_merge(
             "loser_id": loser_id,
             "listings_repointed": 0,
             "merged_aliases": [
-                str(alias)
-                for alias in (survivor.get("aliases") or [])
-                if isinstance(alias, str)
+                str(alias) for alias in (survivor.get("aliases") or []) if isinstance(alias, str)
             ],
             "slug_redirect_from": str(loser["slug"]),
             "slug_redirect_to": str(survivor["slug"]),
@@ -369,10 +363,7 @@ def transition_product_merge(
         }, True
 
     listings_response = (
-        _table(service_client, "vendor_listings")
-        .select("id")
-        .eq("product_id", loser_id)
-        .execute()
+        _table(service_client, "vendor_listings").select("id").eq("product_id", loser_id).execute()
     )
     listing_rows = _rows(listings_response)
     listings_repointed = 0
@@ -388,9 +379,7 @@ def transition_product_merge(
     survivor_aliases = [
         str(alias) for alias in (survivor.get("aliases") or []) if isinstance(alias, str)
     ]
-    loser_aliases = [
-        str(alias) for alias in (loser.get("aliases") or []) if isinstance(alias, str)
-    ]
+    loser_aliases = [str(alias) for alias in (loser.get("aliases") or []) if isinstance(alias, str)]
     merged_aliases = _union_aliases(
         survivor_aliases,
         loser_aliases,
@@ -588,15 +577,10 @@ async def set_product_relations(
     # Every related product must exist and be active/shoppable.
     if ordered_ids:
         related_response = (
-            _table(service_client, "products")
-            .select("id, status")
-            .in_("id", ordered_ids)
-            .execute()
+            _table(service_client, "products").select("id, status").in_("id", ordered_ids).execute()
         )
         active_ids = {
-            str(row["id"])
-            for row in _rows(related_response)
-            if str(row.get("status")) == "active"
+            str(row["id"]) for row in _rows(related_response) if str(row.get("status")) == "active"
         }
         invalid = [related_id for related_id in ordered_ids if related_id not in active_ids]
         if invalid:
@@ -615,9 +599,7 @@ async def set_product_relations(
     }
 
     # Replace-all: clear the existing curation, then re-insert in the requested order.
-    _table(service_client, "product_relations").delete().eq(
-        "product_id", product_id_str
-    ).execute()
+    _table(service_client, "product_relations").delete().eq("product_id", product_id_str).execute()
     if ordered_ids:
         rows = [
             {
@@ -686,10 +668,7 @@ def _cloudinary_delivery_url(public_id: str) -> str | None:
     normalized = public_id.strip().lstrip("/")
     if not normalized:
         return None
-    return (
-        f"https://res.cloudinary.com/{cloud_name}/image/upload/"
-        f"f_auto,q_auto/{normalized}"
-    )
+    return f"https://res.cloudinary.com/{cloud_name}/image/upload/f_auto,q_auto/{normalized}"
 
 
 def _load_canonical_images(
@@ -702,9 +681,7 @@ def _load_canonical_images(
         .eq("product_id", product_id)
         .execute()
     )
-    listing_ids = [
-        str(row["id"]) for row in _rows(listings_response) if row.get("id") is not None
-    ]
+    listing_ids = [str(row["id"]) for row in _rows(listings_response) if row.get("id") is not None]
     if not listing_ids:
         return []
 
@@ -904,6 +881,21 @@ async def list_pending_canonical_products(
     return items
 
 
+def _seed_canonical_photos(service_client: ServiceRoleClient, product_id: str) -> int:
+    """Approval adopts the proposing listing's photos as the product's (flag-gated).
+
+    Best effort: a photo-seeding failure must never undo or block moderation.
+    """
+    client = service_client.client
+    if not shared_photos_enabled(client):
+        return 0
+    try:
+        return seed_canonical_images_from_listings(client, product_id)
+    except Exception:
+        logger.warning("canonical photo seeding failed", exc_info=True)
+        return 0
+
+
 @canonical_router.patch("/{product_id}/status", response_model=CanonicalStatusResponse)
 async def patch_canonical_product_status(
     product_id: UUID,
@@ -931,6 +923,10 @@ async def patch_canonical_product_status(
         "reason": result.get("reason"),
         "actor_id": current_user.id,
     }
+    if str(result["status"]) == "active":
+        seeded = _seed_canonical_photos(service_client, product_id_str)
+        if seeded:
+            after["canonical_images_seeded"] = seeded
     recorder.record(
         action=f"admin.products.canonical.{body.status}",
         entity_type="product",

@@ -3,7 +3,6 @@
 import { emitToast } from "@vergeo/ui/src/toast";
 import { useState } from "react";
 
-
 type SaveSearchButtonProps = {
   locale: string;
   query: string;

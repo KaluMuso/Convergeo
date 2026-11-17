@@ -9,7 +9,10 @@ import {
 import { getApiBaseUrl } from "./api-base-url";
 
 /** Vendor notification-center transport (vendor audience feed). */
-const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken: getBrowserAccessToken });
+const client = createApiClient({
+  baseUrl: getApiBaseUrl(),
+  getToken: getBrowserAccessToken,
+});
 
 export const vendorNotificationsRequest: NotificationRequest = (path, init) =>
   client.request(path, { ...init, cache: "no-store" });

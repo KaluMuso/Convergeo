@@ -74,9 +74,16 @@ CLOUDINARY_WEBHOOK = RateLimitPolicy(
 
 # Public, unauthenticated telemetry beacon (navigator.sendBeacon). Higher ceiling than
 # human writes — a batch fires ~once per page-session — and enforcement is fail-open, so a
-# limiter outage never drops analytics. Enforced in routers/analytics_collect.py.
+# limiter outage never drops analytics. Enforced in routers/analytics_collect.py — with
+# feature flag analytics_v2_collect ON the endpoint instead uses the in-process
+# token buckets there (no DB write per beacon; per worker, see plan §R-C).
 PUBLIC_BEACON = RateLimitPolicy(
     scope="analytics_collect_ip", limit=120, window=timedelta(minutes=1)
+)
+# Signed-in sign-in link (POST /analytics/identify): fires once per v2 session after login.
+# Keyed per user and enforced fail-open in routers/analytics_identify.py.
+ANALYTICS_IDENTIFY = RateLimitPolicy(
+    scope="analytics_identify_user", limit=20, window=timedelta(minutes=1)
 )
 # Public browser error beacon from Next.js error boundaries (navigator.sendBeacon).
 TELEMETRY_FRONTEND_ERRORS = RateLimitPolicy(
@@ -149,6 +156,15 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /dispatch/requests/{dispatch_id}/handover": SENSITIVE_WRITE,
     "POST /dispatch/requests/{dispatch_id}/notify": ADMIN_WRITE,
     "POST /dispatch/requests/{dispatch_id}/transition": ADMIN_WRITE,
+    # Pay at the door (flag pay_at_door). Prompts move money: PAYMENT_WRITE, plus
+    # the per-dispatch attempt cap (pay_at_door_max_attempts) in the service.
+    "POST /dispatch/requests/{dispatch_id}/door-payment/arrived": ADMIN_WRITE,
+    "POST /dispatch/requests/{dispatch_id}/door-payment/request": PAYMENT_WRITE,
+    "POST /dispatch/requests/{dispatch_id}/door-payment/poll": ADMIN_WRITE,
+    "POST /dispatch/requests/{dispatch_id}/door-payment/cash": SENSITIVE_WRITE,
+    "POST /dispatch/door-payment/exceptions/{exception_id}/resolve": SENSITIVE_WRITE,
+    "POST /account/orders/{order_id}/door-payment": PAYMENT_WRITE,
+    "POST /account/orders/{order_id}/door-payment/poll": PAYMENT_WRITE,
     "PATCH /config/platform/{key}": ADMIN_WRITE,
     "PATCH /merch/slots/{slot_id}": ADMIN_WRITE,
     "PATCH /organiser/events/{event_id}": STANDARD_WRITE,
@@ -162,6 +178,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /account/addresses": STANDARD_WRITE,
     "POST /account/delete": SENSITIVE_WRITE,
     "POST /account/export": SENSITIVE_WRITE,
+    "PUT /account/consents/delivery-partner": STANDARD_WRITE,
     "POST /account/recently-viewed": STANDARD_WRITE,
     "POST /account/tickets/{ticket_id}/cancel": PAYMENT_WRITE,
     "POST /account/tickets/{ticket_id}/reschedule-opt-out": PAYMENT_WRITE,
@@ -177,9 +194,18 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PUT /admin/roles/{key}/users/{user_id}": ADMIN_WRITE,
     "DELETE /admin/roles/{key}/users/{user_id}": ADMIN_WRITE,
     "POST /admin/events/{event_id}/high-value-verify": ADMIN_WRITE,
+    "POST /admin/event-advance-debts/repayments": PAYMENT_WRITE,
+    # 2026-11 governance: scoped operator tools and admin account lifecycle.
+    "PATCH /admin/services/{service_id}/status": ADMIN_WRITE,
+    "POST /admin/rfq/jobs/{job_id}/close": ADMIN_WRITE,
+    "POST /admin/events/{event_id}/unpublish": ADMIN_WRITE,
+    "POST /admin/events/{event_id}/cancel": SENSITIVE_WRITE,
+    "POST /admin/disputes/{dispute_id}/notes": ADMIN_WRITE,
+    "POST /admin/accounts/{user_id}/deactivate": SENSITIVE_WRITE,
     "POST /admin/orders/{order_id}/cod/confirm-collection": PAYMENT_WRITE,
     "POST /admin/orders/{order_id}/cod/refuse-collection": PAYMENT_WRITE,
     "POST /analytics/collect": PUBLIC_BEACON,
+    "POST /analytics/identify": ANALYTICS_IDENTIFY,
     "POST /ask": STANDARD_WRITE,
     "POST /auth/guard/otp-quota": SENSITIVE_WRITE,
     "POST /beta/feedback": STANDARD_WRITE,
@@ -191,6 +217,9 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /cart/merge": STANDARD_WRITE,
     "POST /cart/revalidate": STANDARD_WRITE,
     "POST /cart/rfq/{rfq_id}/accept": STANDARD_WRITE,
+    # Unified cart: event-ticket lines (the price is resolved server-side).
+    "POST /cart/tickets": STANDARD_WRITE,
+    "DELETE /cart/tickets/{line_id}": STANDARD_WRITE,
     "POST /checkout/session": PAYMENT_WRITE,
     "POST /checkout/steps/contact": PAYMENT_WRITE,
     "POST /checkout/steps/fulfilment": PAYMENT_WRITE,
@@ -226,11 +255,15 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /webhooks/cloudinary": CLOUDINARY_WEBHOOK,
     "POST /webhooks/waha-intake": WAHA_INTAKE_WEBHOOK,
     "POST /internal/analytics/retention-tick": INTERNAL_CRON,
+    "POST /internal/analytics/v2-retention-tick": INTERNAL_CRON,
+    "POST /internal/analytics/rollup-tick": INTERNAL_CRON,
     "POST /internal/digest": INTERNAL_CRON,
     "POST /internal/dispatch/tick": INTERNAL_CRON,
+    "POST /internal/reconciliation/door-poll-tick": INTERNAL_CRON,
     "POST /internal/embeddings/tick": INTERNAL_CRON,
     "POST /internal/event-release/tick": INTERNAL_CRON,
     "POST /internal/event-refund-jobs/tick": INTERNAL_CRON,
+    "POST /internal/event-advance-debts/tick": INTERNAL_CRON,
     "POST /internal/event-recurrence/tick": INTERNAL_CRON,
     "POST /internal/funnel/abandon-tick": INTERNAL_CRON,
     # M18-P07 WAHA intake operations. Three separate sweeps rather than one
@@ -323,6 +356,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /orders/{order_id}/report-problem": STANDARD_WRITE,
     "POST /organiser/events": STANDARD_WRITE,
     "POST /organiser/events/{event_id}/cancel": STANDARD_WRITE,
+    "POST /organiser/advance/undertaking": STANDARD_WRITE,
     "POST /organiser/events/{event_id}/end": STANDARD_WRITE,
     "POST /organiser/events/{event_id}/publish": STANDARD_WRITE,
     "POST /organiser/events/{event_id}/ticket-types": STANDARD_WRITE,
@@ -336,6 +370,31 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /products/merge": ADMIN_WRITE,
     "PATCH /products/canonical/{product_id}/status": ADMIN_WRITE,
     "PUT /products/{product_id}/relations": ADMIN_WRITE,
+    # Vendor plans + canonical product photos (admin sub-routers, un-prefixed
+    # keys). Enforced in-router (admin_vendor_plans._limit, keyed by admin id).
+    # Multi-branch businesses (flag multi_branch). Enforced in-router: vendor
+    # routes keyed by the owner (vendor_branches._limit), admin routes by the
+    # acting admin (admin_branches._limit, un-prefixed admin keys).
+    "PATCH /vendor/businesses/{business_id}": SENSITIVE_WRITE,
+    "POST /vendor/businesses/{business_id}/branches": SENSITIVE_WRITE,
+    "POST /vendor/businesses/{business_id}/evidence/sign": SENSITIVE_WRITE,
+    "PUT /vendor/businesses/{business_id}/branches/{branch_id}/evidence": STANDARD_WRITE,
+    "POST /vendor/businesses/{business_id}/branches/{branch_id}/submit": STANDARD_WRITE,
+    "POST /vendor/businesses/{business_id}/staff": SENSITIVE_WRITE,
+    "DELETE /vendor/businesses/{business_id}/staff/{staff_id}": STANDARD_WRITE,
+    "POST /branches/{branch_id}/approve": ADMIN_WRITE,
+    "POST /branches/{branch_id}/request-info": ADMIN_WRITE,
+    "POST /branches/{branch_id}/reject": ADMIN_WRITE,
+    "POST /branches/flags/{flag_id}/resolve": ADMIN_WRITE,
+    "POST /branches/businesses/{business_id}/pacra": ADMIN_WRITE,
+    "POST /vendor-plans": ADMIN_WRITE,
+    "PATCH /vendor-plans/{plan_key}": ADMIN_WRITE,
+    "DELETE /vendor-plans/{plan_key}": ADMIN_WRITE,
+    "PUT /vendors/{vendor_id}/plan": ADMIN_WRITE,
+    "PUT /vendors/{vendor_id}/plan/override": ADMIN_WRITE,
+    "DELETE /vendors/{vendor_id}/plan/override": ADMIN_WRITE,
+    "POST /products/{product_id}/images": ADMIN_WRITE,
+    "DELETE /products/{product_id}/images/{image_id}": ADMIN_WRITE,
     "POST /quotes/{quote_id}/decline": STANDARD_WRITE,
     "POST /quotes/{quote_id}/withdraw": STANDARD_WRITE,
     "POST /refunds/execute": PAYMENT_WRITE,
@@ -346,6 +405,10 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /service-reviews": STANDARD_WRITE,
     "POST /service-reviews/{review_id}/reply": STANDARD_WRITE,
     "POST /services/{service_id}/book": PAYMENT_WRITE,
+    "POST /services/{service_id}/request-free": STANDARD_WRITE,
+    "POST /me/free-bookings/{booking_id}/cancel": STANDARD_WRITE,
+    "POST /vendor/free-bookings/{booking_id}/accept": STANDARD_WRITE,
+    "POST /vendor/free-bookings/{booking_id}/decline": STANDARD_WRITE,
     "POST /support/send": ADMIN_WRITE,
     "POST /tickets/checkout": PAYMENT_WRITE,
     "POST /tickets/rsvp": PAYMENT_WRITE,
@@ -357,6 +420,14 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /tickets/{ticket_id}/transfer": STANDARD_WRITE,
     "POST /telemetry/frontend-errors": TELEMETRY_FRONTEND_ERRORS,
     "POST /telemetry/views": TELEMETRY_VIEWS,
+    # W8 offers (flag `bundles`). In-router enforcement uses the per-vendor
+    # `vendor_offers_write` scope (30/min); admin pause/unpause is ADMIN_WRITE.
+    "POST /vendor/offers": STANDARD_WRITE,
+    "POST /vendor/offers/preview": STANDARD_WRITE,
+    "PATCH /vendor/offers/{offer_id}": STANDARD_WRITE,
+    "DELETE /vendor/offers/{offer_id}": STANDARD_WRITE,
+    "POST /offers/{offer_id}/pause": ADMIN_WRITE,
+    "POST /offers/{offer_id}/unpause": ADMIN_WRITE,
     "POST /vendor/collections": STANDARD_WRITE,
     "PATCH /vendor/collections/{collection_id}": STANDARD_WRITE,
     "DELETE /vendor/collections/{collection_id}": STANDARD_WRITE,
@@ -414,6 +485,21 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PUT /organiser/ticket-types/{ticket_type_id}/allocations": STANDARD_WRITE,
     "PUT /organiser/ticket-types/{ticket_type_id}/early-bird": STANDARD_WRITE,
     "PUT /organiser/ticket-types/{ticket_type_id}/price-tiers": STANDARD_WRITE,
+    # Coupons / gift orders / birthdays (flags coupons, gift_orders, birthday_greetings).
+    # Coupon apply is SENSITIVE (code guessing) and also enforces its own
+    # per-user + per-IP counters in routers/checkout_extras.py.
+    "POST /checkout/steps/coupon": SENSITIVE_WRITE,
+    "DELETE /checkout/steps/coupon": STANDARD_WRITE,
+    "PUT /checkout/steps/gift": STANDARD_WRITE,
+    "DELETE /checkout/steps/gift": STANDARD_WRITE,
+    "POST /admin/coupons": ADMIN_WRITE,
+    "PATCH /admin/coupons/{coupon_id}": ADMIN_WRITE,
+    "POST /vendor/coupons": STANDARD_WRITE,
+    "PATCH /vendor/coupons/{coupon_id}": STANDARD_WRITE,
+    "PUT /account/birthday": SENSITIVE_WRITE,
+    "DELETE /account/birthday": SENSITIVE_WRITE,
+    "POST /internal/birthdays/tick": INTERNAL_CRON,
+    "POST /internal/gifts/redact-tick": INTERNAL_CRON,
 }
 
 

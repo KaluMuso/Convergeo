@@ -28,17 +28,32 @@ type Props = {
  * local recently-viewed entry when `recent` is provided. Signed-in users also
  * sync to `/account/recently-viewed`.
  */
-export function ProductViewTracker({ productId, listingId, recent }: Props): null {
+export function ProductViewTracker({
+  productId,
+  listingId,
+  recent,
+}: Props): null {
   const recentSlug = recent?.slug;
   const recentName = recent?.name;
 
   useEffect(() => {
     track(
       "product_view",
-      listingId ? { product_id: productId, listing_id: listingId } : { product_id: productId },
+      listingId
+        ? { product_id: productId, listing_id: listingId }
+        : { product_id: productId },
     );
     if (listingId) {
-      recordListingPdpView(listingId);
+      if (process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING === "1") {
+        // v2: attach the session token (if any) so the API can drop vendor self-views.
+        // The engagement client stays outside first-load JS (lazy, as above).
+        void import("../../../../../lib/engagement-api")
+          .then((mod) => mod.getAccessToken())
+          .catch(() => null)
+          .then((token) => recordListingPdpView(listingId, token));
+      } else {
+        recordListingPdpView(listingId);
+      }
     }
     if (recentSlug && recentName) {
       recordRecentlyViewed(recentSlug, recentName);

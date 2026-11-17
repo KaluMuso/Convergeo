@@ -4,7 +4,9 @@
  * SAMPLE badges are hidden in production hosts unless explicitly re-enabled.
  */
 
-export function isDemoListingPublicId(publicId: string | null | undefined): boolean {
+export function isDemoListingPublicId(
+  publicId: string | null | undefined,
+): boolean {
   if (!publicId) {
     return false;
   }
@@ -14,7 +16,11 @@ export function isDemoListingPublicId(publicId: string | null | undefined): bool
     return false;
   }
 
-  return normalized === "demo" || normalized.startsWith("demo/") || normalized.includes("/demo/");
+  return (
+    normalized === "demo" ||
+    normalized.startsWith("demo/") ||
+    normalized.includes("/demo/")
+  );
 }
 
 /**
@@ -24,7 +30,9 @@ export function isDemoListingPublicId(publicId: string | null | undefined): bool
  * - Hidden when `NEXT_PUBLIC_SHOW_SAMPLE_LISTINGS` is `"0"` / `"false"`.
  * - Shown in development/test, or when the public flag is `"1"` / `"true"`.
  */
-export function shouldShowSampleListingBadge(env: NodeJS.ProcessEnv = process.env): boolean {
+export function shouldShowSampleListingBadge(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
   const flag = env.NEXT_PUBLIC_SHOW_SAMPLE_LISTINGS?.trim().toLowerCase();
   if (flag === "0" || flag === "false") {
     return false;

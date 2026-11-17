@@ -6,7 +6,8 @@ import { classifyPlaceOrderError, placeOrder } from "./place-order";
 const request = vi.fn();
 
 vi.mock("@vergeo/config", async () => {
-  const actual = await vi.importActual<typeof import("@vergeo/config")>("@vergeo/config");
+  const actual =
+    await vi.importActual<typeof import("@vergeo/config")>("@vergeo/config");
   return {
     ...actual,
     createApiClient: () => ({ request }),
@@ -71,9 +72,13 @@ describe("classifyPlaceOrderError", () => {
   it("sends the buyer back to the cart when the stock hold lapsed", () => {
     expect(
       classifyPlaceOrderError(
-        new ApiError("checkout.reservation_expired", "Your reservation has expired", {
-          status: 410,
-        }),
+        new ApiError(
+          "checkout.reservation_expired",
+          "Your reservation has expired",
+          {
+            status: 410,
+          },
+        ),
       ),
     ).toEqual({ kind: "return_to_cart", notice: "reservation_expired" });
   });
@@ -85,7 +90,11 @@ describe("classifyPlaceOrderError", () => {
     "cart.variant_out_of_stock",
     "cart.variant_unavailable",
   ])("sends the buyer back to review a stale cart on %s", (code) => {
-    expect(classifyPlaceOrderError(new ApiError(code, "server detail", { status: 409 }))).toEqual({
+    expect(
+      classifyPlaceOrderError(
+        new ApiError(code, "server detail", { status: 409 }),
+      ),
+    ).toEqual({
       kind: "return_to_cart",
       notice: "stock_unavailable",
     });
@@ -94,7 +103,11 @@ describe("classifyPlaceOrderError", () => {
   it.each(["orders.fulfilment_not_confirmed", "orders.fulfilment_mismatch"])(
     "sends the buyer back to the fulfilment step on %s",
     (code) => {
-      expect(classifyPlaceOrderError(new ApiError(code, "server detail", { status: 409 }))).toEqual({
+      expect(
+        classifyPlaceOrderError(
+          new ApiError(code, "server detail", { status: 409 }),
+        ),
+      ).toEqual({
         kind: "redo_fulfilment",
       });
     },
@@ -103,9 +116,13 @@ describe("classifyPlaceOrderError", () => {
   it("flags a cash-on-delivery rejection so the payment copy can explain it", () => {
     expect(
       classifyPlaceOrderError(
-        new ApiError("checkout.cod_ineligible", "Cash on delivery is not available", {
-          status: 422,
-        }),
+        new ApiError(
+          "checkout.cod_ineligible",
+          "Cash on delivery is not available",
+          {
+            status: 422,
+          },
+        ),
       ),
     ).toEqual({ kind: "cod_ineligible" });
   });
@@ -113,11 +130,17 @@ describe("classifyPlaceOrderError", () => {
   it("never passes the API's developer English through", () => {
     expect(
       classifyPlaceOrderError(
-        new ApiError("first_order_cap_exceeded", "Vendor cap enforcement blocked this action", {
-          status: 403,
-        }),
+        new ApiError(
+          "first_order_cap_exceeded",
+          "Vendor cap enforcement blocked this action",
+          {
+            status: 403,
+          },
+        ),
       ),
     ).toEqual({ kind: "unavailable" });
-    expect(classifyPlaceOrderError(new Error("nope"))).toEqual({ kind: "unavailable" });
+    expect(classifyPlaceOrderError(new Error("nope"))).toEqual({
+      kind: "unavailable",
+    });
   });
 });

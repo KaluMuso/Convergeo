@@ -23,13 +23,18 @@ const t = createTranslator({
   locale: "en",
   messages: { catalog: catalogMessages },
   namespace: "catalog",
-}) as unknown as (key: string, values?: Record<string, string | number>) => string;
+}) as unknown as (
+  key: string,
+  values?: Record<string, string | number>,
+) => string;
 
 describe("readCategoryImageMap", () => {
   it("reads slug→publicId maps from merch payload", () => {
     const map = readCategoryImageMap({
       images: { electronics: "campaign/electronics-tile" },
-      category_images: [{ slug: "fashion", image_public_id: "campaign/fashion-tile" }],
+      category_images: [
+        { slug: "fashion", image_public_id: "campaign/fashion-tile" },
+      ],
     });
     expect(map.get("electronics")).toBe("campaign/electronics-tile");
     expect(map.get("fashion")).toBe("campaign/fashion-tile");
@@ -56,7 +61,9 @@ describe("CategoryGrid (CUST-HOME-01)", () => {
       />,
     );
     expect(screen.getByTestId("category-image")).toBeInTheDocument();
-    expect(screen.queryByTestId("category-fallback-icon")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("category-fallback-icon"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders accessible links with colour/icon fallback when no image is configured", () => {
@@ -78,13 +85,14 @@ describe("CategoryGrid (CUST-HOME-01)", () => {
       />,
     );
 
-    expect(screen.getByTestId("home-category-electronics-unmapped")).toHaveAttribute(
-      "href",
-      "/en/c/electronics-unmapped",
-    );
+    expect(
+      screen.getByTestId("home-category-electronics-unmapped"),
+    ).toHaveAttribute("href", "/en/c/electronics-unmapped");
     expect(screen.getByTestId("category-fallback-icon")).toBeInTheDocument();
     expect(screen.queryByTestId("category-image")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Browse Electronics" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Browse Electronics" }),
+    ).toBeInTheDocument();
   });
 
   it("uses a denser marketplace category grid on desktop", () => {

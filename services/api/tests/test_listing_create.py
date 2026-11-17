@@ -473,6 +473,128 @@ def test_class_d_draft_persists_used_disclosure(
     assert len(fake_client.tables["products"].rows) == 1
 
 
+def test_class_d_new_tshirt_draft_is_allowed_and_mirrors_condition(
+    listing_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="quick_list",
+            product_id=None,
+            title_override="Hand-printed T-shirt",
+            product_class="D",
+            condition="new",
+            category_id=CATEGORY_ID,
+            description="Hand-printed cotton T-shirt, one of a kind design.",
+            fulfilment_options=["lusaka_delivery", "pickup_shop", "pickup_nationwide"],
+            publish=False,
+        ),
+    )
+
+    assert response.status_code == 200, response.text
+    created = fake_client.tables["vendor_listings"].rows[-1]
+    assert created["condition"] == "new"
+    assert created["condition_detail"] == "new"
+    assert created["fulfilment_options"] == [
+        "lusaka_delivery",
+        "pickup_shop",
+        "pickup_nationwide",
+    ]
+
+
+def test_used_draft_sends_a_used_grade_the_database_accepts(
+    listing_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="quick_list",
+            product_id=None,
+            title_override="Pre-owned carved chair",
+            product_class="D",
+            condition="used",
+            condition_detail="used_fair",
+            defect_notes="Visible scratch along the left arm",
+            category_id=CATEGORY_ID,
+            description="Pre-owned carved chair with a solid timber frame.",
+            publish=False,
+        ),
+    )
+    assert response.status_code == 200, response.text
+    assert fake_client.tables["vendor_listings"].rows[-1]["condition_detail"] == "used_fair"
+
+    default = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="quick_list",
+            product_id=None,
+            title_override="Pre-owned carved stool",
+            product_class="D",
+            condition="used",
+            defect_notes="Visible scratch along the left arm",
+            category_id=CATEGORY_ID,
+            description="Pre-owned carved stool with a solid timber frame.",
+            publish=False,
+        ),
+    )
+    assert default.status_code == 200, default.text
+    assert fake_client.tables["vendor_listings"].rows[-1]["condition_detail"] == "used_good"
+
+
+def test_validation_errors_name_the_field(listing_client: TestClient) -> None:
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="quick_list",
+            product_id=None,
+            title_override="Pre-owned carved chair",
+            product_class="D",
+            condition="used",
+            defect_notes="scratch",
+            category_id=CATEGORY_ID,
+            description="Pre-owned carved chair with a solid timber frame.",
+            publish=False,
+        ),
+    )
+    assert response.status_code == 422
+    fields = response.json()["error"]["details"]["fields"]
+    assert fields[0]["field"] == "defect_notes"
+    assert fields[0]["code"] == "defect_notes_required"
+
+
+def test_standalone_details_missing_returns_per_field_errors(
+    listing_client: TestClient,
+) -> None:
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="quick_list",
+            product_id=None,
+            title_override="Pre-owned carved chair",
+            product_class="D",
+            condition="new",
+            category_id=None,
+            description="short",
+            publish=False,
+        ),
+    )
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "standalone_details_required"
+    assert {item["field"] for item in error["details"]["fields"]} == {
+        "category_id",
+        "description",
+    }
+    assert error["details"]["intent"] == "draft"
+
+
 def test_class_d_cannot_publish_before_evidence_upload(listing_client: TestClient) -> None:
     response = listing_client.post(
         "/vendor/listings",

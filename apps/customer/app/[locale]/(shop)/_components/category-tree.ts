@@ -22,7 +22,10 @@ export type CategoryRecord = {
   prohibited: boolean;
 };
 
-function byPosition(left: { position: number }, right: { position: number }): number {
+function byPosition(
+  left: { position: number },
+  right: { position: number },
+): number {
   return left.position - right.position;
 }
 
@@ -98,7 +101,9 @@ export function categoryDisplayName(
   if (!slug) {
     return "";
   }
-  const match = rows.find((row) => row.slug === slug && row.name.trim().length > 0);
+  const match = rows.find(
+    (row) => row.slug === slug && row.name.trim().length > 0,
+  );
   if (match) {
     return match.name.trim();
   }

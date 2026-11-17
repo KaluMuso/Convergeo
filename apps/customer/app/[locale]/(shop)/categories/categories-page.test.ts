@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildCategoryTree, isMalformedCategoryPayload } from "../_components/category-tree";
-import { classifyCategoriesQueryError, logCategoriesLoadFailure } from "../_components/merch-data";
+import {
+  buildCategoryTree,
+  isMalformedCategoryPayload,
+} from "../_components/category-tree";
+import {
+  classifyCategoriesQueryError,
+  logCategoriesLoadFailure,
+} from "../_components/merch-data";
 
 import { resolveCategoriesBrowseView } from "./categories-view";
 
@@ -121,26 +127,40 @@ describe("resolveCategoriesBrowseView", () => {
 
   it("maps unauthorized failures distinctly from empty", () => {
     expect(
-      resolveCategoriesBrowseView({ ok: false, reason: "unauthorized", code: "PGRST301" }),
+      resolveCategoriesBrowseView({
+        ok: false,
+        reason: "unauthorized",
+        code: "PGRST301",
+      }),
     ).toEqual({ kind: "unavailable", reason: "unauthorized" });
   });
 
   it("maps upstream failures distinctly from empty", () => {
-    expect(resolveCategoriesBrowseView({ ok: false, reason: "upstream", status: 503 })).toEqual({
+    expect(
+      resolveCategoriesBrowseView({
+        ok: false,
+        reason: "upstream",
+        status: 503,
+      }),
+    ).toEqual({
       kind: "unavailable",
       reason: "upstream",
     });
   });
 
   it("maps config failures distinctly from empty", () => {
-    expect(resolveCategoriesBrowseView({ ok: false, reason: "config" })).toEqual({
+    expect(
+      resolveCategoriesBrowseView({ ok: false, reason: "config" }),
+    ).toEqual({
       kind: "unavailable",
       reason: "config",
     });
   });
 
   it("maps malformed payloads distinctly from empty", () => {
-    expect(resolveCategoriesBrowseView({ ok: false, reason: "malformed" })).toEqual({
+    expect(
+      resolveCategoriesBrowseView({ ok: false, reason: "malformed" }),
+    ).toEqual({
       kind: "unavailable",
       reason: "malformed",
     });
@@ -149,26 +169,36 @@ describe("resolveCategoriesBrowseView", () => {
 
 describe("categories load classification + logging", () => {
   it("classifies JWT / permission errors as unauthorized", () => {
-    expect(classifyCategoriesQueryError({ code: "PGRST301", status: 401 })).toBe("unauthorized");
-    expect(classifyCategoriesQueryError({ message: "JWT expired", status: 401 })).toBe(
-      "unauthorized",
-    );
-    expect(classifyCategoriesQueryError({ message: "permission denied", code: "42501" })).toBe(
-      "unauthorized",
-    );
+    expect(
+      classifyCategoriesQueryError({ code: "PGRST301", status: 401 }),
+    ).toBe("unauthorized");
+    expect(
+      classifyCategoriesQueryError({ message: "JWT expired", status: 401 }),
+    ).toBe("unauthorized");
+    expect(
+      classifyCategoriesQueryError({
+        message: "permission denied",
+        code: "42501",
+      }),
+    ).toBe("unauthorized");
   });
 
   it("classifies missing Supabase env as config", () => {
     expect(
       classifyCategoriesQueryError({
-        message: "Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL",
+        message:
+          "Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL",
       }),
     ).toBe("config");
   });
 
   it("classifies other query failures as upstream", () => {
-    expect(classifyCategoriesQueryError({ code: "PGRST002", status: 500 })).toBe("upstream");
-    expect(classifyCategoriesQueryError({ message: "connection reset" })).toBe("upstream");
+    expect(
+      classifyCategoriesQueryError({ code: "PGRST002", status: 500 }),
+    ).toBe("upstream");
+    expect(classifyCategoriesQueryError({ message: "connection reset" })).toBe(
+      "upstream",
+    );
   });
 
   it("detects wholly malformed payloads", () => {
@@ -189,9 +219,15 @@ describe("categories load classification + logging", () => {
   });
 
   it("emits structured failure logs without secrets or row payloads", () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
 
-    logCategoriesLoadFailure({ reason: "upstream", code: "PGRST002", status: 503 });
+    logCategoriesLoadFailure({
+      reason: "upstream",
+      code: "PGRST002",
+      status: 503,
+    });
 
     expect(errorSpy).toHaveBeenCalledTimes(1);
     const payload = JSON.parse(String(errorSpy.mock.calls[0]?.[0]));
@@ -202,13 +238,16 @@ describe("categories load classification + logging", () => {
       code: "PGRST002",
       status: 503,
     });
-    expect(JSON.stringify(payload)).not.toMatch(/supabase|service_role|anon|cookie|Bearer/i);
+    expect(JSON.stringify(payload)).not.toMatch(
+      /supabase|service_role|anon|cookie|Bearer/i,
+    );
   });
 });
 
 describe("browseCategories i18n distinguishes empty vs unavailable", () => {
   it("keeps English empty and unavailable copy distinct", async () => {
-    const catalog = await import("../../../../../../packages/i18n/messages/en/catalog.json");
+    const catalog =
+      await import("../../../../../../packages/i18n/messages/en/catalog.json");
     const browse = catalog.default.browseCategories;
     expect(browse.emptyTitle).not.toEqual(browse.unavailableTitle);
     expect(browse.emptyBody).not.toEqual(browse.unavailableBody);
@@ -217,7 +256,8 @@ describe("browseCategories i18n distinguishes empty vs unavailable", () => {
   });
 
   it("keeps French empty and unavailable copy distinct", async () => {
-    const catalog = await import("../../../../../../packages/i18n/messages/fr/catalog.json");
+    const catalog =
+      await import("../../../../../../packages/i18n/messages/fr/catalog.json");
     const browse = catalog.default.browseCategories;
     expect(browse.emptyTitle).not.toEqual(browse.unavailableTitle);
     expect(browse.emptyBody).not.toEqual(browse.unavailableBody);
