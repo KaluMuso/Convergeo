@@ -54,8 +54,8 @@ import {
   type HomeSectionKey,
 } from "./_components/merch-data";
 import { MerchPreviewBanner } from "./_components/merch-preview-banner";
-import { catalogDeliveryLabels, catalogMadeToOrderLabels } from "./_components/plp/delivery-labels";
 import { buildOfferBadgeLabels } from "./_components/offers/offer-badge";
+import { catalogDeliveryLabels, catalogMadeToOrderLabels } from "./_components/plp/delivery-labels";
 
 import type { Metadata } from "next";
 
