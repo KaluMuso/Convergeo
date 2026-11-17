@@ -178,7 +178,10 @@ export function OtherShopsRailView({
       data-testid="other-shops-rail"
       className="flex flex-col gap-3"
     >
-      <h2 id="other-shops-heading" className="m-0 font-display text-h2 text-display-ink">
+      <h2
+        id="other-shops-heading"
+        className="m-0 font-display text-h2 text-display-ink"
+      >
         {heading}
       </h2>
       <ul className="-mx-1 m-0 flex list-none gap-3 overflow-x-auto p-0 px-1 pb-1 [scrollbar-width:none]">
@@ -206,9 +209,13 @@ export function OtherShopsRailView({
                 <p className="m-0 text-xs font-semibold uppercase text-text-2">
                   {kindLabels[card.kind]}
                 </p>
-                <p className="m-0 truncate text-sm font-medium text-text">{card.title}</p>
+                <p className="m-0 truncate text-sm font-medium text-text">
+                  {card.title}
+                </p>
                 {card.detail ? (
-                  <p className="m-0 text-sm font-semibold text-text">{card.detail}</p>
+                  <p className="m-0 text-sm font-semibold text-text">
+                    {card.detail}
+                  </p>
                 ) : null}
                 {card.stock ? (
                   <p
@@ -249,7 +256,10 @@ export async function OtherShopsRail({
   excludeIds?: string[];
 }) {
   const [data, messages] = await Promise.all([
-    fetchElsewhere(vendorSlug, { product: focusProductSlug, service: focusServiceId }),
+    fetchElsewhere(vendorSlug, {
+      product: focusProductSlug,
+      service: focusServiceId,
+    }),
     loadNamespace(locale as Locale, "directory"),
   ]);
   if (!data) {
@@ -259,7 +269,10 @@ export async function OtherShopsRail({
     locale,
     messages: { directory: messages } as AbstractIntlMessages,
     namespace: "directory",
-  }) as unknown as (key: string, values?: Record<string, string | number>) => string;
+  }) as unknown as (
+    key: string,
+    values?: Record<string, string | number>,
+  ) => string;
   const kindLabels: Record<ElsewhereKind, string> = {
     product: t("elsewhere.kindProduct"),
     service: t("elsewhere.kindService"),

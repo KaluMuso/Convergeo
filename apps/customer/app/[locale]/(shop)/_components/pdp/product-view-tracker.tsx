@@ -28,14 +28,20 @@ type Props = {
  * local recently-viewed entry when `recent` is provided. Signed-in users also
  * sync to `/account/recently-viewed`.
  */
-export function ProductViewTracker({ productId, listingId, recent }: Props): null {
+export function ProductViewTracker({
+  productId,
+  listingId,
+  recent,
+}: Props): null {
   const recentSlug = recent?.slug;
   const recentName = recent?.name;
 
   useEffect(() => {
     track(
       "product_view",
-      listingId ? { product_id: productId, listing_id: listingId } : { product_id: productId },
+      listingId
+        ? { product_id: productId, listing_id: listingId }
+        : { product_id: productId },
     );
     if (listingId) {
       if (process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING === "1") {

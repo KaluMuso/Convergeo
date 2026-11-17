@@ -54,10 +54,10 @@ describe("order guidance", () => {
     expect(screen.queryByTestId("vendor-dispatch-cutoff")).not.toBeInTheDocument();
   });
 
-  it("explains COD: the customer pays the rider and Vergeo5 settles", () => {
+  it("explains COD: the customer pays the rider and Convergeo settles", () => {
     wrap(<OrderPaymentExplainer cod paid={false} />);
     expect(screen.getByText(/pays the rider in cash/)).toBeInTheDocument();
-    expect(screen.getByText(/Vergeo5 settles the order money with you/)).toBeInTheDocument();
+    expect(screen.getByText(/Convergeo settles the order money with you/)).toBeInTheDocument();
   });
 
   it("renders the full lifecycle with the current step marked", () => {

@@ -1,4 +1,8 @@
-import { isSearchKind, type SearchKind, type SearchKindFilter } from "./search-kinds";
+import {
+  isSearchKind,
+  type SearchKind,
+  type SearchKindFilter,
+} from "./search-kinds";
 
 import type { SearchResponse, TabCounts } from "./results-tabs";
 
@@ -6,9 +10,13 @@ import type { SearchResponse, TabCounts } from "./results-tabs";
 export const MAX_SEARCH_QUERY_LENGTH = 200;
 
 export type NormalizedSearchQuery =
-  { status: "empty" } | { status: "invalid"; reason: "too_long" } | { status: "ok"; query: string };
+  | { status: "empty" }
+  | { status: "invalid"; reason: "too_long" }
+  | { status: "ok"; query: string };
 
-export function normalizeSearchQuery(raw: string | undefined): NormalizedSearchQuery {
+export function normalizeSearchQuery(
+  raw: string | undefined,
+): NormalizedSearchQuery {
   const trimmed = (raw ?? "").trim();
   if (!trimmed) {
     return { status: "empty" };

@@ -50,7 +50,9 @@ describe("ProductViewTracker listing telemetry", () => {
     const listingId = "20000000-0000-4000-8000-000000000001";
     render(<ProductViewTracker productId="product-1" listingId={listingId} />);
 
-    await vi.waitFor(() => expect(mocks.recordListingPdpView).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() =>
+      expect(mocks.recordListingPdpView).toHaveBeenCalledTimes(1),
+    );
     expect(mocks.recordListingPdpView).toHaveBeenCalledWith(listingId, "tok");
   });
 });

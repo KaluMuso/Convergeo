@@ -56,7 +56,7 @@
     "inviteOnlyNotice": "Invite fye seller beta. Public self-service selling is not open yet. Invited sellers can continue onboarding with the link they received.",
     "meta": {
       "title": "Gulitseni pa Convergeo — invite-only seller beta",
-      "description": "⚠ Convergeo seller onboarding is invite/concierge-only during beta. Learn about commissions, KYC, and mobile-money payouts — public self-service signup is not open yet."
+      "description": "⚠ Convergeo seller onboarding is invite/concierge-only during the pilot. Learn about commissions and verification — public self-service signup is not open yet."
     },
     "hero": {
       "eyebrow": "Invite fye seller beta",
@@ -114,20 +114,20 @@
       "heading": "How it works",
       "steps": {
         "signup": {
-          "title": "Sign up in minutes",
-          "description": "⚠ Create your vendor account on mobile or desktop — no upfront fees."
+          "title": "⚠ Sign in with your invite",
+          "description": "⚠ Use the invite you received to sign in to the vendor app on mobile or desktop — no upfront fees."
         },
         "kyc": {
           "title": "⚠ Verify your ID",
-          "description": "Upload your NRC and a selfie. We match your mobile-money name. Same-day approval."
+          "description": "⚠ Upload your NRC and a selfie. Same-day approval for most sellers."
         },
         "list": {
           "title": "List your first products",
           "description": "⚠ Attach to our catalog or quick-list. See your commission before you publish."
         },
         "sell": {
-          "title": "Sell and get paid",
-          "description": "⚠ Ama-order flow to your dashboard. Escrow protects buyers; payouts hit your MoMo fast."
+          "title": "⚠ Sell to your customers",
+          "description": "⚠ Orders flow to your dashboard. During the pilot, customers pay cash on delivery. Online payouts are coming soon."
         }
       }
     },
@@ -138,7 +138,7 @@
         "t1": {
           "badge": "T1 · Seller",
           "title": "Same-day selling",
-          "description": "NRC photo + selfie + mobile-money name match. Up to 30 listings; first 5 orders capped at K500 each."
+          "description": "⚠ NRC photo + selfie. Up to 30 listings; first 5 orders capped at K500 each."
         },
         "t2": {
           "badge": "T2 · Verified business",
@@ -158,9 +158,9 @@
       }
     },
     "payout": {
-      "heading": "⚠ Fast mobile-money payouts",
-      "promise": "Paid out in minutes on mobile money — always within 48 hours.",
-      "body": "⚠ Buyer payments are held in escrow until delivery is confirmed (or auto-confirmed after 48 hours). Once released, MTN and Airtel payouts typically arrive in under five minutes. Bank transfers take 24–36 hours."
+      "heading": "⚠ Online payouts: coming soon",
+      "promise": "⚠ During the pilot, customers pay cash on delivery.",
+      "body": "⚠ Mobile-money payouts and buyer protection are coming soon. Until then, orders are paid in cash when they arrive, and we will confirm settlement details with each invited seller."
     },
     "faq": {
       "heading": "Frequently asked questions",
@@ -171,7 +171,7 @@
         },
         "payout": {
           "question": "When do I get paid?",
-          "answer": "⚠ After escrow releases on delivery confirmation. Mobile-money payouts usually arrive in minutes; we guarantee payout within 48 hours."
+          "answer": "⚠ During the pilot, customers pay cash on delivery. Online payouts are coming soon — we will confirm timing with each invited seller."
         },
         "whatCanISell": {
           "question": "What can I sell?",
@@ -179,15 +179,16 @@
         },
         "kyc": {
           "question": "How long does verification take?",
-          "answer": "⚠ T1 sellers with a valid NRC, selfie, and matching MoMo name are typically approved the same day. Nothing goes live until you pass KYC."
+          "answer": "⚠ T1 sellers with a valid NRC and selfie are typically approved the same day. Nothing goes live until you pass KYC."
         }
       }
     },
     "cta": {
       "heading": "Invited to sell on Convergeo?",
-      "body": "⚠ Seller onboarding is concierge/invite-only during beta. If you have an invite, continue below — listing and payout tools unlock only after admin approval.",
+      "body": "⚠ Seller onboarding is concierge/invite-only during the pilot. If you have an invite, continue below — listing tools unlock only after admin approval.",
       "button": "Yendeni pa invite ya seller",
-      "loadingLabel": "Funguleniing invite onboarding"
+      "loadingLabel": "Funguleniing invite onboarding",
+      "haveInviteSignIn": "⚠ I have an invite — sign in"
     }
   },
   "onboarding": {
@@ -348,7 +349,7 @@
           "why": "Matched to your NRC photo so no one else can sell in your name."
         },
         "review": {
-          "title": "Ukulolesha kwa Vergeo5",
+          "title": "Ukulolesha kwa Convergeo",
           "why": "Our team checks everything, usually within 1 working day, and lets you know the result."
         }
       },
@@ -1087,7 +1088,7 @@
       "cancel": "Cancel",
       "after": {
         "confirm": "The customer is told you accepted. Next you'll pack it.",
-        "reject": "The order is cancelled and the customer is told why. Vergeo5 handles any refund.",
+        "reject": "The order is cancelled and the customer is told why. Convergeo handles any refund.",
         "pack": "The customer sees that you're preparing their order.",
         "ship": "Tap when the rider has the parcel. Add the rider's name or phone.",
         "ready_for_pickup": "The customer is told to come and collect it from you."
@@ -1128,11 +1129,11 @@
       "headingNow": "Ifyakucita nomba",
       "headingNext": "Ifikonkelepo",
       "scanCta": "Open Scan to hand over",
-      "paidExplainer": "The customer has paid. Vergeo5 holds the money safely until the order is delivered.",
+      "paidExplainer": "The customer has paid. Convergeo holds the money safely until the order is delivered.",
       "unpaidExplainer": "The customer hasn't paid yet. Don't pack or send anything until payment shows as received.",
       "cod": {
         "body": "The customer pays the rider in cash when the order arrives. You don't collect any money yourself.",
-        "settlement": "Vergeo5 settles the order money with you — you don't need to chase the rider or the customer."
+        "settlement": "Convergeo settles the order money with you — you don't need to chase the rider or the customer."
       },
       "steps": {
         "confirm": {
@@ -1449,9 +1450,9 @@
       "body": "You won't receive payouts through this app yet, so there's no balance to show here. That's expected — nothing is wrong with your account.",
       "meanwhileHeading": "How money works during the pilot",
       "meanwhile": {
-        "cod": "Cash on delivery: the customer pays the rider in cash, and Vergeo5 settles with you.",
-        "prepaid": "Paid orders: Vergeo5 holds the customer's money safely until the order is delivered.",
-        "questions": "Questions about money owed to you? Ask the Vergeo5 pilot team."
+        "cod": "Cash on delivery: the customer pays the rider in cash, and Convergeo settles with you.",
+        "prepaid": "Paid orders: Convergeo holds the customer's money safely until the order is delivered.",
+        "questions": "Questions about money owed to you? Ask the Convergeo pilot team."
       },
       "laterHeading": "What you'll see here later",
       "later": {

@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ReportListing, type ReportListingLabels } from "./report-listing";
@@ -49,7 +55,12 @@ beforeEach(() => {
   fetchMock.mockResolvedValue({
     ok: true,
     status: 200,
-    json: async () => ({ ok: true, created: true, deduped: false, flag_id: "f1" }),
+    json: async () => ({
+      ok: true,
+      created: true,
+      deduped: false,
+      flag_id: "f1",
+    }),
   });
   vi.stubGlobal("fetch", fetchMock);
 });

@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Convergeo",
-    "tagline": "Zambia's marketplace — escrow-backed shopping"
+    "tagline": "Zambia's marketplace — pay when it arrives"
   },
   "meta": {
     "defaultDescription": "Shop products, book services, and find events across Zambia on Convergeo — Zambia's multivendor marketplace.",
@@ -52,11 +52,6 @@
   "contact": {
     "email": "support@vergeo5.com"
   },
-  "social": {
-    "facebook": "https://www.facebook.com/",
-    "twitter": "https://twitter.com/",
-    "instagram": "https://www.instagram.com/"
-  },
   "utilityBar": {
     "ariaLabel": "Language, contact, and social links",
     "socialAria": "Social media",
@@ -102,8 +97,8 @@
     "label": "Share"
   },
   "fab": {
-    "ask": "Ask Vergeo",
-    "askTitle": "Ask Vergeo",
+    "ask": "Ask Convergeo",
+    "askTitle": "Ask Convergeo",
     "askHint": "Describe what you need — a product, a service or an event.",
     "askPlaceholder": "e.g. solar panel under K3,000 in Lusaka",
     "send": "Ask",

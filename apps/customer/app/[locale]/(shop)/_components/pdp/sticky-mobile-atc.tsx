@@ -12,7 +12,11 @@ import {
   resolveSaleUnit,
 } from "../sale-quantity";
 
-import { getMinimumQuantity, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
+import {
+  getMinimumQuantity,
+  type BuyBoxLabels,
+  type BuyBoxListing,
+} from "./buy-box";
 
 import type { ListingPurchaseControls } from "./use-listing-purchase";
 
@@ -113,7 +117,8 @@ export function StickyMobileAtc({
       style={{
         bottom: "calc(3.5rem + env(safe-area-inset-bottom, 0px))",
         boxShadow: "var(--shadow-2)",
-        transition: "transform var(--dur) var(--ease-out), opacity var(--dur) var(--ease-out)",
+        transition:
+          "transform var(--dur) var(--ease-out), opacity var(--dur) var(--ease-out)",
       }}
     >
       {/* Phone widths cannot fit the summary and all three controls on one line:
@@ -131,7 +136,9 @@ export function StickyMobileAtc({
           </p>
           {saleUnit !== "each" ? (
             <p className="truncate text-micro text-text-2">
-              {t("pdp.buyBox.pricePerIncrement", { quantity: formattedIncrement })}
+              {t("pdp.buyBox.pricePerIncrement", {
+                quantity: formattedIncrement,
+              })}
             </p>
           ) : null}
           <p
@@ -186,7 +193,8 @@ export function StickyMobileAtc({
               className="shrink-0"
               disabled={
                 purchase.adding ||
-                (purchase.pickupBranchTracked !== false && !purchase.selectedPickupLocationId)
+                (purchase.pickupBranchTracked !== false &&
+                  !purchase.selectedPickupLocationId)
               }
               loading={purchase.adding}
               loadingLabel={labels.addingToCartLabel}

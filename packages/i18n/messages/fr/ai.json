@@ -13,7 +13,7 @@
   "ai.ask.viewEvent": "Voir l'événement",
   "ai.quota.remaining": "{count, plural, one {# question restante} other {# questions restantes}} ce mois-ci",
   "ai.disclaimer": "Les réponses de l'IA sont des suggestions — vérifiez avant d'acheter",
-  "ai.quota.guestExceeded": "Vous avez utilisé toutes vos questions gratuites d'invité. Inscrivez-vous pour continuer à poser des questions.",
+  "ai.quota.guestExceeded": "Vous avez utilisé vos questions gratuites d'invité. Connectez-vous pour continuer à poser vos questions à Convergeo.",
   "ai.quota.monthlyExceeded": "Vous avez atteint votre limite de questions mensuelle.",
   "ai.quota.killSwitch": "Ask Convergeo est temporairement indisponible. Veuillez réessayer plus tard.",
   "ai.quota.tooLong": "Votre question est trop longue. Veuillez la raccourcir.",
@@ -23,5 +23,9 @@
   "ai.quota.signupPrompt": "Inscrivez-vous pour 25 questions gratuites par mois.",
   "ai.answer.not_found": "Je n'ai pas trouvé cela sur Convergeo.",
   "ai.answer.rate_limited": "Trop de questions — veuillez patienter un instant et réessayer.",
-  "ai.answer.unavailable": "Ask Convergeo est temporairement indisponible. Veuillez réessayer sous peu."
+  "ai.answer.unavailable": "Ask Convergeo est temporairement indisponible. Veuillez réessayer sous peu.",
+  "ai.faq.cod.a": "Pendant le pilote, toutes les commandes se paient en espèces à la livraison : rien n'est débité en ligne. Certaines commandes peuvent ne pas être éligibles ; le paiement vous le dit avant de commander.",
+  "ai.faq.escrow.a": "Le paiement en ligne avec protection acheteur par séquestre arrive bientôt. D'ici là, vous payez en espèces à la livraison.",
+  "ai.faq.payment.a": "Pendant le pilote, vous payez en espèces à la livraison. Les paiements par mobile money et par carte arrivent bientôt.",
+  "ai.faq.returns.a": "Signalez un problème depuis la page de votre commande et notre équipe l'examinera. Nous organiserons directement avec vous tout remboursement approuvé."
 }

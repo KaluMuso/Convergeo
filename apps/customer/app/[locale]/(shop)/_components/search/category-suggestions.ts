@@ -1,6 +1,10 @@
 import type { CategoryRow } from "../merch-data";
 
-export type TopCategorySuggestion = { key: string; href: string; label: string };
+export type TopCategorySuggestion = {
+  key: string;
+  href: string;
+  label: string;
+};
 
 /**
  * Top-level (root) categories for the zero-results "browse instead" links, sourced from
@@ -13,7 +17,10 @@ export function buildTopCategorySuggestions(
   limit = 4,
 ): TopCategorySuggestion[] {
   return categories
-    .filter((row) => row.parent_id === null && !row.prohibited && row.slug && row.name)
+    .filter(
+      (row) =>
+        row.parent_id === null && !row.prohibited && row.slug && row.name,
+    )
     .sort((left, right) => left.position - right.position)
     .slice(0, limit)
     .map((row) => ({

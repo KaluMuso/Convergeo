@@ -24,7 +24,11 @@ export type PopularSearchesProps = {
   className?: string;
 };
 
-export async function PopularSearches({ locale, labels, className }: PopularSearchesProps) {
+export async function PopularSearches({
+  locale,
+  labels,
+  className,
+}: PopularSearchesProps) {
   const url = absoluteApiUrl("/discovery/popular-searches?limit=6");
   if (!url) {
     return null;

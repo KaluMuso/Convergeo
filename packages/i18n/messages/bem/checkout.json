@@ -23,7 +23,7 @@
     "itemCount": "{count, plural, one {# item} other {# ama-items}}",
     "loading": "Ileleleta cart yenu…",
     "lineTotal": "Total ya line: {amount}",
-    "madeToOrderLeadTime": "Cipangwa pa order · ifwile {days} masiku ya kulanga",
+    "madeToOrderLeadTime": "⚠ Made to order · ready {when}",
     "miniCartClose": "Isaleni cart",
     "miniCartTitle": "Summary ya cart",
     "noticeOutOfStock": "Ici cintu tacili mu stock",
@@ -104,7 +104,18 @@
       "addFailed": "⚠ Could not add these tickets. Try again.",
       "signInRequired": "⚠ Sign in to add tickets to your cart."
     },
-    "mergeWholesaleTerms": "Ifya wholesale fyaleposa ubwingi ubusuma {moq}."
+    "mergeWholesaleTerms": "Ifya wholesale fyaleposa ubwingi ubusuma {moq}.",
+    "codStep1": "⚠ You order",
+    "codStep2": "⚠ We deliver",
+    "codStep3": "⚠ You pay on arrival",
+    "leadTimeWhen": {
+      "oneDay": "⚠ within a day",
+      "days": "⚠ in about {count} days",
+      "oneWeek": "⚠ within a week",
+      "weeks": "⚠ in about {count} weeks",
+      "oneMonth": "⚠ in about a month",
+      "months": "⚠ in about {count} months"
+    }
   },
   "checkout": {
     "card": {
@@ -138,7 +149,7 @@
       "title": "Amashiwi yenu",
       "subtitle": "Tukatungila uku pakuti mutume updates pa WhatsApp nangu SMS.",
       "phoneLabel": "Nambala ya mobile",
-      "phoneHelp": "MTN, Airtel, nangu Zamtel — tukatuma code imo.",
+      "phoneHelp": "⚠ MTN, Airtel, or Zamtel — we'll use it to confirm your delivery.",
       "phonePlaceholder": "97X XXX XXX",
       "countryCode": "Code ya calo",
       "nationalNumber": "Nambala ya mobile",
@@ -286,7 +297,7 @@
       "escrowStep1": "Mwalipila",
       "escrowStep2": "Yikwata bwino na Convergeo",
       "escrowStep3": "Yasuminishwa pa kufika",
-      "escrowTitle": "Ifyo payment yenu ilindililwa",
+      "escrowTitle": "⚠ How it works",
       "lineItems": "Ifintu",
       "loading": "Lemeni…",
       "methodCard": "Card (secure hosted page)",
@@ -327,7 +338,9 @@
       "typeEventTickets": "⚠ Event tickets",
       "ticketLine": "⚠ {type} × {qty}",
       "platformFee": "⚠ Ticket service fee",
-      "discount": "Kuponi {code}"
+      "discount": "Kuponi {code}",
+      "estimatedReady": "⚠ Estimated ready by {date}",
+      "estimatedDelivery": "⚠ Estimated delivery by {date}"
     },
     "stepAnnouncement": "Step {current} ya {total}",
     "steps": {

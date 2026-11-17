@@ -19,7 +19,7 @@
     "lineTotal": "Line total: {amount}",
     "unitPrice": "{amount} each",
     "unitPriceMeasured": "{amount} per {quantity}",
-    "madeToOrderLeadTime": "Made to order · ready in {days} days",
+    "madeToOrderLeadTime": "Made to order · ready {when}",
     "saleUnits": {
       "each": "item",
       "metre": "m",
@@ -104,7 +104,18 @@
       "addFailed": "Could not add these tickets. Try again.",
       "signInRequired": "Sign in to add tickets to your cart."
     },
-    "mergeWholesaleTerms": "Wholesale minimum {moq} units."
+    "mergeWholesaleTerms": "Wholesale minimum {moq} units.",
+    "codStep1": "You order",
+    "codStep2": "We deliver",
+    "codStep3": "You pay on arrival",
+    "leadTimeWhen": {
+      "oneDay": "within a day",
+      "days": "in about {count} days",
+      "oneWeek": "within a week",
+      "weeks": "in about {count} weeks",
+      "oneMonth": "in about a month",
+      "months": "in about {count} months"
+    }
   },
   "checkout": {
     "pageTitle": "Checkout",
@@ -120,7 +131,7 @@
       "title": "Your contact details",
       "subtitle": "We'll use this to send order updates on WhatsApp or SMS.",
       "phoneLabel": "Mobile number",
-      "phoneHelp": "MTN, Airtel, or Zamtel — we'll send a one-time code.",
+      "phoneHelp": "MTN, Airtel, or Zamtel — we'll use it to confirm your delivery.",
       "phonePlaceholder": "97X XXX XXX",
       "countryCode": "Country code",
       "nationalNumber": "Mobile number",
@@ -246,7 +257,7 @@
       "railMtn": "MTN",
       "railAirtel": "Airtel",
       "payerNumber": "Payer: {number}",
-      "escrowTitle": "How your payment is protected",
+      "escrowTitle": "How it works",
       "escrowStep1": "You pay",
       "escrowStep2": "Held by Convergeo",
       "escrowStep3": "Released on delivery",
@@ -279,7 +290,9 @@
       "typeEventTickets": "Event tickets",
       "ticketLine": "{type} × {qty}",
       "platformFee": "Ticket service fee",
-      "discount": "Coupon {code}"
+      "discount": "Coupon {code}",
+      "estimatedReady": "Estimated ready by {date}",
+      "estimatedDelivery": "Estimated delivery by {date}"
     },
     "pending": {
       "pageTitle": "Approve payment",

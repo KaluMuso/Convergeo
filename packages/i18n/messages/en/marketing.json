@@ -2,26 +2,26 @@
   "about": {
     "meta": {
       "title": "About Convergeo",
-      "description": "Convergeo is Zambia's mobile-first marketplace for products, services and events — with money held safely in escrow until you get what you paid for."
+      "description": "Convergeo is Zambia's mobile-first marketplace for products, services and events — pay when your order arrives during our pilot."
     },
     "hero": {
       "eyebrow": "About us",
       "headline": "Zambia's marketplace, built for trust",
-      "subhead": "Convergeo brings products, services and events into one place — with escrow that holds your money until delivery is confirmed."
+      "subhead": "Convergeo brings products, services and events into one place — and during our pilot you pay when your order arrives."
     },
     "mission": {
       "heading": "Our mission",
-      "body": "Make buying and selling online in Zambia safe, simple and fast — even on a slow connection. Every order is protected by escrow, every payout reaches vendors in minutes on mobile money, and every conversation can happen on WhatsApp."
+      "body": "Make buying and selling online in Zambia safe, simple and fast — even on a slow connection. Every conversation can happen on WhatsApp, and online payment with buyer protection is coming soon."
     },
     "values": {
       "heading": "What we stand for",
       "trust": {
         "title": "Trust first",
-        "body": "You pay, we hold, the vendor ships, you confirm — then funds release. No hoping a stranger delivers."
+        "body": "You order, we deliver, you pay on arrival. No paying upfront and hoping a stranger delivers."
       },
       "local": {
         "title": "Built for Zambia",
-        "body": "Mobile-money-first (MTN, Airtel), landmark addressing, Lusaka delivery and nationwide pickup, priced in Kwacha."
+        "body": "Cash on delivery, landmark addressing, Lusaka delivery and nationwide pickup, priced in Kwacha."
       },
       "fast": {
         "title": "Fast on any network",
@@ -29,15 +29,15 @@
       },
       "fair": {
         "title": "Fair to vendors",
-        "body": "Transparent commissions shown before you publish, and payouts within 48 hours — usually minutes on mobile money."
+        "body": "Transparent commissions shown before you publish. Online payouts are coming soon."
       }
     },
     "howItWorks": {
       "heading": "How Convergeo works",
       "step1": "Discover products, services and events from sellers across Zambia.",
-      "step2": "Pay by mobile money, card or cash on delivery for orders up to K500.",
-      "step3": "Your money is held safely in escrow until you confirm delivery.",
-      "step4": "We release funds to the vendor — and step in if anything goes wrong."
+      "step2": "Place your order and pay cash when it arrives. Online payment is coming soon.",
+      "step3": "Your order is delivered or ready for pickup.",
+      "step4": "We step in if anything goes wrong."
     },
     "cta": {
       "heading": "Ready to explore?",
@@ -94,7 +94,7 @@
   "help": {
     "meta": {
       "title": "Help Centre",
-      "description": "Answers about escrow, payments, delivery, returns, tickets and selling on Convergeo."
+      "description": "Answers about payments, delivery, returns, tickets and selling on Convergeo."
     },
     "hero": {
       "eyebrow": "Help Centre",
@@ -103,7 +103,7 @@
     },
     "search": {
       "label": "Search help articles",
-      "placeholder": "Search — e.g. escrow, delivery, refund",
+      "placeholder": "Search — e.g. payment, delivery, refund",
       "clear": "Clear search",
       "resultsCount": "{count, plural, =0 {No articles found} one {# article} other {# articles}}",
       "noResults": "No articles matched your search.",
@@ -111,7 +111,7 @@
     },
     "categories": {
       "buying": "Buying & payments",
-      "escrow": "Escrow & safety",
+      "escrow": "Payments & safety",
       "delivery": "Delivery & pickup",
       "returns": "Returns & refunds",
       "events": "Events & tickets",
@@ -123,7 +123,8 @@
       "inCategory": "In {category}",
       "relatedHeading": "Related articles",
       "notHelpful": "Still need help?",
-      "contactCta": "Contact support"
+      "contactCta": "Contact support",
+      "comingSoon": "Coming soon: online payment is not available during the pilot. For now you pay cash when your order arrives."
     },
     "cta": {
       "heading": "Didn't find your answer?",

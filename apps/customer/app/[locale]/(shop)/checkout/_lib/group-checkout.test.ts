@@ -23,13 +23,17 @@ describe("resolveGroupParam (cart vs group checkout)", () => {
   it("enters group mode for ?group= and the legacy service-deposit hand-off", () => {
     expect(resolveGroupParam({ group: GROUP })).toBe(GROUP);
     expect(resolveGroupParam({ group: [GROUP, GROUP] })).toBeNull();
-    expect(resolveGroupParam({ session: GROUP, kind: "service_deposit" })).toBe(GROUP);
+    expect(resolveGroupParam({ session: GROUP, kind: "service_deposit" })).toBe(
+      GROUP,
+    );
   });
 });
 
 describe("groupPaths", () => {
   it("lands tickets in the wallet and services in the job thread", () => {
-    expect(groupPaths("en", GROUP, "ticket", null).success(null)).toBe("/en/account/tickets");
+    expect(groupPaths("en", GROUP, "ticket", null).success(null)).toBe(
+      "/en/account/tickets",
+    );
     expect(groupPaths("en", GROUP, "service_deposit", JOB).success("o")).toBe(
       `/en/account/jobs/${JOB}`,
     );
@@ -65,10 +69,12 @@ describe("resumeTarget", () => {
   it("resumes waiting attempts and lets terminal failures pick a rail again", () => {
     expect(resumeTarget(null, paths)).toBeNull();
     expect(resumeTarget(base, paths)).toBe(paths.pending);
-    expect(resumeTarget({ ...base, rail: "card", status: "initiated" }, paths)).toBe(
-      paths.card(PAY),
+    expect(
+      resumeTarget({ ...base, rail: "card", status: "initiated" }, paths),
+    ).toBe(paths.card(PAY));
+    expect(resumeTarget({ ...base, status: "success" }, paths)).toBe(
+      paths.pending,
     );
-    expect(resumeTarget({ ...base, status: "success" }, paths)).toBe(paths.pending);
     expect(resumeTarget({ ...base, status: "failed" }, paths)).toBeNull();
     expect(resumeTarget({ ...base, status: "expired" }, paths)).toBeNull();
   });

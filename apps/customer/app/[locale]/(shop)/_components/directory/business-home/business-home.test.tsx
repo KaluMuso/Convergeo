@@ -3,7 +3,10 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { buildStorefrontCompare, CompareOtherShopsLink } from "./compare-other-shops";
+import {
+  buildStorefrontCompare,
+  CompareOtherShopsLink,
+} from "./compare-other-shops";
 import { isOpenAt, OpenStatus, type DaySchedule } from "./open-status";
 import {
   ClipsRow,
@@ -20,7 +23,9 @@ afterEach(cleanup);
 
 const compareLabels = {
   count: (count: number) =>
-    count === 1 ? "Compare with 1 other shop" : `Compare with ${count} other shops`,
+    count === 1
+      ? "Compare with 1 other shop"
+      : `Compare with ${count} other shops`,
   from: (price: number) => `from K${price / 100}`,
   aria: (title: string) => `Compare ${title} at other shops`,
 };
@@ -88,7 +93,9 @@ describe("isOpenAt (Lusaka clock, mirrors API)", () => {
   // 2026-08-03 is a Monday. Lusaka = UTC+2.
   const utc = (day: number, hour: number, minute = 0) =>
     new Date(Date.UTC(2026, 7, day, hour - 2, minute));
-  const weekday: DaySchedule[] = [{ day: "mon", opens: "09:00", closes: "17:00" }];
+  const weekday: DaySchedule[] = [
+    { day: "mon", opens: "09:00", closes: "17:00" },
+  ];
 
   it("is open inside the span and closed at closing time", () => {
     expect(isOpenAt(weekday, utc(3, 12))).toBe(true);
@@ -97,23 +104,34 @@ describe("isOpenAt (Lusaka clock, mirrors API)", () => {
   });
 
   it("treats a reversed span as overnight into the next day", () => {
-    const bar: DaySchedule[] = [{ day: "fri", opens: "18:00", closes: "02:00" }];
+    const bar: DaySchedule[] = [
+      { day: "fri", opens: "18:00", closes: "02:00" },
+    ];
     expect(isOpenAt(bar, utc(7, 23))).toBe(true); // Fri 23:00
     expect(isOpenAt(bar, utc(8, 1))).toBe(true); // Sat 01:00
     expect(isOpenAt(bar, utc(8, 3))).toBe(false);
   });
 
   it("renders nothing when no hours are published", () => {
-    render(<OpenStatus schedule={[]} labels={{ open: "Open now", closed: "Closed now" }} />);
+    render(
+      <OpenStatus
+        schedule={[]}
+        labels={{ open: "Open now", closed: "Closed now" }}
+      />,
+    );
     expect(screen.queryByTestId("open-status")).toBeNull();
   });
 });
 
 describe("Business Home sections", () => {
   it("shows the story only when the business wrote one", () => {
-    const { rerender } = render(<StorySection heading="Our story" story="  " />);
+    const { rerender } = render(
+      <StorySection heading="Our story" story="  " />,
+    );
     expect(screen.queryByTestId("bh-story")).toBeNull();
-    rerender(<StorySection heading="Our story" story="Selling chitenge since 2009." />);
+    rerender(
+      <StorySection heading="Our story" story="Selling chitenge since 2009." />,
+    );
     const story = screen.getByRole("region", { name: "Our story" });
     expect(story).toHaveTextContent("Selling chitenge since 2009.");
   });
@@ -151,13 +169,17 @@ describe("Business Home sections", () => {
         name: "Directions to Soweto Market, stall 12",
       }),
     ).toHaveAttribute("href", directionsHref({ lat: -15.42, lng: 28.27 }));
-    expect(within(branches[1]!).getByText("Opening hours not shared yet")).toBeInTheDocument();
+    expect(
+      within(branches[1]!).getByText("Opening hours not shared yet"),
+    ).toBeInTheDocument();
   });
 
   it("never shows an empty offers block: flag ON and at least one offer", () => {
     const labels = { heading: "Offers" };
     const offer = { id: "o1", title: "10% off rice", endsLabel: "Ends 30 Nov" };
-    const { rerender } = render(<OffersSection enabled={false} offers={[offer]} labels={labels} />);
+    const { rerender } = render(
+      <OffersSection enabled={false} offers={[offer]} labels={labels} />,
+    );
     expect(screen.queryByTestId("bh-offers")).toBeNull();
     rerender(<OffersSection enabled offers={[]} labels={labels} />);
     expect(screen.queryByTestId("bh-offers")).toBeNull();
@@ -171,9 +193,21 @@ describe("Business Home sections", () => {
     expect(
       visibleSections({
         counts,
-        sections: { products: true, services: true, events: false, offers: true, clips: true },
+        sections: {
+          products: true,
+          services: true,
+          events: false,
+          offers: true,
+          clips: true,
+        },
       }),
-    ).toEqual({ products: true, services: false, events: false, offers: false, clips: true });
+    ).toEqual({
+      products: true,
+      services: false,
+      events: false,
+      offers: false,
+      clips: true,
+    });
     // Older API (no `sections`): core sections follow their items; offers need the flag.
     expect(visibleSections({ counts: { ...counts, offers: 1 } })).toEqual({
       products: true,
@@ -186,7 +220,9 @@ describe("Business Home sections", () => {
 
   it("hides the clips row when there are no clips (flag off returns none)", () => {
     const labels = { heading: "Clips", watch: "Watch clip" };
-    const { rerender } = render(<ClipsRow locale="en" clips={[]} labels={labels} />);
+    const { rerender } = render(
+      <ClipsRow locale="en" clips={[]} labels={labels} />,
+    );
     expect(screen.queryByTestId("bh-clips")).toBeNull();
     rerender(
       <ClipsRow
@@ -195,10 +231,9 @@ describe("Business Home sections", () => {
         labels={labels}
       />,
     );
-    expect(screen.getByRole("link", { name: "Watch clip: New stock" })).toHaveAttribute(
-      "href",
-      "/en/clips/c1",
-    );
+    expect(
+      screen.getByRole("link", { name: "Watch clip: New stock" }),
+    ).toHaveAttribute("href", "/en/clips/c1");
   });
 
   it("says reviews come from verified purchases only", () => {
@@ -215,7 +250,9 @@ describe("Business Home sections", () => {
       />,
     );
     expect(screen.getByText("4.5")).toBeInTheDocument();
-    expect(screen.getByText("Only customers who bought here can review.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Only customers who bought here can review."),
+    ).toBeInTheDocument();
   });
 
   it("prices services customer-first: fixed booking, then from, then quote", () => {
@@ -227,13 +264,19 @@ describe("Business Home sections", () => {
     };
     expect(
       servicePriceLine(
-        { bookable: true, booking_price_ngwee: 30_000, from_price_ngwee: 25_000 },
+        {
+          bookable: true,
+          booking_price_ngwee: 30_000,
+          from_price_ngwee: 25_000,
+        },
         labels,
       ),
     ).toBe("Book for K300.00");
-    expect(servicePriceLine({ bookable: false, from_price_ngwee: 25_000 }, labels)).toBe(
-      "From K250.00",
+    expect(
+      servicePriceLine({ bookable: false, from_price_ngwee: 25_000 }, labels),
+    ).toBe("From K250.00");
+    expect(servicePriceLine({ from_price_ngwee: null }, labels)).toBe(
+      "Ask for a price",
     );
-    expect(servicePriceLine({ from_price_ngwee: null }, labels)).toBe("Ask for a price");
   });
 });

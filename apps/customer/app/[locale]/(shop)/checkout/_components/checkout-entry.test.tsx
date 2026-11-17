@@ -15,7 +15,10 @@ const useSessionSpy = vi.fn(() => ({ session: null, loading: true }));
 // The cart shell's session hook (#718 identity barrier) lives in lib/customer-session.
 vi.mock("../../../../../lib/customer-session", () => ({
   useSession: () => useSessionSpy(),
-  customerAuth: { snapshot: () => ({ session: null, loading: true }), subscribe: () => () => {} },
+  customerAuth: {
+    snapshot: () => ({ session: null, loading: true }),
+    subscribe: () => () => {},
+  },
   getReadyCustomerSession: async () => null,
 }));
 vi.mock("next/navigation", () => ({
@@ -57,14 +60,20 @@ afterEach(() => {
 describe("CheckoutEntry", () => {
   it("never mounts the cart shell (session hook) for a ?group= handoff", async () => {
     query.value = "group=2f1c1a52-6a39-4e6c-9d57-0a7a9b1d5f11";
-    render(<CheckoutEntry locale="en" labels={labels} groupLabels={groupLabels} />);
-    expect(await screen.findByTestId("group-checkout-stub")).toBeInTheDocument();
+    render(
+      <CheckoutEntry locale="en" labels={labels} groupLabels={groupLabels} />,
+    );
+    expect(
+      await screen.findByTestId("group-checkout-stub"),
+    ).toBeInTheDocument();
     expect(useSessionSpy).not.toHaveBeenCalled();
   });
 
   it("mounts the cart shell when there is no group", () => {
     query.value = "";
-    render(<CheckoutEntry locale="en" labels={labels} groupLabels={groupLabels} />);
+    render(
+      <CheckoutEntry locale="en" labels={labels} groupLabels={groupLabels} />,
+    );
     expect(useSessionSpy).toHaveBeenCalled();
   });
 });

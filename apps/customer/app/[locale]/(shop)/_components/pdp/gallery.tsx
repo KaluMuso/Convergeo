@@ -8,9 +8,12 @@ import { useCallback, useEffect, useState } from "react";
 import type { LightboxLabels } from "./lightbox";
 
 /** Lazy — the full-screen viewer only loads when a buyer opens it (3G budget). */
-const Lightbox = dynamic(() => import("./lightbox").then((mod) => mod.Lightbox), {
-  ssr: false,
-});
+const Lightbox = dynamic(
+  () => import("./lightbox").then((mod) => mod.Lightbox),
+  {
+    ssr: false,
+  },
+);
 
 export type PdpGalleryImage = {
   publicId: string;
@@ -56,17 +59,24 @@ export function PdpGallery({
   lightboxLabels,
 }: PdpGalleryProps) {
   const t = useTranslations("catalog.pdp.gallery");
-  const usableImages = images.filter((image) => image.publicId.trim().length > 0);
+  const usableImages = images.filter(
+    (image) => image.publicId.trim().length > 0,
+  );
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   // Slide the strip should show: the caller's (variant photo) or, after the
   // viewer closes, the image the buyer ended on.
-  const [targetIndex, setTargetIndex] = useState<number | undefined>(activeIndex);
+  const [targetIndex, setTargetIndex] = useState<number | undefined>(
+    activeIndex,
+  );
   useEffect(() => {
     setTargetIndex(activeIndex);
   }, [activeIndex]);
 
-  const openLightbox = useCallback((index: number) => setLightboxIndex(index), []);
+  const openLightbox = useCallback(
+    (index: number) => setLightboxIndex(index),
+    [],
+  );
   const closeLightbox = useCallback((lastIndex: number) => {
     setLightboxIndex(null);
     setTargetIndex(lastIndex);

@@ -28,6 +28,12 @@ describe("help frontmatter", () => {
     expect(article.category).toBe("buying");
     expect(article.keywords).toEqual(["alpha", "beta"]);
     expect(article.order).toBe(100);
+    expect(article.comingSoon).toBe(false);
+  });
+
+  it("flags status: coming-soon articles", () => {
+    const article = toArticle("later", `---\ntitle: Later\nstatus: coming-soon\n---\nBody.`);
+    expect(article.comingSoon).toBe(true);
   });
 });
 
@@ -48,7 +54,7 @@ describe("help content collection", () => {
     expect(escrow?.category).toBe("escrow");
     // Real content, not a stub.
     expect(escrow?.body.length ?? 0).toBeGreaterThan(1200);
-    expect(escrow?.body.toLowerCase()).toContain("held by vergeo5");
+    expect(escrow?.body.toLowerCase()).toContain("held by convergeo");
   });
 });
 
@@ -79,5 +85,34 @@ describe("help FAQ search", () => {
   it("returns the full index for an empty query and nothing for gibberish", () => {
     expect(searchArticles(index, "")).toHaveLength(index.length);
     expect(searchArticles(index, "zzzqqxnotarealterm")).toHaveLength(0);
+  });
+});
+
+describe("pilot copy (cash on delivery only)", () => {
+  const LIVE_PAYMENT_CLAIM =
+    /pay (by|with) (mtn|airtel|mobile money|card)|payouts? (hit|reach)|sign up in minutes/i;
+
+  it("marks every escrow / mobile-money / payout article as coming soon", () => {
+    for (const slug of [
+      "how-escrow-works",
+      "is-my-money-safe",
+      "when-funds-are-released",
+      "how-refunds-work",
+      "mobile-money-payments",
+      "vendor-payouts",
+    ]) {
+      expect(getArticleBySlug(slug)?.comingSoon, slug).toBe(true);
+    }
+  });
+
+  it("does not claim live online payment, and never says the old brand name", () => {
+    for (const article of getAllArticles()) {
+      expect(`${article.title} ${article.summary}`, article.slug).not.toMatch(LIVE_PAYMENT_CLAIM);
+      expect(article.body, article.slug).not.toMatch(/vergeo5/i);
+      if (!article.comingSoon) {
+        expect(article.body, article.slug).not.toMatch(LIVE_PAYMENT_CLAIM);
+        expect(article.body.toLowerCase(), article.slug).not.toContain("escrow");
+      }
+    }
   });
 });

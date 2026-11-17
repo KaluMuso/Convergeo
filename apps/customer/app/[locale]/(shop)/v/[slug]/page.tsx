@@ -45,7 +45,10 @@ import {
   buildOfferBadgeLabels,
   type OfferBadge,
 } from "../../_components/offers/offer-badge";
-import { catalogDeliveryLabels } from "../../_components/plp/delivery-labels";
+import {
+  catalogDeliveryLabels,
+  catalogMadeToOrderLabels,
+} from "../../_components/plp/delivery-labels";
 import { catalogLogisticsLabels } from "../../_components/plp/logistics-pills";
 
 import type { DaySchedule } from "../../_components/directory/business-home/open-status";
@@ -491,6 +494,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
             conditionUsed: tCatalog("plp.card.conditionUsed"),
             logistics: catalogLogisticsLabels(tCatalog),
             delivery: catalogDeliveryLabels((key) => tCatalog.raw(key)),
+            madeToOrder: catalogMadeToOrderLabels((key) => tCatalog.raw(key)),
             offerBadge: buildOfferBadgeLabels((key) => tCatalog.raw(key)),
           }}
         />

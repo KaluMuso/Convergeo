@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { buildPageMetadata } from "../../../../../lib/page-title";
 import { getAccountAccessToken } from "../../_components/account-server";
 import { QuoteDetailClient } from "../_components/quote-detail-client";
 
@@ -30,9 +31,17 @@ async function fetchThread(accessToken: string, threadId: string): Promise<RfqTh
   return (await response.json()) as RfqThread;
 }
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "account", "listingQuotes.detail.title", {
+    index: false,
+    follow: false,
+  });
+}
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));

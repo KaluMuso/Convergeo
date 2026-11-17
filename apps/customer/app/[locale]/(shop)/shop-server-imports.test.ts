@@ -38,7 +38,10 @@ function collectSourceFiles(dir: string): string[] {
       if (!SKIP_DIRS.has(entry.name)) {
         out.push(...collectSourceFiles(full));
       }
-    } else if (/\.tsx?$/.test(entry.name) && !/\.(test|spec)\.tsx?$/.test(entry.name)) {
+    } else if (
+      /\.tsx?$/.test(entry.name) &&
+      !/\.(test|spec)\.tsx?$/.test(entry.name)
+    ) {
       out.push(full);
     }
   }
@@ -47,7 +50,9 @@ function collectSourceFiles(dir: string): string[] {
 
 function isUseClient(source: string): boolean {
   const firstStatement = source.trimStart().split("\n", 1)[0]?.trim();
-  return firstStatement === '"use client";' || firstStatement === "'use client';";
+  return (
+    firstStatement === '"use client";' || firstStatement === "'use client';"
+  );
 }
 
 /** SCREAMING_SNAKE_CASE `export const NAME = ...` bindings — the data-constant convention this repo uses. */
@@ -65,7 +70,9 @@ function exportedConstNames(source: string): string[] {
 }
 
 /** Named import specifiers from relative-path imports, split into (name, isTypeOnly) pairs. */
-function relativeImports(source: string): Array<{ from: string; specifiers: string[] }> {
+function relativeImports(
+  source: string,
+): Array<{ from: string; specifiers: string[] }> {
   const out: Array<{ from: string; specifiers: string[] }> = [];
   const re = /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+["'](\.[^"']+)["']/g;
   let match: RegExpExecArray | null;

@@ -1,8 +1,9 @@
 import { AppHeader } from "@vergeo/ui/src/app-header";
-import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 
 import { BrandLogo } from "../../(shop)/_components/brand-logo";
+
+import { MarketingSignInSlot } from "./marketing-sign-in-slot";
 
 export type MarketingAppHeaderLabels = {
   appName: string;
@@ -12,6 +13,7 @@ export type MarketingAppHeaderLabels = {
   help: string;
   sell: string;
   signIn: string;
+  account: string;
 };
 
 type MarketingAppHeaderProps = {
@@ -45,9 +47,11 @@ export function MarketingAppHeader({ locale, labels }: MarketingAppHeaderProps) 
       skipLinkTargetId="marketing-main"
       navLinks={navLinks}
       signInSlot={
-        <LinkButton href={`/${locale}/login`} variant="primary" size="md" LinkComponent={Link}>
-          {labels.signIn}
-        </LinkButton>
+        <MarketingSignInSlot
+          locale={locale}
+          signInLabel={labels.signIn}
+          accountLabel={labels.account}
+        />
       }
       LinkComponent={Link}
     />

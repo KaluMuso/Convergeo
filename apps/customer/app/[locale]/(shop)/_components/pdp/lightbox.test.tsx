@@ -4,7 +4,13 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Lightbox, clampPan, clampZoom, MAX_ZOOM, type LightboxLabels } from "./lightbox";
+import {
+  Lightbox,
+  clampPan,
+  clampZoom,
+  MAX_ZOOM,
+  type LightboxLabels,
+} from "./lightbox";
 
 const labels: LightboxLabels = {
   open: "View full screen",
@@ -44,7 +50,10 @@ if (typeof window.PointerEvent === "undefined") {
       this.pointerId = init.pointerId ?? 0;
     }
   }
-  Object.defineProperty(window, "PointerEvent", { value: TestPointerEvent, writable: true });
+  Object.defineProperty(window, "PointerEvent", {
+    value: TestPointerEvent,
+    writable: true,
+  });
 }
 
 beforeEach(() => mockReducedMotion(false));
@@ -60,7 +69,11 @@ function renderLightbox(onClose = vi.fn(), initialIndex = 0) {
       onClose={onClose}
     />,
   );
-  return { ...view, onClose, dialog: screen.getByRole("dialog", { name: "Image viewer" }) };
+  return {
+    ...view,
+    onClose,
+    dialog: screen.getByRole("dialog", { name: "Image viewer" }),
+  };
 }
 
 describe("Lightbox", () => {
@@ -68,7 +81,9 @@ describe("Lightbox", () => {
     const { dialog } = renderLightbox();
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(screen.getByRole("button", { name: "Close viewer" })).toHaveFocus();
-    expect(screen.getByTestId("pdp-lightbox-indicator")).toHaveTextContent("Image 1 of 3");
+    expect(screen.getByTestId("pdp-lightbox-indicator")).toHaveTextContent(
+      "Image 1 of 3",
+    );
   });
 
   it("navigates with arrow keys and closes on Escape, reporting the last image", () => {
@@ -76,10 +91,16 @@ describe("Lightbox", () => {
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
-    expect(screen.getByTestId("pdp-lightbox-indicator")).toHaveTextContent("Image 3 of 3");
-    expect(screen.getByRole("img", { name: "Dress detail" })).toBeInTheDocument();
+    expect(screen.getByTestId("pdp-lightbox-indicator")).toHaveTextContent(
+      "Image 3 of 3",
+    );
+    expect(
+      screen.getByRole("img", { name: "Dress detail" }),
+    ).toBeInTheDocument();
     fireEvent.keyDown(dialog, { key: "ArrowLeft" });
-    expect(screen.getByTestId("pdp-lightbox-indicator")).toHaveTextContent("Image 2 of 3");
+    expect(screen.getByTestId("pdp-lightbox-indicator")).toHaveTextContent(
+      "Image 2 of 3",
+    );
     fireEvent.keyDown(dialog, { key: "Escape" });
     expect(onClose).toHaveBeenCalledWith(1);
   });
@@ -129,7 +150,9 @@ describe("Lightbox", () => {
     fireEvent.pointerDown(stage, { pointerId: 3, clientX: 300, clientY: 100 });
     fireEvent.pointerMove(stage, { pointerId: 3, clientX: 150, clientY: 100 });
     fireEvent.pointerUp(stage, { pointerId: 3, clientX: 150, clientY: 100 });
-    expect(screen.getByTestId("pdp-lightbox-indicator")).toHaveTextContent("Image 2 of 3");
+    expect(screen.getByTestId("pdp-lightbox-indicator")).toHaveTextContent(
+      "Image 2 of 3",
+    );
   });
 
   it("traps Tab focus inside the dialog", () => {
@@ -161,7 +184,8 @@ describe("Lightbox", () => {
   it("drops the zoom transition when the user prefers reduced motion", () => {
     mockReducedMotion(true);
     renderLightbox();
-    const layer = screen.getByTestId("pdp-lightbox-stage").firstElementChild as HTMLElement;
+    const layer = screen.getByTestId("pdp-lightbox-stage")
+      .firstElementChild as HTMLElement;
     expect(layer.style.transition).toBe("none");
   });
 });
@@ -170,10 +194,15 @@ describe("zoom maths", () => {
   it("clamps zoom and pan so the image cannot leave the stage", () => {
     expect(clampZoom(0.2)).toBe(1);
     expect(clampZoom(9)).toBe(MAX_ZOOM);
-    expect(clampPan({ x: 500, y: -500 }, 2, { width: 400, height: 300 })).toEqual({
+    expect(
+      clampPan({ x: 500, y: -500 }, 2, { width: 400, height: 300 }),
+    ).toEqual({
       x: 200,
       y: -150,
     });
-    expect(clampPan({ x: 50, y: 50 }, 1, { width: 400, height: 300 })).toEqual({ x: 0, y: 0 });
+    expect(clampPan({ x: 50, y: 50 }, 1, { width: 400, height: 300 })).toEqual({
+      x: 0,
+      y: 0,
+    });
   });
 });

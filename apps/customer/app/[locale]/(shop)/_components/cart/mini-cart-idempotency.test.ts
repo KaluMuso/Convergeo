@@ -21,7 +21,8 @@ const authState = vi.hoisted(() => ({
   session: null as null | { access_token: string; user: { id: string } },
   error: null as null | { message: string },
   beforeRead: null as null | (() => void),
-  snapshotRead: null as null | (() => Promise<{ data: { session: null }; error: null }>),
+  snapshotRead: null as
+    null | (() => Promise<{ data: { session: null }; error: null }>),
 }));
 
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
@@ -39,8 +40,12 @@ vi.mock("../../../../../lib/api-base-url", () => ({
   getApiBaseUrl: vi.fn(() => "http://localhost:8000"),
 }));
 
-vi.mock("../../../../../lib/wishlist-local", () => ({ upsertWishlistLocal: vi.fn() }));
-vi.mock("../../../../../lib/engagement-api", () => ({ syncWishlistWithServer: vi.fn() }));
+vi.mock("../../../../../lib/wishlist-local", () => ({
+  upsertWishlistLocal: vi.fn(),
+}));
+vi.mock("../../../../../lib/engagement-api", () => ({
+  syncWishlistWithServer: vi.fn(),
+}));
 
 const cart = {
   cart_id: "cart-1",
@@ -83,7 +88,9 @@ afterEach(async () => {
 });
 
 function session(userId: string, sessionId: string, revision = 1) {
-  const payload = btoa(JSON.stringify({ sub: userId, session_id: sessionId, revision }));
+  const payload = btoa(
+    JSON.stringify({ sub: userId, session_id: sessionId, revision }),
+  );
   return {
     access_token: `synthetic.${payload}.not-a-real-signature`,
     user: { id: userId },
@@ -92,7 +99,10 @@ function session(userId: string, sessionId: string, revision = 1) {
 
 function postedKeys(fetchMock: ReturnType<typeof vi.fn>) {
   return fetchMock.mock.calls
-    .filter(([url, init]) => String(url).endsWith("/cart/items") && init?.method === "POST")
+    .filter(
+      ([url, init]) =>
+        String(url).endsWith("/cart/items") && init?.method === "POST",
+    )
     .map(([, init]) => new Headers(init?.headers).get("Idempotency-Key"));
 }
 
@@ -240,7 +250,8 @@ describe("cart add retry keys", () => {
       vi.fn(async (url: string, init?: RequestInit) => {
         if (url.endsWith("/cart/items")) {
           keys.push(new Headers(init?.headers).get("Idempotency-Key") ?? "");
-          if (++attempts === 1) throw new Error("navigation interrupted response");
+          if (++attempts === 1)
+            throw new Error("navigation interrupted response");
         }
         return Response.json(cart);
       }),
@@ -350,7 +361,9 @@ describe("session-bound confirmation and retry contract", () => {
     vi.mocked(getApiBaseUrl).mockReturnValue("");
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    await expect(addCartItem("listing-1", 2)).rejects.toThrow("API unavailable");
+    await expect(addCartItem("listing-1", 2)).rejects.toThrow(
+      "API unavailable",
+    );
     expect(fetchMock).not.toHaveBeenCalled();
     expect(sessionStorage.length).toBe(0);
   });
@@ -361,7 +374,8 @@ describe("session-bound confirmation and retry contract", () => {
     authState.session = first;
     let attempts = 0;
     const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (url.endsWith("/cart/items") && ++attempts === 1) throw new Error("lost response");
+      if (url.endsWith("/cart/items") && ++attempts === 1)
+        throw new Error("lost response");
       return Response.json(cart);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -369,7 +383,9 @@ describe("session-bound confirmation and retry contract", () => {
     authState.session = refreshed;
     await addCartItem("listing-1", 2);
     expect(postedKeys(fetchMock)).toEqual(["key-1", "key-1"]);
-    const posts = fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/cart/items"));
+    const posts = fetchMock.mock.calls.filter(([url]) =>
+      String(url).endsWith("/cart/items"),
+    );
     expect(new Headers(posts[0]?.[1]?.headers).get("Authorization")).toBe(
       `Bearer ${first.access_token}`,
     );
@@ -378,7 +394,9 @@ describe("session-bound confirmation and retry contract", () => {
     );
     for (let index = 0; index < sessionStorage.length; index++) {
       expect(sessionStorage.key(index)).not.toContain(first.access_token);
-      expect(sessionStorage.getItem(sessionStorage.key(index)!)).not.toContain(first.access_token);
+      expect(sessionStorage.getItem(sessionStorage.key(index)!)).not.toContain(
+        first.access_token,
+      );
     }
   });
 
@@ -389,7 +407,8 @@ describe("session-bound confirmation and retry contract", () => {
     authState.session = session("user-a", "session-a");
     let attempts = 0;
     const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (url.endsWith("/cart/items") && ++attempts === 1) throw new Error("lost response");
+      if (url.endsWith("/cart/items") && ++attempts === 1)
+        throw new Error("lost response");
       return Response.json(cart);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -455,7 +474,8 @@ describe("session-bound confirmation and retry contract", () => {
   it("rotates guest scope after an observed sign-in and sign-out", async () => {
     let posts = 0;
     const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (url.endsWith("/cart/items") && ++posts === 1) throw new Error("lost guest response");
+      if (url.endsWith("/cart/items") && ++posts === 1)
+        throw new Error("lost guest response");
       return Response.json(cart);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -476,7 +496,9 @@ describe("session-bound confirmation and retry contract", () => {
     authState.error = { message: "synthetic session storage error" };
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    await expect(addCartItem("listing-1", 2)).rejects.toThrow("Cart session unavailable");
+    await expect(addCartItem("listing-1", 2)).rejects.toThrow(
+      "Cart session unavailable",
+    );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -580,7 +602,9 @@ describe("ordered auth observations", () => {
       subtle: { digest },
     });
     authState.session = { access_token: "opaque-a", user: { id: "user-a" } };
-    const fetchMock = vi.fn(async () => Response.json({ ...cart, cart_id: "cart-b" }));
+    const fetchMock = vi.fn(async () =>
+      Response.json({ ...cart, cart_id: "cart-b" }),
+    );
     vi.stubGlobal("fetch", fetchMock);
     const older = addCartItem("listing-1", 1).catch((error: unknown) => error);
     await vi.waitFor(() => expect(digest).toHaveBeenCalledOnce());
@@ -617,18 +641,25 @@ describe("ordered auth observations", () => {
   });
 
   it("keeps in-memory retry isolation when session storage is unavailable", async () => {
-    const get = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("blocked");
-    });
-    const set = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("blocked");
-    });
-    const remove = vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
-      throw new Error("blocked");
-    });
+    const get = vi
+      .spyOn(Storage.prototype, "getItem")
+      .mockImplementation(() => {
+        throw new Error("blocked");
+      });
+    const set = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("blocked");
+      });
+    const remove = vi
+      .spyOn(Storage.prototype, "removeItem")
+      .mockImplementation(() => {
+        throw new Error("blocked");
+      });
     let attempts = 0;
     const fetchMock = vi.fn(async (url: string) => {
-      if (url.endsWith("/cart/items") && ++attempts === 1) throw new Error("lost");
+      if (url.endsWith("/cart/items") && ++attempts === 1)
+        throw new Error("lost");
       return Response.json(cart);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -639,7 +670,12 @@ describe("ordered auth observations", () => {
       await addCartItem("listing-1", 1);
       authState.session = null;
       await addCartItem("listing-1", 1);
-      expect(postedKeys(fetchMock)).toEqual(["key-1", "key-1", "key-2", "key-3"]);
+      expect(postedKeys(fetchMock)).toEqual([
+        "key-1",
+        "key-1",
+        "key-2",
+        "key-3",
+      ]);
     } finally {
       get.mockRestore();
       set.mockRestore();

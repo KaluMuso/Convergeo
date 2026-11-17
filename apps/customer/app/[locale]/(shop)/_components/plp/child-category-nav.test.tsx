@@ -33,7 +33,11 @@ describe("ChildCategoryNav", () => {
 
   it("renders nothing when there are no children", () => {
     const { container } = render(
-      <ChildCategoryNav locale="en" heading="Shop by subcategory" categories={[]} />,
+      <ChildCategoryNav
+        locale="en"
+        heading="Shop by subcategory"
+        categories={[]}
+      />,
     );
     expect(container).toBeEmptyDOMElement();
   });

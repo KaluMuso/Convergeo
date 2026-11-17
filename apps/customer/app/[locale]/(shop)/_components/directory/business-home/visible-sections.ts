@@ -1,4 +1,5 @@
-export type BusinessSectionKey = "products" | "services" | "events" | "offers" | "clips";
+export type BusinessSectionKey =
+  "products" | "services" | "events" | "offers" | "clips";
 
 export type SectionInput = {
   counts: Record<BusinessSectionKey, number>;
@@ -28,6 +29,9 @@ export function visibleSections({
   };
   const keys = Object.keys(counts) as BusinessSectionKey[];
   return Object.fromEntries(
-    keys.map((key) => [key, (sections?.[key] ?? fallback[key]) && counts[key] > 0]),
+    keys.map((key) => [
+      key,
+      (sections?.[key] ?? fallback[key]) && counts[key] > 0,
+    ]),
   ) as Record<BusinessSectionKey, boolean>;
 }

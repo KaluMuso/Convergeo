@@ -98,18 +98,31 @@ describe("buildElsewhereCards", () => {
   it("prices services customer-first and caps the rail", () => {
     const many: ElsewherePayload = {
       ...DATA,
-      services: Array.from({ length: 12 }, (_, i) => ({ ...DATA.services[0]!, id: `s${i}` })),
+      services: Array.from({ length: 12 }, (_, i) => ({
+        ...DATA.services[0]!,
+        id: `s${i}`,
+      })),
     };
-    const cards = buildElsewhereCards({ locale: "en", data: many, lead: "service", labels });
+    const cards = buildElsewhereCards({
+      locale: "en",
+      data: many,
+      lead: "service",
+      labels,
+    });
     expect(cards).toHaveLength(ELSEWHERE_RAIL_LIMIT);
-    expect(cards[0]).toMatchObject({ kind: "service", detail: "From K150.00", stock: null });
+    expect(cards[0]).toMatchObject({
+      kind: "service",
+      detail: "From K150.00",
+      stock: null,
+    });
   });
 });
 
 describe("OtherShopsRail", () => {
   it("renders other shops' items under a detail page", async () => {
     const fetchMock = vi.fn(
-      async (_url: string) => new Response(JSON.stringify(DATA), { status: 200 }),
+      async (_url: string) =>
+        new Response(JSON.stringify(DATA), { status: 200 }),
     );
     vi.stubGlobal("fetch", fetchMock);
     render(
@@ -135,14 +148,19 @@ describe("OtherShopsRail", () => {
       "fetch",
       vi.fn(async () => new Response("{}", { status: 500 })),
     );
-    expect(await OtherShopsRail({ locale: "en", vendorSlug: "x", lead: "event" })).toBeNull();
+    expect(
+      await OtherShopsRail({ locale: "en", vendorSlug: "x", lead: "event" }),
+    ).toBeNull();
     vi.stubGlobal(
       "fetch",
       vi.fn(
         async () =>
-          new Response(JSON.stringify({ products: [], services: [], events: [] }), {
-            status: 200,
-          }),
+          new Response(
+            JSON.stringify({ products: [], services: [], events: [] }),
+            {
+              status: 200,
+            },
+          ),
       ),
     );
     const { container } = render(

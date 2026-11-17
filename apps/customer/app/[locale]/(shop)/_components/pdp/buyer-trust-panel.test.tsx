@@ -27,11 +27,16 @@ describe("BuyerTrustPanel", () => {
       />,
     );
 
-    expect(screen.getByTestId("pdp-trust-seller")).toHaveTextContent("Preferred seller");
+    expect(screen.getByTestId("pdp-trust-seller")).toHaveTextContent(
+      "Preferred seller",
+    );
     expect(screen.getByTestId("pdp-trust-escrow")).toHaveTextContent(
       "When online payment is available",
     );
-    expect(screen.getByTestId("pdp-trust-returns")).toHaveAttribute("href", "/en/legal/returns");
+    expect(screen.getByTestId("pdp-trust-returns")).toHaveAttribute(
+      "href",
+      "/en/legal/returns",
+    );
     expect(screen.queryByTestId("pdp-trust-logistics")).not.toBeInTheDocument();
   });
 

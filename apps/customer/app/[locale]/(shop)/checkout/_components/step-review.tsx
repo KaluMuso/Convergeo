@@ -10,10 +10,15 @@ import {
   saveDeliveryConsent,
 } from "../../../../../lib/delivery-consent";
 import { CodTrustLine } from "../../../_components/cod-trust-line";
+import {
+  estimateReadyDate,
+  formatEstimateDate,
+} from "../../../../../lib/delivery-estimate";
 import { VariantLineLabel } from "../../_components/cart/variant-line-label";
 import {
   formatListingQuantity,
   formatMadeToOrderLeadTime,
+  type LeadTimePhrases,
   type SaleUnitLabels,
 } from "../../_components/sale-quantity";
 
@@ -31,6 +36,11 @@ export type ReviewStepLabels = {
   variantSeparator?: string;
   saleUnits: SaleUnitLabels;
   madeToOrderLeadTime: string;
+  leadTimeWhen?: LeadTimePhrases;
+  /** "Estimated ready by {date}" (pickup) */
+  estimatedReady?: string;
+  /** "Estimated delivery by {date}" (delivery) */
+  estimatedDelivery?: string;
   subtotal: string;
   deliveryFees: string;
   total: string;
@@ -180,6 +190,33 @@ export function StepReview({
       : guide.deliveryNoLandmark;
   };
 
+  const madeToOrderEstimate = (
+    item: CheckoutSession["vendor_groups"][number]["items"][number],
+    vendorId: string,
+  ): string | null => {
+    if (
+      item.fulfilment_mode !== "made_to_order" ||
+      !Number.isSafeInteger(item.lead_time_days) ||
+      (item.lead_time_days ?? 0) <= 0
+    ) {
+      return null;
+    }
+    const group = fulfilment?.groups.find(
+      (entry) => entry.vendor_id === vendorId,
+    );
+    const kind = group?.fulfilment === "delivery" ? "delivery" : "pickup";
+    const template =
+      kind === "delivery" ? labels.estimatedDelivery : labels.estimatedReady;
+    if (!template) {
+      return null;
+    }
+    const date = estimateReadyDate({
+      kind,
+      leadTimeDays: item.lead_time_days as number,
+    });
+    return template.replace("{date}", formatEstimateDate(date, locale));
+  };
+
   const nextCopy =
     payment.method === "cod"
       ? labels.nextCod
@@ -273,6 +310,11 @@ export function StepReview({
                   item.fulfilment_mode,
                   item.lead_time_days,
                   labels.madeToOrderLeadTime,
+                  labels.leadTimeWhen,
+                );
+                const estimateLabel = madeToOrderEstimate(
+                  item,
+                  group.vendor_id,
                 );
 
                 return (
@@ -308,6 +350,14 @@ export function StepReview({
                           data-testid={`checkout-lead-time-${item.listing_id}`}
                         >
                           {leadTimeLabel}
+                        </span>
+                      ) : null}
+                      {estimateLabel ? (
+                        <span
+                          className="block text-xs text-text-3"
+                          data-testid={`checkout-estimate-${item.listing_id}`}
+                        >
+                          {estimateLabel}
                         </span>
                       ) : null}
                     </span>

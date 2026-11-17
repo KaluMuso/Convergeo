@@ -6,6 +6,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { CodTrustLine } from "../../../_components/cod-trust-line";
+import { buildPageMetadata } from "../../../../../lib/page-title";
 import { AccountListBoundary } from "../../_components/account-list-boundary";
 import { getAccountListSession } from "../../_components/account-list-server";
 import { BuyAgain } from "../_components/buy-again";
@@ -37,12 +38,14 @@ import { ReviewPromptBlock } from "./_components/review-prompt";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "orders", "detail.title", { index: false, follow: false });
+}
 
 type PageProps = {
   params: Promise<{ locale: string; id: string }>;

@@ -109,12 +109,18 @@ describe("COD guidance — payment step", () => {
 
     await user.click(await screen.findByLabelText(c.payment.cod));
     const guide = screen.getByTestId("checkout-cod-guide");
-    expect(within(guide).getByText(c.payment.codGuide.step1)).toBeInTheDocument();
     expect(
-      within(guide).getByText(c.payment.codGuide.step2.replace("{amount}", "K425.00")),
+      within(guide).getByText(c.payment.codGuide.step1),
     ).toBeInTheDocument();
     expect(
-      within(guide).getByText(c.payment.codGuide.capNote.replace("{cap}", "K500.00")),
+      within(guide).getByText(
+        c.payment.codGuide.step2.replace("{amount}", "K425.00"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(guide).getByText(
+        c.payment.codGuide.capNote.replace("{cap}", "K500.00"),
+      ),
     ).toBeInTheDocument();
   });
 
@@ -133,13 +139,14 @@ describe("COD guidance — payment step", () => {
     const card = await screen.findByTestId("checkout-cod-unavailable");
     expect(
       within(card).getByText(
-        c.payment.codGuide.overCap.replace("{total}", "K600.00").replace("{cap}", "K500.00"),
+        c.payment.codGuide.overCap
+          .replace("{total}", "K600.00")
+          .replace("{cap}", "K500.00"),
       ),
     ).toBeInTheDocument();
-    expect(within(card).getByRole("link", { name: c.payment.codGuide.editCart })).toHaveAttribute(
-      "href",
-      "/en/cart",
-    );
+    expect(
+      within(card).getByRole("link", { name: c.payment.codGuide.editCart }),
+    ).toHaveAttribute("href", "/en/cart");
   });
 });
 
@@ -173,14 +180,21 @@ describe("COD guidance — review step", () => {
       "You pay on delivery → We deliver → You confirm",
     );
     const steps = screen.getByTestId("checkout-review-cod-steps");
-    expect(within(steps).getByText(c.review.codGuide.step1)).toBeInTheDocument();
     expect(
-      within(steps).getByText(c.review.codGuide.step3.replace("{amount}", "K425.00")),
+      within(steps).getByText(c.review.codGuide.step1),
+    ).toBeInTheDocument();
+    expect(
+      within(steps).getByText(
+        c.review.codGuide.step3.replace("{amount}", "K425.00"),
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(c.review.escrowStep1)).not.toBeInTheDocument();
     expect(screen.queryByText(c.review.escrowTitle)).not.toBeInTheDocument();
     expect(screen.getByTestId("review-fulfilment-vendor-a")).toHaveTextContent(
-      c.review.codGuide.deliveryTo.replace("{landmark}", "Woodlands, near the church"),
+      c.review.codGuide.deliveryTo.replace(
+        "{landmark}",
+        "Woodlands, near the church",
+      ),
     );
     expect(screen.getByTestId("checkout-place-order")).toHaveTextContent(
       c.review.codGuide.placeOrderCod,
@@ -262,11 +276,19 @@ describe("unified checkout — review groups lines by type", () => {
         onPlaceOrder={vi.fn()}
       />,
     );
-    expect(screen.getByTestId("review-type-products")).toHaveTextContent(c.review.typeProducts);
+    expect(screen.getByTestId("review-type-products")).toHaveTextContent(
+      c.review.typeProducts,
+    );
     const group = screen.getByTestId("review-ticket-group");
     expect(group).toHaveTextContent(c.review.typeEventTickets);
-    expect(within(group).getByTestId("review-ticket-line-t1")).toHaveTextContent("VIP × 2");
-    expect(within(group).getByTestId("review-ticket-line-t1")).toHaveTextContent("K201.67");
-    expect(screen.getByTestId("review-platform-fee")).toHaveTextContent("K10.08");
+    expect(
+      within(group).getByTestId("review-ticket-line-t1"),
+    ).toHaveTextContent("VIP × 2");
+    expect(
+      within(group).getByTestId("review-ticket-line-t1"),
+    ).toHaveTextContent("K201.67");
+    expect(screen.getByTestId("review-platform-fee")).toHaveTextContent(
+      "K10.08",
+    );
   });
 });

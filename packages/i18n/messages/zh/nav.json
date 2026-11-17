@@ -24,7 +24,7 @@
     "directory": "商家",
     "services": "服务",
     "events": "活动",
-    "askVergeo": "问 Vergeo",
+    "askVergeo": "问 Convergeo",
     "browseChipsAria": "按板块浏览"
   },
   "marketing": {
@@ -33,7 +33,8 @@
     "contact": "联系",
     "help": "帮助",
     "sell": "在 Convergeo 上销售",
-    "signIn": "登录"
+    "signIn": "登录",
+    "account": "我的账户"
   },
   "account": {
     "ariaLabel": "账户导航",

@@ -13,7 +13,7 @@
   "ai.ask.viewEvent": "查看活动",
   "ai.quota.remaining": "{count, plural, one {本月剩余 # 个问题} other {本月剩余 # 个问题}}",
   "ai.disclaimer": "AI 回答仅供参考 — 购买前请核实",
-  "ai.quota.guestExceeded": "您已用完免费访客提问次数。注册后即可继续向 Vergeo 提问。",
+  "ai.quota.guestExceeded": "您的访客免费提问次数已用完。请登录以继续向 Convergeo 提问。",
   "ai.quota.monthlyExceeded": "您已达到每月提问上限。",
   "ai.quota.killSwitch": "Ask Convergeo 暂时不可用。请稍后重试。",
   "ai.quota.tooLong": "您的问题太长。请将其缩短。",
@@ -23,5 +23,9 @@
   "ai.quota.signupPrompt": "注册即可每月获得 25 次免费提问。",
   "ai.answer.not_found": "我在 Convergeo 上找不到相关内容。",
   "ai.answer.rate_limited": "提问过于频繁 — 请稍候片刻后重试。",
-  "ai.answer.unavailable": "Ask Convergeo 暂时不可用。请稍后再试。"
+  "ai.answer.unavailable": "Ask Convergeo 暂时不可用。请稍后再试。",
+  "ai.faq.cod.a": "试点期间所有订单均为货到付款：不会在线扣款，送达时付款。部分订单可能不符合条件，下单前结算页会告知。",
+  "ai.faq.escrow.a": "带托管买家保障的线上支付即将推出。在此之前，请在订单送达时以现金支付。",
+  "ai.faq.payment.a": "试点期间请货到付款。移动支付和银行卡支付即将推出。",
+  "ai.faq.returns.a": "在订单页面反馈问题，我们的团队会审核。获批的退款将与您直接安排。"
 }

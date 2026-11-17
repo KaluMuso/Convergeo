@@ -56,7 +56,7 @@
     "inviteOnlyNotice": "Bêta vendeur sur invitation. La vente en libre-service publique n'est pas encore ouverte. Les vendeurs invités peuvent poursuivre l'onboarding avec le lien reçu.",
     "meta": {
       "title": "Vendez sur Convergeo — bêta vendeur sur invitation",
-      "description": "L'onboarding vendeur Convergeo est sur invitation/concierge pendant la bêta. Découvrez commissions, KYC et versements mobile money — l'inscription publique n'est pas encore ouverte."
+      "description": "L'accueil des vendeurs Convergeo se fait sur invitation/concierge pendant le pilote. Découvrez les commissions et la vérification — l'inscription libre n'est pas encore ouverte."
     },
     "hero": {
       "eyebrow": "Bêta vendeur sur invitation",
@@ -113,20 +113,20 @@
       "heading": "Comment ça marche",
       "steps": {
         "signup": {
-          "title": "Inscrivez-vous en quelques minutes",
-          "description": "Créez votre compte vendeur sur mobile ou ordinateur — sans frais initiaux."
+          "title": "Connectez-vous avec votre invitation",
+          "description": "Utilisez l'invitation reçue pour vous connecter à l'application vendeur sur mobile ou ordinateur — sans frais initiaux."
         },
         "kyc": {
           "title": "Vérifiez votre identité",
-          "description": "Téléversez votre NRC et un selfie. Nous vérifions la correspondance avec le nom de votre compte mobile money. Approbation le jour même."
+          "description": "Téléversez votre NRC et un selfie. Approbation le jour même pour la plupart des vendeurs."
         },
         "list": {
           "title": "Publiez vos premiers produits",
           "description": "Rattachez-vous à notre catalogue ou publiez en mode rapide. Consultez votre commission avant de publier."
         },
         "sell": {
-          "title": "Vendez et soyez payé",
-          "description": "Les commandes arrivent dans votre tableau de bord. Le séquestre protège les acheteurs ; les versements arrivent vite sur votre MoMo."
+          "title": "Vendez à vos clients",
+          "description": "Les commandes arrivent dans votre tableau de bord. Pendant le pilote, les clients paient en espèces à la livraison. Les versements en ligne arrivent bientôt."
         }
       }
     },
@@ -137,7 +137,7 @@
         "t1": {
           "badge": "T1 · Vendeur",
           "title": "Vendez le jour même",
-          "description": "Photo du NRC + selfie + correspondance du nom mobile money. Jusqu'à 30 annonces ; les 5 premières commandes plafonnées à K500 chacune."
+          "description": "Photo du NRC + selfie. Jusqu'à 30 annonces ; les 5 premières commandes plafonnées à K500 chacune."
         },
         "t2": {
           "badge": "T2 · Entreprise vérifiée",
@@ -157,9 +157,9 @@
       }
     },
     "payout": {
-      "heading": "Versements mobile money rapides",
-      "promise": "Versé en quelques minutes sur mobile money — toujours sous 48 heures.",
-      "body": "Les paiements des acheteurs sont conservés sous séquestre jusqu'à la confirmation de la livraison (ou la confirmation automatique après 48 heures). Une fois débloqués, les versements MTN et Airtel arrivent généralement en moins de cinq minutes. Les virements bancaires prennent 24 à 36 heures."
+      "heading": "Versements en ligne : bientôt disponibles",
+      "promise": "Pendant le pilote, les clients paient en espèces à la livraison.",
+      "body": "Les versements par mobile money et la protection des acheteurs arrivent bientôt. D'ici là, les commandes sont payées en espèces à la livraison, et nous confirmerons les modalités de règlement avec chaque vendeur invité."
     },
     "faq": {
       "heading": "Questions fréquentes",
@@ -170,7 +170,7 @@
         },
         "payout": {
           "question": "Quand suis-je payé ?",
-          "answer": "Après le déblocage du séquestre à la confirmation de la livraison. Les versements mobile money arrivent généralement en quelques minutes ; nous garantissons le versement sous 48 heures."
+          "answer": "Pendant le pilote, les clients paient en espèces à la livraison. Les versements en ligne arrivent bientôt — nous confirmerons le calendrier avec chaque vendeur invité."
         },
         "whatCanISell": {
           "question": "Que puis-je vendre ?",
@@ -178,15 +178,16 @@
         },
         "kyc": {
           "question": "Combien de temps prend la vérification ?",
-          "answer": "Les vendeurs T1 disposant d'un NRC valide, d'un selfie et d'un nom MoMo correspondant sont généralement approuvés le jour même. Rien n'est publié tant que vous n'avez pas passé le KYC."
+          "answer": "Les vendeurs T1 avec un NRC valide et un selfie sont généralement approuvés le jour même. Rien n'est mis en ligne avant la réussite du KYC."
         }
       }
     },
     "cta": {
       "heading": "Invité à vendre sur Convergeo ?",
-      "body": "L'onboarding vendeur est sur invitation/concierge pendant la bêta. Si vous avez une invitation, continuez ci-dessous — catalogue et versements restent verrouillés jusqu'à l'approbation admin.",
+      "body": "L'accueil des vendeurs se fait sur invitation/concierge pendant le pilote. Si vous avez une invitation, continuez ci-dessous — les outils de publication ne se débloquent qu'après approbation par l'administrateur.",
       "button": "Continuer l'invitation vendeur",
-      "loadingLabel": "Ouverture de l'onboarding invitation"
+      "loadingLabel": "Ouverture de l'onboarding invitation",
+      "haveInviteSignIn": "J'ai une invitation — me connecter"
     }
   },
   "onboarding": {
@@ -334,7 +335,7 @@
           "why": "Comparé à la photo de votre NRC pour que personne ne vende en votre nom."
         },
         "review": {
-          "title": "Contrôle par Vergeo5",
+          "title": "Contrôle par Convergeo",
           "why": "Notre équipe vérifie tout, en général sous 1 jour ouvré, et vous informe du résultat."
         }
       },
@@ -1067,7 +1068,7 @@
       "cancel": "Annuler",
       "after": {
         "confirm": "Le client est informé que vous avez accepté. Ensuite, vous emballerez.",
-        "reject": "La commande est annulée et le client en est informé. Vergeo5 gère l'éventuel remboursement.",
+        "reject": "La commande est annulée et le client en est informé. Convergeo gère l'éventuel remboursement.",
         "pack": "Le client voit que vous préparez sa commande.",
         "ship": "Appuyez quand le coursier a le colis. Ajoutez son nom ou son téléphone.",
         "ready_for_pickup": "Le client est invité à venir la retirer chez vous."
@@ -1093,11 +1094,11 @@
       "headingNow": "À faire maintenant",
       "headingNext": "Et ensuite",
       "scanCta": "Ouvrir Scan pour remettre",
-      "paidExplainer": "Le client a payé. Vergeo5 conserve l'argent en sécurité jusqu'à la livraison.",
+      "paidExplainer": "Le client a payé. Convergeo conserve l'argent en sécurité jusqu'à la livraison.",
       "unpaidExplainer": "Le client n'a pas encore payé. N'emballez et n'envoyez rien avant que le paiement soit reçu.",
       "cod": {
         "body": "Le client paie le coursier en espèces à la livraison. Vous n'encaissez rien vous-même.",
-        "settlement": "Vergeo5 vous règle le montant de la commande — inutile de relancer le coursier ou le client."
+        "settlement": "Convergeo vous règle le montant de la commande — inutile de relancer le coursier ou le client."
       },
       "steps": {
         "confirm": {
@@ -1395,9 +1396,9 @@
       "body": "Vous ne recevrez pas encore de versements via cette application, il n'y a donc aucun solde à afficher. C'est normal — votre compte n'a aucun problème.",
       "meanwhileHeading": "Comment fonctionne l'argent pendant le pilote",
       "meanwhile": {
-        "cod": "Paiement à la livraison : le client paie le coursier en espèces et Vergeo5 vous règle.",
-        "prepaid": "Commandes payées : Vergeo5 conserve l'argent du client en sécurité jusqu'à la livraison.",
-        "questions": "Des questions sur l'argent qui vous est dû ? Contactez l'équipe pilote Vergeo5."
+        "cod": "Paiement à la livraison : le client paie le coursier en espèces et Convergeo vous règle.",
+        "prepaid": "Commandes payées : Convergeo conserve l'argent du client en sécurité jusqu'à la livraison.",
+        "questions": "Des questions sur l'argent qui vous est dû ? Contactez l'équipe pilote Convergeo."
       },
       "laterHeading": "Ce que vous verrez ici plus tard",
       "later": {

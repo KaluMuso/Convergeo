@@ -78,3 +78,39 @@ export function formatDeliveryEstimate(
   if (estimate.when === "today") return isDelivery ? labels.deliveryToday : labels.pickupToday;
   return isDelivery ? labels.deliveryTomorrow : labels.pickupTomorrow;
 }
+
+const MS_PER_DAY = 86_400_000;
+
+export type ReadyDateInput = {
+  kind: "delivery" | "pickup";
+  /** Made-to-order lead time in days. */
+  leadTimeDays: number;
+};
+
+/**
+ * Estimated calendar date a made-to-order item is ready (pickup) or arrives
+ * (delivery), on the Lusaka clock: after the 14:00 cut-off production starts the
+ * next day, then `leadTimeDays`, then one more day for delivery. Africa/Lusaka has
+ * no DST, so adding whole days to the instant keeps the Lusaka calendar correct.
+ */
+export function estimateReadyDate(input: ReadyDateInput, now: Date = new Date()): Date {
+  const lead = Math.max(1, Math.round(input.leadTimeDays));
+  const offsetDays =
+    (lusakaHour(now) >= LUSAKA_CUTOFF_HOUR ? 1 : 0) + lead + (input.kind === "delivery" ? 1 : 0);
+  return new Date(now.getTime() + offsetDays * MS_PER_DAY);
+}
+
+/** Intl has no bem/nya data; fall back to the Zambian English formats. */
+function intlLocale(locale: string): string {
+  return locale === "fr" || locale === "zh" ? locale : "en-ZM";
+}
+
+/** "Fri 28 Nov" — day + month in the viewer's language, always on the Lusaka calendar. */
+export function formatEstimateDate(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
+    timeZone: "Africa/Lusaka",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(date);
+}

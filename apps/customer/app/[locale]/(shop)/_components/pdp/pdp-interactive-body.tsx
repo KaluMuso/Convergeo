@@ -80,10 +80,13 @@ const RelatedProductRails = lazy(() =>
 );
 
 /** Lazy — variant picker only matters once a listing has options; reserve height to avoid CLS. */
-const VariantPicker = dynamic(() => import("./variant-picker").then((mod) => mod.VariantPicker), {
-  ssr: false,
-  loading: () => <div aria-hidden="true" className="min-h-24" />,
-});
+const VariantPicker = dynamic(
+  () => import("./variant-picker").then((mod) => mod.VariantPicker),
+  {
+    ssr: false,
+    loading: () => <div aria-hidden="true" className="min-h-24" />,
+  },
+);
 
 /** Lazy — measured-unit formatting + sticky chrome stay off the PDP first-load budget. */
 const StickyMobileAtc = dynamic(
@@ -232,15 +235,20 @@ export function PdpInteractiveBody({
   const optionGroups = selectedListing?.optionGroups ?? NO_GROUPS;
   const listingVariants = selectedListing?.variants ?? NO_VARIANTS;
   const hasVariants = optionGroups.length > 0 && listingVariants.length > 0;
-  const [variantSelection, setVariantSelection] = useState<VariantSelection>(() =>
-    hasVariants ? initialSelection(optionGroups, listingVariants) : {},
+  const [variantSelection, setVariantSelection] = useState<VariantSelection>(
+    () => (hasVariants ? initialSelection(optionGroups, listingVariants) : {}),
   );
   useEffect(() => {
     // A different seller's listing has its own option ids.
-    setVariantSelection(hasVariants ? initialSelection(optionGroups, listingVariants) : {});
+    setVariantSelection(
+      hasVariants ? initialSelection(optionGroups, listingVariants) : {},
+    );
   }, [hasVariants, listingVariants, optionGroups]);
   const selectedVariant = useMemo(
-    () => (hasVariants ? resolveVariant(optionGroups, listingVariants, variantSelection) : null),
+    () =>
+      hasVariants
+        ? resolveVariant(optionGroups, listingVariants, variantSelection)
+        : null,
     [hasVariants, listingVariants, optionGroups, variantSelection],
   );
   const handleVariantSelect = useCallback(
@@ -264,7 +272,10 @@ export function PdpInteractiveBody({
   // Choosing a colour swaps the gallery to that variant's photo.
   const variantImageId = selectedVariant?.imagePublicId ?? null;
   const galleryImages = useMemo(() => {
-    if (!variantImageId || baseGalleryImages.some((image) => image.publicId === variantImageId)) {
+    if (
+      !variantImageId ||
+      baseGalleryImages.some((image) => image.publicId === variantImageId)
+    ) {
       return baseGalleryImages;
     }
     const alt = baseGalleryImages[0]?.alt ?? selectedListing?.title ?? "";
@@ -391,7 +402,9 @@ export function PdpInteractiveBody({
           emptyLabel={galleryLabels.empty}
           previousLabel={galleryLabels.previous}
           nextLabel={galleryLabels.next}
-          indicatorLabel={(current, total) => t("pdp.gallery.indicator", { current, total })}
+          indicatorLabel={(current, total) =>
+            t("pdp.gallery.indicator", { current, total })
+          }
           activeIndex={galleryActiveIndex}
           lightboxLabels={lightboxLabels}
         />

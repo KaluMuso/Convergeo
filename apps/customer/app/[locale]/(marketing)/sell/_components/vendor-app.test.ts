@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   getVendorAppUrl,
+  getVendorLoginUrl,
   getVendorSignupUrl,
   isVendorAppConfigured,
   VENDOR_ONBOARDING_PATH,
@@ -69,5 +70,21 @@ describe("development fallback", () => {
 
     expect(getVendorSignupUrl("en")).toBe("http://localhost:3001/en/onboarding");
     expect(getVendorSignupUrl("bem")).toBe("http://localhost:3001/bem/onboarding");
+  });
+});
+
+describe("getVendorLoginUrl (invite sign-in)", () => {
+  it("uses the configured origin when present", () => {
+    vi.stubEnv("NEXT_PUBLIC_VENDOR_APP_URL", "https://vendor.example.test/");
+
+    expect(getVendorLoginUrl("en")).toBe("https://vendor.example.test/en/login");
+  });
+
+  it("falls back to the canonical vendor origin (never null, never localhost) in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_VENDOR_APP_URL", "");
+
+    expect(getVendorLoginUrl("en")).toBe("https://vendor.vergeo5.com/en/login");
+    expect(getVendorLoginUrl("bem")).toBe("https://vendor.vergeo5.com/bem/login");
   });
 });

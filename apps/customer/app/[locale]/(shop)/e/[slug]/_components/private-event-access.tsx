@@ -29,11 +29,14 @@ export function PrivateEventAccess({ slug }: PrivateEventAccessProps) {
     setSubmitting(true);
     setError(null);
     try {
-      const response = await fetch(`/api/events/${encodeURIComponent(slug)}/access`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: code.trim() }),
-      });
+      const response = await fetch(
+        `/api/events/${encodeURIComponent(slug)}/access`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: code.trim() }),
+        },
+      );
       if (!response.ok) {
         setError(t("errors.invalid"));
         return;

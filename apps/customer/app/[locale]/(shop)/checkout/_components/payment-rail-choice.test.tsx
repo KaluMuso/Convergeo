@@ -48,7 +48,10 @@ describe("PaymentRailChoice", () => {
 
     render(<RailHarness />);
 
-    expect(screen.getByTestId("payment-rail-mtn")).toHaveAttribute("data-selected", "true");
+    expect(screen.getByTestId("payment-rail-mtn")).toHaveAttribute(
+      "data-selected",
+      "true",
+    );
     await user.click(screen.getByLabelText("Airtel Money"));
     expect(screen.getByTestId("selected-rail")).toHaveTextContent("airtel");
   });
