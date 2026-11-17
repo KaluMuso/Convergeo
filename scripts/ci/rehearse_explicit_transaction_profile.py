@@ -210,6 +210,8 @@ def failure_marker(tracker: StageTracker, exc: Exception) -> str:
     stage = tracker.current if tracker.current in STAGES else "entry"
     if isinstance(exc, RehearsalError):
         code = exc.code
+        if code == "GUARD_REJECTED":
+            print(f"DEBUG_GUARD_REASON|{exc.args[0] if exc.args else ''}", file=sys.stderr, flush=True)
     elif isinstance(exc, BoundaryError):
         code = "BOUNDARY_REJECTED"
     elif isinstance(exc, OSError) and tracker.current in {
@@ -991,6 +993,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             for index in range(first_index, len(files)):
                 tracker.enter("suffix_replay")
                 path = files[index]
+                print(f"DEBUG_SUFFIX_FILE|{index}|{path.name}", file=sys.stderr, flush=True)
                 before = ledger(container)
                 if [row[0] for row in before] != [
                     prior.stem.split("_", 1)[0] for prior in files[:index]
