@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 VENDOR_PLANS_FLAG: Final = "vendor_plans"
 SHARED_CANONICAL_PHOTOS_FLAG: Final = "shared_canonical_photos"
 HARD_MAX_IMAGES_PER_LISTING: Final = 8
+TRIAL_PLAN_KEY: Final = "business"
 
 PLAN_COLUMNS: Final = (
     "key, name, price_ngwee, max_listings, max_images_per_listing, featured_slots, "
@@ -192,6 +193,14 @@ def compose_effective_plan(
     )
 
 
+def vendor_in_trial(client: Any, vendor_id: str, *, now: datetime | None = None) -> bool:
+    """True while the shop's business trial is running. Unreadable -> no trial."""
+    from app.services.vendor_plans.trial import load_vendor_trial_end  # no import cycle
+
+    end = load_vendor_trial_end(client, vendor_id)
+    return end is not None and end > (now or datetime.now(UTC))
+
+
 def resolve_plan_for_vendor(client: Any, vendor_id: str) -> EffectivePlan | None:
     """Resolve ignoring the flag (admin views). ``None`` if no plan can be found."""
     plans = {plan.key: plan for plan in list_plans(client)}
@@ -201,6 +210,11 @@ def resolve_plan_for_vendor(client: Any, vendor_id: str) -> EffectivePlan | None
         plan = plans.get(str(assignment.get("plan_key")))
     if plan is None:
         plan = next((candidate for candidate in plans.values() if candidate.is_default), None)
+    # Pilot trial: Business entitlements while trial_ends_at > now. The stored
+    # assignment is untouched; the seller falls back to it when the trial ends.
+    trial_plan = plans.get(TRIAL_PLAN_KEY)
+    if trial_plan is not None and vendor_in_trial(client, vendor_id):
+        plan = trial_plan
     if plan is None:
         return None
     return compose_effective_plan(plan, load_override(client, vendor_id))

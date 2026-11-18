@@ -33,6 +33,8 @@ AI_DAILY_QUOTA_BOUNDS: dict[str, tuple[int, int]] = {
     "ai_premium_daily_quota": (1, 5000),
     # Multi-branch anti-duplication: min metres between sibling branches.
     "branch_min_sibling_distance_m": (10, 5000),
+    # Annual prepay discount on vendor plans, percent.
+    "plan_annual_discount_pct": (0, 90),
 }
 
 NGWEE_PLATFORM_KEYS = frozenset({"cod_cap_ngwee", "free_delivery_threshold_ngwee"})

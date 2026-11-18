@@ -24,6 +24,7 @@ const CORE_VISIBLE: VendorNavItemKey[] = [
   "profile",
   "disputes",
   "settings",
+  "extras",
 ];
 
 function coreCapabilities(): VendorNavCapabilities {
@@ -47,6 +48,7 @@ function coreCapabilities(): VendorNavCapabilities {
     coupons: false,
     settings: true,
     offers: false,
+    extras: true,
   };
 }
 

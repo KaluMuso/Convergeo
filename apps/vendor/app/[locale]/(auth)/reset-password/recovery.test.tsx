@@ -50,6 +50,7 @@ const capabilities = {
   settings: true,
   offers: false,
   coupons: false,
+  extras: false,
 };
 
 const mocks = vi.hoisted(() => ({

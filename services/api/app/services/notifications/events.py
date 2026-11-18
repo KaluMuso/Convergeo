@@ -39,27 +39,30 @@ EVENT_REGISTRY: dict[str, NotificationMapping | None] = {
     "order_ready_pickup": NotificationMapping("order_ready_pickup", Audience.CUSTOMER),
     "order_shipped": NotificationMapping("order_shipped", Audience.CUSTOMER),
     "order_delivered": NotificationMapping("order_delivered", Audience.CUSTOMER),
-    "order_completed": None,  # terminal-success is silent (already delivered)
-    "order_cancelled": None,  # cancellation template not built yet
+    "order_completed": NotificationMapping("order_completed", Audience.CUSTOMER),
+    "order_cancelled": NotificationMapping("order_cancelled", Audience.CUSTOMER),
     # --- Payments -------------------------------------------------------
     "payment_received": NotificationMapping("payment_received", Audience.CUSTOMER),
-    "payment_failed": None,  # payment-failed template not built yet
-    "payout_sent": None,  # vendor payout template not built yet
-    "payout_failed": None,  # vendor payout template not built yet
+    "payment_failed": NotificationMapping("payment_failed", Audience.CUSTOMER),
+    "payout_sent": NotificationMapping("payout_sent", Audience.VENDOR),
+    "payout_failed": NotificationMapping("payout_failed", Audience.VENDOR),
     # --- KYC ------------------------------------------------------------
     "kyc_approved": None,  # email-only path handled elsewhere; no WA template
     "kyc_rejected": None,  # email-only path handled elsewhere; no WA template
     # --- Disputes -------------------------------------------------------
-    "dispute_opened": None,  # dispute templates not built yet
-    "dispute_resolved": None,  # dispute templates not built yet
+    # Vendor is told a dispute was opened on their order; the customer who opened it
+    # already sees the in-app confirmation.
+    "dispute_opened": NotificationMapping("dispute_opened", Audience.VENDOR),
+    "dispute_resolved": NotificationMapping("dispute_resolved", Audience.CUSTOMER),
     # --- Events / ticketing --------------------------------------------
     "event_cancelled": NotificationMapping("event_cancelled", Audience.CUSTOMER),
     "event_schedule_changed": NotificationMapping("event_schedule_changed", Audience.CUSTOMER),
-    "ticket_issued": None,  # ticket templates not built yet
+    "ticket_issued": NotificationMapping("ticket_issued", Audience.CUSTOMER),
     "ticket_transferred": None,  # ticket templates not built yet
     # --- Services / RFQ -------------------------------------------------
-    "quote_received": None,  # quote templates not built yet
-    "quote_accepted": None,  # quote templates not built yet
+    # Reuses the already-approved RFQ templates (no new Meta submission needed).
+    "quote_received": NotificationMapping("rfq_quoted", Audience.CUSTOMER),
+    "quote_accepted": NotificationMapping("service_quote_accepted", Audience.VENDOR),
 }
 
 

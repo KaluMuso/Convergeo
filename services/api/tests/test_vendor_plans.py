@@ -22,7 +22,13 @@ from app.main import create_app
 from app.routers import admin_vendor_plans, vendor_plan
 from app.routers.products import ProductImageResponse, _merge_canonical_gallery
 from app.services.kyc import caps
-from app.services.kyc.caps import VendorCapLimits, VendorQuota, enforce_listing_cap
+from app.services.kyc.caps import (
+    VendorCapLimits,
+    VendorQuota,
+    enforce_listing_cap,
+    enforce_publish_limit,
+    is_plan_limit_db_error,
+)
 from app.services.vendor_plans import canonical_photos
 from app.services.vendor_plans.billing import SubscriptionCharge, get_subscription_gateway
 from app.services.vendor_plans.canonical_photos import (
@@ -323,7 +329,14 @@ def test_live_override_wins_and_expired_override_is_ignored() -> None:
 # ---------------------------------------------------------------------------
 # Cap integration (caps.py) — effective = min(KYC, plan)
 # ---------------------------------------------------------------------------
-def _limits(monkeypatch: pytest.MonkeyPatch, db: FakeDb, *, kyc_cap: int, listings: int) -> Any:
+def _limits(
+    monkeypatch: pytest.MonkeyPatch,
+    db: FakeDb,
+    *,
+    kyc_cap: int,
+    listings: int,
+    active: int | None = None,
+) -> Any:
     monkeypatch.setattr(caps, "resolve_vendor_eligibility", lambda *_a, **_k: object())
     monkeypatch.setattr(caps, "cap_tier_for_quotas", lambda _e: 1)
     monkeypatch.setattr(
@@ -332,21 +345,66 @@ def _limits(monkeypatch: pytest.MonkeyPatch, db: FakeDb, *, kyc_cap: int, listin
         lambda _c, tier: VendorQuota(tier, kyc_cap, None, None, {}),
     )
     monkeypatch.setattr(caps, "_parse_config_int", lambda *_a: 50_000)
-    monkeypatch.setattr(caps, "_count_vendor_listings", lambda *_a: listings)
+    monkeypatch.setattr(
+        caps,
+        "_count_vendor_listings",
+        lambda *_a, statuses=caps.LISTING_COUNT_STATUSES: (
+            listings if statuses == caps.LISTING_COUNT_STATUSES else (
+                listings if active is None else active
+            )
+        ),
+    )
     monkeypatch.setattr(caps, "_count_vendor_orders", lambda *_a: 0)
     return caps.load_vendor_cap_limits_by_id(FakeService(db), VENDOR_A, vendor_row={"id": VENDOR_A})
 
 
-def test_plan_cap_binds_below_kyc_cap_with_upgrade_prompt(monkeypatch: pytest.MonkeyPatch) -> None:
-    limits = _limits(monkeypatch, make_db(), kyc_cap=30, listings=25)
-    assert limits.quota.max_listings == 25
-    assert limits.kyc_max_listings == 30 and limits.limited_by_plan
+def test_plan_limit_binds_on_publish_with_upgrade_prompt(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Free plan here is 25 (the fake catalogue): 25 active listings = at the limit.
+    limits = _limits(monkeypatch, make_db(), kyc_cap=30, listings=25, active=25)
+    assert limits.quota.max_listings == 30  # admission stays the KYC trust cap
+    assert limits.plan_max_active == 25 and limits.limited_by_plan
+    enforce_listing_cap(limits)  # a draft is still allowed
     with pytest.raises(AppError) as excinfo:
-        enforce_listing_cap(limits)
+        enforce_publish_limit(limits)
     details = excinfo.value.details or {}
-    assert excinfo.value.code == "listing_cap_exceeded"
-    assert details["message_key"] == "vendor.plans.limitReached"
+    assert excinfo.value.code == "listing_plan_limit_reached"
+    assert excinfo.value.http_status == 403
+    assert details["message_key"] == "vendor.plans.publishLimitReached"
+    assert details["max_listings"] == 25 and details["current_listings"] == 25
     assert details["upgrade_available"] is True and details["plan_key"] == "free"
+
+
+def test_plan_limit_boundary_one_below_allows_publish(monkeypatch: pytest.MonkeyPatch) -> None:
+    limits = _limits(monkeypatch, make_db(), kyc_cap=30, listings=29, active=24)
+    enforce_publish_limit(limits)  # 24 < 25: the 25th listing may go live
+
+
+def test_drafts_never_count_toward_plan_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 28 listings in total, only 3 active: plenty of room on a 25-active plan.
+    limits = _limits(monkeypatch, make_db(), kyc_cap=30, listings=28, active=3)
+    enforce_listing_cap(limits)
+    enforce_publish_limit(limits)
+
+
+def test_unlimited_plan_never_blocks_publish(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = make_db()
+    db.tables["vendor_plan_assignments"] = [{"vendor_id": VENDOR_A, "plan_key": "pro"}]
+    limits = _limits(monkeypatch, db, kyc_cap=30, listings=29, active=29)
+    assert limits.plan_max_active is None
+    enforce_publish_limit(limits)
+
+
+def test_plan_limit_db_error_detection() -> None:
+    class Exc(Exception):
+        code = "PT403"
+        message = "listing_plan_limit_reached"
+
+    class Other(Exception):
+        code = "PT403"
+        message = "listing_cap_exceeded"
+
+    assert is_plan_limit_db_error(Exc())
+    assert not is_plan_limit_db_error(Other())
 
 
 def test_kyc_cap_still_binds_for_bigger_plans(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -360,9 +418,10 @@ def test_kyc_cap_still_binds_for_bigger_plans(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_flag_off_keeps_pre_plan_behaviour(monkeypatch: pytest.MonkeyPatch) -> None:
-    limits = _limits(monkeypatch, make_db(plans_on=False), kyc_cap=30, listings=29)
+    limits = _limits(monkeypatch, make_db(plans_on=False), kyc_cap=30, listings=29, active=29)
     assert limits.quota.max_listings == 30 and limits.plan is None
     enforce_listing_cap(limits)  # 29 < 30: no error
+    enforce_publish_limit(limits)  # flag off: no plan limit
 
 
 def test_enforce_listing_cap_allows_below_limit() -> None:
@@ -400,10 +459,11 @@ def test_vendor_plan_at_limit_offers_upgrades(
             kyc_tier=1,
             quota=VendorQuota(1, 25, None, None, {}),
             cod_cap_ngwee=50_000,
-            listing_count=27,  # e.g. after a downgrade: nothing is removed
+            listing_count=29,
             order_count=0,
             kyc_max_listings=30,
             plan=plan,
+            active_listing_count=27,  # e.g. after a downgrade: nothing is removed
         )
 
     monkeypatch.setattr(vendor_plan, "load_vendor_cap_limits_by_id", fake_limits)
@@ -415,6 +475,10 @@ def test_vendor_plan_at_limit_offers_upgrades(
     assert body["at_limit"] and body["over_limit"] and body["remaining_listings"] == 0
     assert body["limited_by"] == "plan"
     assert [p["key"] for p in body["upgrade_options"]] == ["starter", "business", "pro"]
+    # Plan picker: every active plan with its annual price (default 15% off).
+    assert body["annual_discount_pct"] == 15
+    starter = next(p for p in body["plans"] if p["key"] == "starter")
+    assert starter["annual_price_ngwee"] == (starter["price_ngwee"] * 12 * 85) // 100
 
 
 def test_vendor_plan_requires_vendor_role(harness: Harness) -> None:

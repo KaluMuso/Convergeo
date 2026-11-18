@@ -704,6 +704,14 @@ def apply_payment_status(
         actor_id=actor_id,
         note=note,
     )
+    if outcome is not None and incoming_status == PaymentStatus.FAILED:
+        # Committed failure: tell the customer (best-effort; dedupe per payment).
+        try:
+            from app.services.notifications.lifecycle import notify_payment_failed
+
+            notify_payment_failed(payment_id, client=service_client.client)
+        except Exception:
+            return outcome
     return outcome
 
 

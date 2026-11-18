@@ -53,7 +53,9 @@
     "auditLog": "Audit log",
     "offers": "Offers",
     "coupons": "Coupons",
-    "branches": "Branch verification"
+    "branches": "Branch verification",
+    "extras": "Extras requests",
+    "trials": "Free trials"
   },
   "hubs": {
     "moderation": {
@@ -216,7 +218,8 @@
       "advanceMinEvents": "Pre-event advance: minimum successful past events",
       "advanceRepaymentDays": "Pre-event advance: repayment window (days)",
       "dangerousHint": "COD cap changes affect new checkout eligibility only.",
-      "branchMinDistance": "Min. distance between branches (m)"
+      "branchMinDistance": "Min. distance between branches (m)",
+      "planAnnualDiscount": "Annual plan prepay discount (%)"
     },
     "flags": {
       "title": "Feature flags",
@@ -2630,6 +2633,95 @@
       "invalidTransition": "This branch is not ready for that decision.",
       "permission": "You do not have permission for this action.",
       "saveFailed": "Could not save the decision. Try again."
+    }
+  },
+  "plans": {
+    "publishLimit": "The shop is at its plan's live-listing limit; the listing stays a draft."
+  },
+  "extras": {
+    "title": "Extras requests",
+    "subtitle": "Quote, approve and fulfil sellers' paid extras. No money is collected here. Every action is audited.",
+    "status": {
+      "requested": "Requested",
+      "quoted": "Quoted",
+      "approved": "Approved",
+      "fulfilled": "Fulfilled",
+      "cancelled": "Cancelled"
+    },
+    "actions": {
+      "quoted": "Send quote",
+      "approved": "Approve",
+      "fulfilled": "Mark fulfilled",
+      "cancelled": "Cancel"
+    },
+    "queue": {
+      "filter": "Status",
+      "catalogueLink": "Edit catalogue",
+      "loading": "Loading…",
+      "error": "Could not load.",
+      "permissionDenied": "You do not have access to extras.",
+      "retry": "Retry",
+      "empty": "No requests here.",
+      "quoted": "quote {price}",
+      "quantity": "Qty {count}",
+      "vendorNote": "Seller: {note}",
+      "quoteLabel": "Quote (K)",
+      "noteLabel": "Note to seller"
+    },
+    "errors": {
+      "quoteRequired": "Enter a valid quote in kwacha.",
+      "quoteUnexpected": "A price is only sent with a quote.",
+      "actionFailed": "Action failed. Refresh and try again.",
+      "priceShape": "Check the price: fixed needs a price, a range needs a higher maximum.",
+      "duplicateKey": "That key already exists."
+    },
+    "pricing": {
+      "fixed": "Fixed",
+      "range": "Range",
+      "pay_as_you_go": "Pay as you go"
+    },
+    "unit": {
+      "one_off": "One-off",
+      "per_month": "Per month",
+      "per_item": "Per item"
+    },
+    "catalogue": {
+      "title": "Extras catalogue",
+      "subtitle": "Names, descriptions and prices sellers see. Changes are audited.",
+      "name": "Name",
+      "description": "Description",
+      "pricing": "Pricing",
+      "price": "Price / from (K)",
+      "priceMax": "Max (K, range only)",
+      "unit": "Unit",
+      "active": "Shown to sellers",
+      "save": "Save",
+      "saved": "Saved.",
+      "placeholder": "Starter price, please review",
+      "current": "Now {price}"
+    }
+  },
+  "trials": {
+    "title": "Free trials",
+    "subtitle": "Every seller gets 1 month of the Business plan free (no plan fee). Extend or end a trial; each change is audited.",
+    "search": "Business name",
+    "searchAction": "Search",
+    "loading": "Loading…",
+    "error": "Could not load trials.",
+    "permissionDenied": "Only admins can manage trials.",
+    "retry": "Retry",
+    "empty": "No businesses found.",
+    "endsOn": "Free until {date}",
+    "endedOn": "Trial ended {date}",
+    "newEnd": "New end date",
+    "reason": "Reason",
+    "extend": "Extend",
+    "end": "End now",
+    "errors": {
+      "input": "Pick a later date and give a reason.",
+      "failed": "Could not change the trial.",
+      "notLater": "The new end must be later than the current one.",
+      "alreadyEnded": "This trial has already ended."
     }
   }
 }

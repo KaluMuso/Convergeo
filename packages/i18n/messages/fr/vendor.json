@@ -634,7 +634,8 @@
         "invalidEncoding": "Enregistrez le CSV avec l’encodage UTF-8.",
         "canonicalRequired": "Sélectionnez un produit du catalogue avant d’importer cette nouvelle référence.",
         "databaseFailure": "Cette ligne n’a pas pu être enregistrée. Réessayez ou contactez l’assistance.",
-        "unknownError": "Cette ligne doit être vérifiée. Contrôlez les champs CSV et réessayez."
+        "unknownError": "Cette ligne doit être vérifiée. Contrôlez les champs CSV et réessayez.",
+        "planLimit": "La limite d'annonces en ligne de votre forfait est atteinte. Importez cette ligne en brouillon ou passez à un forfait supérieur."
       }
     },
     "manage": {
@@ -2267,7 +2268,8 @@
       "profile": "Profil",
       "settings": "Paramètres",
       "offers": "Offres",
-      "coupons": "Coupons"
+      "coupons": "Coupons",
+      "extras": "Options"
     }
   },
   "intake": {
@@ -2547,7 +2549,22 @@
     "limitReachedShort": "Vous avez atteint votre limite d'annonces. Vos annonces existantes restent en ligne ; consultez votre formule ci-dessus pour évoluer.",
     "limitReached": "Vous avez atteint la limite d'annonces de votre formule. Vos annonces restent en ligne ; passez à une formule supérieure pour en ajouter.",
     "photoLimitReached": "Votre formule autorise {max} photos par annonce. Passez à une formule supérieure pour en ajouter.",
-    "billingUnavailable": "Le paiement des formules n'est pas encore disponible. Notre équipe vous aidera à changer de formule."
+    "billingUnavailable": "Le paiement des formules n'est pas encore disponible. Notre équipe vous aidera à changer de formule.",
+    "usageActive": "{count} sur {max} annonces en ligne",
+    "publishLimitReached": "Votre forfait permet {max} annonces en ligne. Enregistrez celle-ci en brouillon ou passez à un forfait supérieur pour publier davantage. Rien de ce qui est déjà en ligne n'est retiré.",
+    "trialNoCharge": "Aucun frais de forfait pendant votre essai gratuit.",
+    "picker": {
+      "title": "Forfaits",
+      "intro": "Comparez les forfaits. Les prix sont par boutique. Les brouillons ne comptent jamais dans votre limite d'annonces.",
+      "loading": "Chargement des forfaits…",
+      "unavailable": "Les forfaits ne sont pas encore disponibles.",
+      "annualNote": "Payez un an d'avance et économisez {pct} %.",
+      "perYear": "ou {price}/an (−{pct} %)",
+      "current": "Votre forfait",
+      "listings": "Jusqu'à {max} annonces en ligne",
+      "listingsUnlimited": "Annonces en ligne illimitées",
+      "seeExtras": "Voir les options payantes"
+    }
   },
   "branches": {
     "title": "Mes entreprises et boutiques",
@@ -2682,6 +2699,60 @@
       "network": "Pas de connexion. Vérifiez vos données et réessayez.",
       "locationDenied": "Impossible de lire votre position. Saisissez-la manuellement.",
       "generic": "Une erreur est survenue. Veuillez réessayer."
+    },
+    "shops": {
+      "heading": "{count, plural, one {Votre boutique} other {Vos # boutiques}}",
+      "otherBranchesLive": "Les clients voient vos autres boutiques en ligne dans « Autres succursales » sur chaque page boutique, avec adresse, horaires, téléphone et lien de carte.",
+      "otherBranchesHint": "Dès que vous avez plusieurs boutiques en ligne, chaque page boutique affiche les autres dans « Autres succursales ».",
+      "viewShop": "Voir la page boutique",
+      "notListedYet": "Pas encore visible par les clients."
+    }
+  },
+  "trial": {
+    "banner": "Forfait Business gratuit jusqu'au {date}",
+    "detail": "Aucun frais de forfait pendant votre essai."
+  },
+  "extras": {
+    "title": "Options payantes",
+    "intro": "Des services payants pour faire grandir votre boutique. Faites une demande et notre équipe vous répondra.",
+    "loading": "Chargement des options…",
+    "noPayment": "Rien n'est facturé ici. Une demande prévient notre équipe, qui vous confirmera d'abord le prix.",
+    "requested": "C'est fait. Nous vous recontacterons.",
+    "indicativePrice": "Prix indicatif ; notre équipe confirme le prix final.",
+    "teamNote": "Note de notre équipe : {note}",
+    "unit": {
+      "one_off": "paiement unique",
+      "per_month": "par mois",
+      "per_item": "par unité"
+    },
+    "price": {
+      "fixed": "{price} {unit}",
+      "range": "{min} – {max} {unit}",
+      "paygFrom": "Paiement à l'usage, à partir de {price} {unit}",
+      "payg": "Paiement à l'usage",
+      "onRequest": "Prix sur demande"
+    },
+    "status": {
+      "requested": "Demandé. Notre équipe vous répondra bientôt.",
+      "quoted": "Notre équipe vous a envoyé un devis.",
+      "quotedWithPrice": "Devis : {price}. Acceptez pour continuer.",
+      "approved": "Approuvé. Nous nous en occupons.",
+      "fulfilled": "Terminé.",
+      "cancelled": "Annulé."
+    },
+    "actions": {
+      "request": "Demander",
+      "accept": "Accepter le devis",
+      "cancel": "Annuler la demande",
+      "working": "En cours…"
+    },
+    "errors": {
+      "load": "Impossible de charger les options. Réessayez plus tard.",
+      "alreadyRequested": "Vous avez déjà une demande en cours pour ceci.",
+      "rateLimited": "Trop de demandes. Patientez un instant.",
+      "notFound": "Cette option n'est plus disponible.",
+      "invalidTransition": "Cette demande ne peut pas être modifiée maintenant.",
+      "generic": "Une erreur s'est produite. Réessayez."
     }
   }
 }

@@ -3279,6 +3279,21 @@ EXPECTATIONS: TableExpectations = {
             "door_payment_exceptions",
         )
     },
+    # Convergeo Points (20261117010100): SELECT own rows only (RLS); no client
+    # INSERT/UPDATE/DELETE grant — writes only via private.points_* definers.
+    "points_ledger": {
+        Persona.ANON: deny_all(),
+        **{
+            persona: {"select": "permit", "insert": "deny", "update": "deny", "delete": "deny"}
+            for persona in (
+                Persona.CUSTOMER,
+                Persona.OTHER_CUSTOMER,
+                Persona.VENDOR,
+                Persona.OTHER_VENDOR,
+                Persona.ADMIN,
+            )
+        },
+    },
     # W8 bundles & offers (20261115120000). Public SELECT of live offers; the
     # owner vendor holds ALL policies and admins a SELECT policy (D1: no admin
     # writes). Non-owners and admins match zero rows on the WHERE-false
@@ -3425,6 +3440,29 @@ EXPECTATIONS: TableExpectations = {
             "vendor_branch_events",
             "vendor_branch_flags",
             "vendor_business_staff",
+        )
+    },
+    # Paid extras (20261117020000): active catalogue readable by signed-in users;
+    # owners read their OWN shops' requests/history (isolation in
+    # test_plan_limits_extras_rls.py). Writes are API-only; anon: no grant.
+    **{
+        table: {
+            Persona.ANON: deny_all(),
+            **{
+                persona: select_only()
+                for persona in (
+                    Persona.CUSTOMER,
+                    Persona.OTHER_CUSTOMER,
+                    Persona.VENDOR,
+                    Persona.OTHER_VENDOR,
+                    Persona.ADMIN,
+                )
+            },
+        }
+        for table in (
+            "vendor_extras",
+            "vendor_extras_requests",
+            "vendor_extras_request_events",
         )
     },
     # 20261115140200: append-only consent log. Owners read their own rows; the API

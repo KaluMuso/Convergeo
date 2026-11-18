@@ -129,7 +129,15 @@
     "otherBranches": "其他分店",
     "otherBranchesAria": "{name} 的其他分店",
     "partOfBusiness": "隶属于 {name}",
-    "branchWithLandmark": "{name} · {landmark}"
+    "branchWithLandmark": "{name} · {landmark}",
+    "branchOpenNow": "营业中",
+    "branchClosedNow": "已打烊",
+    "branchHours": "营业时间",
+    "branchPhone": "电话：",
+    "branchMap": "地图",
+    "branchVisit": "访问 {name}",
+    "branchKmAway": "距离 {km} 公里",
+    "branchMetresAway": "距离 {m} 米"
   },
   "listings": {
     "vendor": "由 {vendor} 销售",

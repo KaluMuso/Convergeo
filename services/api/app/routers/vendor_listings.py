@@ -19,7 +19,13 @@ from app.schemas.vendor_listing import (
     VendorListing,
 )
 from app.services.branches.context import scope_owner_vendor_query
-from app.services.kyc.caps import VendorCapLimits, require_listing_cap
+from app.services.kyc.caps import (
+    VendorCapLimits,
+    enforce_publish_limit,
+    is_plan_limit_db_error,
+    plan_limit_error,
+    require_listing_cap,
+)
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.listings.field_errors import (
     ListingIntent,
@@ -504,10 +510,13 @@ async def get_canonical_preview(
 async def create_listing(
     body: ListingCreateRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
-    _limits: Annotated[VendorCapLimits, Depends(require_listing_cap)],
+    limits: Annotated[VendorCapLimits, Depends(require_listing_cap)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ListingCreateResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
+    if _resolve_listing_status(body.mode, body.publish) == "active":
+        # Publishing counts against the plan's active-listing limit; a draft never does.
+        enforce_publish_limit(limits)
     return create_listing_for_vendor(service_client, vendor=vendor, body=body)
 
 
@@ -751,6 +760,8 @@ def create_listing_for_vendor(
             # solely for the canonical-locked insert. Never fall back on RPC failure.
             created_listing = insert_listing(listing_payload)
     except Exception as exc:
+        if is_plan_limit_db_error(exc):
+            raise plan_limit_error(max_listings=None, active_listings=None, plan_key=None) from exc
         if (
             getattr(exc, "code", None) == "PT403"
             and getattr(exc, "message", None) == "listing_cap_exceeded"
