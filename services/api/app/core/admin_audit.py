@@ -54,13 +54,23 @@ class AdminAuditRecorder:
             )
 
         normalized_entity_id = _normalize_entity_id(entity_id)
+        before_row = dict(before) if before is not None else None
+        after_row = dict(after) if after is not None else None
+        # audit_log.entity_id is a uuid column. Text keys (feature flag names,
+        # config keys) go into before/after as `entity_key` instead, so the
+        # insert succeeds and the record still names what changed.
+        if normalized_entity_id is not None and not _is_uuid(normalized_entity_id):
+            entity_key = normalized_entity_id
+            normalized_entity_id = None
+            before_row = {**(before_row or {}), "entity_key": entity_key}
+            after_row = {**(after_row or {}), "entity_key": entity_key}
         row: dict[str, Any] = {
             "actor": self._actor_id,
             "action": action,
             "entity_type": entity_type,
             "entity_id": normalized_entity_id,
-            "before": dict(before) if before is not None else None,
-            "after": dict(after) if after is not None else None,
+            "before": before_row,
+            "after": after_row,
         }
         # S5 enrichment: role at time of action, request correlation, operator reason.
         # `outcome` is left to the column default ('success').
@@ -91,6 +101,14 @@ def _normalize_entity_id(entity_id: str | UUID | None) -> str | None:
         return str(entity_id)
     value = entity_id.strip()
     return value or None
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        UUID(value)
+    except ValueError:
+        return False
+    return True
 
 
 async def get_admin_audit_recorder(
