@@ -74,6 +74,13 @@ describe("useLocalWishlist", () => {
     expect(list.result.current.slugs).not.toContain("itel-a70");
   });
 
+  it("keeps the slugs array identity stable across re-renders (no render loop)", () => {
+    const list = renderHook(() => useLocalWishlistSlugs());
+    const first = list.result.current.slugs;
+    list.rerender();
+    expect(list.result.current.slugs).toBe(first);
+  });
+
   it("migrates legacy v1 slug arrays", () => {
     window.localStorage.setItem(
       "vergeo5:wishlist:v1",
