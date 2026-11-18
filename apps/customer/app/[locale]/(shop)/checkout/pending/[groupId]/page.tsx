@@ -65,6 +65,7 @@ function buildPendingLabels(
       step2Body: t("checkout.pending.cod.step2Body"),
       step3Title: t("checkout.pending.cod.step3Title"),
       step3Body: t.raw("checkout.pending.cod.step3Body") as string,
+      trustLine: createTranslator({ locale, messages, namespace: "codTrust" })("line"),
       helpTitle: t("checkout.pending.cod.helpTitle"),
       helpBody: t("checkout.pending.cod.helpBody"),
       contactCta: t("checkout.pending.cod.contactCta"),

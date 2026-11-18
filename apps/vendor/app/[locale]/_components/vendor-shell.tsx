@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { isVendorAuthSetupPath } from "../../../lib/password-recovery-path";
 
 import { BusinessSwitcher } from "./business-switcher";
+import { TrialBanner } from "./trial-banner";
 import { VendorNav } from "./vendor-nav";
 import { VendorNotificationBell } from "./vendor-notification-bell";
 
@@ -73,6 +74,7 @@ export function VendorShell({ locale, capabilities, children }: VendorShellProps
           />
         </div>
       </header>
+      <TrialBanner />
 
       <div className="flex min-h-0 flex-1">
         <VendorNav locale={locale} capabilities={capabilities} />

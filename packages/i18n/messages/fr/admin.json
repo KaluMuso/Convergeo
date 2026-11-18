@@ -34,7 +34,9 @@
     "auditLog": "Journal d'audit",
     "offers": "Offres",
     "coupons": "Coupons",
-    "branches": "Vérification des succursales"
+    "branches": "Vérification des succursales",
+    "extras": "Demandes d'options",
+    "trials": "Essais gratuits"
   },
   "hubs": {
     "moderation": {
@@ -194,7 +196,8 @@
       "advanceMinEvents": "Avance avant l'événement : nombre minimum d'événements réussis",
       "advanceRepaymentDays": "Avance avant l'événement : délai de remboursement (jours)",
       "dangerousHint": "Les modifications du plafond COD n'affectent l'éligibilité que pour les nouvelles commandes.",
-      "branchMinDistance": "Distance min. entre succursales (m)"
+      "branchMinDistance": "Distance min. entre succursales (m)",
+      "planAnnualDiscount": "Remise prépaiement annuel des forfaits (%)"
     },
     "flags": {
       "title": "Fonctionnalités (drapeaux)",
@@ -1765,6 +1768,95 @@
       "invalidTransition": "Cette succursale n'est pas prête pour cette décision.",
       "permission": "Vous n'avez pas l'autorisation pour cette action.",
       "saveFailed": "Impossible d'enregistrer la décision. Réessayez."
+    }
+  },
+  "plans": {
+    "publishLimit": "La boutique a atteint la limite d'annonces en ligne de son forfait ; l'annonce reste en brouillon."
+  },
+  "extras": {
+    "title": "Demandes d'options",
+    "subtitle": "Chiffrez, approuvez et livrez les options payantes des vendeurs. Aucun paiement n'est encaissé ici. Chaque action est auditée.",
+    "status": {
+      "requested": "Demandé",
+      "quoted": "Chiffré",
+      "approved": "Approuvé",
+      "fulfilled": "Livré",
+      "cancelled": "Annulé"
+    },
+    "actions": {
+      "quoted": "Envoyer le devis",
+      "approved": "Approuver",
+      "fulfilled": "Marquer comme livré",
+      "cancelled": "Annuler"
+    },
+    "queue": {
+      "filter": "Statut",
+      "catalogueLink": "Modifier le catalogue",
+      "loading": "Chargement…",
+      "error": "Chargement impossible.",
+      "permissionDenied": "Vous n'avez pas accès aux options.",
+      "retry": "Réessayer",
+      "empty": "Aucune demande ici.",
+      "quoted": "devis {price}",
+      "quantity": "Qté {count}",
+      "vendorNote": "Vendeur : {note}",
+      "quoteLabel": "Devis (K)",
+      "noteLabel": "Note au vendeur"
+    },
+    "errors": {
+      "quoteRequired": "Saisissez un devis valide en kwacha.",
+      "quoteUnexpected": "Un prix n'est envoyé qu'avec un devis.",
+      "actionFailed": "Échec de l'action. Actualisez et réessayez.",
+      "priceShape": "Vérifiez le prix : un prix fixe exige un montant, une fourchette exige un maximum plus élevé.",
+      "duplicateKey": "Cette clé existe déjà."
+    },
+    "pricing": {
+      "fixed": "Fixe",
+      "range": "Fourchette",
+      "pay_as_you_go": "À l'usage"
+    },
+    "unit": {
+      "one_off": "Paiement unique",
+      "per_month": "Par mois",
+      "per_item": "Par unité"
+    },
+    "catalogue": {
+      "title": "Catalogue des options",
+      "subtitle": "Noms, descriptions et prix vus par les vendeurs. Les modifications sont auditées.",
+      "name": "Nom",
+      "description": "Description",
+      "pricing": "Tarification",
+      "price": "Prix / à partir de (K)",
+      "priceMax": "Max (K, fourchette)",
+      "unit": "Unité",
+      "active": "Visible par les vendeurs",
+      "save": "Enregistrer",
+      "saved": "Enregistré.",
+      "placeholder": "Prix de départ, à vérifier",
+      "current": "Actuel {price}"
+    }
+  },
+  "trials": {
+    "title": "Essais gratuits",
+    "subtitle": "Chaque vendeur bénéficie d'1 mois gratuit du forfait Business (sans frais de forfait). Prolongez ou terminez un essai ; chaque modification est auditée.",
+    "search": "Nom de l'entreprise",
+    "searchAction": "Rechercher",
+    "loading": "Chargement…",
+    "error": "Impossible de charger les essais.",
+    "permissionDenied": "Seuls les administrateurs gèrent les essais.",
+    "retry": "Réessayer",
+    "empty": "Aucune entreprise trouvée.",
+    "endsOn": "Gratuit jusqu'au {date}",
+    "endedOn": "Essai terminé le {date}",
+    "newEnd": "Nouvelle date de fin",
+    "reason": "Motif",
+    "extend": "Prolonger",
+    "end": "Terminer",
+    "errors": {
+      "input": "Choisissez une date ultérieure et indiquez un motif.",
+      "failed": "Impossible de modifier l'essai.",
+      "notLater": "La nouvelle fin doit être postérieure à l'actuelle.",
+      "alreadyEnded": "Cet essai est déjà terminé."
     }
   }
 }

@@ -102,6 +102,10 @@ def _plan_a(plan: str) -> str:
 INSERT INTO public.vendor_plan_assignments (vendor_id, plan_key)
   VALUES ('{VENDOR_A}', '{plan}')
   ON CONFLICT (vendor_id) DO UPDATE SET plan_key = excluded.plan_key;
+-- 20261117020000: a running pilot trial grants Business entitlements; end it so the
+-- assigned plan is what these tests exercise.
+UPDATE public.vendor_businesses SET trial_ends_at = now() - interval '1 day'
+ WHERE id = '{VENDOR_A}';
 """
 
 

@@ -60,8 +60,13 @@ def emit_order_lifecycle(
     event: str,
     order_row: dict[str, Any],
     extra: dict[str, Any] | None = None,
+    entity_id: str | None = None,
 ) -> dict[str, Any] | None:
-    """Emit the notification for an order lifecycle event, or ``None`` if silent."""
+    """Emit the notification for an order lifecycle event, or ``None`` if silent.
+
+    ``entity_id`` overrides the dedupe entity (default: the order id) for events that
+    can legitimately repeat on one order, e.g. a second dispute.
+    """
     mapping = EVENT_REGISTRY.get(event)
     if mapping is None:
         # Silent (documented) event returns None; an unknown event raises
@@ -93,7 +98,7 @@ def emit_order_lifecycle(
     return emit_event(
         client,
         event=event,
-        entity_id=order_id,
+        entity_id=entity_id or order_id,
         recipient_id=recipient_id,
         payload=payload,
     )

@@ -19,7 +19,8 @@ export type VendorNavItemKey =
   | "intake"
   | "settings"
   | "offers"
-  | "coupons";
+  | "coupons"
+  | "extras";
 
 export type VendorNavGroupKey = "operate" | "sell" | "business";
 
@@ -86,6 +87,7 @@ export const VENDOR_NAV_GROUPS: VendorNavGroup[] = [
       { key: "disputes", href: "/disputes" },
       { key: "intake", href: "/intake" },
       { key: "settings", href: "/settings" },
+      { key: "extras", href: "/extras" },
     ],
   },
 ];

@@ -425,3 +425,75 @@ def test_web_push_flag_defaults_off(db: PgConn) -> None:
     result = db.run("SELECT enabled::text FROM public.feature_flags WHERE flag = 'web_push';")
     assert result.ok, result.error
     assert result.rows == ["false"]
+
+
+def test_never_silent_templates_write_in_app_rows(db: PgConn) -> None:
+    """E1/E4: cancelled/completed/payment_failed/payout/dispute_resolved/quote_accepted."""
+    rows = _tx(
+        db,
+        _outbox(
+            f"order_cancelled:{ORDER_PENDING}:whatsapp",
+            "order_cancelled",
+            f'{{"order_id":"{ORDER_PENDING}","recipient_id":"{CUSTOMER_A}"}}',
+        )
+        + _outbox(
+            f"order_completed:{ORDER_PENDING}:whatsapp",
+            "order_completed",
+            f'{{"order_id":"{ORDER_PENDING}","recipient_id":"{CUSTOMER_A}"}}',
+        )
+        + _outbox(
+            "payment_failed:group-1:whatsapp",
+            "payment_failed",
+            f'{{"recipient_id":"{CUSTOMER_A}","amount_ngwee":5000}}',
+        )
+        + _outbox(
+            "payout_sent:po-1:whatsapp",
+            "payout_sent",
+            f'{{"recipient_id":"{VENDOR_A_OWNER}","amount_ngwee":290000}}',
+        )
+        + _outbox(
+            "payout_failed:po-2:whatsapp",
+            "payout_failed",
+            f'{{"recipient_id":"{VENDOR_A_OWNER}"}}',
+        )
+        + _outbox(
+            f"dispute_resolved:{ORDER_PENDING}:whatsapp",
+            "dispute_resolved",
+            f'{{"order_id":"{ORDER_PENDING}","recipient_id":"{CUSTOMER_A}"}}',
+        )
+        + _outbox(
+            "service_quote_accepted:q-1:whatsapp",
+            "service_quote_accepted",
+            f'{{"recipient_id":"{VENDOR_A_OWNER}"}}',
+        )
+        + """
+        SELECT string_agg(audience || ':' || type, ',' ORDER BY audience, type)
+        FROM public.in_app_notifications
+        WHERE dedupe_key NOT LIKE 'seed:%';
+        """,
+    )
+    assert rows == [
+        "customer:dispute_resolved,customer:order_cancelled,customer:order_completed,"
+        "customer:payment_failed,vendor:payout_failed,vendor:payout_sent,vendor:quote_accepted"
+    ]
+
+
+def test_dispute_opened_and_ticket_issued_outbox_rows_do_not_duplicate_triggers(
+    db: PgConn,
+) -> None:
+    rows = _tx(
+        db,
+        _outbox(
+            "dispute_opened:d-1:whatsapp",
+            "dispute_opened",
+            f'{{"order_id":"{ORDER_PENDING}","recipient_id":"{VENDOR_A_OWNER}"}}',
+        )
+        + _outbox(
+            "ticket_issued:t-1:whatsapp",
+            "ticket_issued",
+            f'{{"recipient_id":"{CUSTOMER_A}"}}',
+        )
+        + "SELECT count(*) FROM public.in_app_notifications WHERE dedupe_key LIKE '%:d-1%' "
+        "OR dedupe_key LIKE '%:t-1%';",
+    )
+    assert rows == ["0"]

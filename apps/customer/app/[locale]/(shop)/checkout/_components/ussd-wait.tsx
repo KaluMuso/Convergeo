@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { resolveApiBaseUrl } from "../../../../../lib/api-base-url";
 import { useSession } from "../../../../../lib/customer-session";
+import { CodTrustLine } from "../../../_components/cod-trust-line";
 import { resolveMomoPollOutcome } from "../_lib/payment-outcome";
 
 import { NextSteps } from "./next-steps";
@@ -56,6 +57,8 @@ export type CodConfirmationLabels = {
   step2Body: string;
   step3Title: string;
   step3Body: string;
+  /** Shared COD trust line (i18n codTrust.line). */
+  trustLine?: string;
   helpTitle: string;
   helpBody: string;
   contactCta: string;
@@ -445,6 +448,9 @@ export function PendingPaymentShell({
         </div>
         {cod ? (
           <>
+            {cod.trustLine ? (
+              <CodTrustLine text={cod.trustLine} testId="payment-cod-trust" />
+            ) : null}
             <NextSteps
               heading={cod.nextTitle}
               headingId="payment-cod-next"

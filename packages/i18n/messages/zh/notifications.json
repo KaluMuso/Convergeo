@@ -42,6 +42,42 @@
     },
     "birthday_greeting": {
       "body": "Convergeo 祝您生日快乐！使用优惠码 {coupon_code}，满 {min_spend} 立减 {amount}，{valid_days} 天内有效。回复 STOP 退订。"
+    },
+    "points_earned": {
+      "body": "您获得了 {points} 积分，当前共有 {balance} 积分。达到 {threshold} 积分即可解锁奖励优惠券。"
+    },
+    "vendor_weekly_digest": {
+      "body": "{shop_name} 本周：{orders} 笔订单，销售额 {sales}。热销商品：{top_item}。新增 {new_followers} 位关注者。{pending_actions} 项待处理。下次结算：{next_payout}。"
+    },
+    "order_cancelled": {
+      "body": "您的 Convergeo 订单 {order_reference} 已取消。{refund_detail} 回复 STOP 即可退订。"
+    },
+    "payment_failed": {
+      "body": "您的 {amount} 付款未成功。如已被扣款，请联系客服，我们会处理。重试：{retry_url} 回复 STOP 即可退订。"
+    },
+    "order_completed": {
+      "body": "您的 Convergeo 订单 {order_reference} 已完成。感谢您的购买！查看订单：{order_url} 回复 STOP 即可退订。"
+    },
+    "ticket_issued": {
+      "body": "您的 {event_title} 门票已就绪。入场时出示二维码：{ticket_url} 回复 STOP 即可退订。"
+    },
+    "dispute_opened": {
+      "body": "有顾客对订单 {order_reference} 发起了纠纷。请打开商家应用查看并回复。"
+    },
+    "dispute_resolved": {
+      "body": "您的订单 {order_reference} 的纠纷已解决。{resolution_summary} 回复 STOP 即可退订。"
+    },
+    "payout_sent": {
+      "body": "您的 {amount} 提现款项正在汇往您的 {destination_label}。"
+    },
+    "payout_failed": {
+      "body": "您的 {amount} 提现款项发送失败。{failure_hint} 信息更正后我们会重试。"
+    },
+    "rfq_quoted": {
+      "body": "您在 Convergeo 收到了 {quote_price} 的报价。请打开应用查看。回复 STOP 即可退订。"
+    },
+    "service_quote_accepted": {
+      "body": "好消息！您的报价已被接受。{deposit} 定金（工作总额 {total}）已存入 Convergeo 托管。请打开应用开始工作。"
     }
   },
   "sms": {
@@ -80,6 +116,30 @@
     },
     "payout_failure_alert": {
       "body": "Convergeo 放款失败：{vendor_name} {amount} 参考号 {lenco_reference}。请检查管理后台。"
+    },
+    "order_cancelled": {
+      "body": "Convergeo：订单 {order_reference} 已取消。如已付款，我们会处理退款。"
+    },
+    "payment_failed": {
+      "body": "Convergeo：您的 K{amount} 付款未成功。请打开应用重试。"
+    },
+    "order_completed": {
+      "body": "Convergeo：订单 {order_reference} 已完成。感谢您的购买！"
+    },
+    "ticket_issued": {
+      "body": "Convergeo：您的“{event_title}”门票已就绪。打开“我的门票”出示二维码。"
+    },
+    "dispute_opened": {
+      "body": "Convergeo：订单 {order_reference} 被发起纠纷。请打开商家应用回复。"
+    },
+    "dispute_resolved": {
+      "body": "Convergeo：订单 {order_reference} 的纠纷已解决。请打开应用查看结果。"
+    },
+    "payout_sent": {
+      "body": "Convergeo：您的 K{amount} 提现款项正在汇往您的 {destination_label}。"
+    },
+    "payout_failed": {
+      "body": "Convergeo：您的 K{amount} 提现款项发送失败。请在商家应用中检查收款号码。"
     }
   },
   "email": {
@@ -160,7 +220,12 @@
       "order_delivered": "订单 {ref} 已送达。体验如何？",
       "quote_received": "您收到了新的报价。请在应用中比较并接受。",
       "ticket_issued": "您的门票已就绪。入场时请出示二维码。",
-      "birthday_greeting": "生日快乐！在接下来的 {valid_days} 天内使用优惠码 {code} 领取惊喜。"
+      "birthday_greeting": "生日快乐！在接下来的 {valid_days} 天内使用优惠码 {code} 领取惊喜。",
+      "points_earned": "您获得了 {points} 积分，现在共有 {balance} 积分。",
+      "order_cancelled": "订单 {ref} 已取消。已付款项将被退还。",
+      "order_completed": "订单 {ref} 已完成。感谢您在 Convergeo 购物！",
+      "payment_failed": "您的付款未成功。请打开订单重试。",
+      "dispute_resolved": "订单 {ref} 的纠纷已解决。打开查看结果。"
     },
     "vendor": {
       "order_placed": "新订单 {ref}。请确认后开始处理。",
@@ -170,11 +235,20 @@
       "kyc_rejected": "您的认证需要修改。打开查看原因。",
       "rfq_received": "有顾客向您询价。",
       "job_matched": "有新的工作与您的服务匹配。",
-      "dispute_opened": "顾客对订单 {ref} 发起了争议，请及时回复。"
+      "dispute_opened": "顾客对订单 {ref} 发起了争议，请及时回复。",
+      "vendor_weekly_digest": "本周：{orders} 笔订单，销售额 {sales}，新增 {followers} 位关注者。",
+      "payout_sent": "您的提现款项正在汇往您的移动支付号码。",
+      "payout_failed": "您的提现款项发送失败。请检查收款号码。",
+      "quote_accepted": "有顾客接受了您的报价。打开即可开始工作。",
+      "extras_quoted": "我们已为 {name} 向您报价。",
+      "extras_approved": "您对 {name} 的申请已获批准。",
+      "extras_fulfilled": "{name} 已完成。",
+      "extras_cancelled": "您对 {name} 的申请已取消。"
     },
     "admin": {
       "kyc_submitted": "有新的 KYC 申请待审核。",
-      "dispute_opened": "订单 {ref} 有新的争议。"
+      "dispute_opened": "订单 {ref} 有新的争议。",
+      "extras_requested": "有卖家申请了增值服务：{name}。"
     }
   }
 }

@@ -112,6 +112,15 @@ FORWARD = [
     "20261116130000_free_events_services.sql",
     # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
     "20261117000000_multi_branch_businesses.sql",
+    # Unpaid-order auto-cancel window config row (additive, reversible).
+    "20261117010000_unpaid_order_cancel_hours.sql",
+    # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
+    "20261117010100_loyalty_points.sql",
+    "20261117010200_vendor_weekly_digest.sql",
+    # In-app rows for never-silent lifecycle templates (additive, reversible).
+    "20261117010300_in_app_never_silent_events.sql",
+    # Plan limits on active listings, trials, paid extras (additive, reversible).
+    "20261117020000_plan_limits_trials_extras.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -484,7 +493,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 184 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 189 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

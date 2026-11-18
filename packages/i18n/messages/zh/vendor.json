@@ -634,7 +634,8 @@
         "invalidEncoding": "请使用 UTF-8 编码保存 CSV。",
         "canonicalRequired": "导入新 SKU 前，请选择目录商品。",
         "databaseFailure": "无法保存此行。请重试或联系支持。",
-        "unknownError": "此行需要检查。请检查 CSV 字段并重试。"
+        "unknownError": "此行需要检查。请检查 CSV 字段并重试。",
+        "planLimit": "您的套餐在售商品数量已达上限。请将此行导入为草稿，或升级套餐。"
       }
     },
     "manage": {
@@ -2267,7 +2268,8 @@
       "profile": "资料",
       "settings": "设置",
       "offers": "优惠",
-      "coupons": "优惠券"
+      "coupons": "优惠券",
+      "extras": "增值服务"
     }
   },
   "intake": {
@@ -2547,7 +2549,22 @@
     "limitReachedShort": "您已达到商品数量上限。现有商品保持上架；请查看上方套餐进行升级。",
     "limitReached": "您已达到套餐的商品数量上限。现有商品保持上架；升级后可添加更多。",
     "photoLimitReached": "您的套餐每个商品最多 {max} 张照片。升级套餐即可添加更多。",
-    "billingUnavailable": "套餐付款功能暂未开放。我们的团队会协助您升级。"
+    "billingUnavailable": "套餐付款功能暂未开放。我们的团队会协助您升级。",
+    "usageActive": "在售商品 {count}/{max}",
+    "publishLimitReached": "您的套餐最多允许 {max} 个在售商品。请先保存为草稿，或升级套餐以发布更多。已上架的商品不会被下架。",
+    "trialNoCharge": "免费试用期间不收取套餐费用。",
+    "picker": {
+      "title": "套餐",
+      "intro": "比较各套餐。价格按店铺计算。草稿不计入商品数量上限。",
+      "loading": "正在加载套餐…",
+      "unavailable": "套餐暂未开放。",
+      "annualNote": "预付一年可节省 {pct}%。",
+      "perYear": "或 {price}/年（省 {pct}%）",
+      "current": "当前套餐",
+      "listings": "最多 {max} 个在售商品",
+      "listingsUnlimited": "在售商品不限",
+      "seeExtras": "查看付费增值服务"
+    }
   },
   "branches": {
     "title": "我的企业与店铺",
@@ -2682,6 +2699,60 @@
       "network": "网络未连接，请检查数据后重试。",
       "locationDenied": "无法获取您的位置，请手动输入。",
       "generic": "出错了，请重试。"
+    },
+    "shops": {
+      "heading": "{count, plural, other {您的 # 家店铺}}",
+      "otherBranchesLive": "顾客会在每个店铺页面的“其他分店”中看到您其他已上线的店铺，包括位置、营业时间、电话和地图链接。",
+      "otherBranchesHint": "当您有多家已上线的店铺时，每个店铺页面都会在“其他分店”中显示其他店铺。",
+      "viewShop": "查看店铺页面",
+      "notListedYet": "尚未对顾客显示。"
+    }
+  },
+  "trial": {
+    "banner": "{date} 前免费使用商业版套餐",
+    "detail": "试用期间不收取套餐费用。"
+  },
+  "extras": {
+    "title": "增值服务",
+    "intro": "帮助店铺成长的付费服务。提交申请后，我们的团队会与您联系。",
+    "loading": "正在加载增值服务…",
+    "noPayment": "此处不会扣费。提交申请后，我们的团队会先与您确认价格。",
+    "requested": "已提交，我们会尽快联系您。",
+    "indicativePrice": "参考价格，最终价格由我们的团队确认。",
+    "teamNote": "团队备注：{note}",
+    "unit": {
+      "one_off": "一次性",
+      "per_month": "每月",
+      "per_item": "每项"
+    },
+    "price": {
+      "fixed": "{price}（{unit}）",
+      "range": "{min} – {max}（{unit}）",
+      "paygFrom": "按需付费，{price} 起（{unit}）",
+      "payg": "按需付费",
+      "onRequest": "价格面议"
+    },
+    "status": {
+      "requested": "已申请，团队将很快回复。",
+      "quoted": "团队已报价。",
+      "quotedWithPrice": "报价：{price}。接受后即可开始。",
+      "approved": "已批准，正在处理。",
+      "fulfilled": "已完成。",
+      "cancelled": "已取消。"
+    },
+    "actions": {
+      "request": "申请",
+      "accept": "接受报价",
+      "cancel": "取消申请",
+      "working": "处理中…"
+    },
+    "errors": {
+      "load": "无法加载增值服务，请稍后再试。",
+      "alreadyRequested": "您已有一个处理中的申请。",
+      "rateLimited": "请求过于频繁，请稍候。",
+      "notFound": "该服务已不再提供。",
+      "invalidTransition": "该申请当前无法更改。",
+      "generic": "出现问题，请重试。"
     }
   }
 }

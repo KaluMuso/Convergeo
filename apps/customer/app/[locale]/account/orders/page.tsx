@@ -7,6 +7,8 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { AccountListBoundary } from "../_components/account-list-boundary";
 import { getAccountListSession } from "../_components/account-list-server";
 
+import { BuyAgain } from "./_components/buy-again";
+import { buildBuyAgainLabels } from "./_components/buy-again-labels";
 import { createOrdersApiClient } from "./_components/orders-api";
 
 import type { Metadata } from "next";
@@ -37,11 +39,15 @@ export default async function AccountOrdersPage({ params }: PageProps) {
   const { accountId, accessToken } = await getAccountListSession(locale);
   const baseMessages = await getMessages();
   const ordersMessages = await loadNamespace(locale as Locale, "orders");
-  const messages = { ...baseMessages, orders: ordersMessages } as AbstractIntlMessages;
-  const t = createTranslator({ locale, messages, namespace: "orders" }) as (
-    key: string,
-    values?: Record<string, string | number>,
-  ) => string;
+  const messages = {
+    ...baseMessages,
+    orders: ordersMessages,
+  } as AbstractIntlMessages;
+  const t = createTranslator({ locale, messages, namespace: "orders" }) as {
+    (key: string, values?: Record<string, string | number>): string;
+    raw(key: string): unknown;
+  };
+  const buyAgainLabels = buildBuyAgainLabels(t);
 
   const api = createOrdersApiClient(() => accessToken);
   const { groups } = await api.listOrders();
@@ -100,7 +106,9 @@ export default async function AccountOrdersPage({ params }: PageProps) {
                     <p className="text-xs text-text-2">
                       {t("list.itemCount", { count: order.item_count })}
                       {" · "}
-                      {t("list.status", { status: t(`status.${order.status}`) })}
+                      {t("list.status", {
+                        status: t(`status.${order.status}`),
+                      })}
                     </p>
                     <p className="text-xs text-text-2">
                       {order.payment_mode === "cod"
@@ -136,6 +144,13 @@ export default async function AccountOrdersPage({ params }: PageProps) {
                     >
                       {t("list.viewOrder")}
                     </LinkButton>
+                    <BuyAgain
+                      orderId={order.id}
+                      accessToken={accessToken}
+                      locale={locale}
+                      status={order.status}
+                      labels={buyAgainLabels}
+                    />
                   </div>
                 </li>
               ))}

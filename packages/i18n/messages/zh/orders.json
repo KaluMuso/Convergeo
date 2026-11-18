@@ -107,7 +107,9 @@
     "confirming": "确认中…",
     "done": "您已确认收货",
     "doneBody": "款项已放款给商家。",
-    "error": "无法确认收货。请重试。"
+    "error": "无法确认收货。请重试。",
+    "bodyCod": "确认即告知我们订单已送达。请在收到全部商品并向商家付款后再确认。",
+    "doneBodyCod": "感谢您的确认。您的订单已完成。"
   },
   "report": {
     "title": "举报问题",
@@ -267,5 +269,22 @@
     "qty": "× {qty}",
     "noPrices": "礼物收据从不显示价格。",
     "pinSentToRecipient": "取货 PIN 码已发送给收礼人。"
+  },
+  "buyAgain": {
+    "button": "再次购买",
+    "loading": "正在加入购物车…",
+    "error": "无法添加这些商品，请重试。",
+    "rateLimited": "尝试次数过多，请稍后再试。",
+    "added": "已加入购物车：{count}",
+    "nothingAdded": "没有商品可加入购物车。",
+    "skippedTitle": "未加入",
+    "skipped": {
+      "unavailable": "已不再提供",
+      "out_of_stock": "缺货",
+      "variant_unavailable": "该选项已不再提供"
+    },
+    "priceChangeTitle": "价格自您上次下单后已变动",
+    "priceChangeLine": "{title}：原价 {previous}，现价 {current}",
+    "goToCart": "查看购物车并结账"
   }
 }
