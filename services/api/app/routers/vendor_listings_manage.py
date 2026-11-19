@@ -17,6 +17,12 @@ from app.schemas.vendor_listing import (
 )
 from app.services.branches.context import scope_owner_vendor_query
 from app.services.inventory.adjustment import adjust_stock, stock_context
+from app.services.kyc.caps import (
+    enforce_publish_limit,
+    is_plan_limit_db_error,
+    load_vendor_cap_limits_by_id,
+    plan_limit_error,
+)
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.listings.field_errors import (
     issues_from_validation_error,
@@ -689,6 +695,11 @@ def _apply_listing_update(
         or (body.wholesale is not None and body.wholesale != bool(listing.get("wholesale")))
     )
 
+    if update_payload.get("status") == "active" and str(listing.get("status")) != "active":
+        # Activating (publish / un-pause) counts against the plan's active limit.
+        enforce_publish_limit(
+            load_vendor_cap_limits_by_id(service_client, str(vendor["id"]), vendor_row=vendor)
+        )
     try:
         response = (
             service_client.client.table("vendor_listings")
@@ -698,6 +709,8 @@ def _apply_listing_update(
             .execute()
         )
     except Exception as exc:
+        if is_plan_limit_db_error(exc):
+            raise plan_limit_error(max_listings=None, active_listings=None, plan_key=None) from exc
         target_status = body.status or str(listing.get("status") or "draft")
         mapped = map_listing_db_error(
             exc, intent="publish" if target_status == "active" else "draft"

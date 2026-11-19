@@ -32,6 +32,7 @@ function allVisible(): VendorNavCapabilities {
     settings: true,
     offers: true,
     coupons: true,
+    extras: true,
   };
 }
 
@@ -103,6 +104,7 @@ describe("mobile More menu", () => {
       settings: false,
       offers: false,
       coupons: false,
+      extras: false,
     };
     const groups = filterVendorNavGroups(caps);
     expect(buildVendorMobilePrimary(groups)).toEqual([

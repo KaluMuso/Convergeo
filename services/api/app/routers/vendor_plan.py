@@ -14,12 +14,14 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.services.kyc.caps import _load_vendor_for_owner, load_vendor_cap_limits_by_id
 from app.services.kyc.state_machine import ServiceRoleClient
+from app.services.vendor_plans.billing import annual_price_ngwee, in_trial
 from app.services.vendor_plans.resolver import (
     HARD_MAX_IMAGES_PER_LISTING,
     PlanFeatures,
     list_plans,
     vendor_plans_enabled,
 )
+from app.services.vendor_plans.trial import load_annual_discount_pct, load_vendor_trial_end
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
@@ -33,6 +35,8 @@ class PlanSummary(BaseModel):
     key: str
     name: str
     price_ngwee: int
+    #: 12 x monthly less the annual prepay discount, integer ngwee rounded down.
+    annual_price_ngwee: int = 0
     max_listings: int | None
     max_images_per_listing: int
     featured_slots: int
@@ -52,13 +56,19 @@ class VendorPlanStatus(BaseModel):
     limited_by: Literal["plan", "kyc", "none"] = "none"
     override_expires_at: str | None = None
     upgrade_options: list[PlanSummary] = []
+    #: Plan picker: every active plan with its monthly and annual price.
+    plans: list[PlanSummary] = []
+    annual_discount_pct: int = 0
+    trial_ends_at: str | None = None
+    in_trial: bool = False
 
 
-def plan_summary(plan: PlanFeatures) -> PlanSummary:
+def plan_summary(plan: PlanFeatures, discount_pct: int = 0) -> PlanSummary:
     return PlanSummary(
         key=plan.key,
         name=plan.name,
         price_ngwee=plan.price_ngwee,
+        annual_price_ngwee=annual_price_ngwee(plan.price_ngwee, discount_pct),
         max_listings=plan.max_listings,
         max_images_per_listing=plan.max_images_per_listing,
         featured_slots=plan.featured_slots,
@@ -80,34 +90,53 @@ async def get_vendor_plan(
 ) -> VendorPlanStatus:
     client: Any = service_client.client
     if not vendor_plans_enabled(client):
-        return VendorPlanStatus(enabled=False)
+        # The free trial applies to every seller, plans flag or not.
+        owner_vendor = _load_vendor_for_owner(service_client, current_user.id)
+        off_trial_end = load_vendor_trial_end(client, str(owner_vendor["id"]))
+        return VendorPlanStatus(
+            enabled=False,
+            trial_ends_at=off_trial_end.isoformat() if off_trial_end is not None else None,
+            in_trial=in_trial(off_trial_end),
+        )
 
     vendor = _load_vendor_for_owner(service_client, current_user.id)
-    limits = load_vendor_cap_limits_by_id(service_client, str(vendor["id"]), vendor_row=vendor)
+    vendor_id = str(vendor["id"])
+    limits = load_vendor_cap_limits_by_id(service_client, vendor_id, vendor_row=vendor)
     effective = limits.plan
-    cap = limits.quota.max_listings
-    count = limits.listing_count
-    # KYC T2/T3 caps (9,999 in vendor_quotas) mean "caps lifted": when the KYC
-    # cap binds at that level the vendor sees "unlimited", not a magic number.
-    effective_cap: int | None = cap
-    limited_by: Literal["plan", "kyc", "none"] = "kyc"
-    if limits.limited_by_plan:
-        limited_by = "plan"
-    elif (limits.kyc_max_listings or 0) >= KYC_CAPS_LIFTED_AT:
-        effective_cap = None
-        limited_by = "none"
+    discount = load_annual_discount_pct(client)
+    trial_end = load_vendor_trial_end(client, vendor_id)
 
+    # Two caps: the plan limits ACTIVE (published) listings; the KYC trust cap
+    # limits all listings including drafts. Show whichever binds first.
+    limited_by: Literal["plan", "kyc", "none"]
+    plan_cap = limits.plan_max_active
+    kyc_cap = limits.kyc_max_listings
+    if plan_cap is not None and (kyc_cap is None or plan_cap < kyc_cap):
+        limited_by = "plan"
+        effective_cap: int | None = plan_cap
+        count = limits.active_listing_count
+    elif (kyc_cap or 0) >= KYC_CAPS_LIFTED_AT:
+        # vendor_quotas T2/T3 (9,999) mean "caps lifted": shown as unlimited.
+        limited_by = "none"
+        effective_cap = None
+        count = limits.listing_count
+    else:
+        limited_by = "kyc"
+        effective_cap = kyc_cap
+        count = limits.listing_count
+
+    active_plans = list_plans(client, active_only=True)
     upgrade_options: list[PlanSummary] = []
     if effective is not None and limited_by == "plan":
         upgrade_options = [
-            plan_summary(candidate)
-            for candidate in list_plans(client, active_only=True)
+            plan_summary(candidate, discount)
+            for candidate in active_plans
             if candidate.key != effective.plan.key and _lifts_cap(candidate, effective.max_listings)
         ]
 
     return VendorPlanStatus(
         enabled=True,
-        plan=plan_summary(effective.plan) if effective is not None else None,
+        plan=plan_summary(effective.plan, discount) if effective is not None else None,
         effective_max_listings=effective_cap,
         max_images_per_listing=(
             effective.max_images_per_listing
@@ -121,4 +150,8 @@ async def get_vendor_plan(
         limited_by=limited_by,
         override_expires_at=effective.override_expires_at if effective is not None else None,
         upgrade_options=upgrade_options,
+        plans=[plan_summary(candidate, discount) for candidate in active_plans],
+        annual_discount_pct=discount,
+        trial_ends_at=trial_end.isoformat() if trial_end is not None else None,
+        in_trial=in_trial(trial_end),
     )

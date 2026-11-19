@@ -41,6 +41,7 @@ describe("vendor-nav-config", () => {
       settings: true,
       offers: false,
       coupons: false,
+      extras: false,
     };
     const keys = filterVendorNavGroups(caps).flatMap((g) =>
       g.items.map((i) => i.key),
@@ -70,6 +71,7 @@ describe("vendor-nav-config", () => {
       settings: false,
       offers: false,
       coupons: false,
+      extras: false,
     };
     expect(buildVendorMobilePrimary(filterVendorNavGroups(caps))).toEqual([
       "home",

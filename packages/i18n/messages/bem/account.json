@@ -25,7 +25,8 @@
     "business": "Mode ya business",
     "signOut": "Fuma",
     "signingOut": "Ilefuma…",
-    "following": "Ifyo mukonka"
+    "following": "Ifyo mukonka",
+    "rewards": "⚠ Rewards"
   },
   "title": "Account yandi",
   "hub": {
@@ -161,6 +162,32 @@
       "changeLocked": "You changed your birthday recently. Try again later.",
       "tooMany": "Too many changes. Try again later.",
       "featureUnavailable": "Birthday treats aren't available yet."
+    }
+  },
+  "rewards": {
+    "title": "⚠ Rewards",
+    "description": "⚠ Convergeo Points for your orders and reviews.",
+    "balanceLabel": "⚠ Your points",
+    "balance": "⚠ {points, plural, one {# point} other {# points}}",
+    "progress": "⚠ {remaining, plural, =0 {You've reached a reward coupon.} one {# point to your next reward coupon} other {# points to your next reward coupon}}",
+    "progressAria": "⚠ Progress to the next reward coupon",
+    "redeemSoon": "⚠ Redeeming points for coupons is coming soon. Points have no cash value.",
+    "historyTitle": "⚠ History",
+    "historyEmpty": "⚠ No points yet. Your first order or review starts the count.",
+    "reason": {
+      "order_completed": "⚠ Order completed",
+      "review": "⚠ Review posted",
+      "reversal": "⚠ Refund or return",
+      "redeem": "⚠ Redeemed for a coupon",
+      "expire": "⚠ Expired",
+      "admin_adjust": "⚠ Adjustment"
+    },
+    "howTitle": "⚠ How to earn",
+    "howOrders": "⚠ 1 point for every K1 you pay, added once your order is delivered and the return window has passed.",
+    "howReviews": "⚠ Points for every verified review, whatever stars you give. A photo earns a little more.",
+    "howRules": "⚠ Refunds and returns take back the points from that order. Points expire after 12 months with no activity.",
+    "errors": {
+      "rateLimited": "⚠ Too many requests. Please try again shortly."
     }
   }
 }

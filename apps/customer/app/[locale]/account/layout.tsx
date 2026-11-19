@@ -140,6 +140,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
               ariaLabel: t("title"),
               overview: t("nav.overview"),
               orders: t("nav.orders"),
+              rewards: t("nav.rewards"),
               tickets: t("nav.tickets"),
               jobs: t("nav.jobs"),
               quotes: t("nav.quotes"),

@@ -733,6 +733,49 @@ def _load_submitter_context(
     )
 
 
+def _activate_draft_listings(service_client: Any, product_id: str) -> int:
+    """Publish the product's draft listings; a shop at its plan's active-listing
+    limit keeps its listing as a draft instead of failing the whole approval."""
+    try:
+        response = (
+            _table(service_client, "vendor_listings")
+            .update({"status": "active"})
+            .eq("product_id", product_id)
+            .eq("status", "draft")
+            .execute()
+        )
+        return len(_rows(response))
+    except Exception as exc:
+        if not (
+            getattr(exc, "code", None) == "PT403"
+            and getattr(exc, "message", None) == "listing_plan_limit_reached"
+        ):
+            raise
+    drafts = _rows(
+        _table(service_client, "vendor_listings")
+        .select("id")
+        .eq("product_id", product_id)
+        .eq("status", "draft")
+        .execute()
+    )
+    activated = 0
+    for row in drafts:
+        try:
+            result = (
+                _table(service_client, "vendor_listings")
+                .update({"status": "active"})
+                .eq("id", str(row["id"]))
+                .eq("status", "draft")
+                .execute()
+            )
+        except Exception as exc:
+            if getattr(exc, "message", None) == "listing_plan_limit_reached":
+                continue
+            raise
+        activated += len(_rows(result))
+    return activated
+
+
 def transition_canonical_moderation(
     *,
     product_id: str,
@@ -784,14 +827,7 @@ def transition_canonical_moderation(
                 message="Failed to approve canonical product",
                 http_status=409,
             )
-        listings_response = (
-            _table(service_client, "vendor_listings")
-            .update({"status": "active"})
-            .eq("product_id", product_id)
-            .eq("status", "draft")
-            .execute()
-        )
-        listings_updated = len(_rows(listings_response))
+        listings_updated = _activate_draft_listings(service_client, product_id)
         return {
             "product_id": product_id,
             "status": "active",

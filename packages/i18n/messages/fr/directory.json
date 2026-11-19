@@ -129,7 +129,15 @@
     "otherBranches": "Autres succursales",
     "otherBranchesAria": "Autres succursales de {name}",
     "partOfBusiness": "Fait partie de {name}",
-    "branchWithLandmark": "{name} · {landmark}"
+    "branchWithLandmark": "{name} · {landmark}",
+    "branchOpenNow": "Ouvert maintenant",
+    "branchClosedNow": "Fermé maintenant",
+    "branchHours": "Horaires d'ouverture",
+    "branchPhone": "Téléphone :",
+    "branchMap": "Carte",
+    "branchVisit": "Visiter {name}",
+    "branchKmAway": "à {km} km",
+    "branchMetresAway": "à {m} m"
   },
   "listings": {
     "vendor": "Vendu par {vendor}",

@@ -17,6 +17,7 @@ const PLATFORM_LABEL_KEYS: Record<string, string> = {
   release_after_delivered_hours: "platform.releaseDelivered",
   release_after_shipped_days: "platform.releaseShipped",
   branch_min_sibling_distance_m: "platform.branchMinDistance",
+  plan_annual_discount_pct: "platform.planAnnualDiscount",
   event_verified_organiser_advance_bps: "platform.advanceBps",
   event_advance_min_kyc_tier: "platform.advanceMinKycTier",
   event_advance_min_successful_events: "platform.advanceMinEvents",

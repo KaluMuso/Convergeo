@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Annotated, Any, cast
 
@@ -18,6 +18,7 @@ from fastapi import Depends
 ServiceClient = Any
 
 LISTING_COUNT_STATUSES = frozenset({"draft", "active", "paused"})
+ACTIVE_LISTING_STATUSES = frozenset({"active"})
 ORDER_COUNT_STATUSES = frozenset(
     {
         "placed",
@@ -53,18 +54,28 @@ class VendorCapLimits:
     cod_cap_ngwee: int
     listing_count: int
     order_count: int
-    # Vendor plans (flag ``vendor_plans``). ``quota.max_listings`` above is
-    # already the EFFECTIVE cap = min(KYC cap, plan cap); these fields say which
-    # one binds so the vendor sees an upgrade prompt rather than a KYC message.
+    # Vendor plans (flag ``vendor_plans``). ``quota.max_listings`` above is the
+    # KYC trust cap on ADMISSION (draft/active/paused). The plan limit is a
+    # separate cap on ACTIVE (published) listings: drafts are always allowed,
+    # publishing beyond ``plan.max_listings`` is refused (enforce_publish_limit).
     kyc_max_listings: int | None = None
     plan: EffectivePlan | None = None
+    active_listing_count: int = 0
+
+    @property
+    def plan_max_active(self) -> int | None:
+        if self.plan is None:
+            return None
+        return self.plan.max_listings
 
     @property
     def limited_by_plan(self) -> bool:
-        if self.plan is None or self.plan.max_listings is None:
+        """True when the plan's active-listing limit is the binding cap."""
+        cap = self.plan_max_active
+        if cap is None:
             return False
         kyc_cap = self.kyc_max_listings
-        return kyc_cap is None or self.plan.max_listings < kyc_cap
+        return kyc_cap is None or cap < kyc_cap
 
 
 @dataclass(slots=True)
@@ -187,13 +198,18 @@ def clear_vendor_cap_cache() -> None:
         _cod_cap_cache = None
 
 
-def _count_vendor_listings(service_client: ServiceRoleClient, vendor_id: str) -> int:
+def _count_vendor_listings(
+    service_client: ServiceRoleClient,
+    vendor_id: str,
+    *,
+    statuses: frozenset[str] = LISTING_COUNT_STATUSES,
+) -> int:
     client: ServiceClient = service_client.client
     response = (
         client.table("vendor_listings")
         .select("id", count="exact")
         .eq("vendor_id", vendor_id)
-        .in_("status", list(LISTING_COUNT_STATUSES))
+        .in_("status", sorted(statuses))
         .execute()
     )
     count = getattr(response, "count", None)
@@ -277,11 +293,13 @@ def load_vendor_cap_limits_by_id(
     kyc_quota = load_vendor_quota(service_client, tier)
     quota = kyc_quota
     plan = resolve_effective_plan(service_client.client, vendor_id)
-    if plan is not None and plan.max_listings is not None:
-        # Plans never lift the KYC trust cap: effective = min(KYC, plan).
-        quota = replace(kyc_quota, max_listings=min(kyc_quota.max_listings, plan.max_listings))
     cod_cap = _parse_config_int(service_client.client, "cod_cap_ngwee", 50_000)
     listing_count = _count_vendor_listings(service_client, vendor_id)
+    active_count = (
+        _count_vendor_listings(service_client, vendor_id, statuses=ACTIVE_LISTING_STATUSES)
+        if plan is not None and plan.max_listings is not None
+        else 0
+    )
     order_count = _count_vendor_orders(service_client, vendor_id)
     return VendorCapLimits(
         vendor_id=vendor_id,
@@ -292,6 +310,7 @@ def load_vendor_cap_limits_by_id(
         order_count=order_count,
         kyc_max_listings=kyc_quota.max_listings,
         plan=plan,
+        active_listing_count=active_count,
     )
 
 
@@ -334,24 +353,52 @@ def _raise_cap_error(
     )
 
 
+def plan_limit_error(
+    *, max_listings: int | None, active_listings: int | None, plan_key: str | None
+) -> AppError:
+    """Friendly upgrade error for a publish beyond the plan's active-listing limit."""
+    return AppError(
+        code="listing_plan_limit_reached",
+        message="Plan limit on active listings reached",
+        http_status=403,
+        details={
+            "message_key": "vendor.plans.publishLimitReached",
+            "max_listings": max_listings,
+            "current_listings": active_listings,
+            "limited_by": "plan",
+            "plan_key": plan_key,
+            "upgrade_available": True,
+        },
+    )
+
+
+def enforce_publish_limit(limits: VendorCapLimits) -> None:
+    """Refuse publishing one more listing beyond the plan's ACTIVE limit.
+
+    Drafts are never limited by the plan. Nothing already live is paused or
+    removed. The DB trigger ``guard_vendor_listing_publish`` re-checks atomically.
+    """
+    cap = limits.plan_max_active
+    if cap is None or limits.active_listing_count < cap:
+        return
+    raise plan_limit_error(
+        max_listings=cap,
+        active_listings=limits.active_listing_count,
+        plan_key=limits.plan.plan.key if limits.plan is not None else None,
+    )
+
+
+def is_plan_limit_db_error(exc: BaseException) -> bool:
+    return (
+        getattr(exc, "code", None) == "PT403"
+        and getattr(exc, "message", None) == "listing_plan_limit_reached"
+    )
+
+
 def enforce_listing_cap(limits: VendorCapLimits) -> None:
+    """KYC trust cap on admission (draft/active/paused); plans never apply here."""
     if limits.listing_count < limits.quota.max_listings:
         return
-    if limits.limited_by_plan and limits.plan is not None:
-        # Friendly upgrade prompt. Nothing is deleted or paused: existing
-        # listings stay live; only a NEW listing is refused.
-        _raise_cap_error(
-            code="listing_cap_exceeded",
-            message_key="vendor.plans.limitReached",
-            details={
-                "max_listings": limits.quota.max_listings,
-                "current_listings": limits.listing_count,
-                "kyc_tier": limits.kyc_tier,
-                "limited_by": "plan",
-                "plan_key": limits.plan.plan.key,
-                "upgrade_available": True,
-            },
-        )
     _raise_cap_error(
         code="listing_cap_exceeded",
         message_key="vendor.caps.listing_limit",

@@ -13,6 +13,7 @@ import {
   estimateReadyDate,
   formatEstimateDate,
 } from "../../../../../lib/delivery-estimate";
+import { CodTrustLine } from "../../../_components/cod-trust-line";
 import { VariantLineLabel } from "../../_components/cart/variant-line-label";
 import {
   formatListingQuantity,
@@ -93,6 +94,8 @@ export type ReviewCodGuideLabels = {
   deliveryNoLandmark: string;
   pickupFromSeller: string;
   placeOrderCod: string;
+  /** Shared "You pay on delivery → We deliver → You confirm" line (i18n codTrust.line). */
+  trustLine?: string;
 };
 
 export type ReviewFulfilment = {
@@ -461,16 +464,21 @@ export function StepReview({
       {codGuide ? (
         // COD is honest about money: nothing is charged now, so the escrow
         // "you paid → held" triad is NOT shown for this method.
-        <NextSteps
-          heading={codGuide.title}
-          headingId={codStepsId}
-          testId="checkout-review-cod-steps"
-          steps={[
-            { title: codGuide.step1 },
-            { title: codGuide.step2 },
-            { title: codGuide.step3.split("{amount}").join(totalFormatted) },
-          ]}
-        />
+        <>
+          {codGuide.trustLine ? (
+            <CodTrustLine text={codGuide.trustLine} testId="checkout-review-cod-trust" />
+          ) : null}
+          <NextSteps
+            heading={codGuide.title}
+            headingId={codStepsId}
+            testId="checkout-review-cod-steps"
+            steps={[
+              { title: codGuide.step1 },
+              { title: codGuide.step2 },
+              { title: codGuide.step3.split("{amount}").join(totalFormatted) },
+            ]}
+          />
+        </>
       ) : (
         <>
           <div

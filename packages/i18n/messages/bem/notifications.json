@@ -50,6 +50,42 @@
     },
     "birthday_greeting": {
       "body": "Happy birthday from Convergeo! Use code {coupon_code} for {amount} off orders of {min_spend} or more, valid {valid_days} days. Reply STOP to opt out."
+    },
+    "points_earned": {
+      "body": "You earned {points} points. You now have {balance}. At {threshold} you unlock a reward coupon."
+    },
+    "vendor_weekly_digest": {
+      "body": "Your week, {shop_name}: {orders} orders, {sales} in sales. Top item: {top_item}. {new_followers} new followers. {pending_actions} actions waiting. Next payout: {next_payout}."
+    },
+    "order_cancelled": {
+      "body": "⚠ Your Convergeo order {order_reference} was cancelled. {refund_detail} Reply STOP to opt out."
+    },
+    "payment_failed": {
+      "body": "⚠ Your payment of {amount} did not go through. If you were charged, contact support and we will sort it out. Try again: {retry_url} Reply STOP to opt out."
+    },
+    "order_completed": {
+      "body": "⚠ Your Convergeo order {order_reference} is complete. Thank you for shopping with us! See it here: {order_url} Reply STOP to opt out."
+    },
+    "ticket_issued": {
+      "body": "⚠ Your ticket for {event_title} is ready. Show the QR code at the door: {ticket_url} Reply STOP to opt out."
+    },
+    "dispute_opened": {
+      "body": "⚠ A customer opened a dispute on order {order_reference}. Open the vendor app to read it and respond."
+    },
+    "dispute_resolved": {
+      "body": "⚠ The dispute on your order {order_reference} is resolved. {resolution_summary} Reply STOP to opt out."
+    },
+    "payout_sent": {
+      "body": "⚠ Your payout of {amount} is on its way to your {destination_label}."
+    },
+    "payout_failed": {
+      "body": "⚠ Your payout of {amount} could not be sent. {failure_hint} We will retry once your details are correct."
+    },
+    "rfq_quoted": {
+      "body": "⚠ You received a quote of {quote_price} on Convergeo. Open the app to review it. Reply STOP to opt out."
+    },
+    "service_quote_accepted": {
+      "body": "⚠ Good news! Your quote was accepted. A deposit of {deposit} (job total {total}) is secured in Convergeo escrow. Open the app to start the job."
     }
   },
   "sms": {
@@ -94,6 +130,30 @@
     },
     "event_schedule_changed": {
       "body": "Convergeo: \"{event_title}\" details yasinthidwa. Usiku: {event_date}. Venue: {venue}. Loleni mu app."
+    },
+    "order_cancelled": {
+      "body": "⚠ Convergeo: order {order_reference} was cancelled. If you paid, we will handle your refund."
+    },
+    "payment_failed": {
+      "body": "⚠ Convergeo: your payment of K{amount} did not go through. Open the app to try again."
+    },
+    "order_completed": {
+      "body": "⚠ Convergeo: order {order_reference} is complete. Thank you for shopping with us!"
+    },
+    "ticket_issued": {
+      "body": "⚠ Convergeo: your ticket for \"{event_title}\" is ready. Open My tickets to show the QR."
+    },
+    "dispute_opened": {
+      "body": "⚠ Convergeo: a dispute was opened on order {order_reference}. Open the vendor app to respond."
+    },
+    "dispute_resolved": {
+      "body": "⚠ Convergeo: the dispute on order {order_reference} is resolved. Open the app to see the outcome."
+    },
+    "payout_sent": {
+      "body": "⚠ Convergeo: your payout of K{amount} is on its way to your {destination_label}."
+    },
+    "payout_failed": {
+      "body": "⚠ Convergeo: your payout of K{amount} could not be sent. Check your payout number in the vendor app."
     }
   },
   "email": {
@@ -174,7 +234,12 @@
       "order_delivered": "Order {ref} yafika. Cali shani?",
       "quote_received": "Mwapokelela quote iipya. Linganyeni no kusuminisha mu app.",
       "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi.",
-      "birthday_greeting": "Ubushiku busuma ubwa kufyalwa! Bomfyeni kuponi {code} mu nshiku {valid_days}."
+      "birthday_greeting": "Ubushiku busuma ubwa kufyalwa! Bomfyeni kuponi {code} mu nshiku {valid_days}.",
+      "points_earned": "⚠ You earned {points} points. You now have {balance}.",
+      "order_cancelled": "⚠ Order {ref} was cancelled. Any payment will be refunded.",
+      "order_completed": "⚠ Order {ref} is complete. Thank you for shopping with Convergeo!",
+      "payment_failed": "⚠ Your payment did not go through. Open your orders to try again.",
+      "dispute_resolved": "⚠ The dispute on order {ref} is resolved. Open it to see the outcome."
     },
     "vendor": {
       "order_placed": "Order iipya {ref}. Isuminisheni pa kutampa.",
@@ -184,11 +249,20 @@
       "kyc_rejected": "Ukusuminishiwa kwenu kulefwaya ukwalula. Kufyeni mumone umulandu.",
       "rfq_received": "Kasita alomba quote kuli imwe.",
       "job_matched": "Incito iipya ilinganya na ma-service yenu.",
-      "dispute_opened": "Kasita aleta ubwafya pa order {ref}. Mwaiseni mwasuke."
+      "dispute_opened": "Kasita aleta ubwafya pa order {ref}. Mwaiseni mwasuke.",
+      "vendor_weekly_digest": "⚠ Your week: {orders} orders, {sales} in sales, {followers} new followers.",
+      "payout_sent": "⚠ Your payout is on its way to your mobile money number.",
+      "payout_failed": "⚠ Your payout could not be sent. Check your payout number.",
+      "quote_accepted": "⚠ A customer accepted your quote. Open it to start the job.",
+      "extras_quoted": "⚠ We sent you a quote for {name}.",
+      "extras_approved": "⚠ Your request for {name} is approved.",
+      "extras_fulfilled": "⚠ {name} is done.",
+      "extras_cancelled": "⚠ Your request for {name} was cancelled."
     },
     "admin": {
       "kyc_submitted": "KYC iipya ilelolela ukumonwa.",
-      "dispute_opened": "Ubwafya bupya pa order {ref}."
+      "dispute_opened": "Ubwafya bupya pa order {ref}.",
+      "extras_requested": "⚠ A seller requested an extra: {name}."
     }
   }
 }

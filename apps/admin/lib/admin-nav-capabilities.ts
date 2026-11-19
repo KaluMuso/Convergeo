@@ -46,5 +46,7 @@ export function resolveAdminNavCapabilities(
     inventory: has("inventory.read"),
     // Platform-funded coupons spend the promotions budget: admin / superadmin only.
     coupons: unrestricted,
+    extras: has("vendors.manage"),
+    trials: unrestricted,
   };
 }

@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 
+import { forgetNearCoords, rememberNearCoords } from "../../../../../lib/near-coords";
+
 // Lusaka CBD — privacy-safe default when geolocation is denied (matches API constant).
 const LUSAKA_LAT = -15.42;
 const LUSAKA_LNG = 28.28;
@@ -59,6 +61,10 @@ export function NearMeToggle({
   const applyCoords = useCallback(
     (latitude: number, longitude: number, nextStatus: Status) => {
       setStatus(nextStatus);
+      // Remember a real fix (never the Lusaka fallback) for distances elsewhere.
+      if (nextStatus !== "lusaka") {
+        rememberNearCoords(roundCoord(latitude), roundCoord(longitude));
+      }
       pushParams((params) => {
         params.set("lat", String(roundCoord(latitude)));
         params.set("lng", String(roundCoord(longitude)));
@@ -69,6 +75,7 @@ export function NearMeToggle({
 
   const disable = useCallback(() => {
     setStatus("idle");
+    forgetNearCoords();
     pushParams((params) => {
       params.delete("lat");
       params.delete("lng");

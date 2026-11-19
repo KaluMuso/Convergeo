@@ -258,6 +258,11 @@ function buildCheckoutLabels(
         deliveryNoLandmark: t("checkout.review.codGuide.deliveryNoLandmark"),
         pickupFromSeller: t("checkout.review.codGuide.pickupFromSeller"),
         placeOrderCod: t("checkout.review.codGuide.placeOrderCod"),
+        trustLine: createTranslator({
+          locale,
+          messages,
+          namespace: "codTrust",
+        })("line"),
       },
       discount: t.raw("checkout.review.discount") as string,
     },

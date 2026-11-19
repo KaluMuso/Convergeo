@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from copy import deepcopy
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -324,6 +325,12 @@ def manage_client(
     _mock_auth(monkeypatch)
     service_wrapper = _mock_supabase(monkeypatch, fake_client)
     _seed_base(fake_client)
+    # Plan limit on publish (20261117020000) is covered in test_vendor_plans.py; the
+    # fake client here has no plan/quota tables, so treat the plan as unlimited.
+    monkeypatch.setattr(
+        "app.routers.vendor_listings_manage.load_vendor_cap_limits_by_id",
+        lambda *_a, **_k: SimpleNamespace(plan_max_active=None, active_listing_count=0, plan=None),
+    )
     app = create_app()
     _apply_supabase_overrides(app, service_wrapper)
     with TestClient(app, raise_server_exceptions=False) as client:

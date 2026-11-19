@@ -34,7 +34,9 @@
     "auditLog": "审计日志",
     "offers": "优惠活动",
     "coupons": "优惠券",
-    "branches": "分店审核"
+    "branches": "分店审核",
+    "extras": "增值服务申请",
+    "trials": "免费试用"
   },
   "hubs": {
     "moderation": {
@@ -194,7 +196,8 @@
       "advanceMinEvents": "活动前预付：最少成功举办的活动数",
       "advanceRepaymentDays": "活动前预付：还款期限（天）",
       "dangerousHint": "货到付款上限的更改仅影响新的结账资格。",
-      "branchMinDistance": "分店最小间距（米）"
+      "branchMinDistance": "分店最小间距（米）",
+      "planAnnualDiscount": "套餐年付折扣（%）"
     },
     "flags": {
       "title": "功能开关",
@@ -1765,6 +1768,95 @@
       "invalidTransition": "该分店尚不能做出此决定。",
       "permission": "您没有执行此操作的权限。",
       "saveFailed": "无法保存决定，请重试。"
+    }
+  },
+  "plans": {
+    "publishLimit": "该店铺已达到套餐在售商品上限，商品保持为草稿。"
+  },
+  "extras": {
+    "title": "增值服务申请",
+    "subtitle": "为卖家的付费增值服务报价、批准和交付。此处不收款。每项操作都会记录审计日志。",
+    "status": {
+      "requested": "已申请",
+      "quoted": "已报价",
+      "approved": "已批准",
+      "fulfilled": "已完成",
+      "cancelled": "已取消"
+    },
+    "actions": {
+      "quoted": "发送报价",
+      "approved": "批准",
+      "fulfilled": "标记为已完成",
+      "cancelled": "取消"
+    },
+    "queue": {
+      "filter": "状态",
+      "catalogueLink": "编辑目录",
+      "loading": "加载中…",
+      "error": "无法加载。",
+      "permissionDenied": "您无权访问增值服务。",
+      "retry": "重试",
+      "empty": "暂无申请。",
+      "quoted": "报价 {price}",
+      "quantity": "数量 {count}",
+      "vendorNote": "卖家：{note}",
+      "quoteLabel": "报价（K）",
+      "noteLabel": "给卖家的备注"
+    },
+    "errors": {
+      "quoteRequired": "请输入有效的克瓦查报价。",
+      "quoteUnexpected": "只有报价时才能填写价格。",
+      "actionFailed": "操作失败，请刷新后重试。",
+      "priceShape": "请检查价格：固定价需填写价格，区间价需填写更高的上限。",
+      "duplicateKey": "该键已存在。"
+    },
+    "pricing": {
+      "fixed": "固定价",
+      "range": "价格区间",
+      "pay_as_you_go": "按需付费"
+    },
+    "unit": {
+      "one_off": "一次性",
+      "per_month": "每月",
+      "per_item": "每项"
+    },
+    "catalogue": {
+      "title": "增值服务目录",
+      "subtitle": "卖家看到的名称、描述和价格。修改会记录审计日志。",
+      "name": "名称",
+      "description": "描述",
+      "pricing": "定价方式",
+      "price": "价格 / 起价（K）",
+      "priceMax": "上限（K，仅区间）",
+      "unit": "单位",
+      "active": "对卖家显示",
+      "save": "保存",
+      "saved": "已保存。",
+      "placeholder": "初始价格，请复核",
+      "current": "当前 {price}"
+    }
+  },
+  "trials": {
+    "title": "免费试用",
+    "subtitle": "每位卖家可免费使用 1 个月商业版套餐（不收套餐费）。可延长或结束试用，每次修改都会记录审计日志。",
+    "search": "企业名称",
+    "searchAction": "搜索",
+    "loading": "加载中…",
+    "error": "无法加载试用信息。",
+    "permissionDenied": "仅管理员可管理试用。",
+    "retry": "重试",
+    "empty": "未找到企业。",
+    "endsOn": "{date} 前免费",
+    "endedOn": "试用已于 {date} 结束",
+    "newEnd": "新结束日期",
+    "reason": "原因",
+    "extend": "延长",
+    "end": "立即结束",
+    "errors": {
+      "input": "请选择更晚的日期并填写原因。",
+      "failed": "无法修改试用。",
+      "notLater": "新的结束时间必须晚于当前结束时间。",
+      "alreadyEnded": "该试用已结束。"
     }
   }
 }

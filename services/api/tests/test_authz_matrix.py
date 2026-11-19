@@ -130,6 +130,9 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # Guest-cookie owner resolution at the dependency; handler rejects guests
         # (401) because accepting a quoted RFQ requires a signed-in customer.
         ("POST", "/cart/rfq/{rfq_id}/accept"),
+        # Same guest-cookie owner dependency; the handler 401s guests and only reads
+        # the caller's OWN delivered/completed orders (foreign ids answer 404).
+        ("POST", "/cart/reorder/{order_id}"),
         # Public offer badges / listing offers (W8): read-only, flag-gated, IP rate-limited.
         ("GET", "/offers/badges"),
         ("GET", "/offers/listing/{listing_id}"),
