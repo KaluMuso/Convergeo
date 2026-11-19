@@ -40,6 +40,7 @@ const navLabels = {
   ariaLabel: accountMessages.title,
   overview: accountMessages.nav.overview,
   orders: accountMessages.nav.orders,
+  rewards: accountMessages.nav.rewards,
   tickets: accountMessages.nav.tickets,
   jobs: accountMessages.nav.jobs,
   quotes: accountMessages.nav.quotes,

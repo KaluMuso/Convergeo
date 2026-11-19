@@ -170,3 +170,48 @@ def test_admin_health_get_does_not_require_audit_row(
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def _recorder_with_capture() -> tuple[AdminAuditRecorder, list[dict[str, Any]]]:
+    inserted: list[dict[str, Any]] = []
+    service_client = MagicMock()
+
+    def fake_insert(row: dict[str, Any]) -> MagicMock:
+        inserted.append(row)
+        builder = MagicMock()
+        builder.execute.return_value = MagicMock(data=[{**row, "id": "audit-1"}])
+        return builder
+
+    service_client.client.table.return_value.insert.side_effect = fake_insert
+    return AdminAuditRecorder(USER_ID, service_client), inserted
+
+
+def test_text_entity_key_is_moved_out_of_uuid_column() -> None:
+    """Feature flags are keyed by name; audit_log.entity_id is a uuid column."""
+    recorder, inserted = _recorder_with_capture()
+    recorder.record(
+        action="config.feature_flag.update",
+        entity_type="feature_flag",
+        entity_id="vendor_plans",
+        before={"enabled": False},
+        after={"enabled": True},
+    )
+    row = inserted[0]
+    assert row["entity_id"] is None
+    assert row["before"] == {"enabled": False, "entity_key": "vendor_plans"}
+    assert row["after"] == {"enabled": True, "entity_key": "vendor_plans"}
+
+
+def test_uuid_entity_id_is_kept_unchanged() -> None:
+    recorder, inserted = _recorder_with_capture()
+    recorder.record(
+        action="x.update",
+        entity_type="thing",
+        entity_id=ENTITY_ID,
+        before=None,
+        after={"a": 1},
+    )
+    row = inserted[0]
+    assert row["entity_id"] == ENTITY_ID
+    assert row["before"] is None
+    assert row["after"] == {"a": 1}
