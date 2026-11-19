@@ -23,7 +23,7 @@ from typing import Any, Protocol
 from app.services.escrow.event_release import MASS_REFUND_FLAG_ACTION
 from app.services.events.refund_jobs import (
     enqueue_organiser_cancel_refund_job,
-    order_ticket_refund_amount_ngwee,
+    organiser_cancel_refund_amount_ngwee,
 )
 from app.services.notifications.events import emit_event
 from app.services.orders.state import SYSTEM_ACTOR_ID
@@ -229,7 +229,7 @@ def process_event_cancellation(
         if not customer_id:
             continue
         try:
-            amount_ngwee = order_ticket_refund_amount_ngwee(order_id)
+            amount_ngwee = organiser_cancel_refund_amount_ngwee(order_id)
         except Exception:
             amount_ngwee = 0
         if amount_ngwee > 0:

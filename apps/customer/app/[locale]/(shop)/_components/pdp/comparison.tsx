@@ -6,7 +6,10 @@ import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { FulfillmentLogisticsPills, type LogisticsPillLabels } from "../plp/logistics-pills";
+import {
+  FulfillmentLogisticsPills,
+  type LogisticsPillLabels,
+} from "../plp/logistics-pills";
 
 import { shouldShowComparison } from "./comparison-visibility";
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
@@ -70,7 +73,10 @@ type GeoCoords = {
 
 function conditionLabel(
   condition: ListingCondition,
-  labels: Pick<ComparisonLabels, "conditionNew" | "conditionRefurbished" | "conditionUsed">,
+  labels: Pick<
+    ComparisonLabels,
+    "conditionNew" | "conditionRefurbished" | "conditionUsed"
+  >,
 ): string {
   if (condition === "new") {
     return labels.conditionNew;
@@ -81,13 +87,20 @@ function conditionLabel(
   return labels.conditionRefurbished;
 }
 
-export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+export function haversineMeters(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
   const earthRadiusM = 6_371_000;
   const phi1 = (lat1 * Math.PI) / 180;
   const phi2 = (lat2 * Math.PI) / 180;
   const dPhi = ((lat2 - lat1) * Math.PI) / 180;
   const dLambda = ((lng2 - lng1) * Math.PI) / 180;
-  const a = Math.sin(dPhi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLambda / 2) ** 2;
+  const a =
+    Math.sin(dPhi / 2) ** 2 +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLambda / 2) ** 2;
   return earthRadiusM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -110,7 +123,10 @@ export function formatDistanceMeters(
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-export function resolveUserCoords(geo: GeoCoords | null, permissionDenied: boolean): GeoCoords {
+export function resolveUserCoords(
+  geo: GeoCoords | null,
+  permissionDenied: boolean,
+): GeoCoords {
   if (geo && !permissionDenied) {
     return geo;
   }
@@ -221,7 +237,10 @@ export function Comparison({
       if (lat === null || lng === null) {
         continue;
       }
-      distances.set(listing.id, haversineMeters(userCoords.lat, userCoords.lng, lat, lng));
+      distances.set(
+        listing.id,
+        haversineMeters(userCoords.lat, userCoords.lng, lat, lng),
+      );
     }
     return distances;
   }, [listings, userCoords]);
@@ -241,18 +260,23 @@ export function Comparison({
 
   return (
     <section
+      id="compare"
       data-testid="pdp-comparison"
-      className="rounded border border-border bg-surface"
+      className="scroll-mt-20 rounded border border-border bg-surface"
       style={{ borderRadius: "var(--r)" }}
     >
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3">
         <div className="flex flex-col gap-1">
-          <h2 className="font-display text-lg font-semibold text-text">{labels.heading}</h2>
+          <h2 className="font-display text-lg font-semibold text-text">
+            {labels.heading}
+          </h2>
           <p className="text-sm text-text-2">
             {labels.vendorCount.replace("{count}", String(listings.length))}
           </p>
           {usingFallbackLocation ? (
-            <p className="text-xs text-text-2">{labels.usingFallbackLocation}</p>
+            <p className="text-xs text-text-2">
+              {labels.usingFallbackLocation}
+            </p>
           ) : null}
         </div>
 
@@ -275,12 +299,18 @@ export function Comparison({
       </div>
 
       {/* Mobile: stacked seller cards (audit E10) */}
-      <ul className="flex list-none flex-col gap-3 p-4 lg:hidden" data-testid="pdp-compare-cards">
+      <ul
+        className="flex list-none flex-col gap-3 p-4 lg:hidden"
+        data-testid="pdp-compare-cards"
+      >
         {sortedListings.map((listing) => {
           const distanceM = distanceByListingId.get(listing.id);
           const distanceLabel =
             distanceM !== undefined
-              ? labels.distance.replace("{distance}", formatLocalizedDistance(distanceM))
+              ? labels.distance.replace(
+                  "{distance}",
+                  formatLocalizedDistance(distanceM),
+                )
               : null;
           const isSelected = listing.id === selectedListingId;
           const ratingLabel =
@@ -296,7 +326,9 @@ export function Comparison({
                 type="button"
                 data-testid={`comparison-card-${listing.id}`}
                 aria-pressed={isSelected}
-                aria-label={isSelected ? labels.selectedListing : labels.selectListing}
+                aria-label={
+                  isSelected ? labels.selectedListing : labels.selectListing
+                }
                 onClick={() => onSelect(listing.id)}
                 className={[
                   "w-full rounded border p-4 text-left transition-colors",
@@ -309,13 +341,22 @@ export function Comparison({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-text">{listing.vendor.displayName}</span>
+                      <span className="font-medium text-text">
+                        {listing.vendor.displayName}
+                      </span>
                       {listing.vendor.preferredBadge ? (
-                        <CornerRibbon trust="preferred" trustLabel={labels.preferredBadge} />
+                        <CornerRibbon
+                          trust="preferred"
+                          trustLabel={labels.preferredBadge}
+                        />
                       ) : null}
-                      {lowestPriceNgwee !== null && listing.priceNgwee === lowestPriceNgwee ? (
+                      {lowestPriceNgwee !== null &&
+                      listing.priceNgwee === lowestPriceNgwee ? (
                         <span data-testid={`comparison-lowest-${listing.id}`}>
-                          <Badge variant="public" label={labels.lowestPriceBadge} />
+                          <Badge
+                            variant="public"
+                            label={labels.lowestPriceBadge}
+                          />
                         </span>
                       ) : null}
                     </div>
@@ -366,11 +407,15 @@ export function Comparison({
               const distanceM = distanceByListingId.get(listing.id);
               const distanceLabel =
                 distanceM !== undefined
-                  ? labels.distance.replace("{distance}", formatLocalizedDistance(distanceM))
+                  ? labels.distance.replace(
+                      "{distance}",
+                      formatLocalizedDistance(distanceM),
+                    )
                   : "—";
               const isSelected = listing.id === selectedListingId;
               const ratingLabel =
-                listing.vendor.ratingAvg !== null && listing.vendor.ratingCount > 0
+                listing.vendor.ratingAvg !== null &&
+                listing.vendor.ratingCount > 0
                   ? labels.rating
                       .replace("{rating}", String(listing.vendor.ratingAvg))
                       .replace("{count}", String(listing.vendor.ratingCount))
@@ -380,14 +425,21 @@ export function Comparison({
                 <tr
                   key={listing.id}
                   data-testid={`comparison-row-${listing.id}`}
-                  className={isSelected ? "bg-primary/5" : "border-t border-border"}
+                  className={
+                    isSelected ? "bg-primary/5" : "border-t border-border"
+                  }
                 >
                   <td className="px-4 py-3 align-top">
                     <div className="flex flex-col gap-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-text">{listing.vendor.displayName}</span>
+                        <span className="font-medium text-text">
+                          {listing.vendor.displayName}
+                        </span>
                         {listing.vendor.preferredBadge ? (
-                          <CornerRibbon trust="preferred" trustLabel={labels.preferredBadge} />
+                          <CornerRibbon
+                            trust="preferred"
+                            trustLabel={labels.preferredBadge}
+                          />
                         ) : null}
                       </div>
                       <span className="text-xs text-text-2">{ratingLabel}</span>
@@ -396,8 +448,12 @@ export function Comparison({
                   <td className="px-4 py-3 align-top font-medium text-[var(--price)]">
                     <div className="flex flex-col gap-1">
                       <span>{formatK(listing.priceNgwee)}</span>
-                      {lowestPriceNgwee !== null && listing.priceNgwee === lowestPriceNgwee ? (
-                        <Badge variant="public" label={labels.lowestPriceBadge} />
+                      {lowestPriceNgwee !== null &&
+                      listing.priceNgwee === lowestPriceNgwee ? (
+                        <Badge
+                          variant="public"
+                          label={labels.lowestPriceBadge}
+                        />
                       ) : null}
                     </div>
                   </td>
@@ -407,7 +463,9 @@ export function Comparison({
                       label={conditionLabel(listing.condition, labels)}
                     />
                   </td>
-                  <td className="px-4 py-3 align-top text-text-2">{distanceLabel}</td>
+                  <td className="px-4 py-3 align-top text-text-2">
+                    {distanceLabel}
+                  </td>
                   <td className="px-4 py-3 align-top">
                     <FulfillmentLogisticsPills
                       deliveryAvailable={listing.deliveryAvailable}
@@ -420,12 +478,18 @@ export function Comparison({
                       type="button"
                       data-testid={`comparison-select-${listing.id}`}
                       aria-pressed={isSelected}
-                      aria-label={isSelected ? labels.selectedListing : labels.selectListing}
+                      aria-label={
+                        isSelected
+                          ? labels.selectedListing
+                          : labels.selectListing
+                      }
                       onClick={() => onSelect(listing.id)}
                       className="min-h-11 rounded border border-border px-3 text-sm font-medium text-primary hover:bg-primary/5"
                       style={{ borderRadius: "var(--r)" }}
                     >
-                      {isSelected ? labels.selectedListing : labels.selectListing}
+                      {isSelected
+                        ? labels.selectedListing
+                        : labels.selectListing}
                     </button>
                   </td>
                 </tr>

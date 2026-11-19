@@ -1,6 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -37,13 +43,18 @@ const fields = () => ({
 });
 function ui(initialCategory?: string) {
   return (
-    <NextIntlClientProvider locale="en" messages={{ services: { postJob: messages.postJob } }}>
+    <NextIntlClientProvider
+      locale="en"
+      messages={{ services: { postJob: messages.postJob } }}
+    >
       <PostJobForm locale="en" initialCategory={initialCategory} />
     </NextIntlClientProvider>
   );
 }
 function fill() {
-  fireEvent.change(fields().description, { target: { value: draft.description } });
+  fireEvent.change(fields().description, {
+    target: { value: draft.description },
+  });
   fireEvent.change(fields().area, { target: { value: draft.service_area } });
 }
 function submit(container: HTMLElement) {
@@ -80,8 +91,12 @@ describe("post-job draft resilience", () => {
     fill();
     submit(container);
     expect(fields().description).toHaveValue(draft.description);
-    expect(screen.queryByText(messages.postJob.draftSaved)).not.toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent(messages.postJob.authRequired);
+    expect(
+      screen.queryByText(messages.postJob.draftSaved),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      messages.postJob.authRequired,
+    );
     expect(mocks.request).not.toHaveBeenCalled();
   });
 
@@ -90,12 +105,16 @@ describe("post-job draft resilience", () => {
     (name) => {
       render(ui());
       expect(screen.getByText(messages.postJob.draftSaved)).toBeInTheDocument();
-      const write = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw new DOMException("Cannot save", name);
-      });
+      const write = vi
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw new DOMException("Cannot save", name);
+        });
       fill();
       expect(fields().description).toHaveValue(draft.description);
-      expect(screen.queryByText(messages.postJob.draftSaved)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(messages.postJob.draftSaved),
+      ).not.toBeInTheDocument();
       write.mockRestore();
       fireEvent.change(fields().area, { target: { value: "Kitwe" } });
       expect(screen.getByText(messages.postJob.draftSaved)).toBeInTheDocument();
@@ -128,7 +147,12 @@ describe("post-job draft resilience", () => {
   it("preserves valid fields of a partially invalid draft", () => {
     localStorage.setItem(
       key,
-      JSON.stringify({ ...draft, category: {}, budget_band: [], preferred_date: "not-a-date" }),
+      JSON.stringify({
+        ...draft,
+        category: {},
+        budget_band: [],
+        preferred_date: "not-a-date",
+      }),
     );
     render(ui());
     expect(fields().description).toHaveValue(draft.description);
@@ -143,25 +167,30 @@ describe("post-job draft resilience", () => {
     ["food-catering", "food_catering"],
     ["tech_services", "tech_services"],
     ["unknown", "cleaning"],
-  ])("restores a valid draft with initial category %s taking precedence", (initial, category) => {
-    localStorage.setItem(key, JSON.stringify(draft));
-    render(ui(initial));
-    expect(fields().category).toHaveValue(category);
-    expect(fields().description).toHaveValue(draft.description);
-    expect(fields().area).toHaveValue(draft.service_area);
-    expect(fields().date).toHaveValue(draft.preferred_date);
-    expect(fields().budget).toHaveValue(draft.budget_band);
-    expect(JSON.parse(localStorage.getItem(key)!)).toEqual({ ...draft, category });
-    expect(mocks.request).not.toHaveBeenCalled();
-  });
+  ])(
+    "restores a valid draft with initial category %s taking precedence",
+    (initial, category) => {
+      localStorage.setItem(key, JSON.stringify(draft));
+      render(ui(initial));
+      expect(fields().category).toHaveValue(category);
+      expect(fields().description).toHaveValue(draft.description);
+      expect(fields().area).toHaveValue(draft.service_area);
+      expect(fields().date).toHaveValue(draft.preferred_date);
+      expect(fields().budget).toHaveValue(draft.budget_band);
+      expect(JSON.parse(localStorage.getItem(key)!)).toEqual({
+        ...draft,
+        category,
+      });
+      expect(mocks.request).not.toHaveBeenCalled();
+    },
+  );
 
   it("restores through sign-in without automatically posting, then sends the unchanged API contract on explicit submit", async () => {
     localStorage.setItem(key, JSON.stringify(draft));
     const view = render(ui());
-    expect(screen.getByRole("link", { name: messages.postJob.authCta })).toHaveAttribute(
-      "href",
-      "/en/login?next=/en/services/post-job",
-    );
+    expect(
+      screen.getByRole("link", { name: messages.postJob.authCta }),
+    ).toHaveAttribute("href", "/en/login?next=/en/services/post-job");
     mocks.session = { access_token: "token" };
     view.rerender(ui());
     expect(mocks.request).not.toHaveBeenCalled();
@@ -183,7 +212,9 @@ describe("post-job draft resilience", () => {
       vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
         throw new DOMException("Denied", "SecurityError");
       });
-      mocks.request.mockResolvedValue({ job: { id: "job-1", broadcast: { no_match: noMatch } } });
+      mocks.request.mockResolvedValue({
+        job: { id: "job-1", broadcast: { no_match: noMatch } },
+      });
       const view = render(ui());
       submit(view.container);
       expect(await screen.findByRole("status")).toHaveTextContent(
@@ -192,7 +223,9 @@ describe("post-job draft resilience", () => {
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       submit(view.container);
       expect(mocks.request).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole("button", { name: messages.postJob.submit })).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: messages.postJob.submit }),
+      ).toBeDisabled();
     },
   );
 
@@ -207,7 +240,9 @@ describe("post-job draft resilience", () => {
     });
     expect(mocks.request).toHaveBeenCalledTimes(1);
     await act(async () => pending.reject(new Error("Offline")));
-    expect(screen.getByRole("alert")).toHaveTextContent(messages.postJob.errors.generic);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      messages.postJob.errors.generic,
+    );
     expect(fields().description).toHaveValue(draft.description);
     expect(JSON.parse(localStorage.getItem(key)!)).toEqual(draft);
     mocks.request.mockResolvedValue({ job: { id: "job-2" } });
@@ -246,7 +281,9 @@ describe("post-job draft resilience", () => {
     mocks.session = { access_token: "token" };
     const view = render(ui());
     submit(view.container);
-    expect(screen.getByRole("alert")).toHaveTextContent(messages.postJob.errors.required);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      messages.postJob.errors.required,
+    );
     expect(mocks.request).not.toHaveBeenCalled();
   });
 
@@ -257,11 +294,15 @@ describe("post-job draft resilience", () => {
     });
     mocks.request.mockResolvedValue({ job: { id: "job-1" } });
     const view = render(ui());
-    fireEvent.change(fields().description, { target: { value: "  Fix the leaking tap  " } });
+    fireEvent.change(fields().description, {
+      target: { value: "  Fix the leaking tap  " },
+    });
     fireEvent.change(fields().area, { target: { value: "  Lusaka  " } });
     expect(mocks.request).not.toHaveBeenCalled();
     submit(view.container);
-    expect(await screen.findByRole("status")).toHaveTextContent(messages.postJob.ack.sent);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      messages.postJob.ack.sent,
+    );
     expect(mocks.request).toHaveBeenCalledExactlyOnceWith("/jobs", {
       method: "POST",
       body: JSON.stringify({
@@ -297,7 +338,9 @@ describe("post-job draft resilience", () => {
     mocks.session = null;
     view.rerender(ui());
     expect(localStorage.getItem(key)).toBeNull();
-    expect(screen.queryByText(messages.postJob.draftSaved)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(messages.postJob.draftSaved),
+    ).not.toBeInTheDocument();
     submit(view.container);
     expect(mocks.request).toHaveBeenCalledTimes(1);
   });

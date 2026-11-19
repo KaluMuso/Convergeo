@@ -337,6 +337,60 @@ def test_bad_release_window_rejected(
     assert config_store.platform_config[1]["value"] == 48
 
 
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("event_verified_organiser_advance_bps", 5001),
+        ("event_verified_organiser_advance_bps", -1),
+        ("event_advance_min_kyc_tier", 0),
+        ("event_advance_min_kyc_tier", 4),
+        ("event_advance_min_successful_events", -1),
+        ("event_advance_repayment_days", 0),
+        ("event_advance_repayment_days", 91),
+    ],
+)
+def test_event_advance_config_out_of_bounds_rejected(
+    config_client: TestClient,
+    config_store: FakeConfigStore,
+    monkeypatch: pytest.MonkeyPatch,
+    key: str,
+    value: int,
+) -> None:
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _mock_audit_insert(monkeypatch)
+
+    response = config_client.patch(
+        f"/admin/config/platform/{key}", headers=_admin_headers(), json={"value": value}
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_event_advance_config_is_admin_editable(
+    config_client: TestClient,
+    config_store: FakeConfigStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _mock_audit_insert(monkeypatch)
+    config_store.platform_config.append(
+        {"key": "event_verified_organiser_advance_bps", "value": 5000, "description": "advance"}
+    )
+
+    response = config_client.patch(
+        "/admin/config/platform/event_verified_organiser_advance_bps",
+        headers=_admin_headers(),
+        json={"value": 2500},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["value"] == 2500
+    assert config_store.platform_config[-1]["value"] == 2500
+
+
 # ---------------------------------------------------------------------------
 # Category tree integrity
 # ---------------------------------------------------------------------------

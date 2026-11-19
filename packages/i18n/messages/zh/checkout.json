@@ -18,7 +18,7 @@
     "lineTotal": "此行合计：{amount}",
     "unitPrice": "每件 {amount}",
     "unitPriceMeasured": "每 {quantity} {amount}",
-    "madeToOrderLeadTime": "按订单制作 · {days} 天内备妥",
+    "madeToOrderLeadTime": "按订单制作 · {when}备妥",
     "saleUnits": {
       "each": "件",
       "metre": "米",
@@ -71,14 +71,48 @@
     "mergeConflictLine": "商品 {listing}：{code}",
     "mergePriceLine": "{item}：单价 {previous} → {current}，数量 {quantity}，合计 {total}",
     "mergeUnnamedItem": "商品 #{id}",
-    "mergeWholesaleTerms": "批发最低数量：{moq} 件。",
     "mergePriceNeedsReview": "此报价不能在这里接受，将从购物车移除；购买前请重新查看。",
     "mergeAccountChoice": "保留账户取货点",
     "mergeGuestChoice": "使用访客取货点",
     "mergeApply": "接受当前价格并移除不可用商品",
     "mergeRetry": "重试购物车合并",
     "mergeSignOut": "退出登录",
-    "mergeFailure": "无法完成购物车保护。您的商品仍已保存。"
+    "mergeFailure": "无法完成购物车保护。您的商品仍已保存。",
+    "offerSavings": "优惠节省",
+    "offerSaving": "优惠节省 {amount}",
+    "offerGift": "赠品：{title} × {qty}",
+    "offerGiftWorth": "价值 {value}，随优惠免费赠送",
+    "types": {
+      "products": "商品",
+      "eventTickets": "活动门票",
+      "services": "服务"
+    },
+    "tickets": {
+      "line": "{type} × {qty}",
+      "remove": "移除",
+      "removeLabel": "移除 {title} 的门票",
+      "unavailable": "这些门票已无法购买。请移除后再结账。",
+      "platformFee": "票务服务费",
+      "prepaidOnly": "活动门票需在线支付（移动钱包或银行卡），不支持货到付款。",
+      "oneEvent": "您的购物车中已有其他活动或其他场次的门票。请先结算或移除它们。",
+      "added": "门票已加入购物车",
+      "addToCart": "加入购物车",
+      "adding": "正在加入…",
+      "addFailed": "无法添加这些门票，请重试。",
+      "signInRequired": "请登录后再将门票加入购物车。"
+    },
+    "mergeWholesaleTerms": "批发最低数量：{moq} 件。",
+    "codStep1": "您下单",
+    "codStep2": "我们配送",
+    "codStep3": "送达时付款",
+    "leadTimeWhen": {
+      "oneDay": "一天内",
+      "days": "约 {count} 天内",
+      "oneWeek": "一周内",
+      "weeks": "约 {count} 周内",
+      "oneMonth": "约一个月内",
+      "months": "约 {count} 个月内"
+    }
   },
   "checkout": {
     "pageTitle": "结账",
@@ -94,7 +128,7 @@
       "title": "您的联系方式",
       "subtitle": "我们将用它通过 WhatsApp 或 SMS 发送订单更新。",
       "phoneLabel": "手机号码",
-      "phoneHelp": "MTN、Airtel 或 Zamtel——我们将发送一次性验证码。",
+      "phoneHelp": "MTN、Airtel 或 Zamtel——我们将用它确认您的配送。",
       "phonePlaceholder": "97X XXX XXX",
       "countryCode": "国家/地区代码",
       "nationalNumber": "手机号码",
@@ -148,7 +182,8 @@
         "cutoffBefore": "在14:00（卢萨卡时间）前下单，现货商品通常在卖家确认后当天发出。",
         "cutoffAfter": "卢萨卡时间已过14:00，现货商品通常会在卖家确认后于明天发出。",
         "cutoffMadeToOrder": "定制商品在制作完成后发出——请查看每件商品的制作周期。"
-      }
+      },
+      "notOffered": "卖家不为您购物车中的某件商品提供该交付方式。"
     },
     "countdown": {
       "label": "商品已预留",
@@ -201,7 +236,8 @@
         "capNote": "货到付款适用于不超过 {cap} 的订单。",
         "overCap": "您的订单总额为 {total}。如需货到付款，请移除部分商品，或分成每笔不超过 {cap} 的订单。",
         "editCart": "编辑购物车"
-      }
+      },
+      "codNotForTickets": "订单包含活动门票时，不支持货到付款。"
     },
     "review": {
       "title": "确认您的订单",
@@ -218,7 +254,7 @@
       "railMtn": "MTN",
       "railAirtel": "Airtel",
       "payerNumber": "付款人：{number}",
-      "escrowTitle": "您的款项如何受到保护",
+      "escrowTitle": "如何运作",
       "escrowStep1": "您付款",
       "escrowStep2": "由 Convergeo 保管",
       "escrowStep3": "送达后放款",
@@ -241,7 +277,19 @@
         "deliveryNoLandmark": "卢萨卡送货",
         "pickupFromSeller": "您将到卖家处自取",
         "placeOrderCod": "提交订单——货到付款"
-      }
+      },
+      "deliveryConsent": {
+        "label": "同意将我的姓名、电话和地址提供给配送合作方，用于配送此订单",
+        "hint": "可选。持证快递员可能配送您的订单。若不同意，将由 Vergeo5 员工配送或先致电您。可随时在“账户 → 隐私”中更改。",
+        "saveFailed": "无法保存此选择。您仍可以下单。"
+      },
+      "typeProducts": "商品",
+      "typeEventTickets": "活动门票",
+      "ticketLine": "{type} × {qty}",
+      "platformFee": "票务服务费",
+      "discount": "优惠券 {code}",
+      "estimatedReady": "预计 {date} 备妥",
+      "estimatedDelivery": "预计 {date} 送达"
     },
     "pending": {
       "pageTitle": "批准付款",
@@ -309,6 +357,64 @@
       "widgetUnavailable": "银行卡付款暂时不可用。请尝试移动支付或稍后重试。",
       "widgetLabel": "Convergeo 订单",
       "secureNote": "由 Lenco 保护——符合 PCI 标准的托管结账"
+    },
+    "tickets": {
+      "unavailable": "购物车中的某张门票已无法购买，请检查购物车。"
+    },
+    "coupon": {
+      "toggle": "有优惠码吗？",
+      "label": "优惠码",
+      "apply": "使用",
+      "applying": "正在验证…",
+      "remove": "移除",
+      "applied": "已使用 {code}：优惠 {amount}",
+      "paidByPlatform": "此优惠由 Convergeo 承担，店铺仍收到全价。",
+      "paidByShop": "此优惠由店铺提供。",
+      "prepaidOnly": "优惠券仅适用于移动支付或银行卡，不适用于货到付款。",
+      "errors": {
+        "generic": "该优惠码无效，请检查后重试。",
+        "not_found": "找不到该优惠码。",
+        "inactive": "该优惠码已暂停。",
+        "not_started": "该优惠码尚未生效。",
+        "expired": "该优惠码已过期。",
+        "min_spend": "适用商品金额未达到最低消费。",
+        "not_applicable": "购物车中没有适用该优惠码的商品。",
+        "limit_reached": "该优惠码已被用完。",
+        "already_used": "您已使用过该优惠码。",
+        "budget_exhausted": "本月活动已结束。",
+        "changed": "购物车已变化，请重新使用优惠码。",
+        "cod_not_allowed": "优惠券需使用移动支付或银行卡。",
+        "tooManyAttempts": "尝试次数过多，请稍后再试。",
+        "featureUnavailable": "优惠券功能尚未开放。"
+      }
+    },
+    "gift": {
+      "toggle": "作为礼物发送",
+      "intro": "我们会送到收礼人手中。您仍是买家，退款将退还给您。",
+      "recipientName": "收礼人姓名",
+      "recipientPhone": "收礼人电话",
+      "recipientPhoneHelp": "赞比亚手机号码。我们只会就礼物给对方发送一条消息。",
+      "message": "礼物留言（可选）",
+      "messageHelp": "最多 200 个字符，不含链接。",
+      "consent": "对方已同意为此礼物向 Convergeo 提供电话（以及送货地址）。",
+      "pickupNote": "自取：取货 PIN 码发送给收礼人，而不是您。",
+      "deliveryNote": "送货：请在送货步骤填写收礼人的地标。",
+      "privacyNote": "对方信息仅用于此礼物，完成后删除。对方的收据不显示价格。",
+      "save": "保存礼物信息",
+      "saving": "正在保存…",
+      "remove": "不是礼物",
+      "saved": "送给 {name}（{phone}）的礼物",
+      "prepaidOnly": "礼物需使用移动支付或银行卡。",
+      "errors": {
+        "generic": "无法保存礼物信息，请重试。",
+        "consent": "请勾选以确认对方已同意。",
+        "name": "请输入对方姓名。",
+        "phone": "请输入赞比亚手机号码，例如 097 123 4567。",
+        "message": "礼物留言不能包含链接。",
+        "codNotAllowed": "礼物需使用移动支付或银行卡。",
+        "tooMany": "修改次数过多，请稍后再试。",
+        "featureUnavailable": "礼物功能尚未开放。"
+      }
     }
   },
   "variant": {

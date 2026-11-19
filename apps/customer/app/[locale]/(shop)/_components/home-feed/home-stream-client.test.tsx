@@ -5,7 +5,11 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { loadStreamPage, HomeStreamClient, type StreamFetcher } from "./home-stream-client";
+import {
+  loadStreamPage,
+  HomeStreamClient,
+  type StreamFetcher,
+} from "./home-stream-client";
 
 import type { FeedLabels, FeedListingWire, HomeStreamPage } from "./feed-types";
 
@@ -13,7 +17,14 @@ vi.mock("@vergeo/ui/src/media/cloudinary-image-static", () => ({
   CloudinaryImageStatic: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
+  default: ({
+    href,
+    children,
+    ...rest
+  }: {
+    href: string;
+    children: React.ReactNode;
+  }) => (
     <a href={href} {...rest}>
       {children}
     </a>
@@ -61,7 +72,10 @@ function page(ids: string[], next: string | null): HomeStreamPage {
   return { items: ids.map(listing), next_cursor: next };
 }
 
-type ObserverRecord = { callback: IntersectionObserverCallback; disconnect: () => void };
+type ObserverRecord = {
+  callback: IntersectionObserverCallback;
+  disconnect: () => void;
+};
 let observers: ObserverRecord[] = [];
 
 function installObserver() {
@@ -92,7 +106,10 @@ async function intersect() {
   });
 }
 
-function mount(fetcher: StreamFetcher, props: { cursor?: string | null; seen?: string[] } = {}) {
+function mount(
+  fetcher: StreamFetcher,
+  props: { cursor?: string | null; seen?: string[] } = {},
+) {
   return render(
     <HomeStreamClient
       initialCursor={props.cursor === undefined ? "c1" : props.cursor}
@@ -135,14 +152,18 @@ describe("HomeStreamClient", () => {
   });
 
   it("loads the next page when the sentinel intersects and announces the count", async () => {
-    const fetcher = vi.fn<StreamFetcher>().mockResolvedValue(page(["a", "b", "c"], "c2"));
+    const fetcher = vi
+      .fn<StreamFetcher>()
+      .mockResolvedValue(page(["a", "b", "c"], "c2"));
     mount(fetcher);
     await intersect();
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher.mock.calls[0]?.[0]).toBe("c1");
     expect(await screen.findByText("Title a")).toBeInTheDocument();
     expect(screen.getByText("Title c")).toBeInTheDocument();
-    expect(screen.getByTestId("home-stream-aria-live")).toHaveTextContent("3 more items loaded.");
+    expect(screen.getByTestId("home-stream-aria-live")).toHaveTextContent(
+      "3 more items loaded.",
+    );
     // More pages remain: the keyboard-reachable button is still there.
     expect(screen.getByTestId("home-stream-load-more")).toBeEnabled();
   });
@@ -156,9 +177,13 @@ describe("HomeStreamClient", () => {
     );
     mount(fetcher);
     await intersect();
-    expect(await screen.findByTestId("home-stream-skeleton")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("home-stream-skeleton"),
+    ).toBeInTheDocument();
     await act(async () => resolve(page(["a"], null)));
-    await waitFor(() => expect(screen.queryByTestId("home-stream-skeleton")).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByTestId("home-stream-skeleton")).toBeNull(),
+    );
   });
 
   it("surfaces an error with a retry button that refetches the same cursor", async () => {
@@ -169,9 +194,9 @@ describe("HomeStreamClient", () => {
     const user = userEvent.setup();
     mount(fetcher);
     await intersect();
-    expect(await screen.findByTestId("home-stream-load-error")).toHaveTextContent(
-      "Couldn't load more right now.",
-    );
+    expect(
+      await screen.findByTestId("home-stream-load-error"),
+    ).toHaveTextContent("Couldn't load more right now.");
     const retry = screen.getByRole("button", { name: "Try again" });
     await user.click(retry);
     expect(await screen.findByText("Title a")).toBeInTheDocument();
@@ -192,12 +217,15 @@ describe("HomeStreamClient", () => {
 
   it("is already at the end when the server batch had no next cursor", () => {
     mount(vi.fn<StreamFetcher>(), { cursor: null });
-    expect(screen.getByTestId("home-stream-end-of-results")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("home-stream-end-of-results"),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId("home-stream-load-more")).toBeNull();
   });
 
   it("falls back to the Load more button when IntersectionObserver is unavailable", async () => {
-    delete (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver;
+    delete (globalThis as { IntersectionObserver?: unknown })
+      .IntersectionObserver;
     const fetcher = vi.fn<StreamFetcher>().mockResolvedValue(page(["a"], "c2"));
     const user = userEvent.setup();
     mount(fetcher);
@@ -207,14 +235,18 @@ describe("HomeStreamClient", () => {
   });
 
   it("does not auto-load under data saver but keeps the Load more button", async () => {
-    vi.stubGlobal("navigator", { ...window.navigator, connection: { saveData: true } });
+    vi.stubGlobal("navigator", {
+      ...window.navigator,
+      connection: { saveData: true },
+    });
     const fetcher = vi.fn<StreamFetcher>().mockResolvedValue(page(["a"], null));
     mount(fetcher);
     await act(async () => undefined);
     // Any observer created before the flag resolved must be disconnected again.
     expect(
       observers.every(
-        (record) => (record.disconnect as ReturnType<typeof vi.fn>).mock.calls.length > 0,
+        (record) =>
+          (record.disconnect as ReturnType<typeof vi.fn>).mock.calls.length > 0,
       ),
     ).toBe(true);
     expect(fetcher).not.toHaveBeenCalled();
@@ -226,7 +258,9 @@ describe("loadStreamPage", () => {
   const signal = new AbortController().signal;
 
   it("drops listings already shown above", async () => {
-    const fetcher = vi.fn<StreamFetcher>().mockResolvedValue(page(["x", "y"], "n"));
+    const fetcher = vi
+      .fn<StreamFetcher>()
+      .mockResolvedValue(page(["x", "y"], "n"));
     const result = await loadStreamPage(fetcher, "c", signal, new Set(["x"]));
     expect(result.items.map((i) => i.id)).toEqual(["y"]);
     expect(result.nextCursor).toBe("n");

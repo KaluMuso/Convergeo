@@ -334,8 +334,8 @@ def test_duplicate_emit_is_deduped_to_one_row() -> None:
 def test_silent_event_emits_nothing() -> None:
     client = _fresh_client()
     order_row = {"id": ORDER_ID, "vendor_id": VENDOR_ID, "customer_id": CUSTOMER_ID}
-    assert EVENT_REGISTRY["order_completed"] is None
-    row = emit_order_lifecycle(client, event="order_completed", order_row=order_row)
+    assert EVENT_REGISTRY["order_processing"] is None
+    row = emit_order_lifecycle(client, event="order_processing", order_row=order_row)
     assert row is None
     assert _outbox(client) == []
 
@@ -344,7 +344,7 @@ def test_silent_event_via_emit_event_returns_none() -> None:
     client = _FakeClient()
     row = emit_event(
         client,
-        event="order_completed",
+        event="ticket_transferred",
         entity_id=ORDER_ID,
         recipient_id=CUSTOMER_ID,
         payload={},

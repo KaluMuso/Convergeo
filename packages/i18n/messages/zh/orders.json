@@ -33,7 +33,8 @@
     "requestReturn": "申请退货",
     "openDispute": "发起或查看纠纷",
     "variantOption": "{group}：{value}",
-    "variantSeparator": " · "
+    "variantSeparator": " · ",
+    "discount": "优惠券折扣"
   },
   "status": {
     "placed": "已下单",
@@ -106,7 +107,9 @@
     "confirming": "确认中…",
     "done": "您已确认收货",
     "doneBody": "款项已放款给商家。",
-    "error": "无法确认收货。请重试。"
+    "error": "无法确认收货。请重试。",
+    "bodyCod": "确认即告知我们订单已送达。请在收到全部商品并向商家付款后再确认。",
+    "doneBodyCod": "感谢您的确认。您的订单已完成。"
   },
   "report": {
     "title": "举报问题",
@@ -230,5 +233,58 @@
     "beforeDispatch": "想修改或取消？请在发货前凭订单号联系客服。",
     "afterDispatch": "订单有问题？请凭订单号联系客服。",
     "contactCta": "联系客服"
+  },
+  "doorPay": {
+    "title": "送货上门付款",
+    "intro": "骑手到达门口、您检查商品后，用手机钱包支付 {amount}。",
+    "amountDue": "检查商品后，在门口用手机钱包支付 {amount}。",
+    "waitingRider": "骑手报告到达后，付款按钮会出现在这里。",
+    "payNow": "立即在手机上付款",
+    "sending": "正在发送付款提示…",
+    "otherNumber": "使用其他号码付款",
+    "phoneLabel": "MTN 或 Airtel 号码",
+    "phoneHelp": "付款提示将发送到此号码。Zamtel 号码暂不支持。",
+    "pending": "请查看手机并输入 PIN 码确认付款。",
+    "checkStatus": "查看付款状态",
+    "checking": "正在查询…",
+    "failed": "付款未成功。您可以重试或使用其他号码。",
+    "attemptsLeft": "{count, plural, other {还可尝试 # 次}}",
+    "noAttemptsLeft": "已无尝试次数。骑手可在现金限额内收取现金。",
+    "paid": "已付款。您的交接码已显示在上方，请交给骑手。",
+    "cash": "请向骑手支付现金 {amount}，然后告诉骑手您的交接码。",
+    "errors": {
+      "invalidPhone": "请输入赞比亚 MTN 或 Airtel 号码。",
+      "operatorUnsupported": "此号码无法接收付款提示，请使用 MTN 或 Airtel 号码。",
+      "inFlight": "您的手机上已有付款提示。请确认，或稍候再试。",
+      "generic": "出现问题。请检查网络连接后重试。"
+    }
+  },
+  "gift": {
+    "title": "这是一份礼物",
+    "body": "您是买家，退款将退还给您。",
+    "receiptLink": "打开礼物收据（不含价格）",
+    "receiptTitle": "礼物收据",
+    "for": "送给 {name}",
+    "from": "来自 {shop}",
+    "qty": "× {qty}",
+    "noPrices": "礼物收据从不显示价格。",
+    "pinSentToRecipient": "取货 PIN 码已发送给收礼人。"
+  },
+  "buyAgain": {
+    "button": "再次购买",
+    "loading": "正在加入购物车…",
+    "error": "无法添加这些商品，请重试。",
+    "rateLimited": "尝试次数过多，请稍后再试。",
+    "added": "已加入购物车：{count}",
+    "nothingAdded": "没有商品可加入购物车。",
+    "skippedTitle": "未加入",
+    "skipped": {
+      "unavailable": "已不再提供",
+      "out_of_stock": "缺货",
+      "variant_unavailable": "该选项已不再提供"
+    },
+    "priceChangeTitle": "价格自您上次下单后已变动",
+    "priceChangeLine": "{title}：原价 {previous}，现价 {current}",
+    "goToCart": "查看购物车并结账"
   }
 }

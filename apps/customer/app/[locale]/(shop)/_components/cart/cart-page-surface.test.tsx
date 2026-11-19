@@ -66,7 +66,10 @@ const { CartPageView } = await import("./vendor-groups");
  */
 function renderInIntl(ui: React.ReactElement) {
   return render(
-    <NextIntlClientProvider locale="en" messages={{ checkout: checkoutMessages }}>
+    <NextIntlClientProvider
+      locale="en"
+      messages={{ checkout: checkoutMessages }}
+    >
       {ui}
     </NextIntlClientProvider>,
   );
@@ -97,7 +100,8 @@ const labels = {
   escrowTeaser: cartMessages.escrowTeaser,
   escrowSteps: ["You pay", "Held by Convergeo", "Released"],
   stockUnavailableNotice: cartMessages.stockUnavailableNotice,
-  reservationExpiredNotice: "Your reservation expired — items were returned to your cart.",
+  reservationExpiredNotice:
+    "Your reservation expired — items were returned to your cart.",
   summaryHeading: cartMessages.summaryHeading,
   vendor: {
     vendorGroup: cartMessages.vendorGroup,
@@ -258,10 +262,12 @@ describe("cart page surface contract", () => {
 
     renderInIntl(<CartPageView locale="en" labels={labels} />);
 
-    expect(screen.getByTestId("cart-reservation-expired-notice")).toHaveTextContent(
-      labels.reservationExpiredNotice,
-    );
-    expect(screen.queryByTestId("cart-stock-unavailable-notice")).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("cart-reservation-expired-notice"),
+    ).toHaveTextContent(labels.reservationExpiredNotice);
+    expect(
+      screen.queryByTestId("cart-stock-unavailable-notice"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows no checkout notice on an ordinary cart visit", () => {
@@ -270,7 +276,9 @@ describe("cart page surface contract", () => {
 
     renderInIntl(<CartPageView locale="en" labels={labels} />);
 
-    expect(screen.queryByTestId("cart-reservation-expired-notice")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("cart-reservation-expired-notice"),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps exactly one cart-page marker per render", () => {

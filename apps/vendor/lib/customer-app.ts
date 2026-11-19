@@ -48,7 +48,10 @@ export function getCustomerAppUrl(): string | null {
 }
 
 /** Locale-aware public vendor storefront URL, or `null` when the customer app is unavailable. */
-export function getVendorStorefrontUrl(locale: string, slug: string): string | null {
+export function getVendorStorefrontUrl(
+  locale: string,
+  slug: string,
+): string | null {
   const base = getCustomerAppUrl();
   if (base === null) {
     return null;

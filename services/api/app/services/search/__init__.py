@@ -8,7 +8,9 @@ from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 from app.schemas.base import NgweeInt, StrictModel
-from app.services.analytics.search_log import log_search_query
+from app.schemas.offers import OfferBadgeOut
+from app.services.analytics.flags import collect_v2_enabled
+from app.services.analytics.search_log import log_search_query, redact_term
 from app.services.listings.demo import drop_demo_listing_hits
 from app.services.search.embedding_client import (
     fetch_query_embedding,
@@ -27,6 +29,7 @@ from app.services.search.query_builder import (
     normalize_page_size,
     paginate,
 )
+from app.services.search.relevance import apply_relevance_guard, has_active_offer
 from app.services.search.search_facets import (
     SearchFacets,
     call_search_query_facets,
@@ -66,6 +69,9 @@ class SearchHit(StrictModel):
     # Whether any branch of the resolved vendor is open now (Africa/Lusaka clock).
     # ``None`` when hours are not published — never treated as closed.
     is_open_now: bool | None = None
+    #: W8 live offer on this product (any active listing) or listing; flag
+    #: `bundles`. Attached by the search router, never part of ranking.
+    offer_badge: OfferBadgeOut | None = None
 
 
 class SearchKindTotals(StrictModel):
@@ -231,9 +237,7 @@ def drop_wholesale_listing_hits(client: Any, hits: list[SearchHit]) -> list[Sear
     if not wholesale_ids:
         return hits
     return [
-        hit
-        for hit in hits
-        if not (hit.entity_kind == "listing" and hit.entity_id in wholesale_ids)
+        hit for hit in hits if not (hit.entity_kind == "listing" and hit.entity_id in wholesale_ids)
     ]
 
 
@@ -299,9 +303,7 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
     event_slugs: dict[str, str] = {}
 
     if product_ids:
-        response = (
-            client.table("products").select("id, slug").in_("id", product_ids).execute()
-        )
+        response = client.table("products").select("id, slug").in_("id", product_ids).execute()
         for row in _rows(response):
             entity_id = row.get("id")
             row_slug = row.get("slug")
@@ -346,9 +348,7 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
                 listing_slugs[listing_id] = row_slug.strip()
 
     if vendor_ids:
-        response = (
-            client.table("vendors").select("id, slug").in_("id", vendor_ids).execute()
-        )
+        response = client.table("vendors").select("id, slug").in_("id", vendor_ids).execute()
         for row in _rows(response):
             entity_id = row.get("id")
             row_slug = row.get("slug")
@@ -356,9 +356,7 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
                 vendor_slugs[str(entity_id)] = row_slug.strip()
 
     if event_ids:
-        response = (
-            client.table("events").select("id, slug").in_("id", event_ids).execute()
-        )
+        response = client.table("events").select("id, slug").in_("id", event_ids).execute()
         for row in _rows(response):
             entity_id = row.get("id")
             row_slug = row.get("slug")
@@ -390,10 +388,13 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
 
 
 def log_zero_result(*, query: str, filters: dict[str, Any], kind: SearchKind | None) -> None:
+    # analytics_v2 (1A-06): the raw query can carry a phone number or e-mail; once the
+    # collect flag is on, application logs get the redacted form too (plan §R-E).
+    logged_query = redact_term(query) if collect_v2_enabled() else query
     logger.info(
         "search_zero_result",
         extra={
-            "query": query,
+            "query": logged_query,
             "filters": filters,
             "kind": kind,
             "zero_result": True,
@@ -418,9 +419,7 @@ def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return 2 * _EARTH_RADIUS_KM * math.asin(min(1.0, math.sqrt(a)))
 
 
-def _geo_rerank(
-    hits: list[SearchHit], *, user_lat: float, user_lng: float
-) -> list[SearchHit]:
+def _geo_rerank(hits: list[SearchHit], *, user_lat: float, user_lng: float) -> list[SearchHit]:
     """Stamp ``distance_km`` and re-sort by an rrf_score blended with a bounded
     proximity boost. Hits without coordinates get no boost and are never dropped;
     the stable sort preserves original RRF order among ties."""
@@ -455,6 +454,7 @@ async def run_search(
     user_lat: float | None = None,
     user_lng: float | None = None,
     include_kind_totals: bool = False,
+    analytics_session_id: str | None = None,
 ) -> SearchResponse:
     trimmed = query.strip()
     expanded_query = expand_query(client, trimmed)
@@ -495,6 +495,11 @@ async def run_search(
     # Resolve/filter before totals and pagination so stale listing documents do
     # not inflate counts or leave a short page after enrichment.
     hits = attach_route_slugs(client, hits)
+    # Relevance guard: unrelated fuzzy/semantic neighbours (e.g. event tiers for
+    # "t-shirt") and catalogue products with no active offer are not results.
+    candidates_before_guard = len(hits)
+    hits = apply_relevance_guard(hits, query=trimmed, expanded_query=expanded_query)
+    guard_dropped_hits = len(hits) != candidates_before_guard
 
     kind_totals: SearchKindTotals | None = None
     if include_kind_totals and trimmed:
@@ -512,11 +517,17 @@ async def run_search(
             include_wholesale=include_wholesale,
         )
 
-        facets = call_search_query_facets(
-            client,
-            query=trimmed,
-            embedding=embedding,
-            filters=facet_filters,
+        # The facet RPC scores the raw candidate set; once the guard has removed hits
+        # its counts would disagree with the visible results, so derive them locally.
+        facets = (
+            None
+            if guard_dropped_hits
+            else call_search_query_facets(
+                client,
+                query=trimmed,
+                embedding=embedding,
+                filters=facet_filters,
+            )
         )
         if facets is None:
             facets = compute_search_facets(
@@ -552,6 +563,7 @@ async def run_search(
             entity_counts=dict(Counter(hit.entity_kind for hit in display_hits)),
             zero_result=total == 0,
             user_id=user_id,
+            session_id=analytics_session_id,
         )
 
     if total == 0 and trimmed:
@@ -594,6 +606,7 @@ def run_suggest(
         hits = drop_wholesale_listing_hits(client, hits)
     hits = drop_demo_listing_hits(client, hits)
     hits = attach_route_slugs(client, hits)
+    hits = [hit for hit in hits if has_active_offer(hit)]
 
     suggestions: list[SuggestItem] = []
     seen_titles: set[str] = set()

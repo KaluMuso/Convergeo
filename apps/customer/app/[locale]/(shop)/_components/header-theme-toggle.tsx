@@ -16,7 +16,11 @@ export function HeaderThemeToggle({ labels }: HeaderThemeToggleProps) {
   const order = ["system", "light", "dark"] as const;
   const next = order[(order.indexOf(theme) + 1) % order.length] ?? "system";
   const current =
-    theme === "light" ? labels.light : theme === "dark" ? labels.dark : labels.system;
+    theme === "light"
+      ? labels.light
+      : theme === "dark"
+        ? labels.dark
+        : labels.system;
 
   return (
     <button

@@ -13,7 +13,7 @@
   "ai.ask.viewEvent": "View event",
   "ai.quota.remaining": "{count, plural, one {# question left} other {# questions left}} this month",
   "ai.disclaimer": "AI answers are suggestions — verify before you buy",
-  "ai.quota.guestExceeded": "You've used your free guest questions. Sign up to keep asking Vergeo.",
+  "ai.quota.guestExceeded": "You've used your free guest questions. Sign in to keep asking Convergeo.",
   "ai.quota.monthlyExceeded": "You've reached your monthly question limit.",
   "ai.quota.killSwitch": "Ask Convergeo is temporarily unavailable. Please try again later.",
   "ai.quota.tooLong": "Your question is too long. Please shorten it.",
@@ -76,11 +76,11 @@
   "ai.faq.pickup.q": "Can I pick up my order?",
   "ai.faq.pickup.a": "Yes. Choose pickup at checkout and collect from the vendor's branch. Show the pickup code from your order page when you collect.",
   "ai.faq.cod.q": "Can I pay cash on delivery?",
-  "ai.faq.cod.a": "Cash on delivery is available on eligible Lusaka orders up to K500. Larger orders are paid by mobile money or card and held safely until delivery.",
+  "ai.faq.cod.a": "During the pilot every order is cash on delivery: nothing is charged online and you pay when your order arrives. Some orders may not qualify; checkout tells you before you place it.",
   "ai.faq.escrow.q": "Is my money safe?",
-  "ai.faq.escrow.a": "Yes. When you pay, Convergeo holds the money and the vendor is only paid after you receive your order: You paid → Held by Convergeo → Released.",
+  "ai.faq.escrow.a": "Online payment with escrow buyer protection is coming soon. Until then, you pay cash when your order arrives.",
   "ai.faq.payment.q": "How can I pay?",
-  "ai.faq.payment.a": "Pay with MTN or Airtel mobile money by approving the prompt on your phone, or by card through our secure checkout.",
+  "ai.faq.payment.a": "During the pilot you pay cash on delivery. Mobile money and card payments are coming soon.",
   "ai.faq.returns.q": "What if something goes wrong with my order?",
-  "ai.faq.returns.a": "Report a problem from your order page and our team will review it. Approved refunds are sent back to your mobile money."
+  "ai.faq.returns.a": "Report a problem from your order page and our team will review it. We will arrange any approved refund with you directly."
 }

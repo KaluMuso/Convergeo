@@ -388,13 +388,26 @@ def _activate_listing(service_client: ServiceRoleClient, listing_id: str) -> dic
             http_status=409,
             details={"listing_id": listing_id, "status": from_status},
         )
-    updated = _rows(
-        service_client.client.table(LISTINGS_TABLE)
-        .update({"status": "active"})
-        .eq("id", listing_id)
-        .eq("status", "draft")
-        .execute()
-    )
+    try:
+        updated = _rows(
+            service_client.client.table(LISTINGS_TABLE)
+            .update({"status": "active"})
+            .eq("id", listing_id)
+            .eq("status", "draft")
+            .execute()
+        )
+    except Exception as exc:
+        if getattr(exc, "code", None) == "PT403" and getattr(exc, "message", None) == (
+            "listing_plan_limit_reached"
+        ):
+            # The shop is at its plan's active-listing limit: the listing stays a draft.
+            raise AppError(
+                code="listing_plan_limit_reached",
+                message="The shop has reached its plan's active-listing limit",
+                http_status=409,
+                details={"listing_id": listing_id, "message_key": "admin.plans.publishLimit"},
+            ) from exc
+        raise
     if not updated:
         raise AppError(
             code="listing_transition_conflict",

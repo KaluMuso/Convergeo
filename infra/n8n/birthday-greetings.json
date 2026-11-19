@@ -1,0 +1,111 @@
+{
+  "name": "Birthday Greetings + Gift Redaction",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 08:00 Africa/Lusaka",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/birthdays/tick",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_BIRTHDAY_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "birthday-tick",
+      "name": "Birthday Greetings Tick",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/gifts/redact-tick",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_BIRTHDAY_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "gift-redact-tick",
+      "name": "Redact Finished Gifts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Daily 08:00 Africa/Lusaka": {
+      "main": [
+        [
+          {
+            "node": "Birthday Greetings Tick",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Birthday Greetings Tick": {
+      "main": [
+        [
+          {
+            "node": "Redact Finished Gifts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Lusaka"
+  },
+  "versionId": "growth-birthday-gifts",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "note": "Idempotent. Birthday tick is a no-op while flags birthday_greetings or coupons are off; one greeting + single-use coupon per consenting adult per calendar year (DB unique key). Gift redaction wipes recipient phone/message 30 days after the gift's orders finish."
+  },
+  "tags": [
+    {
+      "name": "growth",
+      "createdAt": "2026-11-13T00:00:00.000Z",
+      "updatedAt": "2026-11-13T00:00:00.000Z",
+      "id": "growth"
+    }
+  ]
+}

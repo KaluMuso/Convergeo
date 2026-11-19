@@ -48,7 +48,9 @@ export function ProgressiveLoadControls({
   const showButton = hasMore || errored || loading;
 
   const liveMessage =
-    lastAppendedCount > 0 ? formatCountLabel(labels.moreLoaded, lastAppendedCount) : "";
+    lastAppendedCount > 0
+      ? formatCountLabel(labels.moreLoaded, lastAppendedCount)
+      : "";
 
   return (
     <div className="flex flex-col items-center gap-2 pt-4">
@@ -62,13 +64,20 @@ export function ProgressiveLoadControls({
       </div>
 
       {errored ? (
-        <p className="text-sm text-text-2" role="alert" data-testid={`${testIdPrefix}-load-error`}>
+        <p
+          className="text-sm text-text-2"
+          role="alert"
+          data-testid={`${testIdPrefix}-load-error`}
+        >
           {labels.loadError}
         </p>
       ) : null}
 
       {complete && !errored ? (
-        <p className="text-sm text-text-3" data-testid={`${testIdPrefix}-end-of-results`}>
+        <p
+          className="text-sm text-text-3"
+          data-testid={`${testIdPrefix}-end-of-results`}
+        >
           {labels.endOfResults}
         </p>
       ) : null}

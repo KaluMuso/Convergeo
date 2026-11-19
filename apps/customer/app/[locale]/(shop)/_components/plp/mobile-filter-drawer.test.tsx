@@ -70,6 +70,8 @@ describe("MobileFilterDrawer", () => {
         initialState={{ condition: ["new"], availability: [] }}
       />,
     );
-    expect(screen.getByTestId("plp-open-filters")).toHaveTextContent("Filters (active)");
+    expect(screen.getByTestId("plp-open-filters")).toHaveTextContent(
+      "Filters (active)",
+    );
   });
 });

@@ -118,6 +118,44 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
     elif template_id == "dispatch_stale_alert":
         payload["courier_name"] = "TownStar"
         payload["minutes_waiting"] = 47
+    elif template_id == "order_cancelled":
+        payload["refund_detail"] = "Your refund is being processed."
+    elif template_id in {"payment_failed", "payout_failed"}:
+        payload["amount_ngwee"] = MONEY_NGEWEE
+    elif template_id == "payout_sent":
+        payload["amount_ngwee"] = MONEY_NGEWEE
+        payload["destination_label"] = "MTN number ending 1234"
+    elif template_id == "order_completed":
+        payload["order_url"] = FIXTURE_TRACK
+    elif template_id == "ticket_issued":
+        payload["event_title"] = "Jazz Night"
+        payload["ticket_url"] = "https://vergeo5.com/en/account/tickets"
+    elif template_id == "dispute_resolved":
+        payload["resolution_summary"] = "We refunded you in full."
+    elif template_id == "gift_recipient_notice":
+        payload["recipient_name"] = "Mary"
+        payload["sender_name"] = "Chanda"
+        payload["shop_name"] = "Kamwala Trading"
+    elif template_id == "gift_ready_pickup":
+        payload["shop_name"] = "Kamwala Trading"
+        payload["pickup_pin"] = "482913"
+    elif template_id == "birthday_greeting":
+        payload["coupon_code"] = "BDAY-ABC123"
+        payload["amount_ngwee"] = 2_000
+        payload["min_spend_ngwee"] = 20_000
+        payload["valid_days"] = 14
+    elif template_id == "points_earned":
+        payload["points"] = 120
+        payload["balance"] = 480
+        payload["threshold"] = 500
+    elif template_id == "vendor_weekly_digest":
+        payload["shop_name"] = "Kamwala Trading"
+        payload["orders"] = 12
+        payload["sales_ngwee"] = MONEY_NGEWEE
+        payload["top_item"] = "Samsung A15"
+        payload["new_followers"] = 3
+        payload["pending_actions"] = 2
+        payload["next_payout_ngwee"] = MONEY_NGEWEE
     return payload
 
 

@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Convergeo",
-    "tagline": "La place de marché zambienne — des achats protégés par séquestre"
+    "tagline": "La place de marché de la Zambie — payez à la livraison"
   },
   "meta": {
     "defaultDescription": "Achetez des produits, réservez des services et trouvez des événements en Zambie sur Convergeo — la place de marché multi-vendeurs.",
@@ -52,11 +52,6 @@
   "contact": {
     "email": "support@vergeo5.com"
   },
-  "social": {
-    "facebook": "https://www.facebook.com/",
-    "twitter": "https://twitter.com/",
-    "instagram": "https://www.instagram.com/"
-  },
   "utilityBar": {
     "ariaLabel": "Langue, contact et réseaux sociaux",
     "socialAria": "Réseaux sociaux",
@@ -102,8 +97,8 @@
     "label": "Partager"
   },
   "fab": {
-    "ask": "Demander à Vergeo",
-    "askTitle": "Demander à Vergeo",
+    "ask": "Demander à Convergeo",
+    "askTitle": "Demander à Convergeo",
     "askHint": "Décrivez ce qu'il vous faut : un produit, un service ou un événement.",
     "askPlaceholder": "ex. panneau solaire à moins de 3 000 K à Lusaka",
     "send": "Demander",
@@ -118,5 +113,8 @@
   "paymentTrust": {
     "footerSeal": "Payez en espèces à l'arrivée de votre commande",
     "footerPaymentNote": "Paiement à la livraison · Paiement en ligne bientôt disponible"
+  },
+  "codTrust": {
+    "line": "Vous payez à la livraison → Nous livrons → Vous confirmez"
   }
 }

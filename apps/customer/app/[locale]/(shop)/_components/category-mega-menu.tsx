@@ -10,14 +10,21 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
-import { buildCategoryTree, type CategoryRecord, type NavCategory } from "./category-tree";
+import {
+  buildCategoryTree,
+  type CategoryRecord,
+  type NavCategory,
+} from "./category-tree";
 import {
   fetchMegaMenuMerchSlot,
   readMerchPreviewToken,
   withLocaleHref,
   type MegaMenuMerchPayload,
 } from "./mega-menu-merch";
-import { useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
+import {
+  useMerchPreviewToken,
+  withMerchPreviewParam,
+} from "./merch-preview-nav";
 
 export type { NavCategory } from "./category-tree";
 export { buildCategoryTree } from "./category-tree";
@@ -76,7 +83,9 @@ type CatalogListingItem = {
   price_ngwee: number;
 };
 
-async function loadCatalogFeaturedMinis(locale: string): Promise<FeaturedMini[]> {
+async function loadCatalogFeaturedMinis(
+  locale: string,
+): Promise<FeaturedMini[]> {
   const baseUrl = getApiBaseUrl();
   if (!baseUrl) {
     return [];
@@ -98,7 +107,10 @@ async function loadCatalogFeaturedMinis(locale: string): Promise<FeaturedMini[]>
   }
 }
 
-function featuredFromMerch(locale: string, merch: MegaMenuMerchPayload): FeaturedMini[] {
+function featuredFromMerch(
+  locale: string,
+  merch: MegaMenuMerchPayload,
+): FeaturedMini[] {
   return merch.featuredMinis.map((mini) => ({
     title: mini.title,
     href: withLocaleHref(locale, mini.href),
@@ -114,7 +126,8 @@ async function defaultLoadFeaturedContent(
   const merch = await fetchMegaMenuMerchSlot(previewToken);
 
   const cmsMinis = merch ? featuredFromMerch(locale, merch) : [];
-  const minis = cmsMinis.length > 0 ? cmsMinis : await loadCatalogFeaturedMinis(locale);
+  const minis =
+    cmsMinis.length > 0 ? cmsMinis : await loadCatalogFeaturedMinis(locale);
 
   return {
     minis,
@@ -154,7 +167,8 @@ export function CategoryMegaMenu({
   const [open, setOpen] = useState(false);
   const [panelLeft, setPanelLeft] = useState(0);
   const [categories, setCategories] = useState<NavCategory[] | null>(null);
-  const [featuredContent, setFeaturedContent] = useState<MegaMenuFeaturedContent | null>(null);
+  const [featuredContent, setFeaturedContent] =
+    useState<MegaMenuFeaturedContent | null>(null);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -170,11 +184,15 @@ export function CategoryMegaMenu({
     if (triggerLeft === undefined) {
       return;
     }
-    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const rem =
+      parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const viewport = document.documentElement.clientWidth || window.innerWidth;
     const panelWidth = Math.min(52 * rem, Math.max(0, viewport - 2 * rem));
     setPanelLeft(
-      Math.max(rem - triggerLeft, Math.min(0, viewport - rem - triggerLeft - panelWidth)),
+      Math.max(
+        rem - triggerLeft,
+        Math.min(0, viewport - rem - triggerLeft - panelWidth),
+      ),
     );
   }, []);
 
@@ -244,7 +262,10 @@ export function CategoryMegaMenu({
       return;
     }
     const onPointerDown = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         closeMenu();
       }
     };
@@ -302,7 +323,9 @@ export function CategoryMegaMenu({
         {loading || categories === null || featuredContent === null ? (
           <p className="text-sm text-text-2">{labels.loading}</p>
         ) : categories.length === 0 ? (
-          <p className="text-sm text-text-2">{labels.empty ?? labels.loading}</p>
+          <p className="text-sm text-text-2">
+            {labels.empty ?? labels.loading}
+          </p>
         ) : (
           <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
             <div className="min-w-0 flex-1 space-y-4">
@@ -348,7 +371,10 @@ export function CategoryMegaMenu({
               className="w-full shrink-0 rounded-lg border border-border bg-bg-2 p-3 lg:w-56"
               data-testid="mega-menu-featured"
             >
-              <h3 id="mega-menu-featured-title" className="mb-2 text-sm font-semibold text-text">
+              <h3
+                id="mega-menu-featured-title"
+                className="mb-2 text-sm font-semibold text-text"
+              >
                 {labels.featuredTitle}
               </h3>
               {featuredContent.minis.length > 0 ? (
@@ -364,14 +390,18 @@ export function CategoryMegaMenu({
                           {mini.title}
                         </span>
                         {mini.priceLabel ? (
-                          <span className="text-xs text-text-2">{mini.priceLabel}</span>
+                          <span className="text-xs text-text-2">
+                            {mini.priceLabel}
+                          </span>
                         ) : null}
                       </Link>
                     </li>
                   ))}
                 </ul>
               ) : null}
-              <p className="mt-3 text-xs text-text-2">{featuredContent.promoText}</p>
+              <p className="mt-3 text-xs text-text-2">
+                {featuredContent.promoText}
+              </p>
               <Link
                 href={previewHref(featuredContent.promoHref)}
                 onClick={closeMenu}

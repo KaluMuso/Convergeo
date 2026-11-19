@@ -25,7 +25,8 @@
     "business": "Mode ya business",
     "signOut": "Fuma",
     "signingOut": "Ilefuma…",
-    "following": "Ifyo mukonka"
+    "following": "Ifyo mukonka",
+    "rewards": "⚠ Rewards"
   },
   "title": "Account yandi",
   "hub": {
@@ -100,5 +101,93 @@
     "retry": "Try again",
     "loadMore": "Show more",
     "viewFeed": "See new from stores you follow"
+  },
+  "privacy": {
+    "deliveryConsent": {
+      "title": "Ukwabana amashina ne ba delivery",
+      "description": "Vergeo5 ibomfya ama-courier ayakwata licence pa ma-delivery yamo. Pa kuleta order yenu, courier alefwaya ishina lyenu, nambala ya foni ne address ya delivery. Tulabapeela fye nga mwasuminisha. Pickup tailefwaya ifi.",
+      "label": "Peeleni courier ishina lyandi, foni ne address pa kuleta ama-order yandi",
+      "grantedAt": "Mwasuminishe pa {at}. Kuti mwaleka ilyo lyonse.",
+      "notGranted": "Tamusuminishe. Abantu ba Vergeo5 balaleta order beka, nangu balamwipusha ilyo bashilabomfya courier.",
+      "loading": "Ilekete…",
+      "loadFailed": "Twafilwa ukusanga ifyo mwasala. Esheni na kabili.",
+      "saveFailed": "Twafilwa ukusunga ifyo mwasala. Esheni na kabili."
+    },
+    "analytics": {
+      "title": "Analytics",
+      "description": "Tumwafwe ukusuma Convergeo pa kutwebelela ukumona ifyo mubomfya, nga amapeji mwingila.",
+      "toggleLabel": "Ukwabana ifyo mubomfya",
+      "on": "Kuli: tulemona amapeji mwingila, kabili panuma ya kwingila tulemulumanya ku akaunti yenu. Ifilumanya fisulwa panuma ya matazi 30.",
+      "off": "Cilekwa: tusunga fye ubwingi bwa bantu (anonymous counts), nga bangaye bamona peji. Takuli ifyo mwacita ifisungwa, kabili takuli cilumenwe kuli imwe.",
+      "gpc": "Browser yenu iletuma Global Privacy Control, ico analytics ilekwa. Tulesunga ico browser yenu ilanda."
+    }
+  },
+  "birthday": {
+    "title": "Ubushiku bwenu ubwa kufyalwa (te kuti mufwile)",
+    "intro": "Tell us your birthday for a treat each year. We only need the day and month.",
+    "day": "Ubushiku",
+    "month": "Umweshi",
+    "year": "Year (optional)",
+    "yearHelp": "Leave empty if you prefer. We never show it.",
+    "months": [
+      "Januari",
+      "Febuluari",
+      "Machi",
+      "Epreo",
+      "Mei",
+      "Juni",
+      "Julai",
+      "Ogasti",
+      "Septemba",
+      "Okotoba",
+      "Novemba",
+      "Disemba"
+    ],
+    "consent": "Yes, send me a birthday treat each year. I can stop this any time.",
+    "adult": "Nakwata imyaka 18 nangu ukucila.",
+    "save": "Sunga",
+    "saving": "Saving…",
+    "saved": "Saved. Look out for a treat on your birthday.",
+    "current": "Your birthday: {date}",
+    "changeFrom": "You can change the date again from {date}.",
+    "remove": "Fumyapo ubushiku bwandi",
+    "removed": "Removed. We won't send birthday messages.",
+    "privacy": "Every birthday message has a way to stop them.",
+    "errors": {
+      "generic": "We couldn't save your birthday. Try again.",
+      "consent": "Tick the first box to get a birthday treat.",
+      "adult": "Birthday treats are for people aged 18 or older.",
+      "minor": "Birthday treats are for people aged 18 or older.",
+      "invalid": "Choose a real date.",
+      "changeLocked": "You changed your birthday recently. Try again later.",
+      "tooMany": "Too many changes. Try again later.",
+      "featureUnavailable": "Birthday treats aren't available yet."
+    }
+  },
+  "rewards": {
+    "title": "⚠ Rewards",
+    "description": "⚠ Convergeo Points for your orders and reviews.",
+    "balanceLabel": "⚠ Your points",
+    "balance": "⚠ {points, plural, one {# point} other {# points}}",
+    "progress": "⚠ {remaining, plural, =0 {You've reached a reward coupon.} one {# point to your next reward coupon} other {# points to your next reward coupon}}",
+    "progressAria": "⚠ Progress to the next reward coupon",
+    "redeemSoon": "⚠ Redeeming points for coupons is coming soon. Points have no cash value.",
+    "historyTitle": "⚠ History",
+    "historyEmpty": "⚠ No points yet. Your first order or review starts the count.",
+    "reason": {
+      "order_completed": "⚠ Order completed",
+      "review": "⚠ Review posted",
+      "reversal": "⚠ Refund or return",
+      "redeem": "⚠ Redeemed for a coupon",
+      "expire": "⚠ Expired",
+      "admin_adjust": "⚠ Adjustment"
+    },
+    "howTitle": "⚠ How to earn",
+    "howOrders": "⚠ 1 point for every K1 you pay, added once your order is delivered and the return window has passed.",
+    "howReviews": "⚠ Points for every verified review, whatever stars you give. A photo earns a little more.",
+    "howRules": "⚠ Refunds and returns take back the points from that order. Points expire after 12 months with no activity.",
+    "errors": {
+      "rateLimited": "⚠ Too many requests. Please try again shortly."
+    }
   }
 }

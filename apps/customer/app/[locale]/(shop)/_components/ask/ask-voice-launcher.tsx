@@ -22,7 +22,11 @@ export type AskVoiceLauncherProps = {
  * Usage (FAB / header):
  *   <AskVoiceLauncher locale={locale} labels={{ start, stop, listening, error }} />
  */
-export function AskVoiceLauncher({ locale, labels, className }: AskVoiceLauncherProps) {
+export function AskVoiceLauncher({
+  locale,
+  labels,
+  className,
+}: AskVoiceLauncherProps) {
   const router = useRouter();
 
   const handleTranscript = useCallback(
@@ -35,5 +39,11 @@ export function AskVoiceLauncher({ locale, labels, className }: AskVoiceLauncher
     [locale, router],
   );
 
-  return <AskVoiceButton labels={labels} onTranscript={handleTranscript} className={className} />;
+  return (
+    <AskVoiceButton
+      labels={labels}
+      onTranscript={handleTranscript}
+      className={className}
+    />
+  );
 }

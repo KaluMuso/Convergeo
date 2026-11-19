@@ -242,7 +242,9 @@ export function SearchInput({
         break;
       case "ArrowUp":
         event.preventDefault();
-        setActiveIndex((current) => (current <= 0 ? optionCount - 1 : current - 1));
+        setActiveIndex((current) =>
+          current <= 0 ? optionCount - 1 : current - 1,
+        );
         break;
       case "Enter":
         if (showRecents && activeIndex >= 0 && recentTerms[activeIndex]) {
@@ -262,7 +264,8 @@ export function SearchInput({
     }
   };
 
-  const activeSuggestionId = activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined;
+  const activeSuggestionId =
+    activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined;
 
   return (
     <form
@@ -312,7 +315,9 @@ export function SearchInput({
           autoComplete="off"
           autoFocus={autoFocus}
           size={compact ? "sm" : "md"}
-          className={[askLabel ? "pr-24" : "pr-12", inputClassName].filter(Boolean).join(" ")}
+          className={[askLabel ? "pr-24" : "pr-12", inputClassName]
+            .filter(Boolean)
+            .join(" ")}
         />
         {askLabel ? (
           <button
@@ -322,11 +327,20 @@ export function SearchInput({
             title={askLabel}
             onClick={() => {
               const q = value.trim();
-              router.push(q ? `/${locale}/ask?q=${encodeURIComponent(q)}` : `/${locale}/ask`);
+              router.push(
+                q
+                  ? `/${locale}/ask?q=${encodeURIComponent(q)}`
+                  : `/${locale}/ask`,
+              );
             }}
             className="absolute right-12 top-1/2 inline-flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded text-accent transition-colors hover:text-accent-deep focus-visible:outline-none focus-visible:shadow-focusRing"
           >
-            <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="currentColor"
+            >
               <path d="M11 2.5l1.6 4.6a3 3 0 0 0 1.8 1.8L19 10.5l-4.6 1.6a3 3 0 0 0-1.8 1.8L11 18.5l-1.6-4.6a3 3 0 0 0-1.8-1.8L3 10.5l4.6-1.6a3 3 0 0 0 1.8-1.8L11 2.5Z" />
               <path d="M18.5 15l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z" />
             </svg>
@@ -354,7 +368,9 @@ export function SearchInput({
           <ul
             id={listboxId}
             role="listbox"
-            aria-label={showRecents ? labels.recentTitle : labels.suggestionsLabel}
+            aria-label={
+              showRecents ? labels.recentTitle : labels.suggestionsLabel
+            }
             className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-border bg-surface shadow-1"
           >
             {showRecents ? (
@@ -388,7 +404,9 @@ export function SearchInput({
             ) : (
               <>
                 {suggestions.length === 0 && !isLoading ? (
-                  <li className="px-3 py-2 text-sm text-text-3">{labels.noSuggestions}</li>
+                  <li className="px-3 py-2 text-sm text-text-3">
+                    {labels.noSuggestions}
+                  </li>
                 ) : null}
                 {suggestions.map((item, index) => {
                   const optionId = `${listboxId}-option-${index}`;
@@ -409,7 +427,9 @@ export function SearchInput({
                       onClick={() => navigateToSuggestion(item)}
                     >
                       <span className="block truncate">{item.title}</span>
-                      <span className="text-xs text-text-3">{item.entity_kind}</span>
+                      <span className="text-xs text-text-3">
+                        {item.entity_kind}
+                      </span>
                     </li>
                   );
                 })}

@@ -9,7 +9,6 @@ import { PriceBlock } from "@vergeo/ui/src/price-block";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import { ServiceCard } from "@vergeo/ui/src/service-card";
 import { StarRating } from "@vergeo/ui/src/star-rating";
-import { TierPriceTable } from "@vergeo/ui/src/tier-price-table";
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import { useState } from "react";
 
@@ -69,20 +68,6 @@ export function CardsSection() {
           onChange={setRating}
           name="preview-rating"
           inputAriaLabel="Rate this product"
-        />
-      </SectionBlock>
-
-      <SectionBlock title="Tier price table">
-        <TierPriceTable
-          tiers={[
-            { minQty: 1, ngwee: 50000 },
-            { minQty: 10, ngwee: 45000 },
-            { minQty: 50, ngwee: 40000 },
-          ]}
-          moq={5}
-          quantityHeader="Qty"
-          priceHeader="Unit price"
-          moqLabel="MOQ:"
         />
       </SectionBlock>
 

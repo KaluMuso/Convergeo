@@ -114,11 +114,16 @@ export function ReportReview({ reviewId, labels }: ReportReviewProps) {
       }}
     >
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-display-ink">{labels.heading}</legend>
+        <legend className="text-sm font-medium text-display-ink">
+          {labels.heading}
+        </legend>
         <p className="text-xs text-text-2">{labels.reasonLegend}</p>
         <div className="space-y-1">
           {reasons.map((option) => (
-            <label key={option.value} className="flex min-h-11 items-center gap-2 text-sm">
+            <label
+              key={option.value}
+              className="flex min-h-11 items-center gap-2 text-sm"
+            >
               <input
                 type="radio"
                 name={groupId}

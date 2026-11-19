@@ -4,18 +4,24 @@ import { cookies } from "next/headers";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { buildPageMetadata } from "../../../../lib/page-title";
 import { BackToTop } from "../_components/back-to-top";
 
 import { SavedItemsPanel } from "./_components/saved-items-panel";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  robots: {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "account", "saved.title", {
     index: false,
     follow: false,
-  },
-};
+  });
+}
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -42,7 +48,10 @@ export default async function WishlistPage({ params }: PageProps) {
   const baseMessages = await getMessages();
   const accountMessages = await loadNamespace(locale as Locale, "account");
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const messages = { ...baseMessages, account: accountMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    account: accountMessages,
+  } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "account" });
   const tCatalog = createTranslator({
     locale,

@@ -33,7 +33,8 @@
     "requestReturn": "Request a return",
     "openDispute": "Open or view dispute",
     "variantOption": "{group}: {value}",
-    "variantSeparator": " · "
+    "variantSeparator": " · ",
+    "discount": "Coupon discount"
   },
   "status": {
     "placed": "Placed",
@@ -106,7 +107,9 @@
     "confirming": "Confirming…",
     "done": "You confirmed receipt",
     "doneBody": "Payment has been released to the vendor.",
-    "error": "Could not confirm receipt. Please try again."
+    "error": "Could not confirm receipt. Please try again.",
+    "bodyCod": "Confirming tells us your order arrived. Only confirm when you have received everything and paid the vendor.",
+    "doneBodyCod": "Thanks for confirming. Your order is complete."
   },
   "report": {
     "title": "Report a problem",
@@ -248,5 +251,58 @@
     "beforeDispatch": "Want to change or cancel? Contact support with your order number before it's sent out.",
     "afterDispatch": "Something wrong with your order? Contact support with your order number.",
     "contactCta": "Contact support"
+  },
+  "doorPay": {
+    "title": "Pay at the door",
+    "intro": "Pay {amount} by mobile money when the rider is at your door, after you check your items.",
+    "amountDue": "Pay {amount} by mobile money at the door, after you check your items.",
+    "waitingRider": "The payment button appears here when the rider says they have arrived.",
+    "payNow": "Pay now on your phone",
+    "sending": "Sending the payment prompt…",
+    "otherNumber": "Pay from another number",
+    "phoneLabel": "MTN or Airtel number",
+    "phoneHelp": "The prompt goes to this number. Zamtel numbers cannot receive it yet.",
+    "pending": "Check your phone and enter your PIN to approve the payment.",
+    "checkStatus": "Check payment status",
+    "checking": "Checking…",
+    "failed": "The payment did not go through. You can try again or use another number.",
+    "attemptsLeft": "{count, plural, one {# try left} other {# tries left}}",
+    "noAttemptsLeft": "No more tries. The rider can take cash, up to the cash limit.",
+    "paid": "Paid. Your handover code is now shown above. Give it to the rider.",
+    "cash": "Pay the rider {amount} in cash, then give them your handover code.",
+    "errors": {
+      "invalidPhone": "Enter a Zambian MTN or Airtel number.",
+      "operatorUnsupported": "This number cannot receive the prompt. Use an MTN or Airtel number.",
+      "inFlight": "A prompt is already on your phone. Approve it, or wait a moment and try again.",
+      "generic": "Something went wrong. Check your connection and try again."
+    }
+  },
+  "gift": {
+    "title": "This is a gift",
+    "body": "You're the buyer. Refunds come back to you.",
+    "receiptLink": "Open the gift receipt (no prices)",
+    "receiptTitle": "Gift receipt",
+    "for": "For {name}",
+    "from": "From {shop}",
+    "qty": "× {qty}",
+    "noPrices": "Gift receipts never show prices.",
+    "pinSentToRecipient": "We sent the pickup PIN to the person you're gifting."
+  },
+  "buyAgain": {
+    "button": "Buy again",
+    "loading": "Adding to your cart…",
+    "error": "Could not add these items. Please try again.",
+    "rateLimited": "Too many tries. Please wait a moment and try again.",
+    "added": "Added to your cart: {count}",
+    "nothingAdded": "Nothing could be added to your cart.",
+    "skippedTitle": "Not added",
+    "skipped": {
+      "unavailable": "No longer available",
+      "out_of_stock": "Out of stock",
+      "variant_unavailable": "That option is no longer available"
+    },
+    "priceChangeTitle": "Prices have changed since your last order",
+    "priceChangeLine": "{title}: was {previous}, now {current}",
+    "goToCart": "Review cart and checkout"
   }
 }

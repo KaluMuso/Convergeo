@@ -21,6 +21,10 @@ CORS_ALLOW_HEADERS = [
     "Accept",
     "X-Request-ID",
     "Idempotency-Key",
+    # Multi-branch: the storefront an owner acts on (narrows owner lookups only).
+    "X-Vendor-Branch",
+    "X-Analytics-Session",
+    "X-Analytics-Consent",
 ]
 
 

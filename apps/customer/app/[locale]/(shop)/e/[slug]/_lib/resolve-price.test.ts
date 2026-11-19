@@ -93,9 +93,15 @@ describe("nextTierUpsell", () => {
         { min_qty: 10, price_ngwee: 40_000 },
       ],
     });
-    expect(nextTierUpsell(t, 1, NOW)).toEqual({ min_qty: 5, price_ngwee: 45_000 });
+    expect(nextTierUpsell(t, 1, NOW)).toEqual({
+      min_qty: 5,
+      price_ngwee: 45_000,
+    });
     // Once at 5, the next reachable saving is the 10+ tier.
-    expect(nextTierUpsell(t, 5, NOW)).toEqual({ min_qty: 10, price_ngwee: 40_000 });
+    expect(nextTierUpsell(t, 5, NOW)).toEqual({
+      min_qty: 10,
+      price_ngwee: 40_000,
+    });
     // At/above the top tier there is nothing left to upsell.
     expect(nextTierUpsell(t, 10, NOW)).toBeNull();
   });

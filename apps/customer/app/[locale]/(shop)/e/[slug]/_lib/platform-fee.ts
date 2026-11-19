@@ -5,12 +5,18 @@
  * (`(line_total * bps) // 10_000`).
  */
 export function parsePlatformFeeBps(value: unknown): number | null {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 10_000
+  return typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
+    value <= 10_000
     ? value
     : null;
 }
 
-export function buyerPlatformFeeNgwee(lineTotalNgwee: number, feeBps: number): number {
+export function buyerPlatformFeeNgwee(
+  lineTotalNgwee: number,
+  feeBps: number,
+): number {
   if (lineTotalNgwee <= 0 || feeBps <= 0) {
     return 0;
   }

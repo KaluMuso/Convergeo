@@ -30,11 +30,7 @@ def _single_row(response: Any) -> dict[str, Any] | None:
 
 def _resolve_vendor_owner(client: Any, vendor_id: str) -> str | None:
     response = (
-        client.table("vendors")
-        .select("owner_user_id")
-        .eq("id", vendor_id)
-        .maybe_single()
-        .execute()
+        client.table("vendors").select("owner_user_id").eq("id", vendor_id).maybe_single().execute()
     )
     row = _single_row(response)
     if row is None:
@@ -64,8 +60,13 @@ def emit_order_lifecycle(
     event: str,
     order_row: dict[str, Any],
     extra: dict[str, Any] | None = None,
+    entity_id: str | None = None,
 ) -> dict[str, Any] | None:
-    """Emit the notification for an order lifecycle event, or ``None`` if silent."""
+    """Emit the notification for an order lifecycle event, or ``None`` if silent.
+
+    ``entity_id`` overrides the dedupe entity (default: the order id) for events that
+    can legitimately repeat on one order, e.g. a second dispute.
+    """
     mapping = EVENT_REGISTRY.get(event)
     if mapping is None:
         # Silent (documented) event returns None; an unknown event raises
@@ -97,7 +98,7 @@ def emit_order_lifecycle(
     return emit_event(
         client,
         event=event,
-        entity_id=order_id,
+        entity_id=entity_id or order_id,
         recipient_id=recipient_id,
         payload=payload,
     )

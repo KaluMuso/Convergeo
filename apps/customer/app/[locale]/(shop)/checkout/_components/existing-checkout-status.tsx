@@ -31,7 +31,10 @@ export type ExistingCheckoutStatusProps = {
   };
 };
 
-export function ExistingCheckoutStatus({ groupId, labels }: ExistingCheckoutStatusProps) {
+export function ExistingCheckoutStatus({
+  groupId,
+  labels,
+}: ExistingCheckoutStatusProps) {
   const { session, loading } = useSession();
   const accessToken = session?.access_token;
   const [result, setResult] = useState<{
@@ -53,15 +56,20 @@ export function ExistingCheckoutStatus({ groupId, labels }: ExistingCheckoutStat
     // This ownership-checked GET is read-only. Payment-options can expire a group
     // through a write, so it and all payment/order actions are excluded here.
     void client
-      .request<ExistingSessionStatus>(`/checkout/session/${encodeURIComponent(groupId)}`, {
-        method: "GET",
-      })
+      .request<ExistingSessionStatus>(
+        `/checkout/session/${encodeURIComponent(groupId)}`,
+        {
+          method: "GET",
+        },
+      )
       .then((data) => {
         if (
           !data ||
           typeof data.session_id !== "string" ||
           data.session_id.toLowerCase() !== groupId.toLowerCase() ||
-          !["pending", "completed", "abandoned", "expired"].includes(data.status) ||
+          !["pending", "completed", "abandoned", "expired"].includes(
+            data.status,
+          ) ||
           typeof data.expired !== "boolean" ||
           typeof data.expires_at !== "string" ||
           !Number.isFinite(Date.parse(data.expires_at))
@@ -80,19 +88,29 @@ export function ExistingCheckoutStatus({ groupId, labels }: ExistingCheckoutStat
   // Never display a previous identifier's or signed-in user's result while a
   // new retrieval is pending. The backend remains the ownership authority.
   const current =
-    result?.groupId === groupId && result?.accessToken === accessToken ? result : null;
-  const failed = !groupId || (!loading && !accessToken) || current?.data === null;
+    result?.groupId === groupId && result?.accessToken === accessToken
+      ? result
+      : null;
+  const failed =
+    !groupId || (!loading && !accessToken) || current?.data === null;
   const data = current?.data;
 
   useEffect(() => {
-    if (loading || !data || data.expired || ["expired", "abandoned"].includes(data.status)) return;
+    if (
+      loading ||
+      !data ||
+      data.expired ||
+      ["expired", "abandoned"].includes(data.status)
+    )
+      return;
     const expiresAt = Date.parse(data.expires_at);
     let timer: ReturnType<typeof setTimeout> | undefined;
     const updateExpiry = () => {
       const timestamp = Date.now();
       setNow(timestamp);
       const remaining = expiresAt - timestamp;
-      if (remaining > 0) timer = setTimeout(updateExpiry, Math.min(remaining, 2_147_483_647));
+      if (remaining > 0)
+        timer = setTimeout(updateExpiry, Math.min(remaining, 2_147_483_647));
     };
     updateExpiry();
     return () => {
@@ -118,7 +136,9 @@ export function ExistingCheckoutStatus({ groupId, labels }: ExistingCheckoutStat
               ? labels.expired
               : labels.statusTemplate.replace(
                   "{status}",
-                  data.status === "completed" ? labels.completed : labels.pending,
+                  data.status === "completed"
+                    ? labels.completed
+                    : labels.pending,
                 )}
       </p>
       <p>

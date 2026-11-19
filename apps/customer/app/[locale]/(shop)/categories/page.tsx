@@ -1,6 +1,9 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
-import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import {
+  buildCanonicalAlternates,
+  buildLocaleCanonical,
+} from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -22,10 +25,15 @@ type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
 
-async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
+async function getCatalogTranslator(
+  locale: string,
+): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const messages = { ...baseMessages, catalog: catalogMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    catalog: catalogMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -38,7 +46,9 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getCatalogTranslator(locale);
   const result = await fetchCategoriesResult();
@@ -71,8 +81,12 @@ export default async function CategoriesPage({ params }: PageProps) {
   return (
     <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-5xl">
       <header className="space-y-2">
-        <h1 className="font-display text-h1 text-display-ink">{t("browseCategories.title")}</h1>
-        <p className="text-body text-text-2">{t("browseCategories.subtitle")}</p>
+        <h1 className="font-display text-h1 text-display-ink">
+          {t("browseCategories.title")}
+        </h1>
+        <p className="text-body text-text-2">
+          {t("browseCategories.subtitle")}
+        </p>
       </header>
 
       {view.kind === "populated" ? (

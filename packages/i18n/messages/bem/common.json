@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Convergeo",
-    "tagline": "Isoko lya mu Zambia — ukushita na escrow"
+    "tagline": "⚠ Zambia's marketplace — pay when it arrives"
   },
   "meta": {
     "defaultDescription": "Shiteni ifintu, bookeni ma-service, no sangeni ma-event mu Zambia pa Convergeo.",
@@ -52,11 +52,6 @@
   "contact": {
     "email": "support@vergeo5.com"
   },
-  "social": {
-    "facebook": "https://www.facebook.com/",
-    "twitter": "https://twitter.com/",
-    "instagram": "https://www.instagram.com/"
-  },
   "utilityBar": {
     "ariaLabel": "Ululimi, contact, no social links",
     "socialAria": "Social media",
@@ -93,8 +88,8 @@
     "label": "Share"
   },
   "fab": {
-    "ask": "Ask Vergeo",
-    "askTitle": "Ask Vergeo",
+    "ask": "⚠ Ask Convergeo",
+    "askTitle": "⚠ Ask Convergeo",
     "askHint": "Describe what you need — a product, a service or an event.",
     "askPlaceholder": "e.g. solar panel under K3,000 in Lusaka",
     "send": "Ask",
@@ -109,5 +104,8 @@
   "paymentTrust": {
     "footerSeal": "Lipileni mu cash ilyo order yafika",
     "footerPaymentNote": "Cash on delivery · Ukulipila pa intaneti kukesa"
+  },
+  "codTrust": {
+    "line": "⚠ You pay on delivery → We deliver → You confirm"
   }
 }

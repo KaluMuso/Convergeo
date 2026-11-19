@@ -66,23 +66,35 @@ const listing: BuyBoxListing = {
 
 describe("useListingPurchase — required pickup branch gate", () => {
   it("calls addCartItem with no location options for a non-branch-tracked listing", async () => {
-    vi.mocked(fetchPickupLocations).mockResolvedValue({ branchTracked: false, locations: [] });
+    vi.mocked(fetchPickupLocations).mockResolvedValue({
+      branchTracked: false,
+      locations: [],
+    });
     const { result } = renderHook(() => useListingPurchase(listing, labels));
-    await waitFor(() => expect(result.current?.pickupBranchTracked).toBe(false));
+    await waitFor(() =>
+      expect(result.current?.pickupBranchTracked).toBe(false),
+    );
 
     await act(async () => {
       result.current?.handleAddToCart();
     });
 
     await waitFor(() => {
-      expect(addCartItem).toHaveBeenCalledWith("listing-1", 1, undefined, undefined);
+      expect(addCartItem).toHaveBeenCalledWith(
+        "listing-1",
+        1,
+        undefined,
+        undefined,
+      );
     });
   });
 
   it("refuses to call addCartItem when branch-tracked and no branch is selected", async () => {
     vi.mocked(fetchPickupLocations).mockResolvedValue({
       branchTracked: true,
-      locations: [{ id: "branch-1", landmark: "East Park Mall", lat: -15.4, lng: 28.3 }],
+      locations: [
+        { id: "branch-1", landmark: "East Park Mall", lat: -15.4, lng: 28.3 },
+      ],
     });
     const { result } = renderHook(() => useListingPurchase(listing, labels));
     await waitFor(() => expect(result.current?.pickupBranchTracked).toBe(true));
@@ -98,7 +110,9 @@ describe("useListingPurchase — required pickup branch gate", () => {
   it("sends pickup_location_id + fulfilment=pickup once a branch is selected", async () => {
     vi.mocked(fetchPickupLocations).mockResolvedValue({
       branchTracked: true,
-      locations: [{ id: "branch-1", landmark: "East Park Mall", lat: -15.4, lng: 28.3 }],
+      locations: [
+        { id: "branch-1", landmark: "East Park Mall", lat: -15.4, lng: 28.3 },
+      ],
     });
     const { result } = renderHook(() => useListingPurchase(listing, labels));
     await waitFor(() => expect(result.current?.pickupBranchTracked).toBe(true));
@@ -106,7 +120,9 @@ describe("useListingPurchase — required pickup branch gate", () => {
     act(() => {
       result.current?.selectPickupLocation("branch-1");
     });
-    await waitFor(() => expect(result.current?.selectedPickupLocationId).toBe("branch-1"));
+    await waitFor(() =>
+      expect(result.current?.selectedPickupLocationId).toBe("branch-1"),
+    );
 
     await act(async () => {
       result.current?.handleAddToCart();
@@ -142,12 +158,21 @@ function deferred<T>() {
 
 describe("shared purchase while cart actions load", () => {
   it("publishes retry success only after replay delivery and client completion", async () => {
-    vi.mocked(fetchPickupLocations).mockResolvedValue({ branchTracked: false, locations: [] });
-    cartMocks.addCartItem.mockRejectedValueOnce(new Error("Response lost after commit"));
+    vi.mocked(fetchPickupLocations).mockResolvedValue({
+      branchTracked: false,
+      locations: [],
+    });
+    cartMocks.addCartItem.mockRejectedValueOnce(
+      new Error("Response lost after commit"),
+    );
     const { result } = renderHook(() => useListingPurchase(listing, labels));
-    await waitFor(() => expect(result.current?.pickupBranchTracked).toBe(false));
+    await waitFor(() =>
+      expect(result.current?.pickupBranchTracked).toBe(false),
+    );
     act(() => result.current?.handleAddToCart());
-    await waitFor(() => expect(result.current?.addError).toBe(labels.addToCartErrorLabel));
+    await waitFor(() =>
+      expect(result.current?.addError).toBe(labels.addToCartErrorLabel),
+    );
     expect(result.current?.adding).toBe(false);
 
     const delivery = deferred<void>();
@@ -181,9 +206,17 @@ describe("shared purchase while cart actions load", () => {
       expect(result.current?.adding).toBe(false);
       expect(result.current?.addError).toBeNull();
       expect(result.current?.addedMessage).toBe(labels.addToCartLabel);
-      expect(cartMocks.setLastAddedMessage).toHaveBeenCalledExactlyOnceWith(labels.addToCartLabel);
+      expect(cartMocks.setLastAddedMessage).toHaveBeenCalledExactlyOnceWith(
+        labels.addToCartLabel,
+      );
       expect(openMiniCart).toHaveBeenCalledOnce();
-      expect(addCartItem).toHaveBeenNthCalledWith(2, "listing-1", 1, undefined, undefined);
+      expect(addCartItem).toHaveBeenNthCalledWith(
+        2,
+        "listing-1",
+        1,
+        undefined,
+        undefined,
+      );
     } finally {
       delivery.resolve();
       clientCompletion.resolve();
@@ -202,7 +235,9 @@ describe("shared purchase while cart actions load", () => {
       locations: [{ id: "branch-1", landmark: "Mall", lat: -15.4, lng: 28.3 }],
     });
     const { result } = renderHook(() => useListingPurchase(listing, labels));
-    await waitFor(() => expect(result.current?.pickupLocations).toHaveLength(1));
+    await waitFor(() =>
+      expect(result.current?.pickupLocations).toHaveLength(1),
+    );
     act(() => result.current?.selectPickupLocation("branch-1"));
     act(() => {
       result.current?.handleAddToCart();
@@ -228,7 +263,9 @@ describe("shared purchase while cart actions load", () => {
     });
     await waitFor(() => expect(result.current?.adding).toBe(false));
     expect(openMiniCart).toHaveBeenCalledOnce();
-    expect(cartMocks.setLastAddedMessage).toHaveBeenCalledExactlyOnceWith(labels.addToCartLabel);
+    expect(cartMocks.setLastAddedMessage).toHaveBeenCalledExactlyOnceWith(
+      labels.addToCartLabel,
+    );
     expect(result.current?.addedMessage).toBe(labels.addToCartLabel);
   });
 
@@ -236,16 +273,25 @@ describe("shared purchase while cart actions load", () => {
     vi.doMock("../cart/mini-cart-drawer", () => {
       throw new Error("Chunk unavailable");
     });
-    vi.mocked(fetchPickupLocations).mockResolvedValue({ branchTracked: false, locations: [] });
+    vi.mocked(fetchPickupLocations).mockResolvedValue({
+      branchTracked: false,
+      locations: [],
+    });
     const { result } = renderHook(() => useListingPurchase(listing, labels));
-    await waitFor(() => expect(result.current?.pickupBranchTracked).toBe(false));
+    await waitFor(() =>
+      expect(result.current?.pickupBranchTracked).toBe(false),
+    );
     act(() => result.current?.handleAddToCart());
-    await waitFor(() => expect(result.current?.addError).toBe(labels.addToCartErrorLabel));
+    await waitFor(() =>
+      expect(result.current?.addError).toBe(labels.addToCartErrorLabel),
+    );
     expect(result.current?.adding).toBe(false);
     expect(addCartItem).not.toHaveBeenCalled();
     expect(openMiniCart).not.toHaveBeenCalled();
     vi.doMock("../cart/mini-cart-drawer", () => cartMocks);
-    cartMocks.addCartItem.mockRejectedValueOnce(new Error("Request unavailable"));
+    cartMocks.addCartItem.mockRejectedValueOnce(
+      new Error("Request unavailable"),
+    );
     act(() => result.current?.handleAddToCart());
     await waitFor(() => expect(result.current?.adding).toBe(false));
     expect(result.current?.addError).toBe(labels.addToCartErrorLabel);

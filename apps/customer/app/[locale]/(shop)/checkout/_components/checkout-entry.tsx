@@ -27,7 +27,13 @@ function Switch({ locale, labels, groupLabels }: Props) {
   }
   const groupId = resolveGroupParam(query);
   if (groupId !== undefined) {
-    return <GroupCheckoutLazy locale={locale} groupId={groupId} labels={groupLabels} />;
+    return (
+      <GroupCheckoutLazy
+        locale={locale}
+        groupId={groupId}
+        labels={groupLabels}
+      />
+    );
   }
   return <CheckoutShell locale={locale} labels={labels} />;
 }
@@ -40,12 +46,22 @@ function Switch({ locale, labels, groupLabels }: Props) {
  */
 function EntrySkeleton({ labels }: { labels: CheckoutShellLabels }) {
   return (
-    <div className="space-y-6" aria-busy="true" data-testid="checkout-entry-skeleton">
-      <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
+    <div
+      className="space-y-6"
+      aria-busy="true"
+      data-testid="checkout-entry-skeleton"
+    >
+      <h1 className="font-display text-h1 text-display-ink">
+        {labels.pageTitle}
+      </h1>
       <div className="space-y-4">
         <div className="space-y-1">
-          <h2 className="font-display text-h2 text-display-ink">{labels.contact.title}</h2>
-          <p className="font-body text-sm text-text-2">{labels.contact.subtitle}</p>
+          <h2 className="font-display text-h2 text-display-ink">
+            {labels.contact.title}
+          </h2>
+          <p className="font-body text-sm text-text-2">
+            {labels.contact.subtitle}
+          </p>
         </div>
         <div className="flex flex-col gap-4" aria-hidden="true">
           <div className="space-y-2">

@@ -24,8 +24,7 @@
     "directory": "Vendeurs",
     "services": "Services",
     "events": "Événements",
-    "askVergeo": "Demander à Vergeo",
-    "supplies": "Fournitures",
+    "askVergeo": "Demander à Convergeo",
     "browseChipsAria": "Parcourir par zone"
   },
   "marketing": {
@@ -34,7 +33,8 @@
     "contact": "Contact",
     "help": "Aide",
     "sell": "Vendre sur Convergeo",
-    "signIn": "Se connecter"
+    "signIn": "Se connecter",
+    "account": "Mon compte"
   },
   "account": {
     "ariaLabel": "Navigation du compte",

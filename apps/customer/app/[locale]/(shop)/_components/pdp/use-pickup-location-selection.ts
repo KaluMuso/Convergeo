@@ -25,12 +25,16 @@ export type PickupLocationSelection = {
  * add-to-cart surfaces enforce the same required-branch-selection contract
  * instead of duplicating the fetch/fail-closed logic.
  */
-export function usePickupLocationSelection(listingId: string | null): PickupLocationSelection {
+export function usePickupLocationSelection(
+  listingId: string | null,
+): PickupLocationSelection {
   const [branchTracked, setBranchTracked] = useState<boolean | null>(null);
   const [locations, setLocations] = useState<PickupLocation[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     setSelectedLocationId(null);
@@ -77,5 +81,12 @@ export function usePickupLocationSelection(listingId: string | null): PickupLoca
     setSelectedLocationId(locationId);
   }, []);
 
-  return { branchTracked, locations, loading, loadError, selectedLocationId, selectLocation };
+  return {
+    branchTracked,
+    locations,
+    loading,
+    loadError,
+    selectedLocationId,
+    selectLocation,
+  };
 }

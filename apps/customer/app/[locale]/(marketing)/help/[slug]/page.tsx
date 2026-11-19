@@ -88,6 +88,16 @@ export default async function HelpArticlePage({ params }: PageProps) {
         <h1 className="font-display text-h1 text-display-ink">{article.title}</h1>
       </header>
 
+      {article.comingSoon ? (
+        <p
+          role="note"
+          data-testid="help-coming-soon-notice"
+          className="mb-6 rounded-lg border border-border bg-primary-tint p-4 text-sm font-medium text-primary-deep"
+        >
+          {t("article.comingSoon")}
+        </p>
+      ) : null}
+
       <article className="mb-10">
         <Markdown content={article.body} />
       </article>

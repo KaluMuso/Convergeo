@@ -23,6 +23,9 @@ describe("NoSellersPanel", () => {
 
     expect(screen.getByTestId("pdp-no-sellers")).toBeInTheDocument();
     expect(screen.getByText("No sellers available")).toBeInTheDocument();
-    expect(screen.getByTestId("pdp-no-sellers-browse")).toHaveAttribute("href", "/en/c/all");
+    expect(screen.getByTestId("pdp-no-sellers-browse")).toHaveAttribute(
+      "href",
+      "/en/c/all",
+    );
   });
 });

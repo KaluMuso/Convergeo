@@ -40,10 +40,7 @@ export default function VendorJobCompletePage({ params }: PageProps) {
     });
   }, [params]);
 
-  const getToken = useCallback(
-    () => session?.access_token ?? null,
-    [session?.access_token],
-  );
+  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
 
   useEffect(() => {
     if (!jobId || !session?.access_token) return;
@@ -66,13 +63,10 @@ export default function VendorJobCompletePage({ params }: PageProps) {
     setError(null);
     try {
       const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
-      const result = await client.request<MarkCompleteResponse>(
-        `/jobs/${jobId}/complete`,
-        {
-          method: "POST",
-          body: JSON.stringify({}),
-        },
-      );
+      const result = await client.request<MarkCompleteResponse>(`/jobs/${jobId}/complete`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
       setMarked(true);
       void result;
     } catch (err) {
@@ -91,7 +85,7 @@ export default function VendorJobCompletePage({ params }: PageProps) {
 
   if (sessionLoading) {
     return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
+      <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
         <div className="flex min-h-[40vh] items-center justify-center">
           <Spinner label={t("marking")} />
         </div>
@@ -100,7 +94,7 @@ export default function VendorJobCompletePage({ params }: PageProps) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-4 p-4">
+    <main className="mx-auto flex w-full max-w-lg flex-col gap-3 px-4 py-3">
       <header className="space-y-1">
         <h1 className="font-display text-h2 text-display-ink">{t("title")}</h1>
         <p className="text-sm text-text-2">{t("intro")}</p>
@@ -110,8 +104,7 @@ export default function VendorJobCompletePage({ params }: PageProps) {
         <h2>{funding("title")}</h2>
         {legs.map((leg) => (
           <p key={leg.id}>
-            {funding(leg.leg)}: {formatK(leg.amount_ngwee)} —{" "}
-            {funding(`status.${leg.status}`)}
+            {funding(leg.leg)}: {formatK(leg.amount_ngwee)} — {funding(`status.${leg.status}`)}
           </p>
         ))}
       </section>
@@ -133,10 +126,7 @@ export default function VendorJobCompletePage({ params }: PageProps) {
             </Button>
           </>
         )}
-        <Link
-          href={`/${locale}/jobs`}
-          className="block text-center text-sm text-text-2 underline"
-        >
+        <Link href={`/${locale}/jobs`} className="block text-center text-sm text-text-2 underline">
           {t("backToJobs")}
         </Link>
       </section>

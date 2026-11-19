@@ -5,7 +5,13 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { recordAdEvent } from "./ad-events";
 
 /** Counts one impression when ≥50% visible and a click on activation. */
-export function AdTracker({ placementId, children }: { placementId: string; children: ReactNode }) {
+export function AdTracker({
+  placementId,
+  children,
+}: {
+  placementId: string;
+  children: ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

@@ -1,8 +1,8 @@
 {
   "askVergeo": {
     "slotLabel": "Slot ya Ask Convergeo assistant",
-    "teaser": "Tamwishibe ico mufwaya? Ipusheni Vergeo pakuti mwafwena ico mufwaya.",
-    "title": "Ipusheni Vergeo"
+    "teaser": "Tamwishibe ico mufwaya? Ipusheni Convergeo pakuti mwafwena ico mufwaya.",
+    "title": "Ipusheni Convergeo"
   },
   "categories": {
     "electronics": "Ifya elektrik",
@@ -22,7 +22,9 @@
   "noResults": {
     "categoriesTitle": "Twaleni categories",
     "suggestionsTitle": "Wesheni ukufwenya",
-    "title": "Takwaba results ku \"{query}\""
+    "title": "Takwaba results ku \"{query}\"",
+    "body": "⚠ Check the spelling or try a more general word. Products with no seller offering them right now are not shown.",
+    "reset": "⚠ Clear filters and tabs"
   },
   "pagination": {
     "loadMore": "Leteni fimbi",
@@ -86,7 +88,6 @@
     "events": "Ificitike",
     "products": "Ifintu",
     "services": "Imilimo",
-    "supplies": "Ifya business",
     "vendors": "Basellers"
   },
   "title": "Fweni",

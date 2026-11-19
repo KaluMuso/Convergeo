@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Convergeo",
-    "tagline": "赞比亚线上市集——托管担保购物"
+    "tagline": "赞比亚的线上市集——货到付款"
   },
   "meta": {
     "defaultDescription": "在 Convergeo 上选购商品、预订服务并发现赞比亚各地活动——多商家市场平台。",
@@ -45,11 +45,6 @@
   },
   "contact": {
     "email": "support@vergeo5.com"
-  },
-  "social": {
-    "facebook": "https://www.facebook.com/",
-    "twitter": "https://twitter.com/",
-    "instagram": "https://www.instagram.com/"
   },
   "utilityBar": {
     "ariaLabel": "语言、联系方式与社交媒体",
@@ -96,8 +91,8 @@
     "label": "分享"
   },
   "fab": {
-    "ask": "问 Vergeo",
-    "askTitle": "问 Vergeo",
+    "ask": "询问 Convergeo",
+    "askTitle": "询问 Convergeo",
     "askHint": "描述您的需求：商品、服务或活动。",
     "askPlaceholder": "例如：卢萨卡 3,000 克瓦查以内的太阳能板",
     "send": "提问",
@@ -112,5 +107,8 @@
   "paymentTrust": {
     "footerSeal": "订单送达时以现金付款",
     "footerPaymentNote": "货到付款 · 在线支付即将推出"
+  },
+  "codTrust": {
+    "line": "货到付款 → 我们送货 → 您确认收货"
   }
 }

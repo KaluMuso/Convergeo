@@ -2,22 +2,35 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { buildPageMetadata } from "../../../../lib/page-title";
+import { readLeadTimePhrases } from "../_components/sale-quantity";
+
 import { ExistingCheckoutStatus } from "./_components/existing-checkout-status-lazy";
 import { GroupCheckoutLazy } from "./_components/group-checkout-lazy";
 import { LazyTicketCheckout } from "./_components/lazy-ticket-checkout";
 import { CheckoutShell } from "./_components/step-fulfilment";
 import { resolveGroupParam } from "./_lib/group-checkout";
 
+import type { CheckoutExtrasLabels } from "./_components/checkout-extras";
 import type { GroupCheckoutLabels } from "./_components/group-checkout";
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  robots: {
+// Message-object nodes read with t.raw (objects, not leaf keys for the i18n sweep).
+const COUPON_LABELS_KEY = "checkout.coupon";
+const GIFT_LABELS_KEY = "checkout.gift";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "checkout", "checkout.pageTitle", {
     index: false,
     follow: false,
-  },
-};
+  });
+}
 
 function buildGroupLabels(
   locale: string,
@@ -45,7 +58,11 @@ function buildGroupLabels(
     payCtaTemplate: t.raw("checkout.group.payCta") as string,
     viewOrder: t("checkout.group.viewOrder"),
     escrowTitle: shell.review.escrowTitle,
-    escrowSteps: [shell.review.escrowStep1, shell.review.escrowStep2, shell.review.escrowStep3],
+    escrowSteps: [
+      shell.review.escrowStep1,
+      shell.review.escrowStep2,
+      shell.review.escrowStep3,
+    ],
     payment: shell.payment,
   };
 }
@@ -59,7 +76,10 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): CheckoutShellLabels {
+function buildCheckoutLabels(
+  locale: string,
+  messages: AbstractIntlMessages,
+): CheckoutShellLabels {
   const t = createTranslator({ locale, messages, namespace: "checkout" });
 
   return {
@@ -112,6 +132,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       pickupAtTemplate: String(t.raw("checkout.fulfilment.pickupAt")),
       pickupHoursTemplate: String(t.raw("checkout.fulfilment.pickupHours")),
       outsideZone: t("checkout.fulfilment.outsideZone"),
+      notOffered: t("checkout.fulfilment.notOffered"),
       mixedHint: t("checkout.fulfilment.mixedHint"),
       continue: t("checkout.fulfilment.continue"),
       subtotal: t("checkout.fulfilment.subtotal"),
@@ -177,6 +198,10 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
     review: {
       title: t("checkout.review.title"),
       subtitle: t("checkout.review.subtitle"),
+      typeProducts: t("checkout.review.typeProducts"),
+      typeEventTickets: t("checkout.review.typeEventTickets"),
+      ticketLine: String(t.raw("checkout.review.ticketLine")),
+      platformFee: t("checkout.review.platformFee"),
       lineItems: t("checkout.review.lineItems"),
       qtyTemplate: String(t.raw("checkout.review.qty")),
       variantOption: String(t.raw("variant.option")),
@@ -189,7 +214,12 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
         bag: t("cart.saleUnits.bag"),
         sqm: t("cart.saleUnits.sqm"),
       },
-      madeToOrderLeadTime: t("cart.madeToOrderLeadTime"),
+      madeToOrderLeadTime: String(t.raw("cart.madeToOrderLeadTime")),
+      leadTimeWhen: readLeadTimePhrases((form) =>
+        String(t.raw(`cart.leadTimeWhen.${form}`)),
+      ),
+      estimatedReady: String(t.raw("checkout.review.estimatedReady")),
+      estimatedDelivery: String(t.raw("checkout.review.estimatedDelivery")),
       subtotal: t("checkout.review.subtotal"),
       deliveryFees: t("checkout.review.deliveryFees"),
       total: t("checkout.review.total"),
@@ -206,6 +236,11 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       escrowStep3: t("checkout.review.escrowStep3"),
       consentLabel: t("checkout.review.consentLabel"),
       consentRequired: t("checkout.review.consentRequired"),
+      deliveryConsent: {
+        label: t("checkout.review.deliveryConsent.label"),
+        hint: t("checkout.review.deliveryConsent.hint"),
+        saveFailed: t("checkout.review.deliveryConsent.saveFailed"),
+      },
       placeOrder: t("checkout.review.placeOrder"),
       loading: t("checkout.review.loading"),
       placingOrder: t("checkout.review.placingOrder"),
@@ -223,7 +258,17 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
         deliveryNoLandmark: t("checkout.review.codGuide.deliveryNoLandmark"),
         pickupFromSeller: t("checkout.review.codGuide.pickupFromSeller"),
         placeOrderCod: t("checkout.review.codGuide.placeOrderCod"),
+        trustLine: createTranslator({
+          locale,
+          messages,
+          namespace: "codTrust",
+        })("line"),
       },
+      discount: t.raw("checkout.review.discount") as string,
+    },
+    extras: {
+      coupon: t.raw(COUPON_LABELS_KEY) as CheckoutExtrasLabels["coupon"],
+      gift: t.raw(GIFT_LABELS_KEY) as CheckoutExtrasLabels["gift"],
     },
     countdown: {
       label: t("checkout.countdown.label"),
@@ -240,7 +285,10 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
   };
 }
 
-export default async function CheckoutPage({ params, searchParams }: PageProps) {
+export default async function CheckoutPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { locale } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {
@@ -250,7 +298,10 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
   setRequestLocale(locale);
   const baseMessages = await getMessages();
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
-  const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    checkout: checkoutMessages,
+  } as AbstractIntlMessages;
   const query = (await searchParams) ?? {};
   const hasSession = Object.prototype.hasOwnProperty.call(query, "session");
   const hasGroup = Object.prototype.hasOwnProperty.call(query, "group");
@@ -263,7 +314,9 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
     const depositGroupId = resolveGroupParam(query);
     if (
       typeof depositGroupId === "string" &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(depositGroupId)
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        depositGroupId,
+      )
     ) {
       const labels = buildCheckoutLabels(locale, messages);
       return (
@@ -285,10 +338,16 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
     hasGroup &&
     !hasSession &&
     typeof query.group === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query.group)
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      query.group,
+    )
   ) {
     const labels = buildCheckoutLabels(locale, messages);
-    const checkoutT = createTranslator({ locale, messages, namespace: "checkout" });
+    const checkoutT = createTranslator({
+      locale,
+      messages,
+      namespace: "checkout",
+    });
     const ticketMessages = await loadNamespace(locale as Locale, "events");
     const ticketT = createTranslator({
       locale,
@@ -319,7 +378,9 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
     const groupId =
       hasSession !== hasGroup &&
       typeof suppliedId === "string" &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(suppliedId)
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        suppliedId,
+      )
         ? suppliedId
         : null;
     const t = createTranslator({ locale, messages, namespace: "checkout" });

@@ -65,6 +65,59 @@ REVIEWED_SUFFIX = (
     "20261113120500_delivery_revenue_ledger_account.sql",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
+    "20261114050000_rate_counter_scope_constraint_sync.sql",
+    # Listing fulfilment options + Class D may be sold new (additive, reversible).
+    "20261115090000_listing_fulfilment_options_class_d_any_condition.sql",
+    # W8 bundles & offers: offers/offer_items/gift reservations + order_items snapshot (additive, reversible).
+    "20261115120000_bundles_offers.sql",
+    # Events collaboration: requests, audit, splits, organiser opt-in (additive, reversible).
+    "20261115130000_event_collaboration.sql",
+    # Events collaboration rate-limit scopes (additive, reversible).
+    "20261115130100_event_collaboration_rate_scopes.sql",
+    # Analytics/RBAC audit S1: admin read-only on money tables (additive).
+    "20261115140000_admin_money_tables_read_only.sql",
+    # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
+    "20261115140100_admin_direct_writes_read_only.sql",
+    "20261115140200_admin_governance_audit_consent.sql",
+    # Analytics v2 (Intelligence 1A/1B, flags default off): additive tables/functions.
+    "20261115150000_analytics_v2_foundation.sql",
+    "20261115150100_analytics_rollups.sql",
+    "20261115150200_analytics_commercial.sql",
+    "20261115150300_analytics_search_sessions.sql",
+    "20261115150400_analytics_lusaka_day.sql",
+    "20261115150500_analytics_search_daily_retention.sql",
+    "20261115150600_analytics_session_links.sql",
+    # Pay at the door: door payment tables + suspense account (additive, flag off).
+    "20261115200000_pay_at_door.sql",
+    # Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
+    "20261115210000_event_ticket_integrity.sql",
+    # Business Home: offers + section flags, default off (additive, reversible).
+    "20261115235500_business_home_offers_flag.sql",
+    "20261115235600_business_home_section_flags.sql",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000_unified_cart_event_tickets.sql",
+    # Coupons, gift orders, birthday greetings (additive; flags default off).
+    "20261116100000_coupons_gifts_birthdays.sql",
+    # Coupons: collection net of the coupon + coupon_funding leg (additive).
+    "20261116100100_collection_coupon_funding.sql",
+    # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
+    "20261116110000_vendor_plans.sql",
+    # Shared canonical photos + sha256 dedup (additive, reversible).
+    "20261116110100_shared_canonical_photos.sql",
+    # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
+    "20261116130000_free_events_services.sql",
+    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
+    "20261117000000_multi_branch_businesses.sql",
+    # Unpaid-order auto-cancel window config row (additive, reversible).
+    "20261117010000_unpaid_order_cancel_hours.sql",
+    # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
+    "20261117010100_loyalty_points.sql",
+    "20261117010200_vendor_weekly_digest.sql",
+    # In-app rows for never-silent lifecycle templates (additive, reversible).
+    "20261117010300_in_app_never_silent_events.sql",
+    # Plan limits on active listings, trials, paid extras (additive, reversible).
+    "20261117020000_plan_limits_trials_extras.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
@@ -618,9 +671,9 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 158 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 189 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 158 source migrations",
+            "disposable copy does not match 189 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
@@ -703,10 +756,10 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                         raise RehearsalError(
                             "failure cleanup did not restore full history"
                         )
-                    print("failure_cleanup|restored_158|PASS")
+                    print("failure_cleanup|restored_189|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 158 migrations",
+                        "error: disposable failure cleanup could not restore 189 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -749,6 +802,19 @@ def assert_prefix(container: str, expected: list[list[object]], count: int) -> N
         raise RehearsalError(
             "predecessor migration history changed", code="HISTORY_MISMATCH"
         )
+
+
+def batch_end(files: list[Path], start: int) -> int:
+    """Index of the last file in the consecutive non-BOUND run from start."""
+    end = start
+    while end + 1 < len(files) and files[end + 1].name not in BOUND_FILES:
+        end += 1
+    return end
+
+
+def assert_batch_ledger(current: list[list[object]], files: list[Path], end: int) -> None:
+    if [row[0] for row in current] != [p.stem.split("_", 1)[0] for p in files[: end + 1]]:
+        raise RehearsalError("intervening CLI migration order changed")
 
 
 def rejection_trigger(container: str, version: str, *, create: bool) -> None:
@@ -814,7 +880,9 @@ def commit_without_ack(container: str, version: str, body: bytes) -> None:
                         raise RehearsalError(
                             "fixture client finished before acknowledgement was cut"
                         )
-                    process.terminate()
+                    # SIGKILL, not SIGTERM: newer runner docker CLIs exit 0 on
+                    # SIGTERM, which falsely reads as an acknowledged commit.
+                    process.kill()
                     process.wait(timeout=5)
                     if process.returncode == 0:
                         raise RehearsalError(
@@ -944,7 +1012,10 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
                         code="HISTORY_MISMATCH",
                     )
             completed: list[list[object]] = []
+            batched_through = first_index - 1
             for index in range(first_index, len(files)):
+                if index <= batched_through:
+                    continue
                 tracker.enter("suffix_replay")
                 path = files[index]
                 before = ledger(container)
@@ -1004,15 +1075,14 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
                         f"original_body_atomicity|{boundary.version}|PASS|{before_catalog}|{after_catalog}"
                     )
                 else:
-                    # Let pinned CLI apply the two intervening migrations and
-                    # final ACL hardening in order, using the same workdir.
-                    with visible_prefix(files, index, holding):
+                    # One push applies the whole consecutive run of non-BOUND
+                    # migrations in order; the ledger guard is unchanged.
+                    end = batch_end(files, index)
+                    with visible_prefix(files, end, holding):
                         cli(workdir, "push", "--db-url", URL, "--include-all", "--yes")
                     assert_prefix(container, baseline, first_index)
-                    if [row[0] for row in ledger(container)] != [
-                        p.stem.split("_", 1)[0] for p in files[: index + 1]
-                    ]:
-                        raise RehearsalError("intervening CLI migration order changed")
+                    assert_batch_ledger(ledger(container), files, end)
+                    batched_through = end
             tracker.enter("final_ledger")
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
@@ -1059,7 +1129,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 158 migrations"
+                    "normal full replay did not restore 189 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")

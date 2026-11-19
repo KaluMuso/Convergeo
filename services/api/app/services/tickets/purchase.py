@@ -74,6 +74,11 @@ class RsvpResult:
     order_item_id: str
     ticket_ids: tuple[str, ...]
     commission_snapshot: dict[str, Any]
+    replayed: bool = False
+
+
+#: Abuse cap: free RSVP tickets one user may hold per event (one RSVP per event).
+MAX_RSVP_TICKETS_PER_USER = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +98,10 @@ class ReleaseClaimResult:
 class ReleaseStaleClaimsResult:
     voided_count: int
     ttl_minutes: int
+
+
+# Paid issuance honours events unpublished after purchase (draft); see below.
+PAID_ISSUANCE_EVENT_STATUSES = frozenset({"published", "draft"})
 
 
 def _validate_uuid(value: str, field: str) -> None:
@@ -405,6 +414,11 @@ def _build_ticket_commission_snapshot(
         "fee_payer": payer,
         "platform_fee_ngwee": platform_fee,
     }
+    if is_free:
+        # Free orders carry no money: the DB refuses ledger rows / payment intents
+        # for them (private.order_is_free, 20261116130000).
+        snapshot["is_free"] = True
+        snapshot["rate_bps"] = 0
     if claimed_ticket_ids:
         snapshot["ticket_claim_ids"] = list(claimed_ticket_ids)
     if promo_code:
@@ -655,6 +669,21 @@ def add_ticket_to_checkout(
         platform_fee=fee,
     )
 
+    # Reserve the promo use atomically (row-locked in the DB) BEFORE claiming
+    # capacity, so an exhausted code fails the checkout without holding seats.
+    if promo_id and discount > 0:
+        try:
+            record_promo_redemption(
+                promo_id=promo_id,
+                event_id=str(ctx["event"]["id"]),
+                order_id=order_id,
+                customer_id=customer_id,
+                discount_ngwee=discount,
+            )
+        except AppError:
+            release_gmv_reservation(checkout_group_id)
+            raise
+
     claim = claim_ticket_or_raise(
         service_client,
         instance_id=instance_id,
@@ -678,14 +707,6 @@ def add_ticket_to_checkout(
         affiliate_code=affiliate_code,
     )
     _update_commission_snapshot(order_id, final_snapshot)
-    if promo_id and discount > 0:
-        record_promo_redemption(
-            promo_id=promo_id,
-            event_id=str(ctx["event"]["id"]),
-            order_id=order_id,
-            customer_id=customer_id,
-            discount_ngwee=discount,
-        )
 
     subtotal = charged
     return TicketCheckoutResult(
@@ -723,12 +744,33 @@ def _ticket_secrets(ticket_id: str) -> tuple[str, str]:
     return qr_secret, pin_hash
 
 
-def _link_claimed_tickets(order_item_id: str, ticket_ids: tuple[str, ...]) -> int:
-    if not ticket_ids:
+def _link_claimed_tickets(
+    order_item_id: str,
+    ticket_ids: tuple[str, ...],
+    *,
+    instance_id: str | None = None,
+    ticket_type_id: str | None = None,
+    limit: int | None = None,
+) -> int:
+    """Link up to ``limit`` unlinked claims of this item's type and instance to it.
+
+    An order with several ticket lines (unified checkout, or a line split by an
+    offer) carries all its claim ids in one snapshot: each line takes only the
+    claims of its own (type, instance) and never more than its quantity, so the
+    claims are shared out exactly and no extra ticket is minted.
+    """
+    if not ticket_ids or (limit is not None and limit <= 0):
         return 0
     item_sql = sql_uuid(order_item_id, "order_item_id")
+    scope_sql = ""
+    if instance_id is not None:
+        scope_sql += f"\n  AND instance_id = {sql_uuid(instance_id, 'instance_id')}"
+    if ticket_type_id is not None:
+        scope_sql += f"\n  AND ticket_type_id = {sql_uuid(ticket_type_id, 'ticket_type_id')}"
     linked = 0
     for ticket_id in ticket_ids:
+        if limit is not None and linked >= limit:
+            break
         tid_sql = sql_uuid(ticket_id, "ticket_id")
         qr_secret, pin_hash = _ticket_secrets(ticket_id)
         result = run_sql_script(
@@ -740,7 +782,7 @@ SET
   pin_hash = {_sql_text(pin_hash)}
 WHERE id = {tid_sql}
   AND order_item_id IS NULL
-  AND status <> 'void'
+  AND status <> 'void'{scope_sql}
 RETURNING id::text;
 """
         )
@@ -839,6 +881,22 @@ VALUES
     return qty
 
 
+def _notify_tickets_issued(order_id: str, instance_id: str) -> None:
+    """ticket_issued after the tickets committed. Best-effort; deduped per order."""
+    try:
+        from app.services.notifications.lifecycle import notify_tickets_issued
+
+        title_result = run_sql_script(
+            "SELECT e.title FROM public.event_instances i "
+            "JOIN public.events e ON e.id = i.event_id "
+            f"WHERE i.id = {sql_uuid(instance_id, 'instance_id')};"
+        )
+        title = title_result.rows[0].strip() if title_result.ok and title_result.rows else ""
+        notify_tickets_issued(order_id, title)
+    except Exception:
+        return
+
+
 def issue_tickets_for_paid_order(
     service_client: Any,
     order_id: str,
@@ -924,7 +982,10 @@ WHERE oi.order_id = {order_sql}
         if len(parts) != 6:
             raise RuntimeError("unexpected ticket order item row shape")
         order_item_id, qty_raw, instance_id, ticket_type_id, event_id, event_status = parts
-        if event_status != "published":
+        # A paid order on an event unpublished after purchase (draft) is still
+        # honoured — the buyer paid and unpublishing keeps sold tickets valid.
+        # Only cancelled/completed events block issuance.
+        if event_status not in PAID_ISSUANCE_EVENT_STATUSES:
             raise AppError(
                 code="tickets.event_not_published",
                 message="Tickets cannot be issued for an unavailable event",
@@ -951,7 +1012,13 @@ WHERE oi.order_id = {order_sql}
 
         linked = 0
         if claim_ids:
-            linked = _link_claimed_tickets(order_item_id, claim_ids)
+            linked = _link_claimed_tickets(
+                order_item_id,
+                claim_ids,
+                instance_id=instance_id,
+                ticket_type_id=ticket_type_id,
+                limit=needed,
+            )
             existing += linked
             needed = max(0, qty - existing)
 
@@ -970,6 +1037,9 @@ WHERE oi.order_id = {order_sql}
         names = _load_attendee_names(order_item_id)
         if names:
             _assign_holder_names(order_item_id, names)
+
+    if total_issued > 0:
+        _notify_tickets_issued(order_id, item_rows[0][2])
 
     return IssueTicketsResult(
         order_id=order_id,
@@ -1061,6 +1131,18 @@ def rsvp(
             details={"message_key": "events.ticketPurchase.errors.paidUseCheckout"},
         )
 
+    if qty > MAX_RSVP_TICKETS_PER_USER:
+        raise AppError(
+            code="tickets.rsvp_cap",
+            message=f"At most {MAX_RSVP_TICKETS_PER_USER} free tickets per person",
+            http_status=422,
+            details={
+                "field": "qty",
+                "max": MAX_RSVP_TICKETS_PER_USER,
+                "message_key": "events.ticketPurchase.errors.rsvpCap",
+            },
+        )
+
     names = _validate_attendee_names(
         attendee_names,
         qty=qty,
@@ -1068,6 +1150,128 @@ def rsvp(
     )
     title = str(ticket_type.get("name") or "RSVP")
     unit_price = 1  # schema requires order_items.unit_price_ngwee > 0
+
+    event_id = str(ctx["event"]["id"])
+    if not _reserve_rsvp(
+        event_id=event_id,
+        customer_id=customer_id,
+        instance_id=instance_id,
+        ticket_type_id=ticket_type_id,
+        qty=qty,
+    ):
+        return _replay_rsvp(event_id=event_id, customer_id=customer_id)
+    try:
+        result = _issue_rsvp(
+            service_client,
+            customer_id=customer_id,
+            instance_id=instance_id,
+            ticket_type_id=ticket_type_id,
+            qty=qty,
+            names=names,
+            title=title,
+            kind=kind,
+            unit_price=unit_price,
+            organiser_vendor_id=ctx["organiser_vendor_id"],
+        )
+    except BaseException:
+        _release_rsvp(event_id=event_id, customer_id=customer_id)
+        raise
+    _bind_rsvp_order(event_id=event_id, customer_id=customer_id, order_id=result.order_id)
+    return result
+
+
+def _reserve_rsvp(
+    *, event_id: str, customer_id: str, instance_id: str, ticket_type_id: str, qty: int
+) -> bool:
+    """Insert the (event, user) RSVP anchor; False when one already exists."""
+    result = run_sql_script(
+        f"""
+INSERT INTO public.event_rsvps (event_id, user_id, instance_id, ticket_type_id, qty)
+VALUES ({sql_uuid(event_id, "event_id")}, {sql_uuid(customer_id, "customer_id")},
+        {sql_uuid(instance_id, "instance_id")}, {sql_uuid(ticket_type_id, "ticket_type_id")},
+        {int(qty)})
+ON CONFLICT (event_id, user_id) DO NOTHING
+RETURNING 'new';
+"""
+    )
+    if not result.ok:
+        raise RuntimeError(f"rsvp reserve failed: {result.error}")
+    return bool(result.rows) and result.rows[0] == "new"
+
+
+def _release_rsvp(*, event_id: str, customer_id: str) -> None:
+    run_sql_script(
+        f"""
+DELETE FROM public.event_rsvps
+WHERE event_id = {sql_uuid(event_id, "event_id")}
+  AND user_id = {sql_uuid(customer_id, "customer_id")}
+  AND order_id IS NULL;
+"""
+    )
+
+
+def _bind_rsvp_order(*, event_id: str, customer_id: str, order_id: str) -> None:
+    result = run_sql_script(
+        f"""
+UPDATE public.event_rsvps SET order_id = {sql_uuid(order_id, "order_id")}
+WHERE event_id = {sql_uuid(event_id, "event_id")}
+  AND user_id = {sql_uuid(customer_id, "customer_id")};
+"""
+    )
+    if not result.ok:
+        raise RuntimeError(f"rsvp bind failed: {result.error}")
+
+
+def _replay_rsvp(*, event_id: str, customer_id: str) -> RsvpResult:
+    """Idempotent duplicate RSVP: return the user's existing order and tickets."""
+    result = run_sql_script(
+        f"""
+SELECT concat_ws('|', o.checkout_group_id, o.id, oi.id,
+                 coalesce(string_agg(t.id::text, ',' ORDER BY t.created_at, t.id), ''))
+FROM public.event_rsvps r
+JOIN public.orders o ON o.id = r.order_id
+JOIN public.order_items oi ON oi.order_id = o.id
+LEFT JOIN public.tickets t ON t.order_item_id = oi.id AND t.status <> 'void'
+WHERE r.event_id = {sql_uuid(event_id, "event_id")}
+  AND r.user_id = {sql_uuid(customer_id, "customer_id")}
+GROUP BY o.checkout_group_id, o.id, oi.id
+LIMIT 1;
+"""
+    )
+    if not result.ok:
+        raise RuntimeError(f"rsvp replay failed: {result.error}")
+    if not result.rows:
+        raise AppError(
+            code="tickets.rsvp_in_progress",
+            message="Your RSVP is already being processed",
+            http_status=409,
+            details={"message_key": "events.ticketPurchase.errors.rsvpInProgress"},
+        )
+    group_id, order_id, item_id, ids = result.rows[0].split("|")
+    return RsvpResult(
+        checkout_group_id=group_id,
+        order_id=order_id,
+        order_item_id=item_id,
+        ticket_ids=tuple(i for i in ids.split(",") if i),
+        commission_snapshot={"is_free": True, "rate_bps": 0},
+        replayed=True,
+    )
+
+
+def _issue_rsvp(
+    service_client: Any,
+    *,
+    customer_id: str,
+    instance_id: str,
+    ticket_type_id: str,
+    qty: int,
+    names: list[str] | None,
+    title: str,
+    kind: str,
+    unit_price: int,
+    organiser_vendor_id: Any,
+) -> RsvpResult:
+    ctx = {"organiser_vendor_id": organiser_vendor_id}
 
     claim = claim_ticket_or_raise(
         service_client,
@@ -1196,7 +1400,7 @@ WHERE coalesce(counts.issued, 0) < oi.qty
     JOIN public.events blocked_e ON blocked_e.id = blocked_ei.event_id
     WHERE blocked_oi.order_id = o.id
       AND blocked_oi.item_kind = 'ticket'
-      AND blocked_e.status <> 'published'
+      AND blocked_e.status NOT IN ('published', 'draft')
   )
 GROUP BY o.id
 ORDER BY o.id;

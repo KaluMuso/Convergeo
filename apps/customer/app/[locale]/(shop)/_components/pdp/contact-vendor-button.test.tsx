@@ -8,7 +8,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import catalogMessages from "../../../../../../../packages/i18n/messages/en/catalog.json";
 import { useSession } from "../../../../../lib/customer-session";
 
-import { ContactVendorButton, type ContactVendorLabels } from "./contact-vendor-button";
+import {
+  ContactVendorButton,
+  type ContactVendorLabels,
+} from "./contact-vendor-button";
 
 const labels = catalogMessages.pdp.contactVendor as ContactVendorLabels;
 
@@ -61,7 +64,10 @@ describe("ContactVendorButton", () => {
     await user.click(screen.getByTestId("pdp-contact-vendor-cta"));
     expect(screen.getByTestId("pdp-contact-vendor-dialog")).toBeInTheDocument();
 
-    await user.type(screen.getByTestId("pdp-contact-vendor-message"), "Is this still in stock?");
+    await user.type(
+      screen.getByTestId("pdp-contact-vendor-message"),
+      "Is this still in stock?",
+    );
     await user.click(screen.getByTestId("pdp-contact-vendor-submit"));
 
     await waitFor(() => {
@@ -71,7 +77,9 @@ describe("ContactVendorButton", () => {
         body: "Is this still in stock?",
       });
     });
-    expect(screen.getByTestId("pdp-contact-vendor-success")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("pdp-contact-vendor-success"),
+    ).toBeInTheDocument();
   });
 
   it("prompts sign-in when the visitor is anonymous", async () => {
@@ -133,7 +141,9 @@ describe("ContactVendorButton", () => {
 
     await user.keyboard("{Escape}");
     await waitFor(() => {
-      expect(screen.queryByTestId("pdp-contact-vendor-dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("pdp-contact-vendor-dialog"),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -151,12 +161,16 @@ describe("ContactVendorButton", () => {
     const cta = screen.getByTestId("pdp-contact-vendor-cta");
     await user.click(cta);
     await waitFor(() => {
-      expect(screen.getByTestId("pdp-contact-vendor-dialog")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("pdp-contact-vendor-dialog"),
+      ).toBeInTheDocument();
     });
 
     await user.keyboard("{Escape}");
     await waitFor(() => {
-      expect(screen.queryByTestId("pdp-contact-vendor-dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("pdp-contact-vendor-dialog"),
+      ).not.toBeInTheDocument();
     });
     await waitFor(() => {
       expect(document.activeElement).toBe(cta);

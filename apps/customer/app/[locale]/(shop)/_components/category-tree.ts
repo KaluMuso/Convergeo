@@ -22,7 +22,10 @@ export type CategoryRecord = {
   prohibited: boolean;
 };
 
-function byPosition(left: { position: number }, right: { position: number }): number {
+function byPosition(
+  left: { position: number },
+  right: { position: number },
+): number {
   return left.position - right.position;
 }
 
@@ -85,4 +88,27 @@ export function isMalformedCategoryPayload(rows: unknown): boolean {
       typeof row.prohibited === "boolean"
     );
   });
+}
+
+/**
+ * Display name for a category slug from category rows (the data's own `name`, e.g.
+ * "Men's Clothing"), falling back to a title-cased slug only when the row is unknown.
+ */
+export function categoryDisplayName(
+  rows: ReadonlyArray<Pick<CategoryRecord, "name" | "slug">>,
+  slug: string | undefined,
+): string {
+  if (!slug) {
+    return "";
+  }
+  const match = rows.find(
+    (row) => row.slug === slug && row.name.trim().length > 0,
+  );
+  if (match) {
+    return match.name.trim();
+  }
+  return slug
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }

@@ -47,7 +47,10 @@ export function buildLogisticsPills(
   if (listing.distanceM !== null) {
     pills.push({
       key: "nearest",
-      label: labels.nearest.replace("{distance}", formatDistance(listing.distanceM)),
+      label: labels.nearest.replace(
+        "{distance}",
+        formatDistance(listing.distanceM),
+      ),
       color: tokens.colors.primary,
     });
   }
@@ -131,7 +134,10 @@ export function FulfillmentLogisticsPills({
   className,
   testId = "fulfillment-logistics-pills",
 }: FulfillmentLogisticsPillsProps) {
-  const pills = buildFulfillmentPills({ deliveryAvailable, pickupAvailable }, labels);
+  const pills = buildFulfillmentPills(
+    { deliveryAvailable, pickupAvailable },
+    labels,
+  );
 
   if (pills.length === 0) {
     return null;
@@ -151,7 +157,10 @@ type ListingLogisticsPillsProps = {
   labels: LogisticsPillLabels;
 };
 
-export function ListingLogisticsPills({ listing, labels }: ListingLogisticsPillsProps) {
+export function ListingLogisticsPills({
+  listing,
+  labels,
+}: ListingLogisticsPillsProps) {
   const pills = buildLogisticsPills(listing, labels);
 
   if (pills.length === 0) {
@@ -159,7 +168,10 @@ export function ListingLogisticsPills({ listing, labels }: ListingLogisticsPills
   }
 
   return (
-    <div className="flex flex-wrap gap-1.5" data-testid="listing-logistics-pills">
+    <div
+      className="flex flex-wrap gap-1.5"
+      data-testid="listing-logistics-pills"
+    >
       {pills.map((pill) => (
         <Pill key={pill.key} label={pill.label} color={pill.color} />
       ))}

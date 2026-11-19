@@ -11,11 +11,16 @@ export function parseStringAllowlist(raw: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  return value.filter(
+    (item): item is string =>
+      typeof item === "string" && item.trim().length > 0,
+  );
 }
 
 async function readFeatureFlag(
-  supabase: ReturnType<typeof import("@vergeo/auth/server-client").createServerClient>,
+  supabase: ReturnType<
+    typeof import("@vergeo/auth/server-client").createServerClient
+  >,
   flag: string,
 ): Promise<boolean> {
   try {

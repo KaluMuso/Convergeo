@@ -11,7 +11,8 @@ export type TicketOrder = {
   status: "pending" | "completed";
 };
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** RLS reads are a display guard; payment endpoints enforce ownership again. */
 export async function loadTicketOrder(
@@ -33,7 +34,8 @@ export async function loadTicketOrder(
     !group ||
     group.id !== groupId ||
     group.customer_id !== userId ||
-    (group.status !== "pending" && !(allowCompleted && group.status === "completed")) ||
+    (group.status !== "pending" &&
+      !(allowCompleted && group.status === "completed")) ||
     !Number.isSafeInteger(group.total_ngwee) ||
     group.total_ngwee <= 0
   ) {

@@ -86,9 +86,12 @@ export function PlpBrowseClient({
       const params = new URLSearchParams(queryString);
       params.delete("cursor");
       params.set("cursor", cursor);
-      const response = await fetch(`${apiBaseUrl}/catalog/listings?${params.toString()}`, {
-        signal,
-      });
+      const response = await fetch(
+        `${apiBaseUrl}/catalog/listings?${params.toString()}`,
+        {
+          signal,
+        },
+      );
       if (!response.ok) {
         throw new Error(`Catalog load failed (${response.status})`);
       }
@@ -113,7 +116,12 @@ export function PlpBrowseClient({
 
   return (
     <>
-      <ListingGrid locale={locale} listings={items} labels={gridLabels} density="compact" />
+      <ListingGrid
+        locale={locale}
+        listings={items}
+        labels={gridLabels}
+        density="compact"
+      />
       <ProgressiveLoadControls
         status={status}
         hasMore={hasMore}

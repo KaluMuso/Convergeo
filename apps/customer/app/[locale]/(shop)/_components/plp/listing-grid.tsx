@@ -1,8 +1,12 @@
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
+import { Rail } from "@vergeo/ui/src/rail";
 
 import { shouldShowSampleListingBadge } from "../demo-listing";
 
 import { ListingCard, type ListingCardLabels } from "./listing-card";
+
+import type { OfferBadge } from "../offers/offer-badge";
+import type { ReactNode } from "react";
 
 export type CatalogListing = {
   id: string;
@@ -27,6 +31,8 @@ export type CatalogListing = {
   productClass?: string;
   fulfilmentMode?: string;
   leadTimeDays?: number | null;
+  /** W8 offers: live offer this listing takes part in (flag `bundles`). */
+  offerBadge?: OfferBadge;
 };
 
 type ListingGridLabels = ListingCardLabels;
@@ -40,9 +46,43 @@ type ListingGridProps = {
   /** Injectable for tests; defaults to production-safe sample gate. */
   showSampleBadge?: boolean;
   density?: "default" | "compact";
+  /**
+   * `grid` (default): dense responsive grid, 2 cols at 360px up to 6 on desktop.
+   * `rail`: single horizontally scrolling row (deal / department rails).
+   */
+  layout?: "grid" | "rail";
+  /** Optional per-card action rendered under the card (e.g. storefront compare). */
+  renderFooter?: (listing: CatalogListing) => ReactNode;
 };
 
-const LISTING_MEDIA_SIZES = "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
+const LISTING_MEDIA_SIZES =
+  "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
+
+function GridWrapper({ children }: { children: ReactNode }) {
+  return (
+    <div
+      data-testid="listing-grid"
+      data-layout="grid"
+      className="motion-fade grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+    >
+      {children}
+    </div>
+  );
+}
+
+function RailWrapper({ children }: { children: ReactNode }) {
+  return (
+    <Rail
+      as="ul"
+      snap
+      data-testid="listing-grid"
+      data-layout="rail"
+      className="motion-fade m-0 flex list-none gap-2 p-0 pb-1 pt-1 [&>li]:w-[8.75rem] [&>li]:shrink-0 [&>li]:snap-start sm:[&>li]:w-40 lg:[&>li]:w-44"
+    >
+      {children}
+    </Rail>
+  );
+}
 
 /**
  * Catalog product grid — media is rendered here (RSC-safe static Cloudinary) and
@@ -54,13 +94,14 @@ export function ListingGrid({
   labels,
   priorityCount = 2,
   showSampleBadge = shouldShowSampleListingBadge(),
-  density = "default",
+  density = "compact",
+  layout = "grid",
+  renderFooter,
 }: ListingGridProps) {
+  const isRail = layout === "rail";
+  const Wrapper = isRail ? RailWrapper : GridWrapper;
   return (
-    <div
-      data-testid="listing-grid"
-      className="motion-fade grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-    >
+    <Wrapper>
       {listings.map((listing, index) => {
         const priority = index < priorityCount;
         const media = listing.imagePublicId ? (
@@ -75,7 +116,7 @@ export function ListingGrid({
           />
         ) : undefined;
 
-        return (
+        const card = (
           <ListingCard
             key={listing.id}
             locale={locale}
@@ -86,7 +127,18 @@ export function ListingGrid({
             density={density}
           />
         );
+        if (isRail) return <li key={listing.id}>{card}</li>;
+        const footer = renderFooter?.(listing);
+        if (!footer) {
+          return card;
+        }
+        return (
+          <div key={listing.id} className="flex min-w-0 flex-col gap-1.5">
+            {card}
+            {footer}
+          </div>
+        );
       })}
-    </div>
+    </Wrapper>
   );
 }

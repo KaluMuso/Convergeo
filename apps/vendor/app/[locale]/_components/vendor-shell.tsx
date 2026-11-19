@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 
 import { isVendorAuthSetupPath } from "../../../lib/password-recovery-path";
 
+import { BusinessSwitcher } from "./business-switcher";
+import { TrialBanner } from "./trial-banner";
 import { VendorNav } from "./vendor-nav";
 import { VendorNotificationBell } from "./vendor-notification-bell";
 
@@ -61,7 +63,8 @@ export function VendorShell({ locale, capabilities, children }: VendorShellProps
         <Link href={`/${locale}`} className="font-display text-base font-semibold text-display-ink">
           {tCommon("app.name")}
         </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1">
+          <BusinessSwitcher locale={locale} />
           <VendorNotificationBell locale={locale} />
           <ThemeToggle
             label={tCommon("theme.label")}
@@ -71,6 +74,7 @@ export function VendorShell({ locale, capabilities, children }: VendorShellProps
           />
         </div>
       </header>
+      <TrialBanner />
 
       <div className="flex min-h-0 flex-1">
         <VendorNav locale={locale} capabilities={capabilities} />

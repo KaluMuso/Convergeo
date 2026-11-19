@@ -16,6 +16,7 @@ from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limi
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.business.access import fetch_business_buyer
 from app.services.moderation.contact_strip import strip_contacts
 from app.services.moderation.prohibited import screen_listing
@@ -402,9 +403,9 @@ def _insert_message(
         "created_at": now,
     }
     service_client.client.table("rfq_messages").insert(payload).execute()
-    service_client.client.table("rfq_threads").update(
-        {"last_message_at": now}
-    ).eq("id", thread_id).execute()
+    service_client.client.table("rfq_threads").update({"last_message_at": now}).eq(
+        "id", thread_id
+    ).execute()
     return payload
 
 
@@ -617,9 +618,10 @@ async def list_rfq_threads(
         query = query.eq("customer_id", current_user.id)
     else:
         vendor_resp = (
-            service_client.client.table("vendors")
+            scope_owner_vendor_query(
+                service_client.client.table("vendors")
             .select("id")
-            .eq("owner_user_id", current_user.id)
+            .eq("owner_user_id", current_user.id))
             .limit(1)
             .execute()
         )
@@ -767,9 +769,7 @@ async def issue_quote(
         "quoted_at": now,
         "last_message_at": now,
     }
-    service_client.client.table("rfq_threads").update(update_payload).eq(
-        "id", thread_id
-    ).execute()
+    service_client.client.table("rfq_threads").update(update_payload).eq("id", thread_id).execute()
 
     if body.message:
         _screen_body(body.message)

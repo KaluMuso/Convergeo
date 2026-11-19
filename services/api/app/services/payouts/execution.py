@@ -164,9 +164,7 @@ def _apply_vendor_payout_destination(
     if not isinstance(msisdn, str) or not msisdn.strip():
         return profile
     operator = (
-        str(rail).strip().lower()
-        if isinstance(rail, str) and rail.strip()
-        else profile.operator
+        str(rail).strip().lower() if isinstance(rail, str) and rail.strip() else profile.operator
     )
     if operator not in MOMO_RAILS:
         operator = profile.operator
@@ -215,17 +213,21 @@ def _insert_payout_row(
     return inserted
 
 
+def _notify_vendor_payout(service_client: ServiceRoleClient, payout_id: str, *, sent: bool) -> None:
+    try:
+        from app.services.notifications.lifecycle import notify_vendor_payout
+
+        notify_vendor_payout(payout_id, sent=sent, client=service_client.client)
+    except Exception:
+        return
+
+
 def _update_payout_row(
     service_client: ServiceRoleClient,
     payout_id: str,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
-    response = (
-        service_client.client.table("payouts")
-        .update(payload)
-        .eq("id", payout_id)
-        .execute()
-    )
+    response = service_client.client.table("payouts").update(payload).eq("id", payout_id).execute()
     updated = _single_row(response)
     if updated is None and _rows(response):
         updated = _rows(response)[0]
@@ -505,10 +507,9 @@ async def execute_vendor_payout(
             lenco_reference=lenco_reference,
         )
         # C6: book Lenco's transfer fee so platform_cash tracks the Lenco balance.
-        book_transfer_fee(
-            payout_id=payout_id, fee=fee_fields_from_provider_raw(transfer.raw)[0]
-        )
+        book_transfer_fee(payout_id=payout_id, fee=fee_fields_from_provider_raw(transfer.raw)[0])
 
+    provider_failed = terminal_status == "failed"
     if terminal_status == "failed":
         merged_snapshot.update(
             {
@@ -527,6 +528,9 @@ async def execute_vendor_payout(
         payout_id,
         {"status": terminal_status, "resolve_snapshot": merged_snapshot},
     )
+    # The payout row has committed: tell the vendor (best-effort, deduped per payout).
+    if terminal_status == "paid" or provider_failed:
+        _notify_vendor_payout(service_client, payout_id, sent=terminal_status == "paid")
 
     outcome = PayoutOutcome.PAID if terminal_status == "paid" else PayoutOutcome.PROCESSING
     if merged_snapshot.get("held") is True:

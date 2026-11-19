@@ -704,6 +704,14 @@ def apply_payment_status(
         actor_id=actor_id,
         note=note,
     )
+    if outcome is not None and incoming_status == PaymentStatus.FAILED:
+        # Committed failure: tell the customer (best-effort; dedupe per payment).
+        try:
+            from app.services.notifications.lifecycle import notify_payment_failed
+
+            notify_payment_failed(payment_id, client=service_client.client)
+        except Exception:
+            return outcome
     return outcome
 
 
@@ -993,6 +1001,16 @@ def process_webhook_event(
         return None
 
     payment = _load_payment_by_reference(service_client, reference)
+    if payment is None and event_name.startswith("collection."):
+        # Pay-at-door collections live in door_payment_attempts, not payments.
+        from app.services.payments import door as door_payments
+
+        if door_payments.is_door_reference(reference):
+            door_payments.apply_webhook(event_name=event_name, data=data)
+            service_client.client.table("webhook_events").update(
+                {"processed_at": datetime.now(UTC).isoformat()}
+            ).eq("id", webhook_event_id).execute()
+            return None
     if payment is None:
         service_client.client.table("webhook_events").update(
             {

@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Convergeo",
-    "tagline": "Msika wa ku Zambia — kugula ndi escrow"
+    "tagline": "⚠ Zambia's marketplace — pay when it arrives"
   },
   "meta": {
     "defaultDescription": "Gulani zinthu, bookani ma-service, ndipo pezani ma-event mu Zambia pa Convergeo.",
@@ -52,11 +52,6 @@
   "contact": {
     "email": "support@vergeo5.com"
   },
-  "social": {
-    "facebook": "https://www.facebook.com/",
-    "twitter": "https://twitter.com/",
-    "instagram": "https://www.instagram.com/"
-  },
   "utilityBar": {
     "ariaLabel": "Chilankhulo, contact, ndi social links",
     "socialAria": "Social media",
@@ -93,8 +88,8 @@
     "label": "Share"
   },
   "fab": {
-    "ask": "Ask Vergeo",
-    "askTitle": "Ask Vergeo",
+    "ask": "⚠ Ask Convergeo",
+    "askTitle": "⚠ Ask Convergeo",
     "askHint": "Describe what you need — a product, a service or an event.",
     "askPlaceholder": "e.g. solar panel under K3,000 in Lusaka",
     "send": "Ask",
@@ -109,5 +104,8 @@
   "paymentTrust": {
     "footerSeal": "Lipirani mu cash order ikafika",
     "footerPaymentNote": "Cash on delivery · Kulipira pa intaneti kukubwera posachedwa"
+  },
+  "codTrust": {
+    "line": "⚠ You pay on delivery → We deliver → You confirm"
   }
 }

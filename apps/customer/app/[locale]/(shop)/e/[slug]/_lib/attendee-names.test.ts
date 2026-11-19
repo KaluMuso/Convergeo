@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { attendeeNamesComplete, cleanedAttendeeNames, resizeNames } from "./attendee-names";
+import {
+  attendeeNamesComplete,
+  cleanedAttendeeNames,
+  resizeNames,
+} from "./attendee-names";
 
 describe("resizeNames", () => {
   it("pads with empty strings up to qty", () => {

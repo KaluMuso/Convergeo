@@ -58,7 +58,10 @@ export function BookService({
   );
   const balanceNgwee = priceNgwee - depositNgwee;
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const getToken = useCallback(
+    () => session?.access_token ?? null,
+    [session?.access_token],
+  );
 
   const handleBook = useCallback(async () => {
     if (!session) {
@@ -72,10 +75,13 @@ export function BookService({
     }
     try {
       const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
-      const result = await client.request<BookResponse>(`/services/${serviceId}/book`, {
-        method: "POST",
-        body: JSON.stringify({ idempotency_key: idempotencyKeyRef.current }),
-      });
+      const result = await client.request<BookResponse>(
+        `/services/${serviceId}/book`,
+        {
+          method: "POST",
+          body: JSON.stringify({ idempotency_key: idempotencyKeyRef.current }),
+        },
+      );
       router.push(
         `/${locale}/checkout?group=${encodeURIComponent(result.checkout_group_id)}&kind=service_deposit`,
       );
@@ -115,11 +121,15 @@ export function BookService({
         </div>
         <div className="flex items-center justify-between">
           <dt className="text-text-2">{t("balanceLabel")}</dt>
-          <dd className="font-mono text-display-ink">{formatK(balanceNgwee)}</dd>
+          <dd className="font-mono text-display-ink">
+            {formatK(balanceNgwee)}
+          </dd>
         </div>
       </dl>
 
-      <p className="rounded bg-bg-2 p-3 text-xs text-text-2">{t("escrowNote")}</p>
+      <p className="rounded bg-bg-2 p-3 text-xs text-text-2">
+        {t("escrowNote")}
+      </p>
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 

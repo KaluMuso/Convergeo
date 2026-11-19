@@ -3,10 +3,21 @@
   "shell": {
     "eyebrow": "Opérations Convergeo",
     "environment": "Origine admin durcie",
-    "signOut": "Déconnexion"
+    "signOut": "Déconnexion",
+    "account": {
+      "menuLabel": "Menu du compte",
+      "unknownUser": "Connecté",
+      "roleLine": "Rôle : {role}",
+      "roles": {
+        "superadmin": "Super admin",
+        "admin": "Admin",
+        "custom": "Rôle personnalisé"
+      }
+    }
   },
   "nav": {
     "home": "Tableau de bord",
+    "analytics": "Analytique",
     "kyc": "File KYC",
     "business": "Entreprises",
     "moderation": "Modération",
@@ -18,7 +29,14 @@
     "support": "Support",
     "events": "Événements à haute valeur",
     "homeFeed": "Home feed",
-    "advertising": "Advertising"
+    "advertising": "Advertising",
+    "accounts": "Comptes admin",
+    "auditLog": "Journal d'audit",
+    "offers": "Offres",
+    "coupons": "Coupons",
+    "branches": "Vérification des succursales",
+    "extras": "Demandes d'options",
+    "trials": "Essais gratuits"
   },
   "hubs": {
     "moderation": {
@@ -41,7 +59,9 @@
       "categoriesTitle": "Arborescence des catégories",
       "categoriesBody": "Structure publique du catalogue.",
       "platformTitle": "Réglages de la plateforme",
-      "platformBody": "Limites opérationnelles et paramètres plateforme."
+      "platformBody": "Limites opérationnelles et paramètres plateforme.",
+      "vendorPlansTitle": "Formules vendeurs",
+      "vendorPlansBody": "Prix des formules, limites d'annonces et de photos, et exceptions par vendeur."
     }
   },
   "translations": {
@@ -77,6 +97,7 @@
     },
     "pages": {
       "common": "Toutes les applications — UI partagée, navigation, thème",
+      "nav": "Toutes les apps — libellés de navigation",
       "auth": "Toutes les applications — connexion et inscription",
       "catalog": "Client — fiches produits, détail, comparaison",
       "search": "Client — recherche et suggestions",
@@ -116,7 +137,8 @@
       "deliveryZones": "Zones de livraison",
       "platform": "Réglages de la plateforme",
       "flags": "Fonctionnalités (drapeaux)",
-      "categories": "Arborescence des catégories"
+      "categories": "Arborescence des catégories",
+      "vendorPlans": "Formules vendeurs"
     },
     "common": {
       "save": "Enregistrer les modifications",
@@ -169,7 +191,13 @@
       "aiCapUsd": "Plafond IA mensuel (USD)",
       "releaseDelivered": "Libération automatique après livraison (heures)",
       "releaseShipped": "Libération automatique après expédition (jours)",
-      "dangerousHint": "Les modifications du plafond COD n'affectent l'éligibilité que pour les nouvelles commandes."
+      "advanceBps": "Avance avant l'événement pour organisateurs vérifiés (pb, max 5000)",
+      "advanceMinKycTier": "Avance avant l'événement : niveau KYC minimum",
+      "advanceMinEvents": "Avance avant l'événement : nombre minimum d'événements réussis",
+      "advanceRepaymentDays": "Avance avant l'événement : délai de remboursement (jours)",
+      "dangerousHint": "Les modifications du plafond COD n'affectent l'éligibilité que pour les nouvelles commandes.",
+      "branchMinDistance": "Distance min. entre succursales (m)",
+      "planAnnualDiscount": "Remise prépaiement annuel des forfaits (%)"
     },
     "flags": {
       "title": "Fonctionnalités (drapeaux)",
@@ -189,6 +217,10 @@
       "moveChildrenConfirm": "Déplacer avec les sous-catégories",
       "orphanWarning": "Impossible de déplacer sans les sous-catégories — activez le déplacement avec sous-catégories.",
       "rootOption": "Racine (aucun parent)"
+    },
+    "vendorPlans": {
+      "title": "Formules vendeurs",
+      "subtitle": "Limites d'annonces et de photos, fonctionnalités et prix mensuels. Les changements s'appliquent immédiatement et sont journalisés."
     }
   },
   "business": {
@@ -238,6 +270,46 @@
       "threshold": "Seuil {amount}",
       "projected": "GMV projeté {amount}",
       "status": "Statut : {status}"
+    },
+    "advanceDebts": {
+      "title": "Dettes d'avance des organisateurs",
+      "subtitle": "Avances versées avant un événement annulé par la suite. Enregistrez ici les remboursements en espèces ; une dette remboursée intégralement avant l'échéance est soldée et ne déclenche jamais de suspension.",
+      "loading": "Chargement des dettes d'avance…",
+      "empty": "Aucune dette d'avance ne correspond à ces filtres.",
+      "error": "Impossible de charger les dettes d'avance.",
+      "forbidden": "Permission refusée — rôle administrateur requis.",
+      "event": "Événement : {title}",
+      "amounts": "Reste dû {outstanding} sur {amount}",
+      "due": "Échéance {date}",
+      "blacklisted": "En retard : organisateur mis sur liste noire et signalé pour suivi juridique.",
+      "filters": {
+        "status": "Statut",
+        "all": "Tous",
+        "organiser": "ID de l'organisateur",
+        "organiserPlaceholder": "UUID du vendeur (facultatif)",
+        "apply": "Appliquer les filtres"
+      },
+      "status": {
+        "open": "Ouverte",
+        "settled": "Soldée",
+        "written_off": "Passée en perte"
+      },
+      "form": {
+        "title": "Enregistrer un remboursement en espèces",
+        "hint": "N'enregistrez que les sommes dont la finance a confirmé la réception. Montant en kwacha ; la référence est le reçu bancaire ou mobile money.",
+        "organiser": "ID de l'organisateur",
+        "amount": "Montant (K)",
+        "reference": "Référence du reçu",
+        "submit": "Enregistrer le remboursement",
+        "saving": "Enregistrement…",
+        "saved": "Remboursement enregistré. Reste dû : {remaining}.",
+        "failed": "Impossible d'enregistrer le remboursement.",
+        "exceeds": "Ce montant dépasse ce que l'organisateur doit.",
+        "vendorRequired": "Saisissez l'ID de l'organisateur.",
+        "amountInvalid": "Saisissez un montant positif en kwacha avec au plus 2 décimales.",
+        "referenceInvalid": "La référence doit contenir 3 à 80 lettres, chiffres, points, tirets ou traits de soulignement.",
+        "useOrganiser": "Enregistrer un remboursement pour cet organisateur"
+      }
     }
   },
   "kyc": {
@@ -317,7 +389,9 @@
       "cancel": "Annuler",
       "submitting": "Enregistrement de la décision…",
       "success": "Décision enregistrée — le vendeur sera notifié.",
-      "failure": "Impossible d'enregistrer la décision."
+      "failure": "Impossible d'enregistrer la décision.",
+      "notFound": "Introuvable",
+      "notFoundBody": "Ce dossier KYC n'existe pas ou a été supprimé."
     },
     "reasons": {
       "blurry_document": "Le document est flou ou illisible",
@@ -388,7 +462,9 @@
     },
     "canonical": {
       "dialog": {
-        "details": "Détails du produit"
+        "details": "Détails du produit",
+        "failureRetryHint": "Rien n'a été enregistré. Vérifiez votre connexion et réessayez, ou rechargez la page si l'erreur persiste.",
+        "failureReference": "Référence : {id}"
       }
     }
   },
@@ -706,9 +782,9 @@
     "emptyTrafficBody": "GMV, pipeline, entonnoir et passifs du grand livre sont tous à zéro via l'API live — ce ne sont pas des analytics fictives.",
     "emptyTrafficDependency": "Dépendance backend manquante pour des tuiles non nulles : volume réel de checkout/commandes, écritures du grand livre (MR-B01) et rapports de rapprochement.",
     "gmv": {
-      "title": "GMV",
-      "subtitle": "Volume brut de transactions (commandes non annulées)",
-      "empty": "K0,00 — aucune commande non annulée dans l'agrégat adossé au grand livre."
+      "title": "Valeur des commandes (non annulées)",
+      "subtitle": "Articles plus livraison de chaque commande non annulée, payée ou non. Ce n'est ni l'argent reçu ni le revenu de la plateforme.",
+      "empty": "K0,00 — aucune commande non annulée pour l'instant."
     },
     "payoutLiabilities": {
       "title": "Passifs de versement",
@@ -788,7 +864,9 @@
         "orders_placed": "Commandes passées",
         "orders_completed": "Commandes terminées"
       }
-    }
+    },
+    "financeWithheldTitle": "Chiffres financiers masqués",
+    "financeWithheldBody": "Le séquestre, les montants dus et le rapprochement exigent la permission finance.read. Demandez-la à un superadmin si votre travail l'exige."
   },
   "disputes": {
     "title": "Console des litiges",
@@ -1157,6 +1235,628 @@
     },
     "placeholders": {
       "path": "/c/electronics"
+    }
+  },
+  "auditLogUi": {
+    "title": "Journal d'audit",
+    "subtitle": "Chaque action admin enregistrée, la plus récente en premier. Lecture seule : rien ne peut être modifié ni supprimé.",
+    "permissionDenied": "La permission audit.read est requise pour lire le journal d'audit.",
+    "filters": "Filtres du journal d'audit",
+    "actor": "ID du compte auteur",
+    "action": "Action (terminez par un point pour une famille, ex. admin.orders.)",
+    "resource": "Type de ressource",
+    "resourceId": "ID de la ressource",
+    "outcome": "Résultat",
+    "outcomeAny": "Tous les résultats",
+    "outcomeSuccess": "Réussi",
+    "outcomeDenied": "Refusé",
+    "outcomeFailed": "Échoué",
+    "from": "Du",
+    "to": "Au",
+    "apply": "Appliquer",
+    "reset": "Effacer les filtres",
+    "maskingNote": "Numéros, e-mails, noms, adresses et codes sont masqués.",
+    "loading": "Chargement du journal…",
+    "empty": "Aucune entrée ne correspond à ces filtres.",
+    "loadFailed": "Le journal d'audit n'a pas pu être chargé.",
+    "invalid": "Vérifiez les filtres : les ID doivent être complets.",
+    "when": "Quand : {at}",
+    "who": "Qui : {actor} ({roles})",
+    "system": "système",
+    "noRoles": "aucun rôle enregistré",
+    "what": "Quoi : {resource} {id}",
+    "reason": "Motif : {reason}",
+    "requestId": "Requête {id}",
+    "details": "Avant et après",
+    "more": "Entrées plus anciennes"
+  },
+  "accountsUi": {
+    "title": "Comptes admin",
+    "subtitle": "Toutes les personnes ayant un rôle admin, avec nom et e-mail.",
+    "deactivateHelp": "Désactiver retire tous les rôles admin du compte d'un coup et inscrit votre motif au journal d'audit. L'effet est immédiat à sa prochaine requête. Le dernier superadmin ne peut pas être retiré et vous ne pouvez pas vous désactiver vous-même.",
+    "manageRolesLink": "Attribuer ou retirer un seul rôle",
+    "permissionDenied": "Seul un superadmin peut gérer les comptes admin.",
+    "loading": "Chargement des comptes…",
+    "loadFailed": "Les comptes admin n'ont pas pu être chargés.",
+    "mutationFailed": "Le compte n'a pas été désactivé. Réessayez.",
+    "lastSuperadmin": "C'est le dernier superadmin : il ne peut pas être désactivé.",
+    "retry": "Réessayer",
+    "empty": "Aucun compte n'a de rôle admin.",
+    "noName": "Pas de nom sur le profil",
+    "noEmail": "Pas d'e-mail enregistré",
+    "roles": "Rôles : {roles}",
+    "selfNote": "C'est votre compte.",
+    "reason": "Motif de la désactivation (obligatoire)",
+    "deactivate": "Désactiver",
+    "confirmDeactivate": "Désactiver {name} ? Ces rôles seront retirés : {roles}."
+  },
+  "analytics": {
+    "title": "Analytique",
+    "subtitle": "Comportement agrégé de la place de marché et des acheteurs. Aucun acheteur individuel ni texte de recherche brut n’est affiché.",
+    "tabs": {
+      "label": "Sections analytiques",
+      "overview": "Vue d’ensemble",
+      "search": "Recherche et demande",
+      "products": "Produits et entonnoir",
+      "insights": "Analyses"
+    },
+    "range": {
+      "label": "Période",
+      "days": "{days} derniers jours"
+    },
+    "loading": "Chargement des analyses…",
+    "error": "Impossible de charger les analyses.",
+    "retry": "Réessayer",
+    "permissionDenied": "Seuls les administrateurs de la plateforme peuvent consulter les analyses.",
+    "disabled": {
+      "title": "L’analytique n’est pas activée",
+      "body": "Les agrégations quotidiennes sont désactivées (indicateur analytics_v2_rollups). Rien n’est collecté ni affiché ici tant qu’il n’est pas activé."
+    },
+    "dataThrough": "Données de comportement jusqu’au {day} (UTC). Commandes et paiements en direct.",
+    "dataPending": "Les données de comportement n’ont pas encore été agrégées. Commandes et paiements en direct.",
+    "insufficient": "Données insuffisantes ({n}+ requis)",
+    "notAvailable": "—",
+    "empty": "Aucune donnée pour cette période.",
+    "delta": {
+      "none": "Pas de référence pour la période précédente",
+      "value": "{change} par rapport à la période précédente"
+    },
+    "columns": {
+      "day": "Jour",
+      "term": "Terme recherché",
+      "product": "Produit",
+      "page": "Type de page"
+    },
+    "session": {
+      "rule": "Une session se termine après 30 minutes d’inactivité.",
+      "activeSpan": "Durée active moyenne",
+      "estimatedEnd": "La fin de session est estimée à partir de la dernière activité observée ; ce n’est pas le temps passé sur le site.",
+      "duration": "{minutes} min {seconds} s"
+    },
+    "overview": {
+      "commercialTitle": "Commandes et paiements",
+      "commercialHint": "Issu uniquement des commandes et des paiements. Payé signifie un paiement réussi.",
+      "behaviourTitle": "Comportement des acheteurs",
+      "dailyTitle": "GMV payé par jour",
+      "reconciliation": {
+        "mismatch": "Les paiements ne concordent pas avec les commandes payées les jours suivants : {days}. Vérifiez les paiements avant d’utiliser ces chiffres."
+      },
+      "kpi": {
+        "gmvPaid": "GMV payé",
+        "ordersPaid": "Commandes payées",
+        "aov": "Panier payé moyen",
+        "checkoutsStarted": "Paiements commencés",
+        "ordersPlacedHint": "{placed} commandes passées",
+        "sessions": "Sessions",
+        "visitorDays": "Visiteurs-jours",
+        "bounceRate": "Taux de rebond",
+        "searches": "Recherches",
+        "zeroResultShare": "Recherches sans résultat"
+      }
+    },
+    "search": {
+      "kNotice": "Les termes recherchés moins de {k} fois sur cette période sont regroupés dans « autres » et jamais affichés.",
+      "zeroResults": "Recherches sans résultat",
+      "zeroTitle": "Recherché mais introuvable",
+      "zeroHint": "Demande que le catalogue ne couvre pas encore.",
+      "topTitle": "Termes les plus recherchés",
+      "other": "Autres : {terms} termes, {searches} recherches"
+    },
+    "products": {
+      "funnelTitle": "Entonnoir",
+      "funnelHint": "Les étapes de navigation proviennent des sessions ; les étapes de paiement et de commande proviennent des commandes et des paiements.",
+      "shareOfSessions": "{share} des sessions",
+      "steps": {
+        "sessions": "Sessions",
+        "search_sessions": "Sessions avec recherche",
+        "product_view_sessions": "Sessions avec vue produit",
+        "cart_adds": "Ajouts au panier",
+        "checkouts_started": "Paiements commencés",
+        "orders_placed": "Commandes passées",
+        "orders_paid": "Commandes payées"
+      },
+      "topTitle": "Produits les plus consultés",
+      "views": "Vues",
+      "unnamed": "Produit sans nom",
+      "pageViewsTitle": "Pages vues par type de page",
+      "entryTitle": "Pages d’entrée"
+    },
+    "insights": {
+      "placeholder": "Les analyses automatiques arriveront dans une version ultérieure. Pour l’instant, cette liste présente les contrôles de qualité des données.",
+      "none": "Aucun problème de qualité des données sur cette période.",
+      "kinds": {
+        "payment_mismatch": "Les paiements ne concordent pas avec les commandes payées le {day}.",
+        "rollup_failed": "L’agrégation quotidienne a échoué pour le {day}.",
+        "rollup_stale": "Les agrégations sont en retard (dernière : {day})."
+      }
+    }
+  },
+  "dispatch": {
+    "doorPayment": {
+      "title": "Paiement à la porte",
+      "states": {
+        "arrived": "Livreur à la porte : paiement en attente",
+        "pending": "Demande de paiement sur le téléphone du client",
+        "paid": "Payé par mobile money : code libéré",
+        "cash": "Repli espèces : code libéré",
+        "failed": "Paiement échoué ou expiré",
+        "exception": "Exception de paiement : voir la file"
+      },
+      "actions": {
+        "arrived": "Livreur arrivé",
+        "request": "Demander le paiement",
+        "poll": "Vérifier le paiement",
+        "cash": "Prendre des espèces"
+      },
+      "done": {
+        "arrived": "Arrivée enregistrée",
+        "request": "Demande de paiement envoyée",
+        "poll": "Statut actualisé",
+        "cash": "Repli espèces enregistré"
+      },
+      "errors": {
+        "inFlight": "Une demande est encore active sur le téléphone du client. Vérifiez d'abord son statut.",
+        "attemptsExhausted": "Plus de demandes possibles. Utilisez les espèces ou retournez le colis.",
+        "cashOverCap": "Le total dépasse la limite en espèces.",
+        "alreadySettled": "Cette commande est déjà payée.",
+        "orderNotPayable": "Cette commande ne peut plus être payée.",
+        "invalidPhone": "Saisissez un numéro mobile zambien.",
+        "operatorUnsupported": "Seuls les numéros MTN et Airtel peuvent recevoir la demande.",
+        "required": "La commande doit être payée avant la remise."
+      }
+    }
+  },
+  "offers": {
+    "title": "Offres des vendeurs",
+    "subtitle": "Examinez les lots et offres de tous les vendeurs. Une suspension par l'administration arrête l'offre immédiatement et le vendeur ne peut pas la lever.",
+    "loading": "Chargement des offres…",
+    "error": "Impossible de charger les offres.",
+    "permissionDenied": "Vous n'avez pas accès aux offres.",
+    "permissionDeniedHint": "Demandez l'autorisation publicité à un super administrateur.",
+    "retry": "Réessayer",
+    "empty": "Aucune offre ne correspond à ces filtres.",
+    "listLabel": "Offres",
+    "truncated": "Affichage des 200 premières offres. Affinez les filtres pour voir les autres.",
+    "vendor": "Vendeur : {name}",
+    "window": "Du {starts} au {ends}",
+    "windowOpen": "À partir du {starts}, sans date de fin",
+    "perCustomer": "{count, plural, one {# utilisation par client} other {# utilisations par client}}",
+    "perCustomerUnlimited": "Pas de limite par client",
+    "giftStock": "Cadeaux : {reserved} sur {total} utilisés",
+    "note": "Note de l'administration : {note}",
+    "pausedToast": "Offre suspendue.",
+    "unpausedToast": "Suspension levée.",
+    "filters": {
+      "label": "Filtrer les offres",
+      "state": "État",
+      "status": "Statut vendeur",
+      "type": "Type",
+      "search": "Titre",
+      "searchPlaceholder": "Rechercher un titre",
+      "apply": "Rechercher",
+      "all": "Toutes"
+    },
+    "state": {
+      "live": "En cours",
+      "admin_paused": "Suspendue par l'administration",
+      "scheduled": "Programmée",
+      "ended": "Terminée"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "active": "Active",
+      "paused": "Suspendue par le vendeur",
+      "archived": "Archivée"
+    },
+    "type": {
+      "bundle": "Lot",
+      "buy_n_pay_m": "N achetés, M payés",
+      "bxgy": "X achetés, Y offerts",
+      "free_gift": "Cadeau offert"
+    },
+    "actions": {
+      "pause": "Suspendre",
+      "unpause": "Lever la suspension",
+      "pauseTitle": "Suspendre cette offre ?",
+      "unpauseTitle": "Lever la suspension ?",
+      "pauseBody": "« {title} » ne s'applique plus aux paniers et aux paiements, immédiatement. Les commandes déjà passées gardent leur prix.",
+      "unpauseBody": "« {title} » s'appliquera de nouveau si le vendeur l'a toujours activée et si elle est dans ses dates.",
+      "noteLabel": "Note (visible des administrateurs)",
+      "notePlaceholder": "Pourquoi modifiez-vous cette offre ?",
+      "audited": "Cette action est enregistrée dans le journal d'audit.",
+      "cancel": "Annuler",
+      "submitting": "Enregistrement…",
+      "confirmPause": "Suspendre l'offre",
+      "confirmUnpause": "Lever la suspension",
+      "failure": "Impossible de mettre à jour l'offre. Réessayez."
+    }
+  },
+  "coupons": {
+    "manager": {
+      "title": "Coupons de la plateforme",
+      "intro": "Codes payés par Convergeo. Les boutiques reçoivent leur prix complet.",
+      "fundingNote": "Chaque remise de la plateforme est prise sur le budget promotions mensuel. Une fois épuisé, les coupons de la plateforme s'arrêtent jusqu'au mois suivant.",
+      "createTitle": "Nouveau coupon",
+      "code": "Code",
+      "codeHelp": "3 à 32 lettres, chiffres ou tirets, ex. SAVE20.",
+      "kind": "Type de remise",
+      "kindPercent": "Pourcentage",
+      "kindFixed": "Montant en kwacha",
+      "percent": "Pourcentage (ex. 10)",
+      "amount": "Montant en kwacha (ex. 20)",
+      "maxDiscount": "Remise maximale (K, facultatif)",
+      "maxDiscountHelp": "Plafonne un coupon en pourcentage sur les gros paniers.",
+      "minSpend": "Achat minimum (K, facultatif)",
+      "minSpendHelp": "Calculé sur les articles couverts.",
+      "scope": "S'applique à",
+      "scopeAll": "Tout",
+      "scopeShop": "Toute ma boutique",
+      "scopeVendor": "Une boutique",
+      "scopeCategory": "Une catégorie",
+      "scopeListing": "Une annonce",
+      "scopeId": "Identifiant",
+      "scopeIdHelp": "Copiez l'identifiant depuis la page de la boutique, de la catégorie ou de l'annonce.",
+      "startsOn": "Début",
+      "endsOn": "Fin (facultatif)",
+      "endsOnHelp": "Le code fonctionne jusqu'à la fin de ce jour, heure de Lusaka.",
+      "totalLimit": "Utilisations totales (facultatif)",
+      "totalLimitHelp": "Laissez vide pour aucune limite.",
+      "perUserLimit": "Utilisations par client",
+      "create": "Créer le coupon",
+      "creating": "Création…",
+      "created": "Coupon créé.",
+      "listTitle": "Coupons de la plateforme",
+      "empty": "Aucun coupon.",
+      "loading": "Chargement…",
+      "usage": "{used} utilisé(s)",
+      "usageLimited": "{used} sur {limit} utilisé(s)",
+      "summaryOff": "{value} de remise",
+      "summaryMin": "min. {amount}",
+      "statusActive": "Actif",
+      "statusPaused": "En pause",
+      "statusArchived": "Terminé",
+      "pause": "Mettre en pause",
+      "resume": "Reprendre",
+      "archive": "Terminer",
+      "errors": {
+        "generic": "Une erreur est survenue. Réessayez.",
+        "disabled": "Les coupons ne sont pas encore activés.",
+        "forbidden": "Seuls les administrateurs gèrent les coupons de la plateforme.",
+        "code": "Utilisez 3 à 32 lettres, chiffres ou tirets.",
+        "codeTaken": "Ce code est déjà pris.",
+        "percent": "Indiquez un pourcentage entre 1 et 100.",
+        "percentTooHigh": "Ce pourcentage dépasse le maximum autorisé.",
+        "amount": "Indiquez un montant comme 20 ou 12.50.",
+        "dates": "La date de fin doit suivre la date de début et ne pas être passée.",
+        "scope": "Choisissez la cible du coupon et collez son identifiant.",
+        "listing": "Cette annonce n'est pas dans votre boutique.",
+        "archived": "Un coupon terminé ne peut pas reprendre. Créez-en un nouveau."
+      }
+    }
+  },
+  "common": {
+    "rateLimited": "Trop de modifications en peu de temps. Patientez une minute puis réessayez."
+  },
+  "productImages": {
+    "errors": {
+      "full": "Un produit peut avoir au maximum 8 photos.",
+      "duplicate": "Cette photo figure déjà sur ce produit."
+    }
+  },
+  "vendorPlans": {
+    "hint": "Les limites comptent les annonces distinctes, jamais le stock. Laissez la limite d'annonces vide pour l'illimité. Dépasser une limite ne supprime jamais d'annonces : le vendeur voit seulement une invitation à changer de formule. Aucune facturation pour l'instant.",
+    "unlimited": "Illimité",
+    "default": "Formule par défaut",
+    "vendorCount": "{count, plural, one {# vendeur} other {# vendeurs}}",
+    "summary": "{price}/mois · {listings} annonces · {images} photos",
+    "makeDefault": "Définir par défaut",
+    "delete": "Supprimer",
+    "createHeading": "Nouvelle formule",
+    "create": "Créer la formule",
+    "fields": {
+      "key": "Clé de formule (minuscules, ex. market_stall)",
+      "name": "Nom",
+      "priceKwacha": "Prix mensuel (K)",
+      "maxListings": "Limite d'annonces (vide = illimité)",
+      "maxImages": "Photos par annonce (1–8)",
+      "featuredSlots": "Emplacements mis en avant",
+      "analyticsDepth": "Statistiques",
+      "wholesaleTools": "Outils de vente en gros",
+      "active": "Active",
+      "includedShops": "Boutiques incluses (vide = illimité)",
+      "extraShopPrice": "Boutique supplémentaire (K/mois, vide = non vendue)",
+      "staffSeats": "Places employés (vide = illimité)",
+      "broadcasts": "Diffusions WhatsApp / mois",
+      "adCredit": "Crédit publicitaire (K/mois)",
+      "integrationsLevel": "Intégrations",
+      "payoutSpeed": "Vitesse de versement",
+      "supportLevel": "Assistance",
+      "officialStoreBadge": "Badge boutique officielle",
+      "clickAndCollect": "Retrait en magasin",
+      "multiBranchStock": "Stock multi-succursales"
+    },
+    "depth": {
+      "basic": "Essentielles",
+      "standard": "Standard",
+      "advanced": "Avancées"
+    },
+    "errors": {
+      "nameRequired": "Saisissez un nom de formule.",
+      "keyInvalid": "Utilisez de 2 à 32 lettres minuscules, chiffres ou tirets bas, en commençant par une lettre.",
+      "priceInvalid": "Saisissez un prix en kwacha, par exemple 49 ou 49.50.",
+      "listingsInvalid": "Saisissez un nombre entier d'annonces, ou laissez vide pour l'illimité.",
+      "imagesInvalid": "Le nombre de photos par annonce doit être compris entre 1 et 8.",
+      "slotsInvalid": "Les emplacements mis en avant doivent être compris entre 0 et 100.",
+      "overrideEmpty": "Une exception doit modifier la limite d'annonces ou de photos.",
+      "expiryInvalid": "Choisissez une date d'expiration future, au plus dans un an.",
+      "reasonRequired": "Indiquez le motif de l'exception.",
+      "vendorIdInvalid": "Saisissez un identifiant vendeur (UUID).",
+      "vendorNotFound": "Vendeur introuvable.",
+      "saveFailed": "Enregistrement impossible. Vérifiez les valeurs et réessayez.",
+      "keyTaken": "Cette clé de formule existe déjà.",
+      "defaultInactive": "La formule par défaut doit rester active.",
+      "defaultDelete": "La formule par défaut ne peut pas être supprimée.",
+      "inUse": "Des vendeurs utilisent cette formule. Désactivez-la plutôt, ou déplacez-les d'abord.",
+      "planInactive": "Cette formule n'est pas active.",
+      "shopsInvalid": "Les boutiques incluses doivent être un nombre entier à partir de 1, ou vide pour illimité.",
+      "extraShopPriceInvalid": "Saisissez le prix de la boutique supplémentaire en kwacha, ou laissez vide.",
+      "seatsInvalid": "Les places employés doivent être un nombre entier, ou vide pour illimité.",
+      "broadcastsInvalid": "Saisissez un nombre entier de diffusions.",
+      "adCreditInvalid": "Saisissez le crédit publicitaire en kwacha."
+    },
+    "vendor": {
+      "heading": "Formule du vendeur",
+      "hint": "Recherchez un vendeur pour lui attribuer une formule ou une exception temporaire.",
+      "vendorId": "Identifiant vendeur",
+      "load": "Charger",
+      "flagOff": "L'indicateur vendor_plans est désactivé : ces limites ne sont pas encore appliquées.",
+      "effective": "Formule {plan} : {listings} annonces ({count} utilisées), {images} photos par annonce",
+      "plan": "Formule",
+      "defaultPlan": "Choisir une formule",
+      "note": "Note (facultative)",
+      "assign": "Attribuer la formule",
+      "noBilling": "Attribuer une formule l'enregistre seulement. Aucun paiement n'est prélevé.",
+      "none": "par défaut"
+    },
+    "override": {
+      "heading": "Exception",
+      "current": "Active : {listings} annonces jusqu'au {expires} ({reason})",
+      "expired": "Expirée le {expires} : {listings} annonces ({reason})",
+      "unlimited": "Annonces illimitées",
+      "expiresOn": "Expire le",
+      "reason": "Motif",
+      "save": "Enregistrer l'exception",
+      "remove": "Retirer l'exception"
+    },
+    "integrations": {
+      "none": "Aucune",
+      "basic": "Basique",
+      "sheets_webhooks": "Sheets + webhooks",
+      "api": "API"
+    },
+    "payoutSpeed": {
+      "standard": "Standard",
+      "fast": "Rapide",
+      "priority": "Prioritaire"
+    },
+    "support": {
+      "community": "Communauté",
+      "standard": "Standard",
+      "priority": "Prioritaire",
+      "dedicated": "Dédiée"
+    }
+  },
+  "branches": {
+    "title": "Vérification des succursales",
+    "subtitle": "Approuvez les nouvelles boutiques des entreprises multi-sites. Chaque décision est auditée.",
+    "status": {
+      "draft": "Brouillon",
+      "pending_review": "En attente",
+      "info_requested": "Infos demandées",
+      "approved": "Approuvée",
+      "rejected": "Refusée"
+    },
+    "kind": {
+      "physical": "Physique",
+      "online": "En ligne"
+    },
+    "queue": {
+      "filter": "Statut",
+      "flagsLink": "Doublons signalés",
+      "loading": "Chargement des succursales…",
+      "error": "Impossible de charger les succursales.",
+      "permissionDenied": "Vous n'avez pas accès à la vérification des succursales.",
+      "retry": "Réessayer",
+      "empty": "Aucune succursale ici.",
+      "evidence": "{count, plural, one {# justificatif} other {# justificatifs}}",
+      "openFlags": "{count, plural, one {# signalement ouvert} other {# signalements ouverts}}"
+    },
+    "detail": {
+      "back": "Retour à la file",
+      "business": "Entreprise",
+      "legalName": "Raison sociale",
+      "registration": "Enregistrement",
+      "pacraCertificate": "Certificat PACRA",
+      "open": "Ouvrir",
+      "ownerKyc": "KYC du propriétaire approuvé",
+      "yes": "Oui",
+      "no": "Non",
+      "shop": "Boutique",
+      "location": "Emplacement",
+      "address": "Adresse",
+      "phone": "Téléphone",
+      "payout": "Versement",
+      "onHold": "suspendu",
+      "plan": "Forfait",
+      "planAddon": "{plan} · option {price}/mois",
+      "planIncluded": "{plan} · inclus",
+      "evidence": "Justificatifs",
+      "noEvidence": "Aucun justificatif envoyé.",
+      "unavailable": "Aperçu indisponible",
+      "flags": "{count, plural, =0 {Doublons signalés} one {Doublons signalés (# ouvert)} other {Doublons signalés (# ouverts)}}",
+      "siblings": "Autres succursales de cette entreprise",
+      "primary": "boutique principale",
+      "note": "Note au vendeur (obligatoire pour demander des infos ou refuser)",
+      "flagsBlock": "Traitez les doublons ouverts avant d'approuver.",
+      "history": "Historique"
+    },
+    "actions": {
+      "approve": "Approuver",
+      "requestInfo": "Demander des infos",
+      "reject": "Refuser"
+    },
+    "evidence": {
+      "storefront_photo": "Photo de la devanture",
+      "premises_proof": "Preuve des locaux"
+    },
+    "proof": {
+      "lease": "Bail",
+      "utility_bill": "Facture d'eau ou d'électricité",
+      "council_permit": "Permis commercial municipal"
+    },
+    "flags": {
+      "title": "Doublons signalés",
+      "subtitle": "Boutiques potentiellement en double détectées par nom, téléphone, numéro de versement, GPS ou photo.",
+      "none": "Aucun signalement.",
+      "score": "correspondance {score} %",
+      "pair": "{branch} ↔ {matched}",
+      "noteLabel": "Note de résolution",
+      "notePlaceholder": "Pourquoi est-ce (ou non) un doublon ?",
+      "clear": "Pas un doublon",
+      "confirm": "Confirmer le doublon"
+    },
+    "flagKind": {
+      "name_similar": "Nom similaire",
+      "phone_match": "Même téléphone",
+      "payout_other_owner": "Numéro de versement d'un autre propriétaire",
+      "payout_shared_same_owner": "Numéro de versement partagé (même propriétaire)",
+      "gps_near_other_owner": "Un autre propriétaire au même endroit",
+      "image_duplicate": "Même photo de devanture"
+    },
+    "flagStatus": {
+      "open": "Ouvert",
+      "cleared": "Levé",
+      "confirmed": "Doublon confirmé"
+    },
+    "errors": {
+      "noteRequired": "Écrivez une courte note (au moins 3 caractères).",
+      "openFlags": "Traitez d'abord les doublons ouverts.",
+      "primary": "La boutique principale est vérifiée via le KYC.",
+      "flagResolved": "Ce signalement est déjà traité.",
+      "payoutOtherOwner": "Un numéro de versement ne peut jamais être partagé entre propriétaires.",
+      "noPacra": "Cette entreprise n'a pas de numéro PACRA.",
+      "invalidTransition": "Cette succursale n'est pas prête pour cette décision.",
+      "permission": "Vous n'avez pas l'autorisation pour cette action.",
+      "saveFailed": "Impossible d'enregistrer la décision. Réessayez."
+    }
+  },
+  "plans": {
+    "publishLimit": "La boutique a atteint la limite d'annonces en ligne de son forfait ; l'annonce reste en brouillon."
+  },
+  "extras": {
+    "title": "Demandes d'options",
+    "subtitle": "Chiffrez, approuvez et livrez les options payantes des vendeurs. Aucun paiement n'est encaissé ici. Chaque action est auditée.",
+    "status": {
+      "requested": "Demandé",
+      "quoted": "Chiffré",
+      "approved": "Approuvé",
+      "fulfilled": "Livré",
+      "cancelled": "Annulé"
+    },
+    "actions": {
+      "quoted": "Envoyer le devis",
+      "approved": "Approuver",
+      "fulfilled": "Marquer comme livré",
+      "cancelled": "Annuler"
+    },
+    "queue": {
+      "filter": "Statut",
+      "catalogueLink": "Modifier le catalogue",
+      "loading": "Chargement…",
+      "error": "Chargement impossible.",
+      "permissionDenied": "Vous n'avez pas accès aux options.",
+      "retry": "Réessayer",
+      "empty": "Aucune demande ici.",
+      "quoted": "devis {price}",
+      "quantity": "Qté {count}",
+      "vendorNote": "Vendeur : {note}",
+      "quoteLabel": "Devis (K)",
+      "noteLabel": "Note au vendeur"
+    },
+    "errors": {
+      "quoteRequired": "Saisissez un devis valide en kwacha.",
+      "quoteUnexpected": "Un prix n'est envoyé qu'avec un devis.",
+      "actionFailed": "Échec de l'action. Actualisez et réessayez.",
+      "priceShape": "Vérifiez le prix : un prix fixe exige un montant, une fourchette exige un maximum plus élevé.",
+      "duplicateKey": "Cette clé existe déjà."
+    },
+    "pricing": {
+      "fixed": "Fixe",
+      "range": "Fourchette",
+      "pay_as_you_go": "À l'usage"
+    },
+    "unit": {
+      "one_off": "Paiement unique",
+      "per_month": "Par mois",
+      "per_item": "Par unité"
+    },
+    "catalogue": {
+      "title": "Catalogue des options",
+      "subtitle": "Noms, descriptions et prix vus par les vendeurs. Les modifications sont auditées.",
+      "name": "Nom",
+      "description": "Description",
+      "pricing": "Tarification",
+      "price": "Prix / à partir de (K)",
+      "priceMax": "Max (K, fourchette)",
+      "unit": "Unité",
+      "active": "Visible par les vendeurs",
+      "save": "Enregistrer",
+      "saved": "Enregistré.",
+      "placeholder": "Prix de départ, à vérifier",
+      "current": "Actuel {price}"
+    }
+  },
+  "trials": {
+    "title": "Essais gratuits",
+    "subtitle": "Chaque vendeur bénéficie d'1 mois gratuit du forfait Business (sans frais de forfait). Prolongez ou terminez un essai ; chaque modification est auditée.",
+    "search": "Nom de l'entreprise",
+    "searchAction": "Rechercher",
+    "loading": "Chargement…",
+    "error": "Impossible de charger les essais.",
+    "permissionDenied": "Seuls les administrateurs gèrent les essais.",
+    "retry": "Réessayer",
+    "empty": "Aucune entreprise trouvée.",
+    "endsOn": "Gratuit jusqu'au {date}",
+    "endedOn": "Essai terminé le {date}",
+    "newEnd": "Nouvelle date de fin",
+    "reason": "Motif",
+    "extend": "Prolonger",
+    "end": "Terminer",
+    "errors": {
+      "input": "Choisissez une date ultérieure et indiquez un motif.",
+      "failed": "Impossible de modifier l'essai.",
+      "notLater": "La nouvelle fin doit être postérieure à l'actuelle.",
+      "alreadyEnded": "Cet essai est déjà terminé."
     }
   }
 }

@@ -4,7 +4,10 @@ import { ApiError } from "@vergeo/config";
 import { useCallback, useMemo, useState } from "react";
 
 import { useSession } from "../../../../../lib/customer-session";
-import { createRfqApiClient, RFQ_DETAILS_MAX_CHARS } from "../../../../../lib/rfq-api";
+import {
+  createRfqApiClient,
+  RFQ_DETAILS_MAX_CHARS,
+} from "../../../../../lib/rfq-api";
 
 export type RequestQuoteStatus = "idle" | "sending" | "success" | "error";
 
@@ -53,7 +56,10 @@ export function useRequestQuote(): UseRequestQuoteResult {
   const [reusedExistingThread, setReusedExistingThread] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const getToken = useCallback(
+    () => session?.access_token ?? null,
+    [session?.access_token],
+  );
   const rfqClient = useMemo(() => createRfqApiClient(getToken), [getToken]);
 
   const reset = useCallback(() => {
@@ -64,7 +70,11 @@ export function useRequestQuote(): UseRequestQuoteResult {
   }, []);
 
   const submitRequest = useCallback(
-    async (payload: { listingId?: string; serviceId?: string; details: string }) => {
+    async (payload: {
+      listingId?: string;
+      serviceId?: string;
+      details: string;
+    }) => {
       const trimmed = payload.details.trim();
       if (!trimmed) {
         setErrorKey("empty");

@@ -1,8 +1,7 @@
 import { LOCALES, type Locale } from "@vergeo/i18n";
-import { LinkButton } from "@vergeo/ui/src/link-button";
-import Link from "next/link";
 import { setRequestLocale } from "next-intl/server";
 
+import { buildPageMetadata } from "../../../../lib/page-title";
 import { getAccountAccessToken, getAccountTranslator } from "../_components/account-server";
 
 import { createBusinessApiClient, type BusinessStatus } from "./_components/business-api";
@@ -10,12 +9,14 @@ import { BusinessApplyForm } from "./_components/business-apply-form";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "account", "business.title", { index: false, follow: false });
+}
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -84,21 +85,6 @@ export default async function AccountBusinessPage({ params }: PageProps) {
         <span className="text-text-2">{t("business.statusLabel")}</span>
         <span className="font-semibold text-text">{t(`business.status.${statusKey}`)}</span>
       </div>
-
-      {statusKey === "verified" ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
-          <p className="font-semibold text-text">{t("business.verifiedTitle")}</p>
-          <p className="text-sm text-text-2">{t("business.verifiedBody")}</p>
-          <LinkButton
-            href={`/${locale}/supplies`}
-            variant="primary"
-            className="w-fit rounded-md text-sm"
-            LinkComponent={Link}
-          >
-            {t("business.browseSupplies")}
-          </LinkButton>
-        </div>
-      ) : null}
 
       {statusKey === "pending" || statusKey === "suspended" ? (
         <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">

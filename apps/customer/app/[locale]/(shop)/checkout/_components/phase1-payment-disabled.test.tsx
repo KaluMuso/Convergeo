@@ -26,7 +26,11 @@ vi.mock("@vergeo/config", () => ({
   ApiError: class ApiError extends Error {
     code: string;
     status: number;
-    constructor(code: string, message: string, options: { status?: number } = {}) {
+    constructor(
+      code: string,
+      message: string,
+      options: { status?: number } = {},
+    ) {
       super(message);
       this.code = code;
       this.status = options.status ?? 503;
@@ -65,7 +69,8 @@ function labelsFor(messages: typeof bemCheckout, locale: string) {
     countryCode: t("checkout.payment.countryCode"),
     nationalNumber: t("checkout.payment.nationalNumber"),
     cardExplainer: t("checkout.payment.cardExplainer"),
-    codIneligible: (cap: string) => t("checkout.payment.codIneligible", { cap }),
+    codIneligible: (cap: string) =>
+      t("checkout.payment.codIneligible", { cap }),
     codUnavailableTitle: t("checkout.payment.codUnavailableTitle"),
     selected: t("checkout.payment.selected"),
     unavailable: t("checkout.payment.unavailable"),
@@ -85,43 +90,52 @@ describe("Phase-1 payment-disabled UI (bem/nya)", () => {
   it.each([
     ["bem", bemCheckout],
     ["nya", nyaCheckout],
-  ] as const)("%s shows localised paymentsDisabled alert", async (locale, messages) => {
-    const { ApiError } = await import("@vergeo/config");
-    requestMock.mockImplementation(async (path: string, init?: { method?: string }) => {
-      if (String(path).includes("payment-options")) {
-        return paymentOptions;
-      }
-      if (init?.method === "POST") {
-        throw new ApiError("payments_disabled", "Online payment is temporarily unavailable.", {
-          status: 503,
-        });
-      }
-      throw new Error(`unexpected ${path}`);
-    });
-
-    const labels = labelsFor(messages, locale);
-    const user = userEvent.setup();
-    render(
-      <StepPayment
-        locale={locale}
-        sessionId="session-1"
-        accessToken="token"
-        labels={labels}
-        onComplete={vi.fn()}
-      />,
-    );
-
-    expect(await screen.findByText(labels.momo)).toBeInTheDocument();
-    await user.click(screen.getByLabelText(labels.card));
-    await user.click(screen.getByRole("button", { name: labels.continue }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("checkout-payment-error")).toHaveTextContent(
-        messages.checkout.payment.paymentsDisabled,
+  ] as const)(
+    "%s shows localised paymentsDisabled alert",
+    async (locale, messages) => {
+      const { ApiError } = await import("@vergeo/config");
+      requestMock.mockImplementation(
+        async (path: string, init?: { method?: string }) => {
+          if (String(path).includes("payment-options")) {
+            return paymentOptions;
+          }
+          if (init?.method === "POST") {
+            throw new ApiError(
+              "payments_disabled",
+              "Online payment is temporarily unavailable.",
+              {
+                status: 503,
+              },
+            );
+          }
+          throw new Error(`unexpected ${path}`);
+        },
       );
-    });
-    expect(screen.getByTestId("checkout-payment-error")).not.toHaveTextContent(
-      "Online payment is temporarily unavailable",
-    );
-  });
+
+      const labels = labelsFor(messages, locale);
+      const user = userEvent.setup();
+      render(
+        <StepPayment
+          locale={locale}
+          sessionId="session-1"
+          accessToken="token"
+          labels={labels}
+          onComplete={vi.fn()}
+        />,
+      );
+
+      expect(await screen.findByText(labels.momo)).toBeInTheDocument();
+      await user.click(screen.getByLabelText(labels.card));
+      await user.click(screen.getByRole("button", { name: labels.continue }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("checkout-payment-error")).toHaveTextContent(
+          messages.checkout.payment.paymentsDisabled,
+        );
+      });
+      expect(
+        screen.getByTestId("checkout-payment-error"),
+      ).not.toHaveTextContent("Online payment is temporarily unavailable");
+    },
+  );
 });

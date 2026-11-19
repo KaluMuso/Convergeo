@@ -14,6 +14,7 @@ from app.services.payouts.execution import (
     BankPayoutFn,
     MomoPayoutFn,
     _map_transfer_status,
+    _notify_vendor_payout,
     _post_payout_ledger,
     _rows,
     _send_lenco_payout,
@@ -60,10 +61,17 @@ def _has_never_sent_provenance(snapshot: dict[str, Any]) -> bool:
         and isinstance(attempts, int)
         and not isinstance(attempts, bool)
         and attempts == 0
-        and not any(snapshot.get(key) for key in (
-            "provider_reference", "provider_status", "transfer_status",
-            "last_error", "last_query_error", "verified_transfer",
-        ))
+        and not any(
+            snapshot.get(key)
+            for key in (
+                "provider_reference",
+                "provider_status",
+                "transfer_status",
+                "last_error",
+                "last_query_error",
+                "verified_transfer",
+            )
+        )
     )
 
 
@@ -281,6 +289,8 @@ def _complete_verified_payout(
         payout_id,
         {"status": "paid", "resolve_snapshot": merged},
     )
+    if not _is_customer_refund(snapshot):
+        _notify_vendor_payout(service_client, payout_id, sent=True)
     if _is_customer_refund(snapshot):
         _notify_customer_refund_paid(
             service_client,
@@ -412,6 +422,7 @@ async def retry_payout_row(
                 reason="provider_failed_reference_reuse_unconfirmed",
                 provider_status=transfer.status.value,
             )
+            _notify_vendor_payout(service_client, payout_id, sent=False)
             return "manual"
 
         backoff = compute_retry_backoff_seconds(1)
@@ -474,8 +485,7 @@ async def retry_payout_row(
     if result.outcome == ProviderOutcome.PENDING:
         merged = {
             **snapshot,
-            "provider_reference": result.provider_reference
-            or snapshot.get("provider_reference"),
+            "provider_reference": result.provider_reference or snapshot.get("provider_reference"),
             "provider_status": result.status,
             "next_retry_at": (
                 clock + timedelta(seconds=compute_retry_backoff_seconds(1))
@@ -504,6 +514,8 @@ async def retry_payout_row(
         reason=reason,
         provider_status=result.status,
     )
+    if result.outcome == ProviderOutcome.FAILED:
+        _notify_vendor_payout(service_client, payout_id, sent=False)
     return "manual"
 
 

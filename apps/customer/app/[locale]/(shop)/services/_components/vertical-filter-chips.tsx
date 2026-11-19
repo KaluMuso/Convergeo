@@ -70,8 +70,14 @@ export function VerticalFilterChips({
         </Rail>
       </div>
 
-      <form action={`/${locale}/services`} method="get" className="flex flex-col gap-2">
-        {activeCategory ? <input type="hidden" name="category" value={activeCategory} /> : null}
+      <form
+        action={`/${locale}/services`}
+        method="get"
+        className="flex flex-col gap-2"
+      >
+        {activeCategory ? (
+          <input type="hidden" name="category" value={activeCategory} />
+        ) : null}
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-text-3">
             {labels.areaLabel}
