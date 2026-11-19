@@ -10,6 +10,7 @@ export type AccountNavLabels = {
   ariaLabel: string;
   overview: string;
   orders: string;
+  rewards: string;
   tickets: string;
   jobs: string;
   quotes: string;
@@ -37,6 +38,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { key: "overview", href: (locale) => `/${locale}/account` },
   { key: "orders", href: (locale) => `/${locale}/account/orders` },
+  { key: "rewards", href: (locale) => `/${locale}/account/rewards` },
   { key: "tickets", href: (locale) => `/${locale}/account/tickets` },
   { key: "jobs", href: (locale) => `/${locale}/account/jobs` },
   { key: "quotes", href: (locale) => `/${locale}/account/quotes` },
