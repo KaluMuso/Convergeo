@@ -20,6 +20,17 @@ export type AuditEntry = {
   after: unknown;
 };
 
+/** Text-keyed resources (feature flags, config keys) store their name as `entity_key`. */
+export function entityKey(entry: AuditEntry): string | null {
+  for (const side of [entry.after, entry.before]) {
+    if (side && typeof side === "object" && "entity_key" in side) {
+      const key = (side as { entity_key?: unknown }).entity_key;
+      if (typeof key === "string" && key) return key;
+    }
+  }
+  return null;
+}
+
 type AuditPage = { items: AuditEntry[]; next_before: string | null };
 
 export type AuditFilters = {
@@ -217,7 +228,7 @@ export function AuditLogBoard({ locale }: { locale: string }) {
                 })}
               </p>
               <p className="text-muted">
-                {t("what", { resource: entry.entity_type, id: entry.entity_id ?? "—" })}
+                {t("what", { resource: entry.entity_type, id: entry.entity_id ?? entityKey(entry) ?? "—" })}
               </p>
               {entry.reason ? <p>{t("reason", { reason: entry.reason })}</p> : null}
               {entry.request_id ? (
