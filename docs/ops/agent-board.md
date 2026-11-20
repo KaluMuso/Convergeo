@@ -22,7 +22,7 @@ GitHub is the source of truth. This file says who is doing what; PRs carry the w
 
 | ID | Task | Owner | Status | PR | Prompt | Notes |
 |---|---|---|---|---|---|---|
-| T1 | Bring #789 plain-language pass up to date with master (29 conflicts, mostly i18n) | Cursor | todo | #789 | `prompts/agents/789-plain-language-catch-up.md` | First Cursor trial |
+| T1 | Bring #789 plain-language pass up to date with master (29 conflicts, mostly i18n) | Cursor | in progress — cursor | #789 | `prompts/agents/789-plain-language-catch-up.md` | Merging origin/master into feat/simple-ux-literacy |
 | T2 | Logistics: combine #788 and #794 (delivery pricing, rider cash, returns, 2 pm promise) | Claude plans, Cursor builds | todo | #788, #794 | (Claude writes) | Starts after Sun 22 Nov reset |
 | T3 | Web Push for closed-app alerts | Cursor | todo | #791 | (Claude writes) | Needs VAPID keys from King later |
 | T4 | Catalogue control, ad targets, suspended-vendor purchase block | Cursor | todo | #782 | (Claude writes) | |
