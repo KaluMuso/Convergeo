@@ -90,7 +90,7 @@
   "home": {
     "meta": {
       "title": "Découvrez la Zambie",
-      "description": "Achetez des produits, réservez des services et trouvez des événements partout en Zambie sur Convergeo."
+      "description": "Comparez les vendeurs, réservez des services et trouvez des événements partout en Zambie sur Convergeo — paiement à la livraison, livraison à Lusaka, retrait dans tout le pays."
     },
     "serviceBar": {
       "ariaLabel": "Informations sur la livraison et le retrait",
@@ -106,10 +106,10 @@
         "title": "Bienvenue sur Convergeo",
         "subtitle": "Votre vitrine configurable apparaîtra ici au fur et à mesure de l'activation des espaces de vente."
       },
-      "escrowLine": "Commandez sur votre téléphone. Le vendeur l'envoie. Payez à l'arrivée.",
-      "escrowStep1": "Commandez sur votre téléphone",
-      "escrowStep2": "Le vendeur l'envoie",
-      "escrowStep3": "Payez à l'arrivée",
+      "escrowLine": "Payez en espèces à la livraison. Le paiement en ligne arrive bientôt.",
+      "escrowStep1": "Vous commandez",
+      "escrowStep2": "Nous livrons",
+      "escrowStep3": "Vous payez à l'arrivée",
       "carousel": {
         "previous": "Diapositive précédente",
         "next": "Diapositive suivante",
@@ -140,7 +140,7 @@
       "sellers": "Chaque boutique a sa page. Voyez à qui vous achetez.",
       "fulfillment": "Livraison à Lusaka. Retrait partout en Zambie.",
       "returns": "Article cassé ou incorrect ? Retournez-le sous 48 heures.",
-      "escrow": "Payez en espèces à l'arrivée de la commande."
+      "escrow": "Payez à la livraison — paiement en espèces pendant le pilote"
     },
     "demo": {
       "sampleListing": "Annonce exemple"
@@ -240,6 +240,16 @@
         "loadMore": "Voir plus",
         "moreLoaded": "{count} articles de plus chargés."
       }
+    },
+    "trustStrip": {
+      "ariaLabel": "Pourquoi acheter sur Convergeo",
+      "cod": "Paiement à la livraison",
+      "verified": "Vendeurs vérifiés",
+      "lusaka": "Livraison à Lusaka",
+      "returns": "Retours faciles"
+    },
+    "dealsRail": {
+      "title": "Offres du jour"
     }
   },
   "pdp": {
@@ -372,7 +382,7 @@
       "delivery": "Livraison disponible pour ce vendeur",
       "pickup": "Retrait disponible pour ce vendeur",
       "returns": "Retours et remboursements",
-      "escrow": "Lorsque le paiement en ligne est disponible, Convergeo conserve votre argent jusqu'à la livraison. Le paiement à la livraison peut être proposé pour les commandes éligibles."
+      "escrow": "Payez à la livraison en espèces pour les commandes éligibles. Le paiement en ligne arrive bientôt."
     },
     "condition": {
       "new": "Neuf",
@@ -521,7 +531,7 @@
   "deals": {
     "metaTitle": "Offres du jour",
     "title": "Offres du jour",
-    "subtitle": "Petits prix pour peu de temps, chez des vendeurs vérifiés.",
+    "subtitle": "Prix à durée limitée de vendeurs vérifiés. Payez à la livraison.",
     "endsIn": "Se termine dans {time}",
     "ended": "Terminé",
     "off": "-{percent} %",
@@ -558,5 +568,36 @@
     "pickupToday": "Retrait aujourd'hui",
     "pickupTomorrow": "Retrait demain",
     "pickupDays": "Retrait sous {min} à {max} jours"
+  },
+  "offers": {
+    "badge": {
+      "bxgy": "{buy} achetés = {get} offert",
+      "bundlePercent": "-{percent} % compléments",
+      "bundleFixed": "Offre lot",
+      "buyNPayM": "{n} pour {m}",
+      "freeGift": "Cadeau offert"
+    },
+    "box": {
+      "heading": "Lot et économies",
+      "itemLine": "{title} × {qty}",
+      "youPay": "Payez {pay} au lieu de {list}.",
+      "youSave": "Vous économisez {amount}",
+      "freeGift": "Offert : {title} × {qty} (valeur {value})",
+      "addAll": "Tout ajouter au panier",
+      "adding": "Ajout…",
+      "added": "Lot ajouté au panier",
+      "failed": "Impossible d'ajouter le lot. Réessayez."
+    }
+  },
+  "madeToOrder": {
+    "when": {
+      "oneDay": "sous 24 heures",
+      "days": "dans environ {count} jours",
+      "oneWeek": "sous une semaine",
+      "weeks": "dans environ {count} semaines",
+      "oneMonth": "dans environ un mois",
+      "months": "dans environ {count} mois"
+    },
+    "badge": "Fabriqué sur commande · prêt {when}"
   }
 }

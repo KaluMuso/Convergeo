@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 
+import { forgetNearCoords, rememberNearCoords } from "../../../../../lib/near-coords";
+
 // Lusaka CBD — privacy-safe default when geolocation is denied (matches API constant).
 const LUSAKA_LAT = -15.42;
 const LUSAKA_LNG = 28.28;
@@ -29,7 +31,13 @@ function roundCoord(value: number): number {
   return Math.round(value * factor) / factor;
 }
 
-export function NearMeToggle({ locale, labels }: { locale: string; labels: NearMeToggleLabels }) {
+export function NearMeToggle({
+  locale,
+  labels,
+}: {
+  locale: string;
+  labels: NearMeToggleLabels;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status>("idle");
@@ -53,6 +61,10 @@ export function NearMeToggle({ locale, labels }: { locale: string; labels: NearM
   const applyCoords = useCallback(
     (latitude: number, longitude: number, nextStatus: Status) => {
       setStatus(nextStatus);
+      // Remember a real fix (never the Lusaka fallback) for distances elsewhere.
+      if (nextStatus !== "lusaka") {
+        rememberNearCoords(roundCoord(latitude), roundCoord(longitude));
+      }
       pushParams((params) => {
         params.set("lat", String(roundCoord(latitude)));
         params.set("lng", String(roundCoord(longitude)));
@@ -63,6 +75,7 @@ export function NearMeToggle({ locale, labels }: { locale: string; labels: NearM
 
   const disable = useCallback(() => {
     setStatus("idle");
+    forgetNearCoords();
     pushParams((params) => {
       params.delete("lat");
       params.delete("lng");
@@ -77,7 +90,11 @@ export function NearMeToggle({ locale, labels }: { locale: string; labels: NearM
     setStatus("locating");
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        applyCoords(position.coords.latitude, position.coords.longitude, "idle");
+        applyCoords(
+          position.coords.latitude,
+          position.coords.longitude,
+          "idle",
+        );
       },
       () => {
         // Permission denied — fall back to Lusaka rather than leaving proximity off.
@@ -130,7 +147,12 @@ export function NearMeToggle({ locale, labels }: { locale: string; labels: NearM
         strokeLinejoin="round"
       >
         <path d="M12 21s-7-6.4-7-11a7 7 0 1 1 14 0c0 4.6-7 11-7 11Z" />
-        <circle cx="12" cy="10" r="2.5" fill={active ? "var(--surface)" : "none"} />
+        <circle
+          cx="12"
+          cy="10"
+          r="2.5"
+          fill={active ? "var(--surface)" : "none"}
+        />
       </svg>
       <span>{label}</span>
     </button>

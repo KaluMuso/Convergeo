@@ -25,7 +25,6 @@
     "services": "Services",
     "events": "Events",
     "askVergeo": "Ask Convergeo",
-    "supplies": "Supplies",
     "browseChipsAria": "Browse by area"
   },
   "marketing": {
@@ -34,7 +33,8 @@
     "contact": "Contact",
     "help": "Help",
     "sell": "Sell on Convergeo",
-    "signIn": "Sign in"
+    "signIn": "Sign in",
+    "account": "My account"
   },
   "account": {
     "ariaLabel": "Account navigation",

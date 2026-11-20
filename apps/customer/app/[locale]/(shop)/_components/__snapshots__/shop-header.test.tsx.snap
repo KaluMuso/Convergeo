@@ -14,7 +14,7 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
   </a>
   <nav
     aria-label="Shop navigation"
-    class="flex flex-col gap-2 px-4 pb-3 pt-2 md:hidden"
+    class="flex flex-col gap-1 px-3 pb-2 pt-1 md:hidden"
   >
     <div
       class="flex items-center justify-between gap-2"
@@ -121,10 +121,10 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
   </nav>
   <nav
     aria-label="Primary navigation"
-    class="hidden flex-wrap items-center gap-x-2 px-4 md:flex lg:h-16 lg:flex-nowrap lg:gap-x-3 lg:px-6 xl:px-8"
+    class="hidden flex-wrap items-center gap-x-2 px-4 md:flex lg:h-14 lg:flex-nowrap lg:gap-x-3 lg:px-6 xl:px-8"
   >
     <div
-      class="order-1 flex h-16 items-center"
+      class="order-1 flex h-14 items-center"
     >
       <a
         aria-label="Convergeo"
@@ -162,7 +162,7 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
       </a>
     </div>
     <div
-      class="order-2 mx-1 min-w-0 flex-1 lg:order-3 lg:mx-2 lg:max-w-xl xl:max-w-2xl"
+      class="order-2 mx-1 min-w-0 flex-1 lg:order-3 lg:mx-2 lg:max-w-3xl xl:max-w-4xl"
     >
       <div
         role="search"

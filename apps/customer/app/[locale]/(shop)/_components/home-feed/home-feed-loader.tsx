@@ -1,7 +1,13 @@
 "use client";
 
 import { Skeleton } from "@vergeo/ui/src/skeleton";
-import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+} from "react";
 
 import type { FeedLabels, FeedSection } from "./feed-types";
 
@@ -17,7 +23,8 @@ const ROOT_MARGIN = "600px 0px";
 
 async function readAccessToken(): Promise<string | null> {
   try {
-    const { getReadyCustomerSession } = await import("../../../../../lib/customer-session");
+    const { getReadyCustomerSession } =
+      await import("../../../../../lib/customer-session");
     const session = await getReadyCustomerSession();
     return session?.access_token ?? null;
   } catch {
@@ -59,10 +66,17 @@ export function HomeFeedLoader({
         moduleRef.current = mod;
         setPages(() => mod.FeedPages);
       }
-      const page = await mod.fetchFeedPage(cursor, locale, await readAccessToken());
+      const page = await mod.fetchFeedPage(
+        cursor,
+        locale,
+        await readAccessToken(),
+      );
       setSections((current) => {
         const seen = new Set(current.map((section) => section.id));
-        return [...current, ...page.sections.filter((section) => !seen.has(section.id))];
+        return [
+          ...current,
+          ...page.sections.filter((section) => !seen.has(section.id)),
+        ];
       });
       setCursor(page.next_cursor);
       setStatus(page.next_cursor ? "idle" : "done");
@@ -95,14 +109,22 @@ export function HomeFeedLoader({
       {Pages && sections.length > 0 ? (
         <Pages sections={sections} locale={locale} labels={labels} />
       ) : null}
-      <div ref={sentinelRef} data-testid="home-feed-sentinel" aria-live="polite">
+      <div
+        ref={sentinelRef}
+        data-testid="home-feed-sentinel"
+        aria-live="polite"
+      >
         {status === "loading" ? (
           <div className="flex flex-col gap-3" aria-busy="true">
             <span className="sr-only">{labels.loadingMore}</span>
             <Skeleton shape="block" className="h-7 w-48 rounded" />
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
               {Array.from({ length: 4 }, (_, index) => (
-                <Skeleton key={index} shape="block" className="aspect-[3/4] w-full rounded-lg" />
+                <Skeleton
+                  key={index}
+                  shape="block"
+                  className="aspect-[3/4] w-full rounded-lg"
+                />
               ))}
             </div>
           </div>
@@ -123,7 +145,10 @@ export function HomeFeedLoader({
           </div>
         ) : null}
         {status === "done" && !hideEnd ? (
-          <p className="py-4 text-center text-sm text-muted" data-testid="home-feed-end">
+          <p
+            className="py-4 text-center text-sm text-muted"
+            data-testid="home-feed-end"
+          >
             {labels.end}
           </p>
         ) : null}

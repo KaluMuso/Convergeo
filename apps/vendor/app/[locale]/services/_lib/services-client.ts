@@ -22,6 +22,7 @@ export type ServiceSummary = {
   description: string | null;
   service_area: string | null;
   from_price_ngwee: number | null;
+  is_free?: boolean;
   bookable: boolean;
   booking_price_ngwee: number | null;
   status: ServiceStatus;
@@ -35,6 +36,7 @@ export type ServiceCreatePayload = {
   description?: string | null;
   service_area?: string | null;
   from_price_ngwee?: number | null;
+  is_free?: boolean;
   bookable?: boolean;
   booking_price_ngwee?: number | null;
   portfolio_images?: string[];

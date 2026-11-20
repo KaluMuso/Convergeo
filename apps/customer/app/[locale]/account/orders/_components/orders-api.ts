@@ -14,6 +14,8 @@ export type OrderSummary = {
   total_ngwee: number;
   item_count: number;
   created_at: string;
+  discount_ngwee?: number;
+  is_gift?: boolean;
 };
 
 export type CheckoutGroup = {
@@ -44,6 +46,8 @@ export type PickupCredentials = {
   qr_token: string | null;
   pin: string | null;
   stub: boolean;
+  /** Gift orders: the PIN went to the recipient's phone only. */
+  sent_to_recipient?: boolean;
 };
 
 export type InvoiceLink = {
@@ -71,6 +75,18 @@ export type OrderDetail = {
   pickup: PickupCredentials | null;
   invoice: InvoiceLink | null;
   related_orders: OrderSummary[];
+  /** Coupon discount already taken off total_ngwee. */
+  discount_ngwee?: number;
+  is_gift?: boolean;
+};
+
+export type GiftReceipt = {
+  order_id: string;
+  vendor_name: string;
+  recipient_name: string | null;
+  message: string | null;
+  fulfilment: string;
+  items: { title: string; qty: number; variant_options: { group: string; value: string }[] }[];
 };
 
 export type CourierDeliveryStatus =
@@ -84,6 +100,29 @@ export type CourierDelivery = {
   timeline: Array<{ status: CourierDeliveryStatus; at: string }>;
   /** Only ever returned to the order owner, and only while the dispatch is in flight. */
   handover_code: string | null;
+};
+
+/** Pay at the door (flag `pay_at_door`). Never carries phone numbers or Lenco references. */
+export type DoorPaymentState =
+  | "not_applicable"
+  | "not_at_door"
+  | "awaiting_arrival"
+  | "awaiting_payment"
+  | "pending"
+  | "failed"
+  | "paid"
+  | "cash";
+
+export type DoorPayment = {
+  enabled: boolean;
+  state: DoorPaymentState;
+  amount_ngwee: number;
+  arrived: boolean;
+  settled_via: "mobile_money" | "cash" | null;
+  attempts_used: number;
+  attempts_allowed: number;
+  latest_failure_reason: string | null;
+  can_request: boolean;
 };
 
 export type OrderDeliveryResponse = {
@@ -111,7 +150,11 @@ export function createOrdersApiClient(getToken: () => string | null | Promise<st
   return {
     listOrders: () => client.request<{ groups: CheckoutGroup[] }>("/account/orders"),
     getOrder: (orderId: string) => client.request<OrderDetail>(`/account/orders/${orderId}`),
+    getGiftReceipt: (orderId: string) =>
+      client.request<GiftReceipt>(`/account/orders/${orderId}/gift-receipt`),
     getDelivery: (orderId: string) =>
       client.request<OrderDeliveryResponse>(`/account/orders/${orderId}/delivery`),
+    getDoorPayment: (orderId: string) =>
+      client.request<DoorPayment>(`/account/orders/${orderId}/door-payment`),
   };
 }

@@ -1,6 +1,10 @@
 import { ListingGrid } from "../plp/listing-grid";
 
-import { mapFeedListing, type FeedLabels, type FeedListingWire } from "./feed-types";
+import {
+  mapFeedListing,
+  type FeedLabels,
+  type FeedListingWire,
+} from "./feed-types";
 
 /**
  * Grid for stream pages appended on the client. Lazily imported by

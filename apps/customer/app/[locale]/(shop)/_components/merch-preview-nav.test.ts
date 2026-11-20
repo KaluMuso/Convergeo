@@ -4,7 +4,9 @@ import { withMerchPreviewParam } from "./merch-preview-nav";
 
 describe("withMerchPreviewParam", () => {
   it("appends preview token to internal paths", () => {
-    expect(withMerchPreviewParam("/en/search", "draft")).toBe("/en/search?merch_preview=draft");
+    expect(withMerchPreviewParam("/en/search", "draft")).toBe(
+      "/en/search?merch_preview=draft",
+    );
   });
 
   it("preserves existing query params", () => {
@@ -25,6 +27,8 @@ describe("withMerchPreviewParam", () => {
   });
 
   it("ignores external URLs", () => {
-    expect(withMerchPreviewParam("https://example.com", "draft")).toBe("https://example.com");
+    expect(withMerchPreviewParam("https://example.com", "draft")).toBe(
+      "https://example.com",
+    );
   });
 });

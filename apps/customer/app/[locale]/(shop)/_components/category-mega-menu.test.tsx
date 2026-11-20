@@ -48,7 +48,9 @@ function isFocusInMegaMenuPanel(element: Element | null): boolean {
 describe("CategoryMegaMenu", () => {
   it("clamps the panel to the viewport and repositions on resize", async () => {
     const user = userEvent.setup();
-    const viewport = vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(1024);
+    const viewport = vi
+      .spyOn(document.documentElement, "clientWidth", "get")
+      .mockReturnValue(1024);
     render(
       <CategoryMegaMenu
         locale="en"
@@ -111,10 +113,9 @@ describe("CategoryMegaMenu", () => {
       "href",
       "/en/c/electronics",
     );
-    expect(screen.getByRole("link", { name: "View all categories" })).toHaveAttribute(
-      "href",
-      "/en/categories",
-    );
+    expect(
+      screen.getByRole("link", { name: "View all categories" }),
+    ).toHaveAttribute("href", "/en/categories");
     expect(screen.getByTestId("mega-menu-featured")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Itel A70/i })).toHaveAttribute(
       "href",
@@ -195,7 +196,9 @@ describe("CategoryMegaMenu", () => {
     const trigger = screen.getByRole("button", { name: /all categories/i });
     await user.click(trigger);
     await screen.findByRole("link", { name: "Phones" });
-    expect(screen.getByRole("dialog", { name: labels.panelAria })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: labels.panelAria }),
+    ).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
     expect(trigger).toHaveAttribute("aria-expanded", "false");
@@ -226,10 +229,38 @@ describe("CategoryMegaMenu", () => {
 
   it("buildCategoryTree nests children under parents and drops prohibited nodes", () => {
     const result = buildCategoryTree([
-      { id: "1", name: "A", slug: "a", position: 1, parent_id: null, prohibited: false },
-      { id: "1a", name: "A1", slug: "a1", position: 0, parent_id: "1", prohibited: false },
-      { id: "0", name: "Top", slug: "top", position: 0, parent_id: null, prohibited: false },
-      { id: "x", name: "Hidden", slug: "hidden", position: 2, parent_id: null, prohibited: true },
+      {
+        id: "1",
+        name: "A",
+        slug: "a",
+        position: 1,
+        parent_id: null,
+        prohibited: false,
+      },
+      {
+        id: "1a",
+        name: "A1",
+        slug: "a1",
+        position: 0,
+        parent_id: "1",
+        prohibited: false,
+      },
+      {
+        id: "0",
+        name: "Top",
+        slug: "top",
+        position: 0,
+        parent_id: null,
+        prohibited: false,
+      },
+      {
+        id: "x",
+        name: "Hidden",
+        slug: "hidden",
+        position: 2,
+        parent_id: null,
+        prohibited: true,
+      },
     ]);
 
     expect(result.map((node) => node.slug)).toEqual(["top", "a"]);

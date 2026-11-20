@@ -5,12 +5,20 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { BrandLogo } from "./brand-logo";
-import { CartNavTrigger, getCartItemCount, setStoreState, useCartStore } from "./cart/cart-store";
+import {
+  CartNavTrigger,
+  getCartItemCount,
+  setStoreState,
+  useCartStore,
+} from "./cart/cart-store";
 import { CategoryMegaMenu } from "./category-mega-menu";
 import { DesktopHeaderSearch } from "./desktop-header-search";
 import { HeaderThemeToggle } from "./header-theme-toggle";
-import { MerchPreviewLink, useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
-import { useBusinessEligibility } from "./use-business-eligibility";
+import {
+  MerchPreviewLink,
+  useMerchPreviewToken,
+  withMerchPreviewParam,
+} from "./merch-preview-nav";
 
 import type { SearchInputLabels } from "./search/search-input";
 
@@ -33,7 +41,6 @@ export type ShopHeaderLabels = {
   services: string;
   events: string;
   askVergeo: string;
-  supplies: string;
   account: string;
   cart: string;
   cartWithCount: string;
@@ -80,7 +87,6 @@ export function ShopHeader({
 }: ShopHeaderProps) {
   const previewToken = useMerchPreviewToken();
   const { cart } = useCartStore();
-  const eligibleForSupplies = useBusinessEligibility();
 
   useEffect(() => {
     // Defer cart hydration until after first paint so header mount does not
@@ -99,7 +105,10 @@ export function ShopHeader({
     };
     const w = window as Window &
       typeof globalThis & {
-        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        requestIdleCallback?: (
+          cb: () => void,
+          opts?: { timeout: number },
+        ) => number;
         cancelIdleCallback?: (id: number) => void;
       };
     let idleId: number | undefined;
@@ -123,7 +132,10 @@ export function ShopHeader({
   const cartCount = getCartItemCount(cart);
   const cartCountLabel =
     cartCount > 0
-      ? labels.cartWithCount.replace("{count}", String(cartCount > 99 ? 99 : cartCount))
+      ? labels.cartWithCount.replace(
+          "{count}",
+          String(cartCount > 99 ? 99 : cartCount),
+        )
       : undefined;
 
   const [scrolled, setScrolled] = useState(false);
@@ -154,7 +166,6 @@ export function ShopHeader({
     ...link,
     href: withMerchPreviewParam(link.href, previewToken),
   }));
-  const suppliesHref = withMerchPreviewParam(`/${locale}/supplies`, previewToken);
   const accountHref = withMerchPreviewParam(`/${locale}/account`, previewToken);
 
   const logo = (
@@ -204,7 +215,9 @@ export function ShopHeader({
     />
   );
 
-  const themeToggle = labels.theme ? <HeaderThemeToggle labels={labels.theme} /> : null;
+  const themeToggle = labels.theme ? (
+    <HeaderThemeToggle labels={labels.theme} />
+  ) : null;
 
   return (
     <header
@@ -222,7 +235,7 @@ export function ShopHeader({
       {/* Phones (< md): logo + actions, then a full-width search row. */}
       <nav
         aria-label={labels.navAriaLabel}
-        className="flex flex-col gap-2 px-4 pb-3 pt-2 md:hidden"
+        className="flex flex-col gap-1 px-3 pb-2 pt-1 md:hidden"
       >
         <div className="flex items-center justify-between gap-2">
           {logo}
@@ -258,10 +271,10 @@ export function ShopHeader({
           (same elements re-ordered with CSS, so nothing renders twice). */}
       <nav
         aria-label={labels.desktopAriaLabel}
-        className="hidden flex-wrap items-center gap-x-2 px-4 md:flex lg:h-16 lg:flex-nowrap lg:gap-x-3 lg:px-6 xl:px-8"
+        className="hidden flex-wrap items-center gap-x-2 px-4 md:flex lg:h-14 lg:flex-nowrap lg:gap-x-3 lg:px-6 xl:px-8"
       >
-        <div className="order-1 flex h-16 items-center">{logo}</div>
-        <div className="order-2 mx-1 min-w-0 flex-1 lg:order-3 lg:mx-2 lg:max-w-xl xl:max-w-2xl">
+        <div className="order-1 flex h-14 items-center">{logo}</div>
+        <div className="order-2 mx-1 min-w-0 flex-1 lg:order-3 lg:mx-2 lg:max-w-3xl xl:max-w-4xl">
           <DesktopHeaderSearch
             locale={locale}
             labels={labels.searchInput}
@@ -284,13 +297,6 @@ export function ShopHeader({
                 </Link>
               </li>
             ))}
-            {eligibleForSupplies ? (
-              <li className="shrink-0">
-                <Link href={suppliesHref} className={navLinkClassName}>
-                  {labels.supplies}
-                </Link>
-              </li>
-            ) : null}
           </ul>
         </div>
       </nav>

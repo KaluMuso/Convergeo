@@ -19,7 +19,10 @@ export default function PlpLoading() {
       <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
         <aside className="hidden flex-col gap-3 lg:flex">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex flex-col gap-2 rounded border border-border p-3">
+            <div
+              key={i}
+              className="flex flex-col gap-2 rounded border border-border p-3"
+            >
               <Skeleton shape="line" width="60%" />
               <Skeleton shape="line" width="90%" height="1.1rem" />
               <Skeleton shape="line" width="80%" height="1.1rem" />
@@ -29,7 +32,10 @@ export default function PlpLoading() {
 
         <section className="grid grid-cols-2 gap-3 motion-stagger sm:grid-cols-3">
           {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="flex flex-col gap-2 rounded border border-border p-2">
+            <div
+              key={i}
+              className="flex flex-col gap-2 rounded border border-border p-2"
+            >
               <Skeleton height="8rem" />
               <Skeleton shape="line" width="85%" />
               <Skeleton shape="line" width="55%" />

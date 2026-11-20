@@ -129,6 +129,10 @@ def test_unmatched_landmark_gets_the_configured_zone_and_its_fee(post_fulfilment
         {
             "subtotal_ngwee": 10_000,
             "delivery_fee_ngwee": 4500,
+            # No coupon on this checkout (#792 records the discount explicitly).
+            "discount_ngwee": 0,
+            # Unified checkout: no event tickets in this cart -> no ticket fee.
+            "platform_fee_ngwee": 0,
             "total_ngwee": 14_500,
             # POST /orders re-prices from these recorded choices.
             "fulfilment_choices": [
@@ -262,3 +266,74 @@ def test_city_name_only_landmark_gets_the_fallback_zone(post_fulfilment: Any) ->
 
     assert response.status_code == 200, response.text
     assert response.json()["resolved_zone_key"] == "lusaka_b"
+
+
+def _group(listing_id: str) -> Any:
+    item = MagicMock()
+    item.listing_id = listing_id
+    group = MagicMock()
+    group.items = [item]
+    return group
+
+
+def _options_service(options: list[str] | None) -> MagicMock:
+    service = MagicMock()
+    row = {"id": LISTING_ID, "fulfilment_options": options}
+    service.client.table.return_value.select.return_value.in_.return_value.execute.return_value = (
+        MagicMock(data=[row])
+    )
+    return service
+
+
+def test_delivery_is_refused_when_a_listing_does_not_offer_lusaka_delivery() -> None:
+    from app.errors import AppError
+    from app.routers.checkout import _enforce_listing_fulfilment_options
+
+    choice = MagicMock()
+    choice.fulfilment = "delivery"
+    with pytest.raises(AppError) as exc_info:
+        _enforce_listing_fulfilment_options(
+            _options_service(["pickup_shop"]),
+            {VENDOR_ID: _group(LISTING_ID)},
+            {VENDOR_ID: choice},
+        )
+    assert exc_info.value.code == "checkout.fulfilment_not_offered"
+    assert exc_info.value.http_status == 422
+
+
+def test_pickup_is_allowed_for_nationwide_only_listings() -> None:
+    from app.routers.checkout import _enforce_listing_fulfilment_options
+
+    choice = MagicMock()
+    choice.fulfilment = "pickup"
+    _enforce_listing_fulfilment_options(
+        _options_service(["pickup_nationwide"]),
+        {VENDOR_ID: _group(LISTING_ID)},
+        {VENDOR_ID: choice},
+    )
+
+
+def test_listings_without_options_keep_the_previous_delivery_and_pickup_behaviour() -> None:
+    from app.routers.checkout import _enforce_listing_fulfilment_options
+
+    for fulfilment in ("delivery", "pickup"):
+        choice = MagicMock()
+        choice.fulfilment = fulfilment
+        _enforce_listing_fulfilment_options(
+            _options_service(None),
+            {VENDOR_ID: _group(LISTING_ID)},
+            {VENDOR_ID: choice},
+        )
+
+
+def test_group_offered_routes_requires_every_line_to_offer_the_route() -> None:
+    from types import SimpleNamespace
+
+    from app.routers.checkout import _group_offered_routes
+
+    items = [SimpleNamespace(listing_id="a"), SimpleNamespace(listing_id="b")]
+    options = {"a": {"lusaka_delivery", "pickup_shop"}, "b": {"pickup_nationwide"}}
+    assert _group_offered_routes(items, options) == (False, True)
+    assert _group_offered_routes(items[:1], options) == (True, True)
+    # Unknown listing (legacy row): both routes stay offered.
+    assert _group_offered_routes([SimpleNamespace(listing_id="zz")], {}) == (True, True)

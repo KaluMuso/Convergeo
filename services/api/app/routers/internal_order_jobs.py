@@ -32,6 +32,10 @@ router = APIRouter(prefix="/internal/order-jobs", tags=["internal-order-jobs"])
 _INTERNAL_TOKEN_ENV = "INTERNAL_ORDER_JOBS_TOKEN"
 _DEFAULT_INTERNAL_TOKEN = "dev-internal-order-jobs"
 
+UNPAID_CANCEL_HOURS_KEY = "unpaid_order_cancel_hours"
+DEFAULT_UNPAID_CANCEL_HOURS = 12
+UNPAID_CANCEL_NOTE = "Auto-cancelled: prepaid order unpaid after {hours}h"
+
 DEFAULT_BATCH_LIMIT = 50
 MAX_BATCH_LIMIT = 200
 
@@ -46,6 +50,14 @@ class AutoConfirmJobResponse(StrictModel):
     processed: int
     skipped: int
     confirmed: int
+    next_cursor: str | None = None
+
+
+class UnpaidCancelJobResponse(StrictModel):
+    scanned: int
+    processed: int
+    skipped: int
+    cancelled: int
     next_cursor: str | None = None
 
 
@@ -227,6 +239,73 @@ LIMIT {int(limit)};
     return result.rows
 
 
+def _unpaid_cancel_hours() -> int:
+    hours = _read_config_int(UNPAID_CANCEL_HOURS_KEY, DEFAULT_UNPAID_CANCEL_HOURS)
+    return hours if hours >= 1 else DEFAULT_UNPAID_CANCEL_HOURS
+
+
+def _list_unpaid_prepaid_candidates(
+    *,
+    limit: int,
+    cursor: str | None,
+    now: datetime,
+    hours: int,
+) -> list[str]:
+    """Placed PREPAID orders older than ``hours`` with no money and no live attempt.
+
+    An order is skipped (and re-checked on the next run) when ANY payment in its
+    checkout scope succeeded, is in flight (initiated/ussd_pushed/pay_offline), or failed without a
+    terminal provider verdict (webhook may still resolve it). Expired, cancelled and
+    terminally failed attempts do not block the cancel.
+    """
+    deadline_sql = sql_literal((now - timedelta(hours=hours)).isoformat())
+    cursor_filter = _cursor_filter_sql(cursor)
+    script = f"""
+SELECT o.id::text
+FROM public.orders o
+WHERE o.status = 'placed'
+  AND o.cod = false
+  AND o.created_at <= {deadline_sql}::timestamptz
+  AND NOT public.order_has_collected_money(o.id)
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.order_payment_checkouts(o.id) scope
+    JOIN public.payments p ON p.checkout_group_id = scope.checkout_group_id
+    WHERE p.status NOT IN ('expired', 'cancelled')
+      AND NOT (p.status = 'failed'
+               AND coalesce(p.raw->>'terminal_provider_failure', 'false') = 'true')
+  )
+  {cursor_filter}
+ORDER BY o.id ASC
+LIMIT {int(limit)};
+"""
+    result = run_sql_script(script)
+    if not result.ok:
+        return []
+    return result.rows
+
+
+def _process_unpaid_cancel(order_ids: list[str], hours: int) -> tuple[int, int]:
+    """Cancel via the guarded transition (system actor, audit note). -> (cancelled, skipped)."""
+    cancelled = 0
+    skipped = 0
+    for order_id in order_ids:
+        try:
+            transition_order(
+                order_id=order_id,
+                event=OrderEvent.CANCEL,
+                actor_role=ActorRole.SYSTEM,
+                actor_id=SYSTEM_ACTOR_ID,
+                note=UNPAID_CANCEL_NOTE.format(hours=hours),
+            )
+        except (OrderTransitionError, AppError):
+            # Paid/attempted in the meantime or already moved: leave it, re-check next run.
+            skipped += 1
+            continue
+        cancelled += 1
+    return cancelled, skipped
+
+
 def _process_auto_confirm(
     service_client: Any,
     order_ids: list[str],
@@ -308,6 +387,32 @@ async def auto_confirm_batch(
         processed=confirmed,
         skipped=skipped,
         confirmed=confirmed,
+        next_cursor=_next_cursor(order_ids, request.limit),
+    )
+
+
+@router.post(
+    "/cancel-unpaid",
+    response_model=UnpaidCancelJobResponse,
+    dependencies=[Depends(require_internal_order_jobs_token)],
+)
+async def cancel_unpaid_batch(
+    body: BatchJobRequest | None = None,
+) -> UnpaidCancelJobResponse:
+    request = body or BatchJobRequest()
+    hours = _unpaid_cancel_hours()
+    order_ids = _list_unpaid_prepaid_candidates(
+        limit=request.limit,
+        cursor=request.cursor,
+        now=datetime.now(UTC),
+        hours=hours,
+    )
+    cancelled, skipped = _process_unpaid_cancel(order_ids, hours)
+    return UnpaidCancelJobResponse(
+        scanned=len(order_ids),
+        processed=cancelled,
+        skipped=skipped,
+        cancelled=cancelled,
         next_cursor=_next_cursor(order_ids, request.limit),
     )
 

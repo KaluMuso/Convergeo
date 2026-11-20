@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal
@@ -11,6 +12,8 @@ from uuid import UUID, uuid4
 
 from app.errors import AppError
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
+from app.services.coupons.rules import scale_snapshot_for_vendor_discount
+from app.services.coupons.store import map_reservation_error
 from app.services.notifications.dedupe import build_dedupe_key
 from app.services.orders.audit import sql_literal
 from app.services.orders.state import OrderStatus
@@ -44,6 +47,59 @@ class CartLineInput:
     #: DB trigger re-checks it belongs to the listing) and its immutable label.
     listing_variant_id: str | None = None
     variant_snapshot: dict[str, Any] | None = None
+    #: W8 offers. A cart line an offer priced may be split into two order lines
+    #: with integral unit prices; only the first consumes the checkout hold
+    #: (for ``reservation_qty`` units, the whole cart line). Gift lines are
+    #: price 0, never consume a hold, and reserve from the offer's gift pool.
+    consumes_reservation: bool = True
+    reservation_qty: int | None = None
+    offer_id: str | None = None
+    offer_snapshot: dict[str, Any] | None = None
+    list_unit_price_ngwee: int | None = None
+    offer_discount_ngwee: int = 0
+    is_offer_gift: bool = False
+    offer_parent_cart_item_id: str | None = None
+
+    @property
+    def hold_qty(self) -> int:
+        return self.reservation_qty if self.reservation_qty is not None else self.qty
+
+
+@dataclass(frozen=True, slots=True)
+class TicketOrderLineInput:
+    """One ticket order line (a ticket cart line may split into two at an offer).
+
+    ``ticket_ids`` are the capacity claims this line consumes (len == qty),
+    taken from the checkout session's hold; the order transaction re-checks
+    them under row lock before the order exists.
+    """
+
+    cart_ticket_item_id: str
+    ticket_type_id: str
+    instance_id: str
+    qty: int
+    unit_price_ngwee: int
+    title_snapshot: str
+    ticket_ids: tuple[str, ...]
+    attendee_names: tuple[str, ...] | None = None
+    offer_id: str | None = None
+    offer_snapshot: dict[str, Any] | None = None
+    list_unit_price_ngwee: int | None = None
+    offer_discount_ngwee: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class TicketOrderInput:
+    """The organiser's ticket order in a unified checkout (lane ``ticket``)."""
+
+    vendor_id: str
+    lines: tuple[TicketOrderLineInput, ...]
+    platform_fee_ngwee: int
+    commission_snapshot: dict[str, Any]
+
+    @property
+    def subtotal_ngwee(self) -> int:
+        return sum(line_total_ngwee(line.qty, line.unit_price_ngwee) for line in self.lines)
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +109,17 @@ class VendorFulfilmentInput:
     delivery_zone: str | None
     delivery_fee_ngwee: int
     subtotal_ngwee: int
+
+
+@dataclass(frozen=True, slots=True)
+class CouponOrderPlan:
+    """Server-recomputed coupon for this checkout (reserved inside the order tx)."""
+
+    coupon_id: str
+    funder: Literal["platform", "vendor"]
+    discount_ngwee: int
+    #: listing_id → discount on that cart line (sums exactly to discount_ngwee).
+    line_discounts: dict[str, int]
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +142,7 @@ class CreatedOrder:
     cod: bool
     commission_snapshot: dict[str, Any]
     items: tuple[CreatedOrderItem, ...]
+    coupon_discount_ngwee: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +198,236 @@ _CLASS_E_CAPACITY_ERROR_RE = re.compile(
     r"(?P<remaining>\d+):(?P<requested>\d+)",
     re.IGNORECASE,
 )
+
+
+# W8 offers: raised inside the order tx when an offer that priced the cart is no
+# longer live, or its gift pool cannot cover the gift line.
+_OFFER_EXPIRED_MARKER = "FIXA_OFFER_EXPIRED"
+_OFFER_GIFT_MARKER = "FIXA_OFFER_GIFT_UNAVAILABLE"
+_OFFER_LIMIT_MARKER = "FIXA_OFFER_LIMIT_REACHED"
+_OFFER_ERROR_RE = re.compile(
+    r"FIXA_OFFER_(?P<kind>EXPIRED|GIFT_UNAVAILABLE|LIMIT_REACHED):"
+    r"(?P<offer_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})",
+    re.IGNORECASE,
+)
+
+
+def _offer_item_columns_sql(
+    line: CartLineInput, *, parent_item_id: str | None
+) -> tuple[str, str]:
+    """Extra order_items columns that freeze the offer pricing on the line."""
+    if line.offer_id is None:
+        return "", ""
+    columns = ", offer_id, offer_snapshot, offer_discount_ngwee, is_offer_gift"
+    values = (
+        f", {sql_uuid(line.offer_id, 'offer_id')}"
+        f", {_sql_json(line.offer_snapshot or {})}::jsonb"
+        f", {int(line.offer_discount_ngwee)}"
+        f", {'true' if line.is_offer_gift else 'false'}"
+    )
+    if line.list_unit_price_ngwee is not None:
+        columns += ", list_unit_price_ngwee"
+        values += f", {int(line.list_unit_price_ngwee)}"
+    if parent_item_id is not None:
+        columns += ", offer_parent_item_id"
+        values += f", {sql_uuid(parent_item_id, 'offer_parent_item_id')}"
+    return columns, values
+
+
+def _lock_live_offers_sql(offer_id_values: Iterable[str], customer_sql: str) -> list[str]:
+    """Row-lock (id order) every offer that priced this cart; abort if one is not live.
+
+    FOR UPDATE rather than FOR SHARE: a gift pool is updated later in the same
+    tx, and two share-holders upgrading would deadlock.
+
+    The per-customer limit is enforced here, under that lock: a second order of
+    the same customer for the same offer blocks on the row lock until the first
+    commits, and the redemption count (a later statement, so a fresh READ
+    COMMITTED snapshot) then sees the first order. Two simultaneous orders can
+    never both pass. A redemption = a distinct checkout of this customer with an
+    order carrying the offer (a product + ticket bundle places two orders in one
+    checkout: one redemption), not cancelled, whose checkout did not expire
+    unpaid / get abandoned (the same rule ``store.customer_offer_use_counts``).
+    """
+    offer_ids = sorted({str(offer_id) for offer_id in offer_id_values if offer_id})
+    statements: list[str] = []
+    for offer_id in offer_ids:
+        offer_sql = sql_uuid(offer_id, "offer_id")
+        statements.append(
+            f"""
+DO $offer$
+DECLARE
+  v_limit integer;
+  v_used integer;
+BEGIN
+  SELECT o.per_customer_limit INTO v_limit FROM public.offers o
+  WHERE o.id = {offer_sql}
+    AND o.status = 'active'
+    AND NOT o.paused_by_admin
+    AND o.starts_at <= timezone('utc', now())
+    AND (o.ends_at IS NULL OR o.ends_at > timezone('utc', now()))
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION '{_OFFER_EXPIRED_MARKER}:%', {sql_literal(offer_id)};
+  END IF;
+  IF v_limit IS NOT NULL THEN
+    SELECT count(DISTINCT ord.checkout_group_id)::integer INTO v_used
+    FROM public.order_items oi
+    JOIN public.orders ord ON ord.id = oi.order_id
+    LEFT JOIN public.checkout_groups cg ON cg.id = ord.checkout_group_id
+    WHERE oi.offer_id = {offer_sql}
+      AND ord.customer_id = {customer_sql}
+      AND ord.status <> 'cancelled'
+      AND coalesce(cg.status, '') NOT IN ('expired', 'abandoned');
+    IF v_used >= v_limit THEN
+      RAISE EXCEPTION '{_OFFER_LIMIT_MARKER}:%', {sql_literal(offer_id)};
+    END IF;
+  END IF;
+END
+$offer$;
+"""
+        )
+    return statements
+
+
+def _reserve_offer_gift_sql(*, offer_id: str, order_id: str, order_item_id: str, qty: int) -> str:
+    offer_sql = sql_uuid(offer_id, "offer_id")
+    qty_sql = str(int(qty))
+    return f"""
+DO $gift$
+DECLARE
+  v_updated int;
+BEGIN
+  UPDATE public.offers
+  SET gift_stock_reserved = gift_stock_reserved + {qty_sql}
+  WHERE id = {offer_sql}
+    AND gift_stock_total IS NOT NULL
+    AND gift_stock_reserved + {qty_sql} <= gift_stock_total;
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  IF v_updated = 0 THEN
+    RAISE EXCEPTION '{_OFFER_GIFT_MARKER}:%', {sql_literal(offer_id)};
+  END IF;
+  INSERT INTO public.offer_gift_reservations (offer_id, order_id, order_item_id, qty)
+  VALUES ({offer_sql}, {sql_uuid(order_id, "order_id")},
+          {sql_uuid(order_item_id, "order_item_id")}, {qty_sql});
+END
+$gift$;
+"""
+
+
+def _ticket_claims_valid_sql(
+    *, customer_sql: str, line: TicketOrderLineInput
+) -> str:
+    """Abort unless every claim of the line is still a live, unlinked claim of this
+    buyer for this type and instance (row-locked, so issuance / the stale sweeper
+    cannot race it). A voided or reused claim -> FIXA_HOLD_INVALID (410)."""
+    ids = ", ".join(sql_uuid(tid, "ticket_id") for tid in line.ticket_ids)
+    return f"""
+DO $tk$
+DECLARE
+  v_n integer;
+BEGIN
+  SELECT count(*)::integer INTO v_n FROM (
+    SELECT t.id FROM public.tickets t
+    WHERE t.id IN ({ids})
+      AND t.status = 'issued'
+      AND t.order_item_id IS NULL
+      AND t.holder_user_id = {customer_sql}
+      AND t.ticket_type_id = {sql_uuid(line.ticket_type_id, "ticket_type_id")}
+      AND t.instance_id = {sql_uuid(line.instance_id, "instance_id")}
+    ORDER BY t.id
+    FOR UPDATE
+  ) claims;
+  IF v_n <> {int(len(line.ticket_ids))} OR v_n <> {int(line.qty)} THEN
+    RAISE EXCEPTION '{_HOLD_INVALID_MARKER}:%', {sql_literal(line.ticket_type_id)};
+  END IF;
+END
+$tk$;
+"""
+
+
+def _consume_ticket_holds_sql(
+    *, session_sql: str, order_sql: str, expected: int
+) -> str:
+    return f"""
+DO $th$
+DECLARE
+  v_n integer;
+BEGIN
+  UPDATE public.checkout_ticket_holds
+  SET status = 'consumed', order_id = {order_sql}
+  WHERE checkout_group_id = {session_sql} AND status = 'held';
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+  IF v_n <> {int(expected)} THEN
+    RAISE EXCEPTION '{_HOLD_INVALID_MARKER}:holds';
+  END IF;
+END
+$th$;
+"""
+
+
+def _ticket_order_sql(
+    *,
+    ticket_order: TicketOrderInput,
+    order_id: str,
+    item_ids: list[str],
+    session_sql: str,
+    customer_sql: str,
+    hold_count: int,
+) -> list[str]:
+    order_sql = sql_uuid(order_id, "order_id")
+    statements = [
+        _ticket_claims_valid_sql(customer_sql=customer_sql, line=line)
+        for line in sorted(ticket_order.lines, key=lambda ln: (ln.ticket_type_id, ln.instance_id))
+    ]
+    statements.append(
+        f"""
+INSERT INTO public.orders (
+  id, checkout_group_id, vendor_id, customer_id, status, fulfilment,
+  delivery_fee_ngwee, platform_fee_ngwee, cod, commission_snapshot, order_lane
+) VALUES (
+  {order_sql}, {session_sql}, {sql_uuid(ticket_order.vendor_id, "vendor_id")}, {customer_sql},
+  '{OrderStatus.PLACED.value}', 'pickup', 0, {int(ticket_order.platform_fee_ngwee)}, false,
+  {_sql_json(ticket_order.commission_snapshot)}::jsonb, 'ticket'
+);
+"""
+    )
+    for line, item_id in zip(ticket_order.lines, item_ids, strict=True):
+        item_sql = sql_uuid(item_id, "order_item_id")
+        offer_columns = ""
+        offer_values = ""
+        if line.offer_id is not None:
+            offer_columns = ", offer_id, offer_snapshot, offer_discount_ngwee"
+            offer_values = (
+                f", {sql_uuid(line.offer_id, 'offer_id')}"
+                f", {_sql_json(line.offer_snapshot or {})}::jsonb"
+                f", {int(line.offer_discount_ngwee)}"
+            )
+            if line.list_unit_price_ngwee is not None:
+                offer_columns += ", list_unit_price_ngwee"
+                offer_values += f", {int(line.list_unit_price_ngwee)}"
+        names_sql = (
+            f"{sql_literal(json.dumps(list(line.attendee_names), separators=(',', ':')))}::jsonb"
+            if line.attendee_names
+            else "NULL"
+        )
+        statements.append(
+            f"""
+INSERT INTO public.order_items (
+  id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot{offer_columns}
+) VALUES (
+  {item_sql}, {order_sql}, 'ticket', {int(line.qty)}, {int(line.unit_price_ngwee)},
+  {sql_literal(line.title_snapshot)}{offer_values}
+);
+INSERT INTO public.order_item_tickets (order_item_id, ticket_type_id, instance_id, attendee_names)
+VALUES ({item_sql}, {sql_uuid(line.ticket_type_id, "ticket_type_id")},
+        {sql_uuid(line.instance_id, "instance_id")}, {names_sql});
+"""
+        )
+    statements.append(
+        _consume_ticket_holds_sql(session_sql=session_sql, order_sql=order_sql, expected=hold_count)
+    )
+    return statements
 
 
 def _lock_and_recheck_sql(session_sql: str, customer_sql: str) -> str:
@@ -365,9 +663,13 @@ def _clear_ordered_cart_lines_sql(cart_lines: list[CartLineInput], customer_sql:
     added in another tab after checkout started was never ordered and stays.
     Prepaid checkouts keep their cart until the payment outcome is known.
     """
-    if not cart_lines:
+    # Offer gift lines have no cart row; a split offer line shares one cart row.
+    cart_item_ids = list(
+        dict.fromkeys(line.cart_item_id for line in cart_lines if not line.is_offer_gift)
+    )
+    if not cart_item_ids:
         return ""
-    item_ids = ", ".join(sql_uuid(line.cart_item_id, "cart_item_id") for line in cart_lines)
+    item_ids = ", ".join(sql_uuid(item_id, "cart_item_id") for item_id in cart_item_ids)
     return f"""
 DELETE FROM public.cart_items ci
 USING public.carts c
@@ -743,6 +1045,9 @@ def _validate_vendor_groups(
     session_subtotal: int,
     session_delivery_fee: int,
     session_total: int,
+    session_discount: int = 0,
+    ticket_subtotal: int = 0,
+    platform_fee: int = 0,
 ) -> dict[str, VendorFulfilmentInput]:
     by_vendor = {group.vendor_id: group for group in vendor_groups}
     cart_vendors = {line.vendor_id for line in cart_lines}
@@ -753,8 +1058,9 @@ def _validate_vendor_groups(
             http_status=422,
         )
 
-    computed_subtotal = cart_subtotal_ngwee(
-        [(line.qty, line.unit_price_ngwee) for line in cart_lines]
+    computed_subtotal = (
+        cart_subtotal_ngwee([(line.qty, line.unit_price_ngwee) for line in cart_lines])
+        + ticket_subtotal
     )
     if computed_subtotal != session_subtotal:
         raise AppError(
@@ -764,7 +1070,7 @@ def _validate_vendor_groups(
             details={"expected": session_subtotal, "actual": computed_subtotal},
         )
 
-    group_subtotal_sum = sum(group.subtotal_ngwee for group in vendor_groups)
+    group_subtotal_sum = sum(group.subtotal_ngwee for group in vendor_groups) + ticket_subtotal
     if group_subtotal_sum != session_subtotal:
         raise AppError(
             code="orders.totals_mismatch",
@@ -782,7 +1088,10 @@ def _validate_vendor_groups(
             details={"expected": session_delivery_fee, "actual": delivery_sum},
         )
 
-    if session_subtotal + session_delivery_fee != session_total:
+    if (
+        session_subtotal + session_delivery_fee + platform_fee - session_discount
+        != session_total
+    ):
         raise AppError(
             code="orders.totals_mismatch",
             message="Checkout session total is inconsistent",
@@ -805,6 +1114,35 @@ def _validate_vendor_groups(
     return by_vendor
 
 
+def _validate_coupon_plan(
+    coupon: CouponOrderPlan, *, session_discount: int, cart_lines: list[CartLineInput]
+) -> None:
+    listing_ids = {line.listing_id for line in cart_lines}
+    if (
+        coupon.discount_ngwee <= 0
+        or coupon.discount_ngwee != session_discount
+        or sum(coupon.line_discounts.values()) != coupon.discount_ngwee
+        or any(amount < 0 for amount in coupon.line_discounts.values())
+        or not set(coupon.line_discounts) <= listing_ids
+    ):
+        raise AppError(
+            code="coupon.changed",
+            message="The coupon amount changed; apply it again",
+            http_status=409,
+            details={"message_key": "checkout.coupon.errors.changed"},
+        )
+    for line in cart_lines:
+        if coupon.line_discounts.get(line.listing_id, 0) > line_total_ngwee(
+            line.qty, line.unit_price_ngwee
+        ):
+            raise AppError(
+                code="coupon.changed",
+                message="The coupon amount changed; apply it again",
+                http_status=409,
+                details={"message_key": "checkout.coupon.errors.changed"},
+            )
+
+
 def create_orders_atomic(
     *,
     client: Any,
@@ -816,8 +1154,16 @@ def create_orders_atomic(
     vendor_groups: list[VendorFulfilmentInput],
     address_id: str | None = None,
     inject_failure: str | None = None,
+    coupon: CouponOrderPlan | None = None,
+    is_gift: bool = False,
+    ticket_order: TicketOrderInput | None = None,
 ) -> CreateOrdersResult:
-    """Create per-vendor orders from a validated checkout session in one transaction."""
+    """Create per-vendor orders from a validated checkout session in one transaction.
+
+    ``ticket_order`` (unified checkout): the organiser's event tickets, placed
+    as a separate ``ticket``-lane order in the same transaction, consuming the
+    session's capacity holds. Tickets are prepaid only (never COD).
+    """
     _validate_uuid(customer_id, "customer_id")
     _validate_uuid(session_id, "session_id")
     if not idempotency_key.strip():
@@ -865,15 +1211,60 @@ def create_orders_atomic(
             details={"session_id": session_id},
         )
 
+    if ticket_order is not None and payment_method == "cod":
+        raise AppError(
+            code="checkout.cod_not_allowed",
+            message="Event tickets must be paid online",
+            http_status=422,
+            details={"message_key": "checkout.payment.codNotForTickets", "field": "method"},
+        )
+    if ticket_order is not None and not ticket_order.lines:
+        ticket_order = None
     session_subtotal = int(session.get("subtotal_ngwee", 0))
     session_delivery_fee = int(session.get("delivery_fee_ngwee", 0))
     session_total = int(session.get("total_ngwee", 0))
+    session_discount = int(session.get("discount_ngwee") or 0)
+    if coupon is not None:
+        _validate_coupon_plan(coupon, session_discount=session_discount, cart_lines=cart_lines)
+        if payment_method == "cod":
+            raise AppError(
+                code="coupon.cod_not_allowed",
+                message="Coupons need mobile money or card payment",
+                http_status=422,
+                details={"message_key": "checkout.coupon.errors.cod_not_allowed"},
+            )
+    elif session_discount != 0:
+        raise AppError(
+            code="coupon.changed",
+            message="The coupon on this checkout is no longer valid",
+            http_status=409,
+            details={"message_key": "checkout.coupon.errors.changed"},
+        )
+    if is_gift and payment_method == "cod":
+        raise AppError(
+            code="gift.cod_not_allowed",
+            message="Gifts need mobile money or card payment",
+            http_status=422,
+            details={"message_key": "checkout.gift.errors.codNotAllowed"},
+        )
+    session_platform_fee = int(session.get("platform_fee_ngwee") or 0)
+    ticket_fee = ticket_order.platform_fee_ngwee if ticket_order is not None else 0
+    if session_platform_fee != ticket_fee:
+        raise AppError(
+            code="orders.totals_mismatch",
+            message="Platform fee does not match checkout session",
+            http_status=409,
+            details={"expected": session_platform_fee, "actual": ticket_fee},
+        )
     groups_by_vendor = _validate_vendor_groups(
         vendor_groups=vendor_groups,
         cart_lines=cart_lines,
         session_subtotal=session_subtotal,
         session_delivery_fee=session_delivery_fee,
         session_total=session_total,
+        session_discount=session_discount,
+        ticket_subtotal=ticket_order.subtotal_ngwee if ticket_order is not None else 0,
+        platform_fee=ticket_fee,
     )
 
     commission_rates = _load_commission_rates(client)
@@ -894,6 +1285,14 @@ def create_orders_atomic(
             commission_keys=commission_keys,
             commission_rates=commission_rates,
         )
+        order_discount = (
+            sum(coupon.line_discounts.get(line.listing_id, 0) for line in vendor_lines)
+            if coupon is not None
+            else 0
+        )
+        if coupon is not None and coupon.funder == "vendor" and order_discount > 0:
+            # Vendor-funded: commission is charged on the discounted price.
+            snapshot = scale_snapshot_for_vendor_discount(snapshot, coupon.line_discounts)
         order_id = str(uuid4())
         planned_items = tuple(
             CreatedOrderItem(
@@ -917,6 +1316,7 @@ def create_orders_atomic(
                     cod=cod,
                     commission_snapshot=snapshot,
                     items=planned_items,
+                    coupon_discount_ngwee=order_discount,
                 ),
                 vendor_lines,
             )
@@ -934,7 +1334,31 @@ def create_orders_atomic(
             _require_own_address_sql(sql_uuid(address_id, "address_id"), customer_sql)
         )
     statements.append(_lock_and_check_class_e_capacity_sql(requested_by_listing))
+    redemption_sql = "NULL"
+    if coupon is not None:
+        coupon_sql = sql_uuid(coupon.coupon_id, "coupon_id")
+        # Atomic reservation under the coupon row lock; raises COUPON_* markers.
+        statements.append(
+            f"SELECT public.reserve_coupon_redemption({coupon_sql}, {customer_sql}, "
+            f"{session_sql}, {int(coupon.discount_ngwee)});"
+        )
+        redemption_sql = (
+            "(SELECT id FROM public.coupon_redemptions "
+            f"WHERE coupon_id = {coupon_sql} AND checkout_group_id = {session_sql})"
+        )
 
+    parent_item_by_cart_line: dict[str, str] = {}
+    statements.extend(
+        _lock_live_offers_sql(
+            [str(line.offer_id) for line in cart_lines if line.offer_id]
+            + (
+                [str(line.offer_id) for line in ticket_order.lines if line.offer_id]
+                if ticket_order is not None
+                else []
+            ),
+            customer_sql,
+        )
+    )
     for order, vendor_lines in planned_orders:
         order_sql = sql_uuid(order.order_id, "order_id")
         vendor_sql = sql_uuid(order.vendor_id, "vendor_id")
@@ -945,11 +1369,20 @@ def create_orders_atomic(
             f"""
 INSERT INTO public.orders (
   id, checkout_group_id, vendor_id, customer_id, status, fulfilment,
-  delivery_zone, address_id, delivery_fee_ngwee, cod, commission_snapshot
+  delivery_zone, address_id, delivery_fee_ngwee, cod, commission_snapshot,
+  coupon_redemption_id, coupon_discount_ngwee, coupon_funder, is_gift
 ) VALUES (
   {order_sql}, {session_sql}, {vendor_sql}, {customer_sql}, '{status_placed}',
   '{order.fulfilment}', {zone_sql}, {address_sql}, {order.delivery_fee_ngwee},
-  {"true" if order.cod else "false"}, {snapshot_sql}::jsonb
+  {"true" if order.cod else "false"}, {snapshot_sql}::jsonb,
+  {redemption_sql if order.coupon_discount_ngwee > 0 else "NULL"},
+  {int(order.coupon_discount_ngwee)},
+  {
+                sql_literal(coupon.funder)
+                if coupon is not None and order.coupon_discount_ngwee > 0
+                else "NULL"
+            },
+  {"true" if is_gift else "false"}
 );
 """
         )
@@ -973,12 +1406,19 @@ INSERT INTO public.orders (
                     f", {sql_uuid(line.listing_variant_id, 'listing_variant_id')}"
                     f", {_sql_json(line.variant_snapshot or {})}::jsonb"
                 )
+            offer_columns, offer_values = _offer_item_columns_sql(
+                line, parent_item_id=parent_item_by_cart_line.get(
+                    line.offer_parent_cart_item_id or ""
+                )
+            )
+            if not line.is_offer_gift:
+                parent_item_by_cart_line.setdefault(line.cart_item_id, item.order_item_id)
             statements.append(
                 f"""
 INSERT INTO public.order_items (
-  id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot
+  id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot{offer_columns}
 ) VALUES (
-  {item_sql}, {order_sql}, 'product', {item.qty}, {item.unit_price_ngwee}, {title_sql}
+  {item_sql}, {order_sql}, 'product', {item.qty}, {item.unit_price_ngwee}, {title_sql}{offer_values}
 );
 INSERT INTO public.order_item_products (order_item_id, listing_id{product_columns})
 VALUES ({item_sql}, {listing_sql}{product_values});
@@ -1009,32 +1449,63 @@ INSERT INTO public.notification_outbox (
 """
             )
 
+    if ticket_order is not None:
+        statements.extend(
+            _ticket_order_sql(
+                ticket_order=ticket_order,
+                order_id=str(uuid4()),
+                item_ids=[str(uuid4()) for _ in ticket_order.lines],
+                session_sql=session_sql,
+                customer_sql=customer_sql,
+                hold_count=len({(ln.ticket_type_id, ln.instance_id) for ln in ticket_order.lines}),
+            )
+        )
+
     # Per-variant stock: lock + decrement each chosen variant in UUID order (no
     # deadlocks across overlapping carts); a sold-out variant aborts the tx.
     for line in sorted(
-        (line for line in cart_lines if line.listing_variant_id is not None),
+        (
+            line
+            for line in cart_lines
+            if line.listing_variant_id is not None and line.consumes_reservation
+        ),
         key=lambda line: str(line.listing_variant_id),
     ):
         variant_sql = sql_uuid(str(line.listing_variant_id), "listing_variant_id")
         statements.append(
-            f"SELECT public.consume_listing_variant_stock({variant_sql}, {int(line.qty)});"
+            f"SELECT public.consume_listing_variant_stock({variant_sql}, {int(line.hold_qty)});"
         )
 
-    placed_item_by_cart_line: dict[str, tuple[str, str]] = {
-        line.cart_item_id: (order.order_id, item.order_item_id)
+    placed_lines: list[tuple[CartLineInput, str, str]] = [
+        (line, order.order_id, item.order_item_id)
         for order, vendor_lines in planned_orders
         for item, line in zip(order.items, vendor_lines, strict=True)
-    }
-    for line in cart_lines:
-        placed_order_id, placed_item_id = placed_item_by_cart_line[line.cart_item_id]
+    ]
+    for line, placed_order_id, placed_item_id in placed_lines:
+        if not line.consumes_reservation:
+            continue
         statements.append(
             _consume_reservation_conditional_sql(
                 checkout_group_id=session_id,
                 listing_id=line.listing_id,
-                qty=line.qty,
+                qty=line.hold_qty,
                 order_id=placed_order_id,
                 order_item_id=placed_item_id,
                 listing_variant_id=line.listing_variant_id,
+            )
+        )
+    # Gift pools: conditional UPDATE in offer-id order (same order as the cancel
+    # trigger) — a pool can never be reserved past its total, even under races.
+    for line, placed_order_id, placed_item_id in sorted(
+        (entry for entry in placed_lines if entry[0].is_offer_gift),
+        key=lambda entry: (str(entry[0].offer_id), entry[2]),
+    ):
+        statements.append(
+            _reserve_offer_gift_sql(
+                offer_id=str(line.offer_id),
+                order_id=placed_order_id,
+                order_item_id=placed_item_id,
+                qty=line.qty,
             )
         )
     statements.append(_consume_reservations_sql(session_id))
@@ -1063,12 +1534,39 @@ WHERE id = {session_sql};
         error = result.error or ""
         if inject_failure == "before_commit":
             raise RuntimeError(f"order creation failed: {error}")
+        coupon_error = map_reservation_error(error)
+        if coupon_error is not None:
+            raise coupon_error
         if _ADDRESS_NOT_OWNED_MARKER in error:
             raise AppError(
                 code="checkout.address_invalid",
                 message="Delivery address was not found for this account",
                 http_status=422,
                 details={"field": "address_id"},
+            )
+        offer_match = _OFFER_ERROR_RE.search(error)
+        if offer_match is not None:
+            kind = offer_match.group("kind").upper()
+            code, message = {
+                "GIFT_UNAVAILABLE": (
+                    "offers.gift_out_of_stock",
+                    "The free gift for an offer in your cart has run out",
+                ),
+                "LIMIT_REACHED": (
+                    "offers.limit_reached",
+                    "You have already used this offer the maximum number of times",
+                ),
+            }.get(kind, ("offers.expired", "An offer in your cart is no longer available"))
+            raise AppError(
+                code=code,
+                message=message,
+                http_status=409,
+                details={
+                    "message_key": code,
+                    "offer_id": offer_match.group("offer_id"),
+                    "redirect_to": "cart",
+                    "retry": False,
+                },
             )
         variant_match = _VARIANT_STOCK_ERROR_RE.search(error)
         if variant_match is not None:

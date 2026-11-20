@@ -46,7 +46,8 @@ describe("site-wide payment trust copy (COD-only pilot)", () => {
     zh: { catalog: zhCatalog, common: zhCommon },
   };
   // Escrow only exists for online payments, which are not live in the pilot.
-  const escrowClaim = /escrow|séquestre|托管|held by|conservé par|ikusungidwa|yikwata/i;
+  const escrowClaim =
+    /escrow|séquestre|托管|held by|conservé par|ikusungidwa|yikwata/i;
 
   it.each(Object.entries(locales))(
     "%s header strip and footer never promise escrow and keep placeholders out",
@@ -67,7 +68,9 @@ describe("site-wide payment trust copy (COD-only pilot)", () => {
   it("English header/footer lead with cash on delivery and mark online payment as coming", () => {
     expect(enCatalog.home.serviceBar.message).toMatch(/^Cash on delivery/);
     expect(enCommon.paymentTrust.footerPaymentNote).toMatch(/coming soon/i);
-    expect(enCommon.paymentTrust.footerPaymentNote).not.toMatch(/MoMo|Airtel|Zamtel|Card/);
+    expect(enCommon.paymentTrust.footerPaymentNote).not.toMatch(
+      /MoMo|Airtel|Zamtel|Card/,
+    );
     expect(enNav.shop.featuredPromo).not.toMatch(/escrow/i);
   });
 });

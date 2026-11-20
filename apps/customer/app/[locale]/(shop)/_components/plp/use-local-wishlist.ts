@@ -1,7 +1,7 @@
 "use client";
 
 import { emitToastKey } from "@vergeo/ui/src/toast";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import {
   clearWishlistLocal,
@@ -54,7 +54,8 @@ export function useLocalWishlist(productSlug: string | null): {
   }, []);
 
   const isWishlisted = Boolean(
-    productSlug && parseWishlistSnapshot(snapshot).some((entry) => entry.slug === productSlug),
+    productSlug &&
+    parseWishlistSnapshot(snapshot).some((entry) => entry.slug === productSlug),
   );
 
   const toggleWishlist = useCallback(() => {
@@ -104,8 +105,17 @@ export function useLocalWishlistSlugs(): {
     void syncWishlistWithServer();
   }, []);
 
+  // Stable identity per snapshot: consumers use `slugs` as an effect dependency,
+  // and a fresh array each render caused an endless render loop on Saved items
+  // (state set in the effect -> re-render -> new array -> effect again), which
+  // starved router transitions so links stopped navigating.
+  const slugs = useMemo(
+    () => parseWishlistSnapshot(snapshot).map((entry) => entry.slug),
+    [snapshot],
+  );
+
   return {
-    slugs: parseWishlistSnapshot(snapshot).map((entry) => entry.slug),
+    slugs,
     hydrated: mounted,
     remove,
     clear,

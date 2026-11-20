@@ -1,25 +1,26 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-
 import { ShopHeader } from "./shop-header";
 
-const eligible = vi.fn<() => boolean>();
 const cartMocks = vi.hoisted(() => ({
   refreshCart: vi.fn().mockResolvedValue(null),
   openMiniCart: vi.fn(),
   setStoreState: vi.fn(),
 }));
 vi.mock("./cart/mini-cart-drawer", () => cartMocks);
-
-vi.mock("./use-business-eligibility", () => ({
-  useBusinessEligibility: () => eligible(),
-}));
 
 vi.mock("./category-mega-menu", () => ({
   CategoryMegaMenu: ({ labels }: { labels: { trigger: string } }) => (
@@ -32,7 +33,11 @@ vi.mock("./desktop-header-search", () => ({
     <div role="search">
       Search
       {askLabel ? (
-        <button type="button" data-testid="search-ask-vergeo" aria-label={askLabel} />
+        <button
+          type="button"
+          data-testid="search-ask-vergeo"
+          aria-label={askLabel}
+        />
       ) : null}
     </div>
   ),
@@ -89,7 +94,6 @@ const labels = {
   services: "Services",
   events: "Events",
   askVergeo: "Ask Vergeo",
-  supplies: "Supplies",
   account: "Account",
   cart: "Cart",
   cartWithCount: "Cart, {count} items",
@@ -106,36 +110,49 @@ const labels = {
 
 describe("ShopHeader", () => {
   it("exposes search-forward primary nav with Directory and without theme control", () => {
-    eligible.mockReturnValue(false);
     render(<ShopHeader locale="en" labels={labels} />);
 
     expect(screen.getByTestId("shop-header")).toBeInTheDocument();
     expect(screen.getByRole("search")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Vendors" })).toHaveAttribute("href", "/en/vendors");
-    expect(screen.getByRole("link", { name: "Services" })).toHaveAttribute("href", "/en/services");
-    expect(screen.getByRole("link", { name: "Events" })).toHaveAttribute("href", "/en/events");
+    expect(screen.getByRole("link", { name: "Vendors" })).toHaveAttribute(
+      "href",
+      "/en/vendors",
+    );
+    expect(screen.getByRole("link", { name: "Services" })).toHaveAttribute(
+      "href",
+      "/en/services",
+    );
+    expect(screen.getByRole("link", { name: "Events" })).toHaveAttribute(
+      "href",
+      "/en/events",
+    );
     // Ask Vergeo is the sparkle button inside the search field, not a nav link.
-    expect(screen.queryByRole("link", { name: "Ask Vergeo" })).not.toBeInTheDocument();
-    expect(screen.getAllByTestId("search-ask-vergeo")[0]).toHaveAccessibleName("Ask Vergeo");
+    expect(
+      screen.queryByRole("link", { name: "Ask Vergeo" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("search-ask-vergeo")[0]).toHaveAccessibleName(
+      "Ask Vergeo",
+    );
     expect(screen.getAllByRole("link", { name: "Account" })[0]).toHaveAttribute(
       "href",
       "/en/account",
     );
     expect(screen.getAllByTestId("cart-nav-trigger").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: "Open cart" }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("link", { name: /browse/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /theme|dark|light/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Supplies" })).not.toBeInTheDocument();
-  });
-
-  it("shows gated Supplies link for eligible business buyers", () => {
-    eligible.mockReturnValue(true);
-    render(<ShopHeader locale="en" labels={labels} />);
-    expect(screen.getByRole("link", { name: "Supplies" })).toHaveAttribute("href", "/en/supplies");
+    expect(
+      screen.getAllByRole("button", { name: "Open cart" }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("link", { name: /browse/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /theme|dark|light/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Supplies" }),
+    ).not.toBeInTheDocument();
   });
 
   it("offers the appearance quick toggle when theme labels are provided", () => {
-    eligible.mockReturnValue(false);
     vi.stubGlobal(
       "matchMedia",
       vi.fn().mockReturnValue({
@@ -150,16 +167,22 @@ describe("ShopHeader", () => {
           locale="en"
           labels={{
             ...labels,
-            theme: { label: "Theme", light: "Light", dark: "Dark", system: "System" },
+            theme: {
+              label: "Theme",
+              light: "Light",
+              dark: "Dark",
+              system: "System",
+            },
           }}
         />
       </ThemeProvider>,
     );
-    expect(screen.getAllByTestId("header-theme-toggle")[0]).toHaveAccessibleName(/Theme: /);
+    expect(
+      screen.getAllByTestId("header-theme-toggle")[0],
+    ).toHaveAccessibleName(/Theme: /);
   });
 
   it("matches the approved desktop chrome structure snapshot", () => {
-    eligible.mockReturnValue(false);
     const { container } = render(<ShopHeader locale="en" labels={labels} />);
     expect(container.firstChild).toMatchSnapshot();
   });

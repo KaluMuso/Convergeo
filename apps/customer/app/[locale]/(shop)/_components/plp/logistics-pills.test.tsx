@@ -38,7 +38,9 @@ describe("buildLogisticsPills", () => {
 
   it("maps distance to a nearest pill", () => {
     const pills = buildLogisticsPills(makeListing({ distanceM: 2300 }), labels);
-    expect(pills).toEqual([expect.objectContaining({ key: "nearest", label: "2.3 km away" })]);
+    expect(pills).toEqual([
+      expect.objectContaining({ key: "nearest", label: "2.3 km away" }),
+    ]);
   });
 
   it("maps below_median and fulfillment flags to pills", () => {
@@ -50,7 +52,11 @@ describe("buildLogisticsPills", () => {
       }),
       labels,
     );
-    expect(pills.map((pill) => pill.key)).toEqual(["below-median", "delivery", "pickup"]);
+    expect(pills.map((pill) => pill.key)).toEqual([
+      "below-median",
+      "delivery",
+      "pickup",
+    ]);
   });
 
   it("buildFulfillmentPills returns delivery/pickup only", () => {
@@ -58,6 +64,8 @@ describe("buildLogisticsPills", () => {
       { deliveryAvailable: true, pickupAvailable: false },
       { delivery: labels.delivery, pickup: labels.pickup },
     );
-    expect(pills).toEqual([expect.objectContaining({ key: "delivery", label: labels.delivery })]);
+    expect(pills).toEqual([
+      expect.objectContaining({ key: "delivery", label: labels.delivery }),
+    ]);
   });
 });

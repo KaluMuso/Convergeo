@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from copy import deepcopy
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -324,6 +325,12 @@ def manage_client(
     _mock_auth(monkeypatch)
     service_wrapper = _mock_supabase(monkeypatch, fake_client)
     _seed_base(fake_client)
+    # Plan limit on publish (20261117020000) is covered in test_vendor_plans.py; the
+    # fake client here has no plan/quota tables, so treat the plan as unlimited.
+    monkeypatch.setattr(
+        "app.routers.vendor_listings_manage.load_vendor_cap_limits_by_id",
+        lambda *_a, **_k: SimpleNamespace(plan_max_active=None, active_listing_count=0, plan=None),
+    )
     app = create_app()
     _apply_supabase_overrides(app, service_wrapper)
     with TestClient(app, raise_server_exceptions=False) as client:
@@ -374,6 +381,48 @@ def test_delete_without_open_orders_sets_removed(
 
     listing = fake_client.tables["vendor_listings"].rows[0]
     assert listing["status"] == "removed"
+
+
+def test_removed_listing_stays_readable_as_removed_but_is_never_editable(
+    manage_client: TestClient,
+) -> None:
+    manage_client.delete(f"/vendor/listings/{LISTING_A_ID}", headers=_auth_headers())
+
+    read = manage_client.get(f"/vendor/listings/{LISTING_A_ID}", headers=_auth_headers())
+    assert read.status_code == 200
+    assert read.json()["status"] == "removed"
+
+    edit = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"price_ngwee": 12_345},
+    )
+    assert edit.status_code == 409
+    assert edit.json()["error"]["code"] == "listing_not_editable"
+
+
+def test_fulfilment_options_are_updated_and_validated(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"fulfilment_options": ["pickup_shop", "pickup_nationwide"]},
+    )
+    assert response.status_code == 200, response.text
+    assert fake_client.tables["vendor_listings"].rows[0]["fulfilment_options"] == [
+        "pickup_shop",
+        "pickup_nationwide",
+    ]
+
+    empty = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"fulfilment_options": []},
+    )
+    assert empty.status_code == 422
+    assert empty.json()["error"]["details"]["fields"][0]["field"] == "fulfilment_options"
 
 
 def test_compare_at_update_sets_and_clears(

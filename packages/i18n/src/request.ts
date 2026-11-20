@@ -16,7 +16,6 @@ export const NAMESPACES = [
   "admin",
   "events",
   "services",
-  "supplies",
   "directory",
   "legal",
   "notifications",
@@ -88,7 +87,6 @@ const namespaceLoaders: Record<Namespace, (locale: Locale) => Promise<Messages>>
   admin: (locale) => import(`../messages/${locale}/admin.json`).then((m) => m.default),
   events: (locale) => import(`../messages/${locale}/events.json`).then((m) => m.default),
   services: (locale) => import(`../messages/${locale}/services.json`).then((m) => m.default),
-  supplies: (locale) => import(`../messages/${locale}/supplies.json`).then((m) => m.default),
   directory: (locale) => import(`../messages/${locale}/directory.json`).then((m) => m.default),
   legal: (locale) => import(`../messages/${locale}/legal.json`).then((m) => m.default),
   notifications: (locale) =>

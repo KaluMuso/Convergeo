@@ -10,6 +10,7 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.events.teams import (
     EDIT_ROLES,
     FINANCE_ROLES,
@@ -124,9 +125,10 @@ def _rows(response: Any) -> list[dict[str, Any]]:
 
 def _load_vendor_for_owner(service_client: ServiceRoleClient, owner_user_id: str) -> dict[str, Any]:
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id, owner_user_id")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )

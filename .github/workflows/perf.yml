@@ -6,16 +6,43 @@ on:
     branches:
       - master
 
+# Supersede a pull request's older run when it is pushed again; master pushes get a
+# run-unique group so they are never cancelled.
 concurrency:
-  group: perf-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: perf-${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
+  changes:
+    # CI-SPEED: same tier selection as ci.yml (scripts/ci/detect_ci_scope.py). The
+    # required check "Bundle, image lint & Lighthouse" always exists; when this tier
+    # is not needed the job is skipped by `if:` (reports as passing, never pending).
+    name: Detect changed tiers (perf)
+    runs-on: ubuntu-latest
+    outputs:
+      run_perf: ${{ steps.scope.outputs.run_perf }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Decide tiers from the changed paths
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: python3 scripts/ci/detect_ci_scope.py
+
   perf:
     name: Bundle, image lint & Lighthouse
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_perf == 'true') }}
     runs-on: ubuntu-24.04
     # Same auth-hook/OAuth dummy env as CI db/rls — Supabase CLI cannot start without them.
     env:
@@ -167,6 +194,16 @@ jobs:
           done
           echo "API failed to become ready"
           exit 1
+
+      - name: Cache Next.js build cache
+        # CI-SPEED: the customer app is built twice (head, then base for the bundle
+        # delta); Next's compiler cache makes both incremental.
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/customer/.next/cache
+          key: nextjs-perf-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/customer/**/*.ts', 'apps/customer/**/*.tsx', 'packages/**/*.ts', 'packages/**/*.tsx') }}
+          restore-keys: |
+            nextjs-perf-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - name: Build customer app (head)
         id: cart_head_build

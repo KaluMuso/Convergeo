@@ -8,7 +8,7 @@ from typing import Annotated, Any, Literal
 
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
-from app.errors import AppError
+from app.errors import AppError, field_value_error
 from app.schemas.base import NgweeInt, StrictModel
 from app.schemas.vendor_listing import (
     FulfilmentMode,
@@ -18,17 +18,33 @@ from app.schemas.vendor_listing import (
     StockMode,
     VendorListing,
 )
-from app.services.kyc.caps import VendorCapLimits, require_listing_cap
+from app.services.branches.context import scope_owner_vendor_query
+from app.services.kyc.caps import (
+    VendorCapLimits,
+    enforce_publish_limit,
+    is_plan_limit_db_error,
+    plan_limit_error,
+    require_listing_cap,
+)
 from app.services.kyc.state_machine import ServiceRoleClient
+from app.services.listings.field_errors import (
+    ListingIntent,
+    issues_from_validation_error,
+    listing_issue,
+    map_listing_db_error,
+)
 from app.services.moderation.prohibited import screen_listing
 from app.services.moderation.prohibited_flags import record_prohibited_listing_attempt
 from fastapi import APIRouter, Depends
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 
 router = APIRouter(prefix="/vendor/listings", tags=["vendor-listings"])
 
 ListingMode = Literal["attach", "new_canonical", "quick_list"]
 ListingStatus = Literal["draft", "active"]
+UsedGrade = Literal["used_excellent", "used_good", "used_fair", "parts_not_working"]
+FulfilmentOption = Literal["lusaka_delivery", "pickup_shop", "pickup_nationwide"]
+DEFAULT_FULFILMENT_OPTIONS: tuple[FulfilmentOption, ...] = ("lusaka_delivery", "pickup_shop")
 
 
 class PriceTierInput(StrictModel):
@@ -57,6 +73,14 @@ class ListingCreateRequest(StrictModel):
     lead_time_days: int | None = Field(default=None, ge=1, le=365)
     vendor_capacity_per_week: int | None = Field(default=None, ge=1, le=9999)
     defect_notes: str | None = None
+    # Grade for used stock. Omitted => used_good, which the vendor sees and can
+    # change in the form; new/refurbished mirror the condition itself.
+    condition_detail: UsedGrade | None = None
+    fulfilment_options: list[FulfilmentOption] = Field(
+        default_factory=lambda: list(DEFAULT_FULFILMENT_OPTIONS),
+        min_length=1,
+        max_length=3,
+    )
     stock_mode: StockMode
     stock_qty: int | None = Field(default=None, ge=0)
     wholesale: bool = False
@@ -65,6 +89,13 @@ class ListingCreateRequest(StrictModel):
     returnable: bool = False
     return_window_hours: int | None = None
     publish: bool = True
+
+    @field_validator("fulfilment_options")
+    @classmethod
+    def fulfilment_options_unique(cls, value: list[FulfilmentOption]) -> list[FulfilmentOption]:
+        if len(set(value)) != len(value):
+            raise ValueError("fulfilment_options must not repeat an option")
+        return value
 
     @field_validator("price_ngwee")
     @classmethod
@@ -77,34 +108,62 @@ class ListingCreateRequest(StrictModel):
     @model_validator(mode="after")
     def validate_mode_fields(self) -> ListingCreateRequest:
         if self.mode == "attach" and not self.product_id:
-            raise ValueError("product_id is required for attach mode")
+            raise field_value_error(
+                "product_id", "product_id is required for attach mode", "product_required"
+            )
         if self.mode == "new_canonical":
             if not self.product_name or not self.product_name.strip():
-                raise ValueError("product_name is required for new_canonical mode")
+                raise field_value_error(
+                    "product_name",
+                    "product_name is required for new_canonical mode",
+                    "title_required",
+                )
             if not self.category_id:
-                raise ValueError("category_id is required for new_canonical mode")
+                raise field_value_error(
+                    "category_id",
+                    "category_id is required for new_canonical mode",
+                    "category_required",
+                )
             if self.spec is not None:
                 if len(self.spec) > 32 or any(
                     not key.strip() or len(key) > 80 for key in self.spec
                 ):
-                    raise ValueError(
-                        "Specifications require at most 32 named details (80 characters per name)"
+                    raise field_value_error(
+                        "spec",
+                        "Specifications require at most 32 named details (80 characters per name)",
+                        "spec_invalid",
                     )
                 try:
                     encoded = json.dumps(
                         self.spec, ensure_ascii=False, allow_nan=False, separators=(",", ":")
                     )
                 except (ValueError, TypeError) as exc:
-                    raise ValueError("Specifications must contain valid JSON values") from exc
+                    raise field_value_error(
+                        "spec", "Specifications must contain valid JSON values", "spec_invalid"
+                    ) from exc
                 if len(encoded.encode("utf-8")) > 32000:
-                    raise ValueError("Specifications exceed the 32000-byte limit")
+                    raise field_value_error(
+                        "spec", "Specifications exceed the 32000-byte limit", "spec_invalid"
+                    )
         if self.mode == "quick_list":
             if not self.title_override or not self.title_override.strip():
-                raise ValueError("title_override is required for quick_list mode")
+                raise field_value_error(
+                    "title_override",
+                    "title_override is required for quick_list mode",
+                    "title_required",
+                )
         if self.returnable and self.return_window_hours is None:
-            raise ValueError("return_window_hours is required when returnable is true")
+            raise field_value_error(
+                "return_window_hours",
+                "return_window_hours is required when returnable is true",
+                "return_window_required",
+            )
         if self.compare_at_ngwee is not None and self.compare_at_ngwee <= self.price_ngwee:
-            raise ValueError("compare_at_ngwee must be greater than price_ngwee")
+            raise field_value_error(
+                "compare_at_ngwee",
+                "compare_at_ngwee must be greater than price_ngwee",
+                "compare_at_too_low",
+            )
         # Invalid canonical/standalone pairings get a stable AppError at the
         # shared create seam, before any product or listing row is written.
         if self.product_class in {"D", "E"} and (
@@ -123,23 +182,27 @@ class ListingCreateRequest(StrictModel):
         status: ListingStatus = (
             "draft" if self.mode == "new_canonical" or not self.publish else "active"
         )
-        VendorListing(
-            product_class=self.product_class,
-            status=status,
-            condition=self.condition,
-            sale_unit=self.sale_unit,
-            unit_step_milli=self.unit_step_milli,
-            min_steps=self.min_steps,
-            fulfilment_mode=self.fulfilment_mode,
-            lead_time_days=self.lead_time_days,
-            vendor_capacity_per_week=self.vendor_capacity_per_week,
-            stock_mode=self.stock_mode,
-            stock_qty=self.stock_qty,
-            price_ngwee=self.price_ngwee,
-            wholesale=self.wholesale,
-            moq=self.moq,
-            defect_notes=self.defect_notes,
-        )
+        try:
+            VendorListing(
+                product_class=self.product_class,
+                status=status,
+                condition=self.condition,
+                sale_unit=self.sale_unit,
+                unit_step_milli=self.unit_step_milli,
+                min_steps=self.min_steps,
+                fulfilment_mode=self.fulfilment_mode,
+                lead_time_days=self.lead_time_days,
+                vendor_capacity_per_week=self.vendor_capacity_per_week,
+                stock_mode=self.stock_mode,
+                stock_qty=self.stock_qty,
+                price_ngwee=self.price_ngwee,
+                wholesale=self.wholesale,
+                moq=self.moq,
+                defect_notes=self.defect_notes,
+            )
+        except ValidationError as exc:
+            first = issues_from_validation_error(exc)[0]
+            raise field_value_error(first["field"], first["message"], first["code"]) from exc
         return self
 
 
@@ -191,9 +254,10 @@ def _load_vendor_for_owner(
     owner_user_id: str,
 ) -> dict[str, Any]:
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id, owner_user_id, status, kyc_tier")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )
@@ -446,10 +510,13 @@ async def get_canonical_preview(
 async def create_listing(
     body: ListingCreateRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
-    _limits: Annotated[VendorCapLimits, Depends(require_listing_cap)],
+    limits: Annotated[VendorCapLimits, Depends(require_listing_cap)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ListingCreateResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
+    if _resolve_listing_status(body.mode, body.publish) == "active":
+        # Publishing counts against the plan's active-listing limit; a draft never does.
+        enforce_publish_limit(limits)
     return create_listing_for_vendor(service_client, vendor=vendor, body=body)
 
 
@@ -474,6 +541,9 @@ def create_listing_for_vendor(
     replaces only insertion after all shared validation and payload construction.
     """
     vendor_id = str(vendor["id"])
+    # A draft is never judged against publish/release policy: only structural
+    # problems can block it. Policy rejections are reported as publish-blocked.
+    intent: ListingIntent = "publish" if body.mode != "new_canonical" and body.publish else "draft"
 
     if body.mode == "quick_list" and body.product_class in {"A", "B", "C"}:
         raise AppError(
@@ -481,8 +551,10 @@ def create_listing_for_vendor(
             message="Class A, B and C listings require a canonical product",
             http_status=422,
             details={
-                "message_key": "vendor.listings.errors.submitFailed",
+                "message_key": "vendor.listings.errors.canonicalRequired",
                 "product_class": body.product_class,
+                "intent": intent,
+                "fields": [listing_issue("product_class", "canonical_product_required")],
             },
         )
 
@@ -497,32 +569,28 @@ def create_listing_for_vendor(
                 "message_key": "vendor.listings.errors.standalone_required",
                 "product_class": body.product_class,
                 "required_mode": "quick_list",
+                "intent": intent,
+                "fields": [listing_issue("product_class", "standalone_required")],
             },
         )
 
     if body.mode == "quick_list":
-        if body.product_class in {"A", "B", "C"}:
-            raise AppError(
-                code="canonical_product_required",
-                message="Attach a catalogue product or create one for Classes A, B and C",
-                http_status=422,
-                details={"message_key": "vendor.listings.errors.canonicalRequired"},
-            )
         if body.product_id is not None:
             raise AppError(
                 code="standalone_product_class_required",
                 message="Standalone listings cannot attach a catalogue product",
                 http_status=422,
-                details={"message_key": "vendor.listings.errors.standalone_required"},
+                details={
+                    "message_key": "vendor.listings.errors.standalone_required",
+                    "intent": intent,
+                    "fields": [listing_issue("product_id", "standalone_required")],
+                },
             )
-        missing_fields = [
-            name
-            for name, ok in (
-                ("category_id", bool(body.category_id)),
-                ("description", len((body.description or "").strip()) >= 20),
-            )
-            if not ok
-        ]
+        missing_fields: list[dict[str, str]] = []
+        if not body.category_id:
+            missing_fields.append(listing_issue("category_id", "category_required"))
+        if len((body.description or "").strip()) < 20:
+            missing_fields.append(listing_issue("description", "description_too_short"))
         if missing_fields:
             raise AppError(
                 code="standalone_details_required",
@@ -530,6 +598,7 @@ def create_listing_for_vendor(
                 http_status=422,
                 details={
                     "message_key": "vendor.listings.errors.standaloneDetailsRequired",
+                    "intent": intent,
                     "fields": missing_fields,
                 },
             )
@@ -567,6 +636,14 @@ def create_listing_for_vendor(
                 "message_key": "vendor.listings.errors.submitFailed",
                 "reason": guard.reason,
                 "matched": guard.matched,
+                "intent": intent,
+                "fields": [
+                    listing_issue(
+                        "category_id" if guard.reason == "category" else "title_override",
+                        "prohibited_listing",
+                        "This item or category cannot be sold on Vergeo5.",
+                    )
+                ],
             },
         )
 
@@ -654,11 +731,16 @@ def create_listing_for_vendor(
         "status": _resolve_listing_status(body.mode, body.publish),
     }
 
-    # The SQL parent-condition constraint and its backfill require these exact
-    # mirrors. Both come from the explicit validated condition; used grading
-    # carries additional information and must not be guessed here.
+    listing_payload["fulfilment_options"] = list(body.fulfilment_options)
+
+    # The SQL parent-condition constraint requires the grade to match the
+    # condition. New/refurbished mirror it; used stock takes the vendor's chosen
+    # grade (default used_good) -- never leave the column default 'new', which the
+    # constraint rejects for used rows.
     if body.condition in {"new", "refurbished"}:
         listing_payload["condition_detail"] = body.condition
+    else:
+        listing_payload["condition_detail"] = body.condition_detail or "used_good"
 
     if body.mode == "quick_list":
         listing_payload["product_id"] = None
@@ -678,6 +760,8 @@ def create_listing_for_vendor(
             # solely for the canonical-locked insert. Never fall back on RPC failure.
             created_listing = insert_listing(listing_payload)
     except Exception as exc:
+        if is_plan_limit_db_error(exc):
+            raise plan_limit_error(max_listings=None, active_listings=None, plan_key=None) from exc
         if (
             getattr(exc, "code", None) == "PT403"
             and getattr(exc, "message", None) == "listing_cap_exceeded"
@@ -688,13 +772,9 @@ def create_listing_for_vendor(
                 http_status=403,
                 details={"message_key": "vendor.caps.listing_limit"},
             ) from exc
-        if getattr(exc, "code", None) == "23514":
-            raise AppError(
-                code="listing_policy_blocked",
-                message="This listing does not satisfy the current category or release policy",
-                http_status=422,
-                details={"message_key": "vendor.listings.errors.policyBlocked"},
-            ) from exc
+        mapped = map_listing_db_error(exc, intent=intent)
+        if mapped is not None:
+            raise mapped from exc
         raise
     if created_listing is None:
         raise AppError(

@@ -10,7 +10,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
-import { LUSAKA_CUTOFF_HOUR, lusakaHour } from "../../../../../lib/delivery-estimate";
+import {
+  LUSAKA_CUTOFF_HOUR,
+  lusakaHour,
+} from "../../../../../lib/delivery-estimate";
 
 import { ReservationCountdown } from "./reservation-countdown";
 
@@ -42,6 +45,23 @@ function formatHours(hours: Record<string, unknown>): string {
   return entries.map(([day, value]) => `${day}: ${String(value)}`).join(", ");
 }
 
+/** First route the buyer can actually use: delivery when eligible and offered, else pickup. */
+export function defaultFulfilment(group: {
+  delivery_eligible: boolean;
+  delivery_offered?: boolean;
+  pickup_offered?: boolean;
+}): "delivery" | "pickup" {
+  const deliveryOffered = group.delivery_offered !== false;
+  const pickupOffered = group.pickup_offered !== false;
+  if (group.delivery_eligible && deliveryOffered) {
+    return "delivery";
+  }
+  if (pickupOffered) {
+    return "pickup";
+  }
+  return deliveryOffered ? "delivery" : "pickup";
+}
+
 export function StepFulfilment({
   locale,
   session,
@@ -57,7 +77,7 @@ export function StepFulfilment({
   const [choices, setChoices] = useState<GroupChoice[]>(
     session.vendor_groups.map((group) => ({
       vendor_id: group.vendor_id,
-      fulfilment: group.delivery_eligible ? "delivery" : "pickup",
+      fulfilment: defaultFulfilment(group),
     })),
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -66,22 +86,30 @@ export function StepFulfilment({
     subtotal_ngwee: number;
     delivery_fee_ngwee: number;
     total_ngwee: number;
+    groups?: FulfilmentGroupResult[];
   } | null>(null);
 
   const handleExpired = useCallback(() => {
     router.push(`${cartPath}?notice=reservation_expired`);
   }, [cartPath, router]);
 
-  const setGroupFulfilment = (vendorId: string, fulfilment: "delivery" | "pickup") => {
+  const setGroupFulfilment = (
+    vendorId: string,
+    fulfilment: "delivery" | "pickup",
+  ) => {
     setChoices((current) =>
-      current.map((choice) => (choice.vendor_id === vendorId ? { ...choice, fulfilment } : choice)),
+      current.map((choice) =>
+        choice.vendor_id === vendorId ? { ...choice, fulfilment } : choice,
+      ),
     );
     setTotals(null);
   };
 
   const handleSubmit = async () => {
     setErrorMessage(null);
-    const deliveryNeeded = choices.some((choice) => choice.fulfilment === "delivery");
+    const deliveryNeeded = choices.some(
+      (choice) => choice.fulfilment === "delivery",
+    );
     if (deliveryNeeded && !landmark.trim()) {
       setErrorMessage(labels.guide?.landmarkRequired ?? labels.landmarkLabel);
       return;
@@ -97,13 +125,16 @@ export function StepFulfilment({
       // Delivery orders require a persisted address_id on POST /orders.
       let addressId: string | null = null;
       if (deliveryNeeded) {
-        const address = await client.request<{ id: string }>("/account/addresses", {
-          method: "POST",
-          body: JSON.stringify({
-            landmark: landmark.trim(),
-            label: labels.addressLabel,
-          }),
-        });
+        const address = await client.request<{ id: string }>(
+          "/account/addresses",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              landmark: landmark.trim(),
+              label: labels.addressLabel,
+            }),
+          },
+        );
         addressId = address.id;
       }
 
@@ -151,12 +182,23 @@ export function StepFulfilment({
   const displayDelivery = totals?.delivery_fee_ngwee ?? 0;
   const displayTotal = totals?.total_ngwee ?? session.subtotal_ngwee;
   const guide = labels.guide;
-  const deliverySelected = choices.some((choice) => choice.fulfilment === "delivery");
+  const deliverySelected = choices.some(
+    (choice) => choice.fulfilment === "delivery",
+  );
   const hasMadeToOrder = session.vendor_groups.some((group) =>
     group.items.some((item) => item.fulfilment_mode === "made_to_order"),
   );
   // Lusaka clock, read once per render; the copy is advisory (vendor confirms dispatch).
   const afterCutoff = lusakaHour(new Date()) >= LUSAKA_CUTOFF_HOUR;
+  // The same-day cut-off is a Lusaka dispatch promise: only for delivery, and only
+  // while the address is (or may still be) inside a Lusaka delivery zone. Pickup
+  // orders and addresses the API placed outside every zone never see it.
+  const outsideZone =
+    errorMessage === labels.outsideZone ||
+    (totals?.groups ?? []).some(
+      (group) => group.fulfilment === "delivery" && !group.delivery_zone,
+    );
+  const showDispatchCutoff = Boolean(guide) && deliverySelected && !outsideZone;
 
   return (
     <div className="space-y-5">
@@ -169,22 +211,30 @@ export function StepFulfilment({
       />
 
       <div className="space-y-1">
-        <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
+        <h2 className="font-display text-h2 text-display-ink">
+          {labels.title}
+        </h2>
         <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
-        <p className="font-body text-xs text-text-3">{guide?.groupHint ?? labels.mixedHint}</p>
+        <p className="font-body text-xs text-text-3">
+          {guide?.groupHint ?? labels.mixedHint}
+        </p>
       </div>
 
-      {guide ? (
+      {showDispatchCutoff && guide ? (
         <div
           className="space-y-1 rounded-card border border-border bg-bg-2 px-4 py-3"
           data-testid="checkout-dispatch-cutoff"
         >
-          <p className="font-body text-sm font-semibold text-text">{guide.cutoffTitle}</p>
+          <p className="font-body text-sm font-semibold text-text">
+            {guide.cutoffTitle}
+          </p>
           <p className="font-body text-sm text-text-2">
             {afterCutoff ? guide.cutoffAfter : guide.cutoffBefore}
           </p>
           {hasMadeToOrder ? (
-            <p className="font-body text-xs text-text-3">{guide.cutoffMadeToOrder}</p>
+            <p className="font-body text-xs text-text-3">
+              {guide.cutoffMadeToOrder}
+            </p>
           ) : null}
         </div>
       ) : null}
@@ -213,7 +263,9 @@ export function StepFulfilment({
               className="space-y-2 rounded-card border border-border bg-surface px-4 py-3"
               data-testid="checkout-landmark-tips"
             >
-              <p className="font-body text-sm font-semibold text-text">{guide.tipsTitle}</p>
+              <p className="font-body text-sm font-semibold text-text">
+                {guide.tipsTitle}
+              </p>
               <ul className="list-disc space-y-1 pl-5 font-body text-sm text-text-2">
                 <li>{guide.tip1}</li>
                 <li>{guide.tip2}</li>
@@ -226,7 +278,9 @@ export function StepFulfilment({
 
       <div className="space-y-4">
         {session.vendor_groups.map((group) => {
-          const choice = choices.find((item) => item.vendor_id === group.vendor_id);
+          const choice = choices.find(
+            (item) => item.vendor_id === group.vendor_id,
+          );
           const fulfilment = choice?.fulfilment ?? "pickup";
           const pickup = group.pickup_location;
 
@@ -236,7 +290,9 @@ export function StepFulfilment({
               className="space-y-3 rounded-card border border-border bg-surface p-4"
             >
               <div className="flex items-start justify-between gap-2">
-                <h3 className="font-body text-base font-semibold text-text">{group.vendor_name}</h3>
+                <h3 className="font-body text-base font-semibold text-text">
+                  {group.vendor_name}
+                </h3>
                 <span className="font-mono text-sm text-text-2">
                   {formatK(group.subtotal_ngwee, { locale: `${locale}-ZM` })}
                 </span>
@@ -248,9 +304,15 @@ export function StepFulfilment({
                     name={`fulfilment-${group.vendor_id}`}
                     label={labels.delivery}
                     checked={fulfilment === "delivery"}
-                    disabled={!group.delivery_eligible}
+                    disabled={
+                      (!group.delivery_eligible &&
+                        group.pickup_offered !== false) ||
+                      group.delivery_offered === false
+                    }
                     aria-describedby={
-                      guide ? `fulfilment-help-delivery-${group.vendor_id}` : undefined
+                      guide
+                        ? `fulfilment-help-delivery-${group.vendor_id}`
+                        : undefined
                     }
                     onChange={() => {
                       setGroupFulfilment(group.vendor_id, "delivery");
@@ -270,8 +332,11 @@ export function StepFulfilment({
                     name={`fulfilment-${group.vendor_id}`}
                     label={labels.pickup}
                     checked={fulfilment === "pickup"}
+                    disabled={group.pickup_offered === false}
                     aria-describedby={
-                      guide ? `fulfilment-help-pickup-${group.vendor_id}` : undefined
+                      guide
+                        ? `fulfilment-help-pickup-${group.vendor_id}`
+                        : undefined
                     }
                     onChange={() => {
                       setGroupFulfilment(group.vendor_id, "pickup");
@@ -297,8 +362,20 @@ export function StepFulfilment({
                 </div>
               ) : null}
 
-              {!group.delivery_eligible ? (
-                <p className="font-body text-xs text-text-2">{labels.outsideZone}</p>
+              {group.delivery_offered === false ||
+              group.pickup_offered === false ? (
+                <p
+                  className="font-body text-xs text-text-2"
+                  data-testid="fulfilment-not-offered"
+                >
+                  {labels.notOffered}
+                </p>
+              ) : null}
+
+              {!group.delivery_eligible && group.delivery_offered !== false ? (
+                <p className="font-body text-xs text-text-2">
+                  {labels.outsideZone}
+                </p>
               ) : null}
             </section>
           );

@@ -2,6 +2,7 @@
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { isGoogleAuthEnabled } from "@vergeo/auth/google-auth";
+import { isPhoneOtpEnabled } from "@vergeo/auth/phone-otp";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -151,7 +152,9 @@ export function AuthLoginShell({
   showSignupLink = variant === "customer",
   phoneEnabled = true,
 }: AuthLoginShellProps) {
-  const [method, setMethod] = useState<"phone" | "email">(phoneEnabled ? "phone" : "email");
+  const [method, setMethod] = useState<"phone" | "email">(
+    phoneEnabled && isPhoneOtpEnabled() ? "phone" : "email",
+  );
   const [oauthError, setOauthError] = useState<string | null>(null);
 
   const postAuthPath = resolvePostAuthPath(locale, nextParam, defaultNextPath);
@@ -279,7 +282,7 @@ export function AuthSignupShell({
   defaultNextPath,
   nextParam,
 }: AuthSignupShellProps) {
-  const [method, setMethod] = useState<"phone" | "email">("phone");
+  const [method, setMethod] = useState<"phone" | "email">(isPhoneOtpEnabled() ? "phone" : "email");
   const [oauthError, setOauthError] = useState<string | null>(null);
 
   const postAuthPath = resolvePostAuthPath(locale, nextParam, defaultNextPath);

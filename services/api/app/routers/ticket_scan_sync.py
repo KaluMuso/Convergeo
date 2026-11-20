@@ -23,6 +23,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.ticket_verify import current_window, window_sig
 from app.schemas.base import StrictModel
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends
 from pydantic import Field
@@ -96,9 +97,10 @@ def _load_vendor_for_owner(
     owner_user_id: str,
 ) -> dict[str, Any]:
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id, owner_user_id")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )
@@ -141,10 +143,12 @@ def _load_event_for_vendor(
             http_status=403,
             details={"message_key": "vendor.scan.errors.forbidden", "event_id": event_id},
         )
-    if row.get("status") != "published":
+    # Unpublished (draft) events keep their sold tickets valid, so gate staff must
+    # still be able to download scan data; cancelled/completed events cannot.
+    if row.get("status") not in {"published", "draft"}:
         raise AppError(
             code="tickets.event_not_published",
-            message="Scan data is only available for published events",
+            message="Scan data is only available for live events",
             http_status=409,
             details={"message_key": "vendor.scan.errors.event_not_published"},
         )

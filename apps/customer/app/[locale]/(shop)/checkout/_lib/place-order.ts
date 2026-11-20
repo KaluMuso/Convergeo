@@ -39,7 +39,9 @@ export type CardSessionResponse = {
  * Authoritative place-order: POST /orders then kick off MoMo/card or land on COD pending.
  * Does not invent totals — groups come from the fulfilment step response.
  */
-export async function placeOrder(input: PlaceOrderInput): Promise<CreateOrderResponse> {
+export async function placeOrder(
+  input: PlaceOrderInput,
+): Promise<CreateOrderResponse> {
   const client = createApiClient({
     baseUrl: input.apiBaseUrl,
     getToken: () => input.accessToken,
@@ -66,11 +68,16 @@ export async function placeOrder(input: PlaceOrderInput): Promise<CreateOrderRes
   }
 
   if (input.payment.method === "card") {
-    const card = await client.request<CardSessionResponse>("/payments/card/session", {
-      method: "POST",
-      body: JSON.stringify({ checkout_group_id: created.checkout_group_id }),
-    });
-    input.navigate(`/${input.locale}/checkout/card/${encodeURIComponent(card.payment_id)}`);
+    const card = await client.request<CardSessionResponse>(
+      "/payments/card/session",
+      {
+        method: "POST",
+        body: JSON.stringify({ checkout_group_id: created.checkout_group_id }),
+      },
+    );
+    input.navigate(
+      `/${input.locale}/checkout/card/${encodeURIComponent(card.payment_id)}`,
+    );
     return created;
   }
 
@@ -118,7 +125,8 @@ export function classifyPlaceOrderError(error: unknown): PlaceOrderFailure {
   if (!(error instanceof ApiError)) return { kind: "unavailable" };
   const notice = RETURN_TO_CART[error.code];
   if (notice) return { kind: "return_to_cart", notice };
-  if (error.code === "checkout.cod_ineligible") return { kind: "cod_ineligible" };
+  if (error.code === "checkout.cod_ineligible")
+    return { kind: "cod_ineligible" };
   // The server re-prices from the delivery/pickup choices it recorded; when
   // those are missing or no longer match, only redoing that step can succeed.
   if (

@@ -48,7 +48,8 @@
     "requestQuoteHint": "Landa umulimo wenu no kupoka quotes kufuma ku providers abalingana.",
     "provider": "Provider",
     "providerCta": "Lolesha profile ya provider",
-    "imageAlt": "Icithunzi ca portfolio {position}"
+    "imageAlt": "Icithunzi ca portfolio {position}",
+    "free": "⚠ Free"
   },
   "vendor": {
     "eyebrow": "Services",
@@ -85,14 +86,17 @@
       "save": "Save",
       "publish": "Publish",
       "pause": "Pause",
-      "saving": "Ilesave…"
+      "saving": "Ilesave…",
+      "isFreeLabel": "⚠ This is free",
+      "isFreeHint": "⚠ No price, no commission and no payment. Customers send a booking request you accept."
     },
     "errors": {
       "loadFailed": "Tatwakwanisha ukulodisha services.",
       "saveFailed": "Tatwakwanisha ukusave service.",
       "titleInvalid": "Lekeni title ya service iyakwata amalembo yabili nangu ukufulapo.",
       "bookablePrice": "Lekeni fixed booking price iyakila zero ukuleka direct booking.",
-      "authRequired": "Ingilani ukumanage services shenu."
+      "authRequired": "Ingilani ukumanage services shenu.",
+      "freeHasPrice": "⚠ A free service cannot have a price."
     }
   },
   "postJob": {
@@ -319,5 +323,18 @@
       "success": "Receipt under review"
     },
     "backToJob": "Return to job and check completion"
+  },
+  "freeBooking": {
+    "title": "⚠ Book this free service",
+    "intro": "⚠ No payment needed. Send a request and the provider will confirm.",
+    "cta": "⚠ Request booking",
+    "submitting": "⚠ Sending…",
+    "sent": "⚠ Request sent — the provider will confirm soon.",
+    "errors": {
+      "authRequired": "⚠ Please sign in to request this service.",
+      "alreadyRequested": "⚠ You already have an open request for this service.",
+      "rateLimited": "⚠ Too many requests. Please wait a moment.",
+      "generic": "⚠ Could not send your request. Please try again."
+    }
   }
 }

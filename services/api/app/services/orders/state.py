@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from enum import StrEnum
@@ -180,7 +181,8 @@ TRANSITION_TABLE: tuple[TransitionSpec, ...] = (
         OrderStatus.PLACED,
         OrderEvent.CANCEL,
         OrderStatus.CANCELLED,
-        frozenset({ActorRole.CUSTOMER, ActorRole.ADMIN}),
+        # SYSTEM: the unpaid-prepaid auto-cancel sweeper (internal_order_jobs).
+        frozenset({ActorRole.CUSTOMER, ActorRole.ADMIN, ActorRole.SYSTEM}),
     ),
     TransitionSpec(
         OrderStatus.CONFIRMED,
@@ -448,6 +450,40 @@ def _validate_snapshot_transition(
     return resolved.to_status
 
 
+def _order_authority_sql(actor_role: ActorRole, actor_sql: str) -> str:
+    """SQL predicate over order alias ``o``: does this actor hold authority on it."""
+    return {
+        ActorRole.CUSTOMER: f"o.customer_id = {actor_sql}",
+        ActorRole.VENDOR: (
+            "EXISTS (SELECT 1 FROM public.vendors v "
+            f"WHERE v.id=o.vendor_id AND v.owner_user_id={actor_sql})"
+        ),
+        ActorRole.ADMIN: (
+            "EXISTS (SELECT 1 FROM public.user_roles ur "
+            f"WHERE ur.user_id={actor_sql} AND ur.role IN ('admin','superadmin'))"
+        ),
+        ActorRole.SYSTEM: "true",  # identity checked by callers; internal trusted caller only
+    }[actor_role]
+
+
+def assert_order_actor_authorized(*, order_id: str, actor_role: ActorRole, actor_id: str) -> None:
+    """Read-only mirror of the authority check inside ``transition_order``.
+
+    Lets a caller that must post a second aggregate (e.g. a ledger reversal) before
+    the transition refuse an unauthorised actor first, so nothing is posted for them.
+    ``transition_order`` still enforces authority atomically; this only refuses earlier.
+    """
+    _validate_actor_id(actor_role, actor_id)
+    order_sql = sql_uuid(order_id, "order_id")
+    actor_sql = sql_uuid(actor_id, "actor_id")
+    result = run_sql_script(
+        f"SELECT 1 FROM public.orders o WHERE o.id={order_sql} "
+        f"AND ({_order_authority_sql(actor_role, actor_sql)});"
+    )
+    if not result.ok or not result.rows:
+        raise AppError(code="forbidden", message="Order actor is not authorized", http_status=403)
+
+
 def transition_order(
     *,
     order_id: str,
@@ -479,18 +515,7 @@ def transition_order(
     from_status = snapshot.status.value
     actor_sql = sql_uuid(actor_id, "actor_id")
     # Roles alone and a caller-supplied refund_path flag are not order authority.
-    authority_sql = {
-        ActorRole.CUSTOMER: f"o.customer_id = {actor_sql}",
-        ActorRole.VENDOR: (
-            "EXISTS (SELECT 1 FROM public.vendors v "
-            f"WHERE v.id=o.vendor_id AND v.owner_user_id={actor_sql})"
-        ),
-        ActorRole.ADMIN: (
-            "EXISTS (SELECT 1 FROM public.user_roles ur "
-            f"WHERE ur.user_id={actor_sql} AND ur.role IN ('admin','superadmin'))"
-        ),
-        ActorRole.SYSTEM: "true",  # identity checked above; internal trusted caller only
-    }[actor_role]
+    authority_sql = _order_authority_sql(actor_role, actor_sql)
     cancellation = event in CANCELLATION_EVENTS
     refund_authority = refund_path and actor_role in {ActorRole.ADMIN, ActorRole.VENDOR}
     update_script = f"""
@@ -605,6 +630,10 @@ COMMIT;
             actor_role=actor_role.value,
         )
 
+    # The guarded transition has committed: tell the customer. Best-effort and
+    # idempotent (outbox dedupe on event + order); never blocks or rolls back.
+    _notify_committed_transition(order_id, to_status)
+
     return TransitionOutcome(
         order_id=order_id,
         from_status=snapshot.status,
@@ -613,6 +642,17 @@ COMMIT;
         actor_id=actor_id,
         note=note,
     )
+
+
+def _notify_committed_transition(order_id: str, to_status: str) -> None:
+    try:
+        from app.services.notifications.lifecycle import notify_order_transition
+
+        notify_order_transition(order_id, to_status)
+    except Exception:
+        logging.getLogger(__name__).warning(
+            "order transition notification failed for %s", order_id, exc_info=True
+        )
 
 
 def fetch_latest_audit_event(order_id: str) -> dict[str, Any] | None:

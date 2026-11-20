@@ -38,8 +38,14 @@ describe("vendor-nav-config", () => {
       payouts: true,
       disputes: true,
       intake: false,
+      settings: true,
+      offers: false,
+      coupons: false,
+      extras: false,
     };
-    const keys = filterVendorNavGroups(caps).flatMap((g) => g.items.map((i) => i.key));
+    const keys = filterVendorNavGroups(caps).flatMap((g) =>
+      g.items.map((i) => i.key),
+    );
     expect(keys).not.toContain("clips");
     expect(keys).not.toContain("intake");
   });
@@ -62,6 +68,10 @@ describe("vendor-nav-config", () => {
       payouts: false,
       disputes: false,
       intake: false,
+      settings: false,
+      offers: false,
+      coupons: false,
+      extras: false,
     };
     expect(buildVendorMobilePrimary(filterVendorNavGroups(caps))).toEqual([
       "home",

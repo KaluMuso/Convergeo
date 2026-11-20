@@ -55,6 +55,7 @@ export default async function MarketingLayout({ children, params }: MarketingLay
           help: tNav("marketing.help"),
           sell: tNav("marketing.sell"),
           signIn: tNav("marketing.signIn"),
+          account: tNav("marketing.account"),
         }}
       />
       {children}

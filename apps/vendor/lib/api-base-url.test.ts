@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { getApiBaseUrl, resolveApiBaseUrl, resolveApiHost } from "./api-base-url";
+import {
+  getApiBaseUrl,
+  resolveApiBaseUrl,
+  resolveApiHost,
+} from "./api-base-url";
 
 describe("resolveApiBaseUrl (vendor)", () => {
   it("returns the configured origin without a trailing slash", () => {
@@ -91,7 +95,10 @@ describe("resolveApiHost (vendor)", () => {
   it("fails closed (null) when the API URL / plane is missing", () => {
     expect(resolveApiHost({ NODE_ENV: "production" })).toBeNull();
     expect(
-      resolveApiHost({ NEXT_PUBLIC_API_BASE_URL: undefined, NODE_ENV: "development" }),
+      resolveApiHost({
+        NEXT_PUBLIC_API_BASE_URL: undefined,
+        NODE_ENV: "development",
+      }),
     ).toBeNull();
   });
 });

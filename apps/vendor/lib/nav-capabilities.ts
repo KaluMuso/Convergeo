@@ -1,5 +1,10 @@
 import { probeApiRoute } from "./api-route-probe";
-import { isClipsRouteAccessible, isIntakeRouteAccessible } from "./route-capabilities";
+import {
+  isBundlesRouteAccessible,
+  isClipsRouteAccessible,
+  isCouponsRouteAccessible,
+  isIntakeRouteAccessible,
+} from "./route-capabilities";
 
 import type { VendorNavItemKey } from "../app/[locale]/_components/vendor-nav-config";
 
@@ -18,6 +23,8 @@ const CORE_VISIBLE: VendorNavItemKey[] = [
   "reviews",
   "profile",
   "disputes",
+  "settings",
+  "extras",
 ];
 
 function coreCapabilities(): VendorNavCapabilities {
@@ -38,6 +45,10 @@ function coreCapabilities(): VendorNavCapabilities {
     payouts: false,
     disputes: true,
     intake: false,
+    coupons: false,
+    settings: true,
+    offers: false,
+    extras: true,
   };
 }
 
@@ -45,7 +56,7 @@ function coreCapabilities(): VendorNavCapabilities {
  * Resolve vendor navigation capabilities for the current request.
  *
  * Sources (fail closed):
- * - `feature_flags.clips`, `feature_flags.waha_vendor_intake` via Supabase
+ * - `feature_flags.clips`, `feature_flags.waha_vendor_intake`, `feature_flags.bundles` via Supabase
  * - `platform_config.waha_intake_vendor_allowlist` for intake (authenticated)
  * - Anonymous API probes for routes that may lag deploy (`/rfq`, `/jobs`, payouts, pickup)
  */
@@ -53,14 +64,17 @@ export async function resolveVendorNavCapabilities(): Promise<VendorNavCapabilit
   const caps = coreCapabilities();
 
   try {
-    const [clips, intake, rfq, jobs, payouts, scan] = await Promise.all([
-      isClipsRouteAccessible(),
-      isIntakeRouteAccessible(),
-      probeApiRoute("/rfq"),
-      probeApiRoute("/jobs"),
-      probeApiRoute("/vendor/payouts"),
-      probeApiRoute("/vendor/pickup/verify"),
-    ]);
+    const [clips, intake, rfq, jobs, payouts, scan, offers, coupons] =
+      await Promise.all([
+        isClipsRouteAccessible(),
+        isIntakeRouteAccessible(),
+        probeApiRoute("/rfq"),
+        probeApiRoute("/jobs"),
+        probeApiRoute("/vendor/payouts"),
+        probeApiRoute("/vendor/pickup/verify"),
+        isBundlesRouteAccessible(),
+        isCouponsRouteAccessible(),
+      ]);
 
     caps.clips = clips;
     caps.intake = intake;
@@ -68,6 +82,8 @@ export async function resolveVendorNavCapabilities(): Promise<VendorNavCapabilit
     caps.jobs = jobs;
     caps.payouts = payouts;
     caps.scan = scan;
+    caps.offers = offers;
+    caps.coupons = coupons;
 
     for (const key of CORE_VISIBLE) {
       caps[key] = true;

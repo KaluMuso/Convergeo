@@ -71,7 +71,8 @@
     },
     "provider": "Provider",
     "providerCta": "View provider profile",
-    "imageAlt": "Portfolio photo {position}"
+    "imageAlt": "Portfolio photo {position}",
+    "free": "Free"
   },
   "vendor": {
     "eyebrow": "Services",
@@ -108,14 +109,17 @@
       "save": "Save",
       "publish": "Publish",
       "pause": "Pause",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "isFreeLabel": "This is free",
+      "isFreeHint": "No price, no commission and no payment. Customers send a booking request you accept."
     },
     "errors": {
       "loadFailed": "Could not load services.",
       "saveFailed": "Could not save service.",
       "titleInvalid": "Enter a title with at least two characters.",
       "bookablePrice": "Set a fixed booking price greater than zero to allow direct booking.",
-      "authRequired": "Sign in to manage your services."
+      "authRequired": "Sign in to manage your services.",
+      "freeHasPrice": "A free service cannot have a price."
     }
   },
   "postJob": {
@@ -344,5 +348,18 @@
       "success": "Receipt under review"
     },
     "backToJob": "Return to job and check completion"
+  },
+  "freeBooking": {
+    "title": "Book this free service",
+    "intro": "No payment needed. Send a request and the provider will confirm.",
+    "cta": "Request booking",
+    "submitting": "Sending…",
+    "sent": "Request sent — the provider will confirm soon.",
+    "errors": {
+      "authRequired": "Please sign in to request this service.",
+      "alreadyRequested": "You already have an open request for this service.",
+      "rateLimited": "Too many requests. Please wait a moment.",
+      "generic": "Could not send your request. Please try again."
+    }
   }
 }

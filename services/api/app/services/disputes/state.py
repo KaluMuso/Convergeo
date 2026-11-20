@@ -335,6 +335,20 @@ def transition_dispute(
         note=note,
     )
 
+    if to_status.value in TERMINAL_STATUSES:
+        # Committed resolution: tell the customer (best-effort; dedupe per dispute).
+        try:
+            from app.services.notifications.lifecycle import notify_dispute_resolved
+
+            notify_dispute_resolved(
+                dispute_id,
+                snapshot.order_id,
+                to_status.value,
+                client=service_client.client,
+            )
+        except Exception:
+            pass
+
     return TransitionOutcome(
         dispute_id=dispute_id,
         from_status=snapshot.status,

@@ -12,6 +12,7 @@ import { createManageClient, type ListingSummary } from "../[id]/edit/_lib/manag
 import { Badge, PriceBlock } from "../new/_lib/ui";
 
 import { ListingStatusGuide, ListingTipsPanel, ListingVisibilityHint } from "./listing-guide";
+import { PlanUsageCard } from "./plan-usage-card";
 
 type ListingsManageListProps = {
   locale: string;
@@ -109,6 +110,10 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
       </header>
 
       <div className="px-1">
+        <PlanUsageCard refreshKey={listings.length} />
+      </div>
+
+      <div className="px-1">
         <Link
           className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-surface"
           href={`/${locale}/listings/new`}
@@ -122,14 +127,6 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
           <VendorEmptyState
             title={t("listings.manage.emptyTitle")}
             body={t("listings.manage.empty")}
-            action={
-              <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-primary"
-                href={`/${locale}/listings/new`}
-              >
-                {t("listings.manage.createCta")}
-              </Link>
-            }
           />
           <ListingTipsPanel defaultOpen />
         </div>

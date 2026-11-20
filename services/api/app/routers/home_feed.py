@@ -27,6 +27,7 @@ from app.services.home_feed.stream import (
     HomeStreamPage,
     build_stream_page,
 )
+from app.services.offers.badges import listing_badges
 from app.settings import get_settings
 from fastapi import APIRouter, Depends, Query, Request, Response
 
@@ -69,6 +70,21 @@ def _rate_limit(request: Request, client: Any, *, scope: str, limit: int, window
             message_key="home.errors.rate_limited",
             message="Too many home feed requests",
         )
+
+
+def _attach_offer_badges(client: Any, listings: list[Any]) -> None:
+    """W8: offer pills on feed / stream cards, server-side (no-op when flag off).
+
+    Attached before the page is cached, so a cached page carries badges at most
+    ``FEED_CACHE_TTL_SECONDS`` stale; checkout re-prices from live offers anyway.
+    """
+    if not listings:
+        return
+    badges = listing_badges(client, [listing.id for listing in listings])
+    if not badges:
+        return
+    for listing in listings:
+        listing.offer_badge = badges.get(str(listing.id).lower())
 
 
 @router.get("/feed", response_model=HomeFeedPage)
@@ -116,6 +132,9 @@ async def home_feed(
         raise AppError(
             code="validation_error", message="Invalid feed cursor", http_status=422
         ) from exc
+    _attach_offer_badges(
+        supabase.client, [listing for section in page.sections for listing in section.listings]
+    )
 
     if user_id is None:
         set_cached_json(cache_key, page.model_dump(mode="json"), ttl_seconds=FEED_CACHE_TTL_SECONDS)
@@ -158,6 +177,7 @@ async def home_stream(
         except Exception:
             pass
     page = build_stream_page(supabase.client, cursor=cursor, limit=limit)
+    _attach_offer_badges(supabase.client, list(page.items))
     set_cached_json(cache_key, page.model_dump(mode="json"), ttl_seconds=FEED_CACHE_TTL_SECONDS)
     response.headers["Cache-Control"] = cache_control
     return page

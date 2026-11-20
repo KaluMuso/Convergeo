@@ -35,7 +35,8 @@ export function StandaloneListingBody({
 }: StandaloneListingBodyProps) {
   const t = useTranslations("catalog");
   const indicatorLabel = useCallback(
-    (current: number, total: number) => t("pdp.gallery.indicator", { current, total }),
+    (current: number, total: number) =>
+      t("pdp.gallery.indicator", { current, total }),
     [t],
   );
 
@@ -54,7 +55,11 @@ export function StandaloneListingBody({
         labels={buyBoxLabels}
         pickupLabels={pickupLabels}
         singleVendor={false}
-        seller={{ displayName: sellerName, preferred: false, ratingLabel: null }}
+        seller={{
+          displayName: sellerName,
+          preferred: false,
+          ratingLabel: null,
+        }}
         locale={locale}
       />
     </div>

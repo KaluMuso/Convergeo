@@ -1,4 +1,11 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { ApiError } from "@vergeo/config";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,13 +15,20 @@ import { loadNamespace } from "../../../../../../packages/i18n/src/request";
 import { canUseWholesaleCapabilities } from "../../_lib/kyc-integrity";
 
 import { ListingCreateFlow } from "./_components/listing-create-flow";
-import { applyListingFieldPatch, DEFAULT_LISTING_FIELDS } from "./_components/listing-fields";
+import {
+  applyListingFieldPatch,
+  DEFAULT_LISTING_FIELDS,
+} from "./_components/listing-fields";
 import { QuickListForm } from "./_components/quick-list-form";
 import { listingCreateErrorMessage } from "./_lib/listing-errors";
 import { isValidUnitDecimal, unitDecimalToMilli } from "./_lib/measure";
 import { zmwDecimalToNgwee, isValidZmwDecimal } from "./_lib/money";
 
-import type { CategoryOption, ListingCreatePayload, ListingCreateResponse } from "./_lib/types";
+import type {
+  CategoryOption,
+  ListingCreatePayload,
+  ListingCreateResponse,
+} from "./_lib/types";
 
 describe("listing money conversion", () => {
   it("converts K1,234.56 to 123456 ngwee without float drift", () => {
@@ -36,9 +50,15 @@ describe("listings i18n", () => {
     expect(vendorMessages.listings.title).toBe("Create listing");
     expect(vendorMessages.listings.commission.rate).toBe("{rate}%");
     expect(vendorMessages.listings.attach.publish).toBe("Start selling");
-    expect(vendorMessages.listings.fields.classA).toBe("A. Brand product, same everywhere (branded SKU)");
-    expect(vendorMessages.listings.fields.classB).toBe("B. Brand product with sizes or colours (variant)");
-    expect(vendorMessages.listings.fields.classC).toBe("C. Everyday goods, no brand (commodity)");
+    expect(vendorMessages.listings.fields.classA).toBe(
+      "A. Brand product, same everywhere (branded SKU)",
+    );
+    expect(vendorMessages.listings.fields.classB).toBe(
+      "B. Brand product with sizes or colours (variant)",
+    );
+    expect(vendorMessages.listings.fields.classC).toBe(
+      "C. Everyday goods, no brand (commodity)",
+    );
     expect(vendorMessages.listings.errors.standalone_required).toBeTruthy();
   });
 });
@@ -56,10 +76,13 @@ describe("listing unit-step conversion", () => {
 });
 
 describe("product-class form rules", () => {
-  it("forces Class D to used condition", () => {
-    expect(applyListingFieldPatch(DEFAULT_LISTING_FIELDS, { productClass: "D" }).condition).toBe(
-      "used",
-    );
+  it("lets Class D be sold as new without forcing used", () => {
+    const fields = applyListingFieldPatch(DEFAULT_LISTING_FIELDS, {
+      productClass: "D",
+    });
+    expect(fields.condition).toBe("new");
+    const used = applyListingFieldPatch(fields, { condition: "used" });
+    expect(used.condition).toBe("used");
   });
 
   it("forces Class E to made-to-order fulfilment", () => {
@@ -182,7 +205,9 @@ function deferred<T>() {
 }
 function makeClient() {
   return {
-    listCategories: vi.fn<() => Promise<CategoryOption[]>>().mockResolvedValue([category]),
+    listCategories: vi
+      .fn<() => Promise<CategoryOption[]>>()
+      .mockResolvedValue([category]),
     createListing: vi
       .fn<(payload: ListingCreatePayload) => Promise<ListingCreateResponse>>()
       .mockResolvedValue(draftResponse),
@@ -194,7 +219,8 @@ function quickLabels() {
   return {
     ...vendorMessages.listings.quickList,
     categoryLabel: vendorMessages.listings.newCanonical.categoryLabel,
-    categoryPlaceholder: vendorMessages.listings.newCanonical.categoryPlaceholder,
+    categoryPlaceholder:
+      vendorMessages.listings.newCanonical.categoryPlaceholder,
     catalogLabel: vendorMessages.listings.tabs.attach,
     fields: {
       ...vendorMessages.listings.fields,
@@ -227,7 +253,9 @@ async function fillDraft(productClass: "D" | "E") {
   fireEvent.change(input(vendorMessages.listings.fields.productClassLabel), {
     target: { value: productClass },
   });
-  await waitFor(() => expect(screen.getByRole("option", { name: category.name })).toBeTruthy());
+  await waitFor(() =>
+    expect(screen.getByRole("option", { name: category.name })).toBeTruthy(),
+  );
   fireEvent.change(input(vendorMessages.listings.quickList.titleLabel), {
     target: { value: " Synthetic item " },
   });
@@ -241,6 +269,9 @@ async function fillDraft(productClass: "D" | "E") {
     target: { value: "1,234.56" },
   });
   if (productClass === "D") {
+    fireEvent.change(input(vendorMessages.listings.fields.conditionLabel), {
+      target: { value: "used" },
+    });
     fireEvent.change(input(vendorMessages.listings.fields.defectNotesLabel), {
       target: { value: " Synthetic wear marks " },
     });
@@ -290,7 +321,9 @@ describe("QuickList draft request contract", () => {
       const selector = input(vendorMessages.listings.fields.productClassLabel);
       expect((selector as HTMLSelectElement).value).toBe("C");
       fireEvent.change(selector, { target: { value: productClass } });
-      expect(screen.getByText(vendorMessages.listings.quickList.canonicalRequired)).toBeTruthy();
+      expect(
+        screen.getByText(vendorMessages.listings.quickList.canonicalRequired),
+      ).toBeTruthy();
       fireEvent.click(
         screen.getByRole("button", {
           name: vendorMessages.listings.tabs.attach,
@@ -321,6 +354,8 @@ describe("QuickList draft request contract", () => {
         min_steps: 1,
         condition: productClass === "D" ? "used" : "new",
         defect_notes: productClass === "D" ? "Synthetic wear marks" : null,
+        condition_detail: productClass === "D" ? "used_good" : null,
+        fulfilment_options: ["lusaka_delivery", "pickup_shop"],
         fulfilment_mode: productClass === "E" ? "made_to_order" : "stocked",
         lead_time_days: productClass === "E" ? 7 : null,
         vendor_capacity_per_week: productClass === "E" ? 10 : null,
@@ -338,79 +373,107 @@ describe("QuickList draft request contract", () => {
     async (description) => {
       const view = mountQuick();
       await fillDraft("E");
-      fireEvent.change(input(vendorMessages.listings.quickList.descriptionLabel), {
-        target: { value: description },
-      });
+      fireEvent.change(
+        input(vendorMessages.listings.quickList.descriptionLabel),
+        {
+          target: { value: description },
+        },
+      );
       saveDraft();
       expect(view.client.createListing).not.toHaveBeenCalled();
-      expect(view.onError).toHaveBeenCalledWith(
-        vendorMessages.listings.quickList.descriptionInvalid,
-      );
+      // Field-level: the reason is shown next to the field, with a summary above.
+      expect(view.onError).toHaveBeenCalledOnce();
+      expect(
+        screen.getByText(vendorMessages.listings.quickList.descriptionInvalid),
+      ).toBeTruthy();
     },
   );
   it("accepts exactly 20 Unicode code points and rejects five-emoji used disclosure", async () => {
     const view = mountQuick();
     await fillDraft("D");
-    fireEvent.change(input(vendorMessages.listings.quickList.descriptionLabel), {
-      target: { value: "😀".repeat(20) },
-    });
+    fireEvent.change(
+      input(vendorMessages.listings.quickList.descriptionLabel),
+      {
+        target: { value: "😀".repeat(20) },
+      },
+    );
     fireEvent.change(input(vendorMessages.listings.fields.defectNotesLabel), {
       target: { value: "😀".repeat(5) },
     });
     saveDraft();
     expect(view.client.createListing).not.toHaveBeenCalled();
-    expect(view.onError).toHaveBeenLastCalledWith(
-      vendorMessages.listings.fields.defectNotesInvalid,
-    );
+    expect(view.onError).toHaveBeenCalled();
+    expect(
+      screen.getByText(vendorMessages.listings.fields.defectNotesInvalid),
+    ).toBeTruthy();
     fireEvent.change(input(vendorMessages.listings.fields.defectNotesLabel), {
       target: { value: "😀".repeat(10) },
     });
     saveDraft();
-    await waitFor(() => expect(view.client.createListing).toHaveBeenCalledOnce());
+    await waitFor(() =>
+      expect(view.client.createListing).toHaveBeenCalledOnce(),
+    );
     expect(view.client.createListing.mock.calls[0]?.[0]).toMatchObject({
       description: "😀".repeat(20),
       publish: false,
     });
   });
-  it.each(["title", "category"])("rejects missing %s without a write", async (missing) => {
-    const view = mountQuick();
-    await fillDraft("E");
-    fireEvent.change(
-      input(
-        missing === "title"
-          ? vendorMessages.listings.quickList.titleLabel
-          : vendorMessages.listings.newCanonical.categoryLabel,
-      ),
-      { target: { value: "" } },
-    );
-    saveDraft();
-    expect(view.client.createListing).not.toHaveBeenCalled();
-    expect(view.onError).toHaveBeenCalledWith(vendorMessages.listings.errors.required);
-  });
-  it.each(["failed", "empty"])("blocks saving when categories are %s", async (state) => {
-    const client = makeClient();
-    if (state === "failed") client.listCategories.mockRejectedValue(new Error("synthetic failure"));
-    else client.listCategories.mockResolvedValue([]);
-    const view = mountQuick(client);
-    fireEvent.change(input(vendorMessages.listings.fields.productClassLabel), {
-      target: { value: "E" },
-    });
-    await waitFor(() =>
+  it.each(["title", "category"])(
+    "rejects missing %s without a write",
+    async (missing) => {
+      const view = mountQuick();
+      await fillDraft("E");
+      fireEvent.change(
+        input(
+          missing === "title"
+            ? vendorMessages.listings.quickList.titleLabel
+            : vendorMessages.listings.newCanonical.categoryLabel,
+        ),
+        { target: { value: "" } },
+      );
+      saveDraft();
+      expect(view.client.createListing).not.toHaveBeenCalled();
+      expect(view.onError).toHaveBeenCalledOnce();
       expect(
-        screen.getByText(vendorMessages.listings.quickList.categoriesUnavailable),
-      ).toBeTruthy(),
-    );
-    saveDraft();
-    expect(client.createListing).not.toHaveBeenCalled();
-    expect(view.onSuccess).not.toHaveBeenCalled();
-  });
+        screen.getAllByText(vendorMessages.listings.errors.required).length,
+      ).toBeGreaterThan(0);
+    },
+  );
+  it.each(["failed", "empty"])(
+    "blocks saving when categories are %s",
+    async (state) => {
+      const client = makeClient();
+      if (state === "failed")
+        client.listCategories.mockRejectedValue(new Error("synthetic failure"));
+      else client.listCategories.mockResolvedValue([]);
+      const view = mountQuick(client);
+      fireEvent.change(
+        input(vendorMessages.listings.fields.productClassLabel),
+        {
+          target: { value: "E" },
+        },
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByText(
+            vendorMessages.listings.quickList.categoriesUnavailable,
+          ),
+        ).toBeTruthy(),
+      );
+      saveDraft();
+      expect(client.createListing).not.toHaveBeenCalled();
+      expect(view.onSuccess).not.toHaveBeenCalled();
+    },
+  );
   it("invalidates a stale category when the client changes and ignores late old results", async () => {
     const view = mountQuick();
     await fillDraft("E");
     const pending = deferred<CategoryOption[]>();
     const replacement = makeClient();
     replacement.listCategories.mockReturnValue(pending.promise);
-    view.rerender(createElement(QuickListForm, { ...view.props, client: replacement }));
+    view.rerender(
+      createElement(QuickListForm, { ...view.props, client: replacement }),
+    );
     saveDraft();
     expect(replacement.createListing).not.toHaveBeenCalled();
     const latest = makeClient();
@@ -421,9 +484,13 @@ describe("QuickList draft request contract", () => {
         name: "Replacement category",
       },
     ]);
-    view.rerender(createElement(QuickListForm, { ...view.props, client: latest }));
+    view.rerender(
+      createElement(QuickListForm, { ...view.props, client: latest }),
+    );
     await waitFor(() =>
-      expect(screen.getByRole("option", { name: "Replacement category" })).toBeTruthy(),
+      expect(
+        screen.getByRole("option", { name: "Replacement category" }),
+      ).toBeTruthy(),
     );
     await act(async () => {
       pending.resolve([category]);
@@ -461,7 +528,10 @@ describe("QuickList draft request contract", () => {
     });
     saveDraft();
     expect(view.client.createListing).not.toHaveBeenCalled();
-    expect(view.onError).toHaveBeenCalledWith(vendorMessages.listings.fields.capacityInvalid);
+    expect(view.onError).toHaveBeenCalledOnce();
+    expect(
+      screen.getByText(vendorMessages.listings.fields.capacityInvalid),
+    ).toBeTruthy();
   });
   it("prevents duplicate dispatch while a draft request is pending", async () => {
     const view = mountQuick();
@@ -492,12 +562,15 @@ describe("QuickList draft request contract", () => {
     );
     saveDraft();
     await waitFor(() =>
-      expect(view.onError).toHaveBeenCalledWith(vendorMessages.listings.errors.submitFailed),
+      expect(view.onError).toHaveBeenCalledWith(
+        vendorMessages.listings.errors.submitFailed,
+      ),
     );
     expect(view.onSuccess).not.toHaveBeenCalled();
-    expect((input(vendorMessages.listings.quickList.titleLabel) as HTMLInputElement).value).toBe(
-      " Synthetic item ",
-    );
+    expect(
+      (input(vendorMessages.listings.quickList.titleLabel) as HTMLInputElement)
+        .value,
+    ).toBe(" Synthetic item ");
     saveDraft();
     await waitFor(() => expect(view.onSuccess).toHaveBeenCalledOnce());
   });
@@ -561,7 +634,9 @@ describe("QuickList retained unit and wholesale controls", () => {
         name: vendorMessages.listings.fields.wholesaleLabel,
       }),
     ).toBeNull();
-    view.rerender(createElement(QuickListForm, { ...view.props, wholesaleEnabled: true }));
+    view.rerender(
+      createElement(QuickListForm, { ...view.props, wholesaleEnabled: true }),
+    );
     fireEvent.click(
       screen.getByRole("switch", {
         name: vendorMessages.listings.fields.wholesaleLabel,
@@ -590,7 +665,10 @@ describe("QuickList localized contract", () => {
   it.each(["en", "fr", "zh", "bem", "nya"] as const)(
     "resolves required draft guidance in %s",
     async (locale) => {
-      const messages = (await loadNamespace(locale, "vendor")) as unknown as typeof vendorMessages;
+      const messages = (await loadNamespace(
+        locale,
+        "vendor",
+      )) as unknown as typeof vendorMessages;
       for (const key of [
         "descriptionLabel",
         "descriptionHelp",
@@ -607,11 +685,15 @@ describe("QuickList localized contract", () => {
       }
       expect(messages.listings.success.draft).toBeTruthy();
       if (locale === "bem" || locale === "nya") {
-        expect(messages.listings.quickList.intro).toBe(vendorMessages.listings.quickList.intro);
+        expect(messages.listings.quickList.intro).toBe(
+          vendorMessages.listings.quickList.intro,
+        );
         expect(messages.listings.quickList.titlePlaceholder).toBe(
           vendorMessages.listings.quickList.titlePlaceholder,
         );
-        expect(messages.listings.meta.description).toBe(vendorMessages.listings.meta.description);
+        expect(messages.listings.meta.description).toBe(
+          vendorMessages.listings.meta.description,
+        );
       }
     },
   );
@@ -638,9 +720,12 @@ describe("QuickList parent-flow success", () => {
         fireEvent.change(input(vendorMessages.listings.fields.conditionLabel), {
           target: { value: "used" },
         });
-        fireEvent.change(input(vendorMessages.listings.fields.defectNotesLabel), {
-          target: { value: "Synthetic wear marks" },
-        });
+        fireEvent.change(
+          input(vendorMessages.listings.fields.defectNotesLabel),
+          {
+            target: { value: "Synthetic wear marks" },
+          },
+        );
       }
       vi.useFakeTimers();
       saveDraft();
@@ -654,12 +739,16 @@ describe("QuickList parent-flow success", () => {
             : vendorMessages.listings.success.draft,
         ),
       ).toBeTruthy();
-      expect(screen.queryByText(vendorMessages.listings.success.live)).toBeNull();
+      expect(
+        screen.queryByText(vendorMessages.listings.success.live),
+      ).toBeNull();
       act(() => {
         vi.advanceTimersByTime(1200);
       });
       expect(flowMocks.push).toHaveBeenCalledWith(
-        requiresEvidence ? `/en/listings/${draftResponse.listing_id}/edit` : "/en/listings",
+        requiresEvidence
+          ? `/en/listings/${draftResponse.listing_id}/edit`
+          : "/en/listings",
       );
     },
   );
@@ -671,7 +760,9 @@ describe("QuickList parent-flow success", () => {
         name: vendorMessages.listings.tabs.quickList,
       }),
     );
-    fireEvent.click(screen.getByRole("button", { name: vendorMessages.listings.tabs.attach }));
+    fireEvent.click(
+      screen.getByRole("button", { name: vendorMessages.listings.tabs.attach }),
+    );
     expect(
       screen
         .getByRole("tab", { name: vendorMessages.listings.tabs.attach })

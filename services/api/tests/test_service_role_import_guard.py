@@ -12,6 +12,9 @@ ALLOWED_IMPORTER_PATHS = frozenset(
     {
         "app/deps.py",
         "app/supabase_client.py",
+        # Founder-approved 2026-11-17: best-effort lifecycle notifications
+        # (outbox enqueue only) need the service client where callers have none.
+        "app/services/notifications/lifecycle.py",
     }
 )
 

@@ -20,7 +20,9 @@ const ORDER_KEYS = ["variantOption", "variantSeparator"];
 type Tree = { [key: string]: string | Tree };
 
 function load(locale: string, namespace: string): Tree {
-  return JSON.parse(readFileSync(join(MESSAGES, locale, `${namespace}.json`), "utf8")) as Tree;
+  return JSON.parse(
+    readFileSync(join(MESSAGES, locale, `${namespace}.json`), "utf8"),
+  ) as Tree;
 }
 
 function pick(tree: Tree, path: string[]): Tree {
@@ -28,16 +30,21 @@ function pick(tree: Tree, path: string[]): Tree {
 }
 
 function flatten(tree: Tree, prefix = ""): Record<string, string> {
-  return Object.entries(tree).reduce<Record<string, string>>((acc, [key, value]) => {
-    const full = prefix ? `${prefix}.${key}` : key;
-    return typeof value === "string"
-      ? { ...acc, [full]: value }
-      : { ...acc, ...flatten(value, full) };
-  }, {});
+  return Object.entries(tree).reduce<Record<string, string>>(
+    (acc, [key, value]) => {
+      const full = prefix ? `${prefix}.${key}` : key;
+      return typeof value === "string"
+        ? { ...acc, [full]: value }
+        : { ...acc, ...flatten(value, full) };
+    },
+    {},
+  );
 }
 
 function placeholders(message: string): string[] {
-  return [...message.matchAll(/\{(\w+)/g)].map((match) => match[1] ?? "").sort();
+  return [...message.matchAll(/\{(\w+)/g)]
+    .map((match) => match[1] ?? "")
+    .sort();
 }
 
 describe("variant + lightbox i18n", () => {
@@ -46,12 +53,18 @@ describe("variant + lightbox i18n", () => {
     for (const locale of LOCALES) {
       it(`${locale}: ${namespace}.${path.join(".")} matches English keys and placeholders`, () => {
         const localized = flatten(pick(load(locale, namespace), path));
-        expect(Object.keys(localized).sort()).toEqual(Object.keys(english).sort());
+        expect(Object.keys(localized).sort()).toEqual(
+          Object.keys(english).sort(),
+        );
         for (const [key, message] of Object.entries(english)) {
-          expect(placeholders(localized[key] ?? ""), `${locale} ${key}`).toEqual(
-            placeholders(message),
-          );
-          expect((localized[key] ?? "").trim().length > 0 || key.endsWith("Separator")).toBe(true);
+          expect(
+            placeholders(localized[key] ?? ""),
+            `${locale} ${key}`,
+          ).toEqual(placeholders(message));
+          expect(
+            (localized[key] ?? "").trim().length > 0 ||
+              key.endsWith("Separator"),
+          ).toBe(true);
         }
       });
     }

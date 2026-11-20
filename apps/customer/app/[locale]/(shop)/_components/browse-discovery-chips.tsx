@@ -15,13 +15,20 @@ type BrowseDiscoveryChipsProps = {
  * Browse entry chips shown on the search hub (audit §5.3): Categories · Directory ·
  * Services · Events. Real routes only — no mock destinations.
  */
-export function BrowseDiscoveryChips({ chips, ariaLabel }: BrowseDiscoveryChipsProps) {
+export function BrowseDiscoveryChips({
+  chips,
+  ariaLabel,
+}: BrowseDiscoveryChipsProps) {
   if (chips.length === 0) {
     return null;
   }
 
   return (
-    <nav data-testid="browse-discovery-chips" aria-label={ariaLabel} className="mb-4">
+    <nav
+      data-testid="browse-discovery-chips"
+      aria-label={ariaLabel}
+      className="mb-4"
+    >
       <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
         {chips.map((chip) => (
           <li key={chip.key}>

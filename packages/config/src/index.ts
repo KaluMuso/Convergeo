@@ -1,7 +1,9 @@
 export {
   ApiError,
   createApiClient,
+  setApiDefaultHeaders,
   type ApiClientOptions,
+  type ApiDefaultHeadersProvider,
   type ApiErrorEnvelope,
 } from "./api-client";
 export {

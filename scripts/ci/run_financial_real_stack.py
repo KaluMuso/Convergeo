@@ -68,6 +68,59 @@ FORWARD = [
     "20261113120500_delivery_revenue_ledger_account.sql",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
+    "20261114050000_rate_counter_scope_constraint_sync.sql",
+    # Listing fulfilment options + Class D may be sold new (additive, reversible).
+    "20261115090000_listing_fulfilment_options_class_d_any_condition.sql",
+    # W8 bundles & offers: offers, offer items, gift reservations, order snapshot (additive).
+    "20261115120000_bundles_offers.sql",
+    # Events collaboration: requests, audit, splits, organiser opt-in (additive, reversible).
+    "20261115130000_event_collaboration.sql",
+    # Events collaboration rate-limit scopes (additive, reversible).
+    "20261115130100_event_collaboration_rate_scopes.sql",
+    # Analytics/RBAC audit S1: admin read-only on money tables (additive).
+    "20261115140000_admin_money_tables_read_only.sql",
+    # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
+    "20261115140100_admin_direct_writes_read_only.sql",
+    "20261115140200_admin_governance_audit_consent.sql",
+    # Analytics v2 (Intelligence 1A/1B, flags default off): additive tables/functions.
+    "20261115150000_analytics_v2_foundation.sql",
+    "20261115150100_analytics_rollups.sql",
+    "20261115150200_analytics_commercial.sql",
+    "20261115150300_analytics_search_sessions.sql",
+    "20261115150400_analytics_lusaka_day.sql",
+    "20261115150500_analytics_search_daily_retention.sql",
+    "20261115150600_analytics_session_links.sql",
+    # Pay at the door: door payment tables + suspense account (additive, flag off).
+    "20261115200000_pay_at_door.sql",
+    # Event ticket integrity: ticket validity, promo limit, advance receivable (additive).
+    "20261115210000_event_ticket_integrity.sql",
+    # Business Home: offers + section flags, default off (additive, reversible).
+    "20261115235500_business_home_offers_flag.sql",
+    "20261115235600_business_home_section_flags.sql",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000_unified_cart_event_tickets.sql",
+    # Coupons, gift orders, birthday greetings (additive; flags default off).
+    "20261116100000_coupons_gifts_birthdays.sql",
+    # Coupons: collection net of the coupon + coupon_funding leg (additive).
+    "20261116100100_collection_coupon_funding.sql",
+    # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
+    "20261116110000_vendor_plans.sql",
+    # Shared canonical photos + sha256 dedup (additive, reversible).
+    "20261116110100_shared_canonical_photos.sql",
+    # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
+    "20261116130000_free_events_services.sql",
+    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
+    "20261117000000_multi_branch_businesses.sql",
+    # Unpaid-order auto-cancel window config row (additive, reversible).
+    "20261117010000_unpaid_order_cancel_hours.sql",
+    # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
+    "20261117010100_loyalty_points.sql",
+    "20261117010200_vendor_weekly_digest.sql",
+    # In-app rows for never-silent lifecycle templates (additive, reversible).
+    "20261117010300_in_app_never_silent_events.sql",
+    # Plan limits on active listings, trials, paid extras (additive, reversible).
+    "20261117020000_plan_limits_trials_extras.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -440,7 +493,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 158 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 189 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

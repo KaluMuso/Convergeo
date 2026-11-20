@@ -5,6 +5,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+import { buildPageMetadata } from "../../../../../../lib/page-title";
 import { getAccountAccessToken } from "../../../_components/account-server";
 import { createOrdersApiClient } from "../../_components/orders-api";
 
@@ -16,9 +17,14 @@ type PageProps = {
   params: Promise<{ locale: string; id: string }>;
 };
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "orders", "dispute.title", { index: false, follow: false });
+}
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale, id: "00000000-0000-0000-0000-000000000000" }));

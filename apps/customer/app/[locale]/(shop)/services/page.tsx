@@ -216,6 +216,7 @@ export default async function ServicesPage({
                   slow: t("badges.slow"),
                 },
                 preferredBadge: t("browse.preferredBadge"),
+                free: t("detail.free"),
               }}
             />
             <BackToTop label={tCatalog("plp.backToTop")} />

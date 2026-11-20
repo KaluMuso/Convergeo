@@ -18,9 +18,18 @@ _AUDIT_RECORDER_STATE_KEY = "admin_audit_recorder"
 class AdminAuditRecorder:
     """Records a single admin mutation into `public.audit_log` via the service-role client."""
 
-    def __init__(self, actor_id: str, service_client: SupabaseServiceClient) -> None:
+    def __init__(
+        self,
+        actor_id: str,
+        service_client: SupabaseServiceClient,
+        *,
+        actor_roles: frozenset[str] | None = None,
+        request_id: str | None = None,
+    ) -> None:
         self._actor_id = actor_id
         self._service_client = service_client
+        self._actor_roles = sorted(actor_roles) if actor_roles is not None else None
+        self._request_id = request_id
         self._recorded = False
 
     @property
@@ -35,6 +44,7 @@ class AdminAuditRecorder:
         entity_id: str | UUID | None,
         before: Mapping[str, Any] | None,
         after: Mapping[str, Any] | None,
+        reason: str | None = None,
     ) -> dict[str, Any]:
         if self._recorded:
             raise AppError(
@@ -44,14 +54,32 @@ class AdminAuditRecorder:
             )
 
         normalized_entity_id = _normalize_entity_id(entity_id)
-        row = {
+        before_row = dict(before) if before is not None else None
+        after_row = dict(after) if after is not None else None
+        # audit_log.entity_id is a uuid column. Text keys (feature flag names,
+        # config keys) go into before/after as `entity_key` instead, so the
+        # insert succeeds and the record still names what changed.
+        if normalized_entity_id is not None and not _is_uuid(normalized_entity_id):
+            entity_key = normalized_entity_id
+            normalized_entity_id = None
+            before_row = {**(before_row or {}), "entity_key": entity_key}
+            after_row = {**(after_row or {}), "entity_key": entity_key}
+        row: dict[str, Any] = {
             "actor": self._actor_id,
             "action": action,
             "entity_type": entity_type,
             "entity_id": normalized_entity_id,
-            "before": dict(before) if before is not None else None,
-            "after": dict(after) if after is not None else None,
+            "before": before_row,
+            "after": after_row,
         }
+        # S5 enrichment: role at time of action, request correlation, operator reason.
+        # `outcome` is left to the column default ('success').
+        if self._actor_roles is not None:
+            row["actor_roles"] = self._actor_roles
+        if self._request_id:
+            row["request_id"] = self._request_id[:128]
+        if reason is not None and reason.strip():
+            row["reason"] = reason.strip()[:1000]
 
         response = self._service_client.client.table("audit_log").insert(row).execute()
         data = response.data
@@ -75,6 +103,14 @@ def _normalize_entity_id(entity_id: str | UUID | None) -> str | None:
     return value or None
 
 
+def _is_uuid(value: str) -> bool:
+    try:
+        UUID(value)
+    except ValueError:
+        return False
+    return True
+
+
 async def get_admin_audit_recorder(
     request: Request,
     current_user: Annotated[CurrentUser, Depends(require_moderator())],
@@ -83,7 +119,13 @@ async def get_admin_audit_recorder(
     if isinstance(existing, AdminAuditRecorder):
         return existing
 
-    recorder = AdminAuditRecorder(current_user.id, get_supabase_service_client())
+    request_id = getattr(request.state, "request_id", None)
+    recorder = AdminAuditRecorder(
+        current_user.id,
+        get_supabase_service_client(),
+        actor_roles=current_user.roles,
+        request_id=request_id if isinstance(request_id, str) else None,
+    )
     setattr(request.state, _AUDIT_RECORDER_STATE_KEY, recorder)
     return recorder
 

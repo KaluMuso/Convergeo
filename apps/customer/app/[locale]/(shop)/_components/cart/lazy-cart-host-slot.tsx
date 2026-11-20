@@ -3,9 +3,14 @@
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 
-const CartHostSlot = dynamic(() => import("./cart-host-slot").then((mod) => mod.CartHostSlot), {
-  ssr: false,
-});
+import { readLeadTimePhrases } from "../sale-quantity";
+
+const CartHostSlot = dynamic(
+  () => import("./cart-host-slot").then((mod) => mod.CartHostSlot),
+  {
+    ssr: false,
+  },
+);
 
 type LazyCartHostSlotProps = {
   locale: string;
@@ -54,6 +59,9 @@ export function LazyCartHostSlot({ locale }: LazyCartHostSlotProps) {
           sqm: t("cart.saleUnits.sqm"),
         },
         madeToOrderLeadTime: raw("cart.madeToOrderLeadTime"),
+        leadTimeWhen: readLeadTimePhrases((form) =>
+          raw(`cart.leadTimeWhen.${form}`),
+        ),
       }}
     />
   );

@@ -50,9 +50,12 @@ type RowState =
 async function loadProduct(slug: string): Promise<RowState> {
   try {
     const base = getApiBaseUrl();
-    const response = await fetch(`${base}/products/${encodeURIComponent(slug)}`, {
-      credentials: "omit",
-    });
+    const response = await fetch(
+      `${base}/products/${encodeURIComponent(slug)}`,
+      {
+        credentials: "omit",
+      },
+    );
     if (response.status === 404) {
       return { kind: "unavailable", slug };
     }
@@ -72,7 +75,9 @@ function lowestInStockListing(product: ProductDetail) {
   if (pool.length === 0) {
     return null;
   }
-  return pool.reduce((best, listing) => (listing.price_ngwee < best.price_ngwee ? listing : best));
+  return pool.reduce((best, listing) =>
+    listing.price_ngwee < best.price_ngwee ? listing : best,
+  );
 }
 
 export function SavedItemsPanel({ locale, labels, signedIn }: Props) {
@@ -106,13 +111,18 @@ export function SavedItemsPanel({ locale, labels, signedIn }: Props) {
   return (
     <section className="space-y-4">
       <header className="space-y-1">
-        <h1 className="font-display text-h1 text-display-ink">{labels.title}</h1>
+        <h1 className="font-display text-h1 text-display-ink">
+          {labels.title}
+        </h1>
         <p className="text-sm text-text-2">{labels.description}</p>
         <p className="text-xs text-text-3" data-testid="saved-items-disclaimer">
           {labels.disclaimer}
         </p>
         {!signedIn ? (
-          <p className="text-xs text-text-2" data-testid="saved-items-signed-out-note">
+          <p
+            className="text-xs text-text-2"
+            data-testid="saved-items-signed-out-note"
+          >
             {labels.signedOutNote}
           </p>
         ) : null}
@@ -125,7 +135,11 @@ export function SavedItemsPanel({ locale, labels, signedIn }: Props) {
       ) : null}
 
       {!hydrated ? (
-        <div className="space-y-3" data-testid="saved-items-loading" aria-busy="true">
+        <div
+          className="space-y-3"
+          data-testid="saved-items-loading"
+          aria-busy="true"
+        >
           <p className="sr-only">{labels.loading}</p>
           <Skeleton height="4rem" />
           <Skeleton height="4rem" />
@@ -171,7 +185,9 @@ export function SavedItemsPanel({ locale, labels, signedIn }: Props) {
                   <div className="min-w-0">
                     <p className="font-mono text-sm text-text-2">{row.slug}</p>
                     <p className="text-sm text-text-2" role="status">
-                      {row.kind === "unavailable" ? labels.unavailable : labels.loadError}
+                      {row.kind === "unavailable"
+                        ? labels.unavailable
+                        : labels.loadError}
                     </p>
                   </div>
                   <button
@@ -259,7 +275,10 @@ export function SavedItemsPanel({ locale, labels, signedIn }: Props) {
                     type="button"
                     className="inline-flex min-h-11 items-center rounded border border-border px-3 text-sm font-medium text-text"
                     onClick={() => remove(row.slug)}
-                    aria-label={labels.removeLabel.replace("{name}", row.product.name)}
+                    aria-label={labels.removeLabel.replace(
+                      "{name}",
+                      row.product.name,
+                    )}
                   >
                     {labels.remove}
                   </button>

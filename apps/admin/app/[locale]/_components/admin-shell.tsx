@@ -4,16 +4,19 @@ import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
+import { resolveAdminRoleKind, useAdminIdentity } from "../../../lib/admin-identity";
 import { resolveAdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
 import { isAdminPasswordRecoveryPath } from "../../../lib/password-recovery-path";
 import {
+  type AdminPermissions,
   AdminPermissionRefreshContext,
   AdminPermissionsContext,
   useAdminPermissionCheck,
 } from "../../../lib/roles-api";
 
+import { AdminAccountMenu } from "./admin-account-menu";
 import {
   ADMIN_NAV_GROUPS,
   adminItemHref,
@@ -23,7 +26,6 @@ import {
   resolveAdminActiveItem,
 } from "./admin-nav-config";
 import { AdminNotificationBell } from "./admin-notification-bell";
-import { SignOutButton } from "./sign-out-button";
 
 type AdminShellProps = {
   locale: string;
@@ -32,11 +34,11 @@ type AdminShellProps = {
 
 function navLinkClass(active: boolean, compact = false): string {
   return [
-    "inline-flex min-h-11 items-center rounded-md border text-sm font-medium",
-    compact ? "shrink-0 px-3" : "w-full px-3",
+    "inline-flex items-center rounded-md border text-sm",
+    compact ? "min-h-11 shrink-0 px-3 font-medium" : "min-h-9 w-full px-3",
     active
-      ? "border-primary bg-surface text-primary"
-      : "border-border bg-surface text-text hover:border-primary hover:text-primary",
+      ? "border-primary bg-primary/10 font-semibold text-primary"
+      : "border-transparent font-medium text-text hover:border-border hover:text-primary",
   ].join(" ");
 }
 
@@ -47,6 +49,18 @@ export function AdminShell({ locale, children }: AdminShellProps) {
   const menuId = useId();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  // The sidebar must survive route changes: permissions reload on every navigation
+  // (grants go null for a moment), which used to empty the nav and reset its scroll.
+  // Keep the last known grants for the nav only, and only while moving to another route;
+  // page content still waits for fresh ones, and a same-route revalidation (focus, auth
+  // event) still clears everything so a revoked grant disappears at once.
+  const [navGrants, setNavGrants] = useState<{
+    grants: AdminPermissions;
+    route: string;
+  } | null>(null);
+  const navScrollRef = useRef<HTMLElement>(null);
+  const navScrollTopRef = useRef(0);
+  const mainRef = useRef<HTMLElement>(null);
 
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
   const isBareAuthRoute =
@@ -59,6 +73,35 @@ export function AdminShell({ locale, children }: AdminShellProps) {
     refresh,
     error: grantError,
   } = useAdminPermissionCheck(isBareAuthRoute ? null : pathname);
+
+  useEffect(() => {
+    if (grants) {
+      setNavGrants({ grants, route: pathname });
+    }
+  }, [grants, pathname]);
+
+  useEffect(() => {
+    if (isBareAuthRoute) {
+      setNavGrants(null);
+    }
+  }, [isBareAuthRoute]);
+
+  // Belt and braces: put the sidebar back where the admin left it after any re-render.
+  useLayoutEffect(() => {
+    const nav = navScrollRef.current;
+    if (nav && nav.scrollTop !== navScrollTopRef.current) {
+      nav.scrollTop = navScrollTopRef.current;
+    }
+  });
+
+  // Main content scrolls on its own, so a new page must start at its top.
+  useLayoutEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+  }, [pathname]);
+
+  const identity = useAdminIdentity(!isBareAuthRoute, grants);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -82,10 +125,13 @@ export function AdminShell({ locale, children }: AdminShellProps) {
     return <>{children}</>;
   }
 
+  const navSource =
+    grants ?? (navGrants && !grantError && navGrants.route !== pathname ? navGrants.grants : null);
+  const roleKind = resolveAdminRoleKind(navSource);
   const capabilities = resolveAdminNavCapabilities(
-    grants?.permissions ?? [],
-    grants?.unrestricted ?? false,
-    grants?.can_manage_roles ?? false,
+    navSource?.permissions ?? [],
+    navSource?.unrestricted ?? false,
+    navSource?.can_manage_roles ?? false,
   );
   const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
   const visibleItems = flattenAdminNavItems(navGroups);
@@ -103,15 +149,16 @@ export function AdminShell({ locale, children }: AdminShellProps) {
         (!requested || !capabilities[requested] || rest.startsWith("/moderation/flags"))));
 
   return (
-    <div className="min-h-dvh bg-bg text-text">
-      <header className="border-b border-border bg-panel text-panel-text">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <p className="text-xs uppercase tracking-wide text-panel-muted">{t("shell.eyebrow")}</p>
-            <h1 className="font-serif text-xl text-panel-text">{t("title")}</h1>
-            <p className="text-xs text-panel-muted">{t("shell.environment")}</p>
+    <div className="flex h-dvh flex-col overflow-hidden bg-bg text-text">
+      <header className="shrink-0 border-b border-border bg-panel text-panel-text">
+        <div className="flex w-full items-center justify-between gap-3 px-3 py-1.5">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <h1 className="truncate font-serif text-lg text-panel-text">{t("title")}</h1>
+            <p className="hidden truncate text-xs text-panel-muted sm:block">
+              {t("shell.eyebrow")} · {t("shell.environment")}
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <AdminNotificationBell locale={locale} />
             <ThemeToggle
               label={tCommon("theme.label")}
@@ -120,24 +167,31 @@ export function AdminShell({ locale, children }: AdminShellProps) {
               systemLabel={tCommon("theme.system")}
               className="border-panel-muted/40 bg-transparent text-panel-text hover:border-panel-text hover:text-panel-text"
             />
-            <SignOutButton
-              locale={locale}
-              label={t("shell.signOut")}
-              className="inline-flex min-h-11 items-center justify-center rounded-md border border-panel-muted/40 px-4 text-sm font-medium text-panel-text disabled:opacity-60"
-            />
+            <AdminAccountMenu locale={locale} identity={identity} roleKind={roleKind} />
           </div>
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 lg:flex-row">
-        <nav aria-label={t("shell.navAriaLabel")} className="hidden shrink-0 lg:block lg:w-60">
-          <div className="sticky top-4 space-y-5">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <nav
+          ref={navScrollRef}
+          aria-label={t("shell.navAriaLabel")}
+          data-testid="admin-sidebar"
+          onScroll={(event) => {
+            // An emptied nav clamps to 0; do not let that overwrite where the admin was.
+            if (navGroups.length > 0) {
+              navScrollTopRef.current = event.currentTarget.scrollTop;
+            }
+          }}
+          className="hidden shrink-0 overflow-y-auto overscroll-contain border-r border-border bg-surface px-2 py-2 lg:block lg:w-56"
+        >
+          <div className="space-y-3">
             {navGroups.map((group) => (
               <section key={group.key}>
-                <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-text-3">
+                <h2 className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-text-3">
                   {t(`nav.groups.${group.key}` as "nav.groups.overview")}
                 </h2>
-                <ul className="space-y-1">
+                <ul className="space-y-0.5">
                   {group.items.map((item) => {
                     const href = adminItemHref(locale, item.href);
                     const active = activeKey === item.key;
@@ -159,7 +213,7 @@ export function AdminShell({ locale, children }: AdminShellProps) {
           </div>
         </nav>
 
-        <div className="lg:hidden">
+        <div className="shrink-0 border-b border-border px-3 py-2 lg:hidden">
           <div className="flex items-center gap-2">
             <button
               ref={menuButtonRef}
@@ -195,20 +249,26 @@ export function AdminShell({ locale, children }: AdminShellProps) {
           </div>
         </div>
 
-        <main className="min-w-0 flex-1 rounded-lg border border-border bg-surface p-4 shadow-sm">
-          {grantError ? (
-            <p role="alert">{t("shell.permissionError")}</p>
-          ) : !grants ? (
-            <p role="status">{t("shell.permissionChecking")}</p>
-          ) : denied ? (
-            <p role="alert">{t("shell.permissionDenied")}</p>
-          ) : (
-            <AdminPermissionsContext.Provider value={grants}>
-              <AdminPermissionRefreshContext.Provider value={refresh}>
-                {children}
-              </AdminPermissionRefreshContext.Provider>
-            </AdminPermissionsContext.Provider>
-          )}
+        <main
+          ref={mainRef}
+          data-testid="admin-main"
+          className="admin-main min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-bg p-3"
+        >
+          <div className="rounded-lg border border-border bg-surface p-3 shadow-sm">
+            {grantError ? (
+              <p role="alert">{t("shell.permissionError")}</p>
+            ) : !grants ? (
+              <p role="status">{t("shell.permissionChecking")}</p>
+            ) : denied ? (
+              <p role="alert">{t("shell.permissionDenied")}</p>
+            ) : (
+              <AdminPermissionsContext.Provider value={grants}>
+                <AdminPermissionRefreshContext.Provider value={refresh}>
+                  {children}
+                </AdminPermissionRefreshContext.Provider>
+              </AdminPermissionsContext.Provider>
+            )}
+          </div>
         </main>
       </div>
 

@@ -7,7 +7,10 @@ import React, { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProgressiveLoadControls } from "./progressive-load-controls";
-import { useProgressiveLoad, type ProgressivePage } from "./use-progressive-load";
+import {
+  useProgressiveLoad,
+  type ProgressivePage,
+} from "./use-progressive-load";
 
 afterEach(() => {
   cleanup();
@@ -35,7 +38,10 @@ function Harness({
   initialItems: Item[];
   initialCursor: string | null;
   resetKey: string;
-  fetchPage: (cursor: string, signal: AbortSignal) => Promise<ProgressivePage<Item>>;
+  fetchPage: (
+    cursor: string,
+    signal: AbortSignal,
+  ) => Promise<ProgressivePage<Item>>;
   preferButtonOnly?: boolean;
 }) {
   const state = useProgressiveLoad<Item>({
@@ -70,7 +76,10 @@ describe("useProgressiveLoad", () => {
   beforeEach(() => {
     vi.stubGlobal(
       "IntersectionObserver",
-      vi.fn(function MockIO(this: { observe: () => void; disconnect: () => void }) {
+      vi.fn(function MockIO(this: {
+        observe: () => void;
+        disconnect: () => void;
+      }) {
         this.observe = vi.fn();
         this.disconnect = vi.fn();
       }),
@@ -128,9 +137,13 @@ describe("useProgressiveLoad", () => {
       expect(screen.getByText("Gamma")).toBeInTheDocument();
     });
 
-    const items = screen.getAllByRole("listitem").map((node) => node.textContent);
+    const items = screen
+      .getAllByRole("listitem")
+      .map((node) => node.textContent);
     expect(items).toEqual(["Alpha", "Beta", "Gamma"]);
-    expect(screen.getByTestId("test-aria-live")).toHaveTextContent("1 more results loaded.");
+    expect(screen.getByTestId("test-aria-live")).toHaveTextContent(
+      "1 more results loaded.",
+    );
     expect(screen.getByTestId("test-end-of-results")).toBeInTheDocument();
   });
 
@@ -142,7 +155,9 @@ describe("useProgressiveLoad", () => {
 
     function Wrapper() {
       const [resetKey, setResetKey] = useState("phones");
-      const [initial, setInitial] = useState<Item[]>([{ id: "a", title: "Alpha" }]);
+      const [initial, setInitial] = useState<Item[]>([
+        { id: "a", title: "Alpha" },
+      ]);
       return (
         <div>
           <button
@@ -237,7 +252,9 @@ describe("useProgressiveLoad", () => {
 
     await user.keyboard("{Enter}");
     await waitFor(() => {
-      expect(screen.getByTestId("test-aria-live")).toHaveTextContent("2 more results loaded.");
+      expect(screen.getByTestId("test-aria-live")).toHaveTextContent(
+        "2 more results loaded.",
+      );
     });
   });
 
@@ -299,6 +316,8 @@ describe("homepage isolation", () => {
     const shopHome = path.resolve(__dirname, "../../page.tsx");
     void homeDir;
     const source = await fs.readFile(shopHome, "utf8");
-    expect(source).not.toMatch(/useProgressiveLoad|ProgressiveLoadControls|PlpBrowseClient/);
+    expect(source).not.toMatch(
+      /useProgressiveLoad|ProgressiveLoadControls|PlpBrowseClient/,
+    );
   });
 });

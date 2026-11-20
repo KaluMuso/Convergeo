@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { buildPageMetadata } from "../../../../../../lib/page-title";
 import { getAccountAccessToken } from "../../../_components/account-server";
 import {
   createOrdersApiClient,
@@ -17,12 +18,14 @@ import type { Metadata } from "next";
 
 const ReturnForm = dynamic(() => import("./_components/return-form").then((mod) => mod.ReturnForm));
 
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "orders", "return.title", { index: false, follow: false });
+}
 
 type PageProps = {
   params: Promise<{ locale: string; id: string }>;

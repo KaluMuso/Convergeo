@@ -24,7 +24,7 @@ export const RAW_ICU_PLACEHOLDER = /\{\s*[A-Za-z_][A-Za-z0-9_]*\s*(?:,[^{}]*)?\}
  * name, a version number) cannot match.
  */
 export const RAW_MESSAGE_ID =
-  /\b(?:account|admin|ai|auth|catalog|checkout|clips|common|directory|events|legal|marketing|nav|notifications|orders|search|services|supplies|vendor)\.[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+\b/;
+  /\b(?:account|admin|ai|auth|catalog|checkout|clips|common|directory|events|legal|marketing|nav|notifications|orders|search|services|vendor)\.[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+\b/;
 
 /** next-intl failure codes / messages as they appear in a console error. */
 export const I18N_CONSOLE_ERROR =

@@ -5,6 +5,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import checkoutMessages from "../../../../../../../packages/i18n/messages/en/checkout.json";
+import commonMessages from "../../../../../../../packages/i18n/messages/en/common.json";
 
 import { StepPayment, type PaymentOptions } from "./step-payment";
 import { StepReview, type ReviewStepLabels } from "./step-review";
@@ -46,7 +47,7 @@ const reviewLabels: ReviewStepLabels = {
   payerNumber: c.review.payerNumber,
   saleUnits: checkoutMessages.cart.saleUnits,
   madeToOrderLeadTime: checkoutMessages.cart.madeToOrderLeadTime,
-  codGuide: c.review.codGuide,
+  codGuide: { ...c.review.codGuide, trustLine: commonMessages.codTrust.line },
 };
 
 const session: CheckoutSession = {
@@ -108,12 +109,18 @@ describe("COD guidance — payment step", () => {
 
     await user.click(await screen.findByLabelText(c.payment.cod));
     const guide = screen.getByTestId("checkout-cod-guide");
-    expect(within(guide).getByText(c.payment.codGuide.step1)).toBeInTheDocument();
     expect(
-      within(guide).getByText(c.payment.codGuide.step2.replace("{amount}", "K425.00")),
+      within(guide).getByText(c.payment.codGuide.step1),
     ).toBeInTheDocument();
     expect(
-      within(guide).getByText(c.payment.codGuide.capNote.replace("{cap}", "K500.00")),
+      within(guide).getByText(
+        c.payment.codGuide.step2.replace("{amount}", "K425.00"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(guide).getByText(
+        c.payment.codGuide.capNote.replace("{cap}", "K500.00"),
+      ),
     ).toBeInTheDocument();
   });
 
@@ -132,13 +139,14 @@ describe("COD guidance — payment step", () => {
     const card = await screen.findByTestId("checkout-cod-unavailable");
     expect(
       within(card).getByText(
-        c.payment.codGuide.overCap.replace("{total}", "K600.00").replace("{cap}", "K500.00"),
+        c.payment.codGuide.overCap
+          .replace("{total}", "K600.00")
+          .replace("{cap}", "K500.00"),
       ),
     ).toBeInTheDocument();
-    expect(within(card).getByRole("link", { name: c.payment.codGuide.editCart })).toHaveAttribute(
-      "href",
-      "/en/cart",
-    );
+    expect(
+      within(card).getByRole("link", { name: c.payment.codGuide.editCart }),
+    ).toHaveAttribute("href", "/en/cart");
   });
 });
 
@@ -167,15 +175,26 @@ describe("COD guidance — review step", () => {
       />,
     );
 
+    // I1: the shared COD trust line leads; escrow wording stays out.
+    expect(screen.getByTestId("checkout-review-cod-trust")).toHaveTextContent(
+      "You pay on delivery → We deliver → You confirm",
+    );
     const steps = screen.getByTestId("checkout-review-cod-steps");
-    expect(within(steps).getByText(c.review.codGuide.step1)).toBeInTheDocument();
     expect(
-      within(steps).getByText(c.review.codGuide.step3.replace("{amount}", "K425.00")),
+      within(steps).getByText(c.review.codGuide.step1),
+    ).toBeInTheDocument();
+    expect(
+      within(steps).getByText(
+        c.review.codGuide.step3.replace("{amount}", "K425.00"),
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(c.review.escrowStep1)).not.toBeInTheDocument();
     expect(screen.queryByText(c.review.escrowTitle)).not.toBeInTheDocument();
     expect(screen.getByTestId("review-fulfilment-vendor-a")).toHaveTextContent(
-      c.review.codGuide.deliveryTo.replace("{landmark}", "Woodlands, near the church"),
+      c.review.codGuide.deliveryTo.replace(
+        "{landmark}",
+        "Woodlands, near the church",
+      ),
     );
     expect(screen.getByTestId("checkout-place-order")).toHaveTextContent(
       c.review.codGuide.placeOrderCod,
@@ -196,6 +215,80 @@ describe("COD guidance — review step", () => {
 
     expect(screen.getByText(c.review.escrowTitle)).toBeInTheDocument();
     expect(screen.queryByTestId("checkout-review-cod-steps")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("checkout-review-cod-trust")).not.toBeInTheDocument();
     expect(screen.getByTestId("checkout-place-order")).toHaveTextContent(c.review.placeOrder);
+  });
+
+  it("shows an applied coupon as a clear negative line above the total", () => {
+    render(
+      <StepReview
+        locale="en"
+        session={session}
+        totals={{ ...eligible, discount_ngwee: 2_000, total_ngwee: 40_500, coupon_code: "SAVE20" }}
+        payment={{ method: "momo", rail: "mtn", payer_number: "+260970000001" }}
+        labels={{ ...reviewLabels, discount: c.review.discount }}
+        onPlaceOrder={vi.fn()}
+      />,
+    );
+
+    const line = screen.getByTestId("review-discount");
+    expect(line).toHaveTextContent("Coupon SAVE20");
+    expect(line).toHaveTextContent("−K20.00");
+    expect(screen.getByText("K405.00")).toBeInTheDocument();
+  });
+});
+
+describe("unified checkout — review groups lines by type", () => {
+  it("labels products and event tickets, and shows the buyer ticket fee", () => {
+    const withTickets: CheckoutSession = {
+      ...session,
+      subtotal_ngwee: 60_167,
+      ticket_lines: [
+        {
+          id: "t1",
+          item_type: "event_ticket",
+          event_id: "e1",
+          event_title: "Lusaka Jazz Night",
+          ticket_type_id: "tt1",
+          type_name: "VIP",
+          instance_id: "i1",
+          vendor_id: "vendor-a",
+          qty: 2,
+          unit_price_ngwee: 15_050,
+          line_total_ngwee: 20_167,
+        },
+      ],
+      cod_allowed: false,
+    };
+    render(
+      <StepReview
+        locale="en"
+        session={withTickets}
+        totals={{
+          ...eligible,
+          subtotal_ngwee: 60_167,
+          delivery_fee_ngwee: 0,
+          total_ngwee: 61_175,
+          cod_eligible: false,
+        }}
+        payment={{ method: "momo", rail: "mtn", payer_number: "+260970000001" }}
+        labels={reviewLabels}
+        onPlaceOrder={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("review-type-products")).toHaveTextContent(
+      c.review.typeProducts,
+    );
+    const group = screen.getByTestId("review-ticket-group");
+    expect(group).toHaveTextContent(c.review.typeEventTickets);
+    expect(
+      within(group).getByTestId("review-ticket-line-t1"),
+    ).toHaveTextContent("VIP × 2");
+    expect(
+      within(group).getByTestId("review-ticket-line-t1"),
+    ).toHaveTextContent("K201.67");
+    expect(screen.getByTestId("review-platform-fee")).toHaveTextContent(
+      "K10.08",
+    );
   });
 });

@@ -34,15 +34,15 @@ set_fixture() {
   export CHROME_FIXTURE_VERSION
 }
 
-set_fixture ubuntu24 20261004.327.1 157.0.8103.78 157.0.8103.78-1
+set_fixture ubuntu24 20261004.327.1 158.0.8127.36 158.0.8127.36-1
 output=$(check_hosted_chrome 2>&1)
 [[ "$output" == *'ImageOS=ubuntu24 ImageVersion=20261004.327.1'* ]]
-[[ "$output" == *'owner=google-chrome-stable product=157.0.8103.78 package=157.0.8103.78-1'* ]]
+[[ "$output" == *'owner=google-chrome-stable product=158.0.8127.36 package=158.0.8127.36-1'* ]]
 
-set_fixture ubuntu24 20260927.320.1 157.0.8103.78 157.0.8103.78-1
+set_fixture ubuntu24 20260927.320.1 158.0.8127.36 158.0.8127.36-1
 check_hosted_chrome >/dev/null
 
-set_fixture ubuntu24 20261101.360.1 157.0.8103.78 157.0.8103.78-1
+set_fixture ubuntu24 20261101.360.1 158.0.8127.36 158.0.8127.36-1
 output=$(check_hosted_chrome 2>&1)
 [[ "$output" == *'ImageOS=ubuntu24 ImageVersion=20261101.360.1'* ]]
 
@@ -63,31 +63,31 @@ for versions in \
   if check_hosted_chrome >/dev/null 2>&1; then exit 1; fi
 done
 
-set_fixture other-os 20261004.327.1 157.0.8103.78 157.0.8103.78-1
+set_fixture other-os 20261004.327.1 158.0.8127.36 158.0.8127.36-1
 if check_hosted_chrome >/dev/null 2>&1; then exit 1; fi
 
-set_fixture ubuntu24 20261011.333.1 157.0.8103.78 157.0.8103.78-1
+set_fixture ubuntu24 20261011.333.1 158.0.8127.36 158.0.8127.36-1
 if output=$(check_hosted_chrome 2>&1); then exit 1; fi
 [[ "$output" == *'ImageVersion=unknown'* ]]
 
-set_fixture ubuntu24 20261004.327.1 157.0.8103.78 157.0.8103.78-1
+set_fixture ubuntu24 20261004.327.1 158.0.8127.36 158.0.8127.36-1
 unset ImageVersion
 if output=$(check_hosted_chrome 2>&1); then exit 1; fi
 [[ "$output" == *'ImageVersion=unknown'* ]]
 
-set_fixture ubuntu24 20261004.327.1 157.0.8103.78 missing
+set_fixture ubuntu24 20261004.327.1 158.0.8127.36 missing
 if output=$(check_hosted_chrome 2>&1); then exit 1; fi
 [[ "$output" == *'package=unknown'* ]]
 
 # Unknown hosts cannot start a download or a privileged package install.
 download_verified_chrome() { : > "$fixture/unexpected-install"; }
-set_fixture ubuntu24 20261011.333.1 157.0.8103.78 157.0.8103.78-1
+set_fixture ubuntu24 20261011.333.1 158.0.8127.36 158.0.8127.36-1
 if install_verified_hosted_chrome >/dev/null 2>&1; then exit 1; fi
 [[ ! -e "$fixture/unexpected-install" ]]
 
 # Even a matching preexisting browser cannot mask a failed verification.
 download_verified_chrome() { return 1; }
-set_fixture ubuntu24 20261004.327.1 157.0.8103.78 157.0.8103.78-1
+set_fixture ubuntu24 20261004.327.1 158.0.8127.36 158.0.8127.36-1
 if install_verified_hosted_chrome >/dev/null 2>&1; then exit 1; fi
 
 chrome_defaults="$fixture/google-chrome-defaults"
@@ -153,7 +153,7 @@ with tempfile.TemporaryDirectory(dir=fixture, prefix="metadata-") as temp:
             "Architecture": "amd64",
             "Filename": expected_name,
             "SHA256": expected_sha,
-            "Size": "147497676",
+            "Size": "152702276",
         }
         if fault == "retired_pin":
             fields["Version"] = "155.0.8059.39-1"

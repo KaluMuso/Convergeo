@@ -7,6 +7,7 @@ import { setRequestLocale } from "next-intl/server";
 
 import { absoluteApiUrl } from "../../../lib/api-base-url";
 import { fetchJson } from "../../../lib/fetch-json";
+import { buildPageMetadata } from "../../../lib/page-title";
 
 import { ClipsFeed } from "./_components/clips-feed";
 import { FeedError } from "./_components/feed-states";
@@ -25,11 +26,16 @@ import type { Metadata } from "next";
  * no transcode credit can be spent.
  */
 
-export const metadata: Metadata = {
-  // The indexable, shareable surface is the per-clip page (M17-P08). The feed
-  // itself is a personalised-order browse surface with no index-critical content.
-  robots: { index: false, follow: true },
-};
+// The indexable, shareable surface is the per-clip page (M17-P08). The feed
+// itself is a personalised-order browse surface with no index-critical content.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "clips", "feed.title", { index: false, follow: true });
+}
 
 type PageProps = {
   params: Promise<{ locale: string }>;
