@@ -8,4 +8,6 @@ commit-msg:
 pre-commit:
   commands:
     format-staged:
-      run: pnpm format:staged
+      glob: "*.{ts,tsx,js,jsx,json,css,md}"
+      run: node scripts/format-staged.mjs {staged_files}
+      stage_fixed: true

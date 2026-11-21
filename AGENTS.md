@@ -4,7 +4,7 @@ Project overview, decisions, and conventions live in `CLAUDE.md` and `docs/`. St
 
 ## Multi-agent work (read first)
 
-Several agents build this repo: Claude (architect, reviewer and merge captain), Cursor and Grok Build (implementers), Grok Bot (routines) and King (founder, approver). **Before starting any task, read `docs/ops/agent-board.md`, claim your row, and follow its rules.** Task prompts live in `prompts/agents/`. Never merge to `master` or `release/*`. Never touch `supabase/migrations/`, `scripts/ci/` or `.github/workflows/`, or payments, auth, RLS or money code, without Claude's review. In Cursor, use Grok or Composer models.
+Several agents build this repo: Claude (architect, reviewer and merge captain), Cursor and Grok Build (implementers), Grok Bot (routines) and King (founder, approver). **Before starting any task, read `docs/ops/agent-board.md`, claim your row, and follow its rules.** Task prompts live in `prompts/agents/`. Never merge to `master` or `release/*`. Never touch `supabase/migrations/`, `scripts/ci/` or `.github/workflows/`, or payments, auth, RLS or money code, without Claude's review. In Cursor, use Grok or Composer models. Commit normally; `LEFTHOOK=0` is no longer needed.
 
 ## Git branching and cloud task identity
 
