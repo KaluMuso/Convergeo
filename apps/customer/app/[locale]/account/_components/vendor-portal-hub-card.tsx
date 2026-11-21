@@ -35,7 +35,7 @@ export function VendorPortalHubCard({ locale, labels }: VendorPortalHubCardProps
 
   return (
     <article
-      className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 sm:col-span-2"
+      className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 lg:p-5 xl:col-span-2"
       data-testid="account-hub-vendor-portal"
     >
       <div className="space-y-1">

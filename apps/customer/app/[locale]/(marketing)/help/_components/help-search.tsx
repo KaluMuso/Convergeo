@@ -63,12 +63,12 @@ export function HelpSearch({ index, locale }: HelpSearchProps) {
             {t("search.resultsCount", { count: results.length })}
           </p>
           {results.length === 0 ? (
-            <div className="rounded-lg border border-border bg-bg-2 p-6 text-center">
+            <div className="rounded-lg border border-border bg-bg-2 p-4 py-8 text-center lg:p-5">
               <p className="font-body text-text">{t("search.noResults")}</p>
               <p className="mt-1 text-sm text-text-2">{t("search.noResultsHint")}</p>
             </div>
           ) : (
-            <ul className="space-y-3">
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {results.map((doc) => (
                 <ArticleLink key={doc.slug} doc={doc} locale={locale} />
               ))}
@@ -76,13 +76,13 @@ export function HelpSearch({ index, locale }: HelpSearchProps) {
           )}
         </section>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {grouped.map((group) => (
             <section key={group.category} className="space-y-3">
               <h2 className="font-display text-h3 text-display-ink">
                 {t(`categories.${group.category}`)}
               </h2>
-              <ul className="space-y-3">
+              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {group.docs.map((doc) => (
                   <ArticleLink key={doc.slug} doc={doc} locale={locale} />
                 ))}

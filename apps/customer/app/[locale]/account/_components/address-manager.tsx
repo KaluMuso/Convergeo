@@ -77,7 +77,7 @@ export function AddressManager({
 
   if (editing) {
     return (
-      <div className="space-y-4">
+      <div className="max-w-2xl space-y-4">
         <h2 className="font-display text-h2 text-display-ink">
           {editing === "new" ? labels.add : labels.edit}
         </h2>
@@ -126,11 +126,11 @@ export function AddressManager({
       {addresses.length === 0 ? (
         <EmptyState title={labels.emptyTitle} body={labels.emptyBody} />
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {addresses.map((address) => (
             <li
               key={address.id}
-              className="rounded-lg border border-border bg-surface p-4 shadow-1"
+              className="rounded-lg border border-border bg-surface p-4 shadow-1 lg:p-5"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-1">

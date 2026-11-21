@@ -54,7 +54,7 @@ export default async function AccountOrdersPage({ params }: PageProps) {
 
   if (groups.length === 0) {
     const content = (
-      <section className="space-y-4 rounded border border-border bg-surface p-6 text-center">
+      <section className="space-y-4 rounded border border-border bg-surface p-4 py-8 text-center lg:p-5">
         <h2 className="font-display text-h2 text-display-ink">{t("empty.title")}</h2>
         <p className="text-sm text-text-2">{t("empty.body")}</p>
         <LinkButton
@@ -71,16 +71,16 @@ export default async function AccountOrdersPage({ params }: PageProps) {
   }
 
   const content = (
-    <section className="space-y-6">
+    <section className="space-y-4 sm:space-y-6">
       <header className="space-y-1">
         <h2 className="font-display text-h2 text-display-ink">{t("title")}</h2>
       </header>
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {groups.map((group) => (
           <article
             key={group.checkout_group_id}
-            className="space-y-3 rounded border border-border bg-surface p-4"
+            className="space-y-3 rounded border border-border bg-surface p-4 lg:p-5"
           >
             <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
               <p className="text-sm font-medium text-display-ink">

@@ -66,8 +66,8 @@ export default async function AccountAddressesPage({ params }: PageProps) {
   };
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
+    <section className="space-y-4 sm:space-y-6">
+      <header className="max-w-2xl space-y-1">
         <h2 className="font-display text-h2 text-display-ink">{t("addresses.title")}</h2>
         <p className="text-sm text-text-2">{t("addresses.description")}</p>
       </header>

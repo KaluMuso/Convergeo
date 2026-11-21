@@ -55,7 +55,7 @@ function HubCard({
 }) {
   return (
     <article
-      className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4"
+      className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 lg:p-5"
       data-testid={testId}
     >
       <div className="space-y-1">
@@ -90,14 +90,14 @@ export function AccountOverview({ locale, labels }: Props) {
       : labels.recentEmpty;
 
   return (
-    <section className="space-y-5" data-testid="account-overview">
+    <section className="space-y-4 sm:space-y-6" data-testid="account-overview">
       <header className="space-y-1">
         <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
         <p className="text-sm text-text-2">{labels.description}</p>
         <p className="text-xs text-text-3">{labels.deviceNote}</p>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <VendorPortalHubCard
           locale={locale}
           labels={{

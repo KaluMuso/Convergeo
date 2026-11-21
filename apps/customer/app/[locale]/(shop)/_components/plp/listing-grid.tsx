@@ -51,20 +51,31 @@ type ListingGridProps = {
    * `rail`: single horizontally scrolling row (deal / department rails).
    */
   layout?: "grid" | "rail";
+  /**
+   * `plp` (default): dense responsive grid up to 6 columns on very wide screens.
+   * `account`: account saved/following — 2→3→4 columns without extra breakpoints.
+   */
+  gridDensity?: "plp" | "account";
   /** Optional per-card action rendered under the card (e.g. storefront compare). */
   renderFooter?: (listing: CatalogListing) => ReactNode;
 };
 
-const LISTING_MEDIA_SIZES =
-  "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
+const LISTING_MEDIA_SIZES = "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
 
-function GridWrapper({ children }: { children: ReactNode }) {
+const GRID_CLASS = {
+  plp: "motion-fade grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
+  account: "motion-fade grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4",
+} as const;
+
+function GridWrapper({
+  children,
+  gridDensity = "plp",
+}: {
+  children: ReactNode;
+  gridDensity?: "plp" | "account";
+}) {
   return (
-    <div
-      data-testid="listing-grid"
-      data-layout="grid"
-      className="motion-fade grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
-    >
+    <div data-testid="listing-grid" data-layout="grid" className={GRID_CLASS[gridDensity]}>
       {children}
     </div>
   );
@@ -96,49 +107,51 @@ export function ListingGrid({
   showSampleBadge = shouldShowSampleListingBadge(),
   density = "compact",
   layout = "grid",
+  gridDensity = "plp",
   renderFooter,
 }: ListingGridProps) {
   const isRail = layout === "rail";
-  const Wrapper = isRail ? RailWrapper : GridWrapper;
-  return (
-    <Wrapper>
-      {listings.map((listing, index) => {
-        const priority = index < priorityCount;
-        const media = listing.imagePublicId ? (
-          <CloudinaryImageStatic
-            publicId={listing.imagePublicId}
-            alt={listing.title}
-            width={360}
-            ratio="4/3"
-            priority={priority}
-            sizes={LISTING_MEDIA_SIZES}
-            className="h-full w-full object-cover"
-          />
-        ) : undefined;
 
-        const card = (
-          <ListingCard
-            key={listing.id}
-            locale={locale}
-            listing={listing}
-            labels={labels}
-            media={media}
-            showSampleBadge={showSampleBadge}
-            density={density}
-          />
-        );
-        if (isRail) return <li key={listing.id}>{card}</li>;
-        const footer = renderFooter?.(listing);
-        if (!footer) {
-          return card;
-        }
-        return (
-          <div key={listing.id} className="flex min-w-0 flex-col gap-1.5">
-            {card}
-            {footer}
-          </div>
-        );
-      })}
-    </Wrapper>
-  );
+  const cards = listings.map((listing, index) => {
+    const priority = index < priorityCount;
+    const media = listing.imagePublicId ? (
+      <CloudinaryImageStatic
+        publicId={listing.imagePublicId}
+        alt={listing.title}
+        width={360}
+        ratio="4/3"
+        priority={priority}
+        sizes={LISTING_MEDIA_SIZES}
+        className="h-full w-full object-cover"
+      />
+    ) : undefined;
+
+    const card = (
+      <ListingCard
+        key={listing.id}
+        locale={locale}
+        listing={listing}
+        labels={labels}
+        media={media}
+        showSampleBadge={showSampleBadge}
+        density={density}
+      />
+    );
+    if (isRail) return <li key={listing.id}>{card}</li>;
+    const footer = renderFooter?.(listing);
+    if (!footer) {
+      return card;
+    }
+    return (
+      <div key={listing.id} className="flex min-w-0 flex-col gap-1.5">
+        {card}
+        {footer}
+      </div>
+    );
+  });
+
+  if (isRail) {
+    return <RailWrapper>{cards}</RailWrapper>;
+  }
+  return <GridWrapper gridDensity={gridDensity}>{cards}</GridWrapper>;
 }

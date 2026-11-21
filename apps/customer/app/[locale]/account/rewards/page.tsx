@@ -31,66 +31,73 @@ export default async function AccountRewardsPage({ params }: PageProps) {
   const dateFormat = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-4 sm:space-y-6">
       <header className="space-y-1">
         <h2 className="font-display text-h2 text-display-ink">{t("rewards.title")}</h2>
         <p className="text-sm text-text-2">{t("rewards.description")}</p>
       </header>
 
-      <div className="space-y-3 rounded border border-border bg-surface p-4">
-        <p className="text-sm text-text-2">{t("rewards.balanceLabel")}</p>
-        <p className="font-display text-h2 text-display-ink">
-          {t("rewards.balance", { points: points.balance })}
-        </p>
-        <div
-          role="progressbar"
-          aria-label={t("rewards.progressAria")}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={percent}
-          className="h-2 w-full overflow-hidden rounded bg-border"
-        >
-          <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
+      <div className="flex flex-col gap-4 sm:gap-6 lg:grid lg:grid-cols-[2fr_1fr] lg:items-start lg:gap-6">
+        <aside className="space-y-3 rounded border border-border bg-surface p-4 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-1 lg:p-5">
+          <p className="text-sm text-text-2">{t("rewards.balanceLabel")}</p>
+          <p className="font-display text-h2 text-display-ink">
+            {t("rewards.balance", { points: points.balance })}
+          </p>
+          <div
+            role="progressbar"
+            aria-label={t("rewards.progressAria")}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+            className="h-2 w-full overflow-hidden rounded bg-border"
+          >
+            <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
+          </div>
+          <p className="text-sm text-text-2">
+            {t("rewards.progress", { remaining: points.points_to_next })}
+          </p>
+          <p className="text-xs text-text-2">{t("rewards.redeemSoon")}</p>
+        </aside>
+
+        <div className="flex flex-col gap-4 sm:gap-6 lg:col-start-1 lg:row-start-1 lg:row-span-2">
+          <section className="space-y-3">
+            <h3 className="font-display text-h3 text-display-ink">{t("rewards.historyTitle")}</h3>
+            {points.history.length === 0 ? (
+              <p className="text-sm text-text-2">{t("rewards.historyEmpty")}</p>
+            ) : (
+              <ul className="divide-y divide-border rounded border border-border bg-surface">
+                {points.history.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="flex items-center justify-between gap-3 p-3 text-sm"
+                  >
+                    <span>
+                      <span className="block text-display-ink">
+                        {t(`rewards.reason.${entry.reason}`)}
+                      </span>
+                      <span className="block text-xs text-text-2">
+                        {dateFormat.format(new Date(entry.created_at))}
+                      </span>
+                    </span>
+                    <span className="font-mono text-display-ink">
+                      {entry.points > 0 ? `+${entry.points}` : `${entry.points}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="font-display text-h3 text-display-ink">{t("rewards.howTitle")}</h3>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-text-2">
+              <li>{t("rewards.howOrders")}</li>
+              <li>{t("rewards.howReviews")}</li>
+              <li>{t("rewards.howRules")}</li>
+            </ul>
+          </section>
         </div>
-        <p className="text-sm text-text-2">
-          {t("rewards.progress", { remaining: points.points_to_next })}
-        </p>
-        <p className="text-xs text-text-2">{t("rewards.redeemSoon")}</p>
       </div>
-
-      <section className="space-y-3">
-        <h3 className="font-display text-h3 text-display-ink">{t("rewards.historyTitle")}</h3>
-        {points.history.length === 0 ? (
-          <p className="text-sm text-text-2">{t("rewards.historyEmpty")}</p>
-        ) : (
-          <ul className="divide-y divide-border rounded border border-border bg-surface">
-            {points.history.map((entry) => (
-              <li key={entry.id} className="flex items-center justify-between gap-3 p-3 text-sm">
-                <span>
-                  <span className="block text-display-ink">
-                    {t(`rewards.reason.${entry.reason}`)}
-                  </span>
-                  <span className="block text-xs text-text-2">
-                    {dateFormat.format(new Date(entry.created_at))}
-                  </span>
-                </span>
-                <span className="font-mono text-display-ink">
-                  {entry.points > 0 ? `+${entry.points}` : `${entry.points}`}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="space-y-2">
-        <h3 className="font-display text-h3 text-display-ink">{t("rewards.howTitle")}</h3>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-text-2">
-          <li>{t("rewards.howOrders")}</li>
-          <li>{t("rewards.howReviews")}</li>
-          <li>{t("rewards.howRules")}</li>
-        </ul>
-      </section>
     </section>
   );
 }

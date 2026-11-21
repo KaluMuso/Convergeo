@@ -12,7 +12,10 @@ export type LegalTranslator = {
 export async function getLegalTranslator(locale: string): Promise<LegalTranslator> {
   const baseMessages = await getMessages();
   const legalMessages = await loadNamespace(locale as Locale, "legal");
-  const messages = { ...baseMessages, legal: legalMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    legal: legalMessages,
+  } as AbstractIntlMessages;
   return createTranslator({
     locale,
     messages,
@@ -44,8 +47,11 @@ export function LegalShell({
   afterSections,
 }: LegalShellProps) {
   return (
-    <main id="marketing-main" className="mx-auto w-full max-w-2xl px-4 py-10 lg:py-16">
-      <header className="mb-10 space-y-4 border-b border-border pb-8">
+    <main
+      id="marketing-main"
+      className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10"
+    >
+      <header className="mx-auto mb-6 max-w-3xl space-y-4 border-b border-border pb-6">
         <h1 className="font-display text-h1 font-bold text-display-ink">{title}</h1>
         <p className="text-sm text-text-2">{updatedLabel}</p>
         <aside
@@ -59,7 +65,7 @@ export function LegalShell({
       {sections.length > 0 ? (
         <nav
           aria-label={typeof tocLabel === "string" ? tocLabel : undefined}
-          className="mb-10 rounded-lg border border-border bg-surface p-5"
+          className="mx-auto mb-6 max-w-3xl rounded-lg border border-border bg-surface p-4 lg:p-5"
         >
           <h2 className="mb-3 font-display text-body font-semibold text-text">{tocLabel}</h2>
           <ul className="flex flex-col gap-2 text-sm">
@@ -77,7 +83,7 @@ export function LegalShell({
         </nav>
       ) : null}
 
-      <article className="space-y-10">
+      <article className="mx-auto max-w-3xl space-y-6">
         {sections.map((section) => (
           <section key={section.id} id={section.id} className="scroll-mt-24 space-y-3">
             <h2 className="font-display text-h2 font-semibold text-display-ink">

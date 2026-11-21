@@ -5,14 +5,8 @@ import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import {
-  ListingGrid,
-  type CatalogListing,
-} from "../../../(shop)/_components/plp/listing-grid";
-import {
-  fetchFollowFeed,
-  type FollowFeedItem,
-} from "../../../../../lib/engagement-api";
+import { ListingGrid, type CatalogListing } from "../../../(shop)/_components/plp/listing-grid";
+import { fetchFollowFeed, type FollowFeedItem } from "../../../../../lib/engagement-api";
 
 export type FollowFeedLabels = {
   title: string;
@@ -52,17 +46,9 @@ function toListing(item: FollowFeedItem): CatalogListing {
 }
 
 /** New listings from followed stores (GET /me/follows/feed, offset-paged). */
-export function FollowFeedPanel({
-  locale,
-  labels,
-}: {
-  locale: string;
-  labels: FollowFeedLabels;
-}) {
+export function FollowFeedPanel({ locale, labels }: { locale: string; labels: FollowFeedLabels }) {
   const [items, setItems] = useState<CatalogListing[]>([]);
-  const [state, setState] = useState<
-    "loading" | "ready" | "signed_out" | "error"
-  >("loading");
+  const [state, setState] = useState<"loading" | "ready" | "signed_out" | "error">("loading");
   const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [moreBusy, setMoreBusy] = useState(false);
 
@@ -76,9 +62,7 @@ export function FollowFeedPanel({
       setState((current) => (offset === 0 ? "error" : current));
       return;
     }
-    setItems((current) =>
-      (offset === 0 ? [] : current).concat(result.items.map(toListing)),
-    );
+    setItems((current) => (offset === 0 ? [] : current).concat(result.items.map(toListing)));
     setNextOffset(result.next_offset);
     setState("ready");
   }, []);
@@ -90,9 +74,7 @@ export function FollowFeedPanel({
   return (
     <section className="flex flex-col gap-4" data-testid="follow-feed">
       <div>
-        <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
-          {labels.title}
-        </h1>
+        <h1 className="m-0 font-display text-h1 font-bold text-display-ink">{labels.title}</h1>
         <p className="m-0 mt-1 text-sm text-text-2">{labels.description}</p>
       </div>
       {state === "loading" ? (
@@ -133,18 +115,19 @@ export function FollowFeedPanel({
           title={labels.emptyTitle}
           body={labels.emptyBody}
           action={
-            <LinkButton
-              href={`/${locale}/vendors`}
-              variant="primary"
-              LinkComponent={Link}
-            >
+            <LinkButton href={`/${locale}/vendors`} variant="primary" LinkComponent={Link}>
               {labels.browseVendors}
             </LinkButton>
           }
         />
       ) : (
         <>
-          <ListingGrid locale={locale} listings={items} labels={labels.grid} />
+          <ListingGrid
+            locale={locale}
+            listings={items}
+            labels={labels.grid}
+            gridDensity="account"
+          />
           {nextOffset !== null ? (
             <button
               type="button"

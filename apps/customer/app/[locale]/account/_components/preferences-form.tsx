@@ -71,7 +71,7 @@ export function PreferencesForm({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <ThemePreference
         label={labels.themeTitle}
         description={labels.themeDescription}
@@ -97,7 +97,10 @@ export function PreferencesForm({
           }
           checked={prefs.whatsapp}
           onChange={(event) =>
-            setPrefs((current) => ({ ...current, whatsapp: event.target.checked }))
+            setPrefs((current) => ({
+              ...current,
+              whatsapp: event.target.checked,
+            }))
           }
         />
         <Switch

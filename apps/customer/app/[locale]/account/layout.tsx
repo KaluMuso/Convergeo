@@ -123,7 +123,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
         }}
         localeSwitcherLabels={localeSwitcherLabels}
       />
-      <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-20 pt-8 lg:pb-12">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 pb-20 pt-6 sm:px-6 lg:px-8 lg:pb-12">
         <main id="account-main" tabIndex={-1} className="focus-visible:outline-none">
           <header className="mb-2 flex flex-wrap items-end justify-between gap-3">
             <h1 className="font-display text-h1 text-display-ink">{t("title")}</h1>
@@ -164,7 +164,11 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
            */}
           <NextIntlClientProvider
             locale={locale}
-            messages={{ account: accountMessages, orders: ordersMessages, nav: navMessages }}
+            messages={{
+              account: accountMessages,
+              orders: ordersMessages,
+              nav: navMessages,
+            }}
           >
             {children}
           </NextIntlClientProvider>
