@@ -20,8 +20,9 @@
     "products": "Produits",
     "services": "Services",
     "events": "Événements",
-    "vendors": "Vendeurs",
-    "count": "{label} ({count})"
+    "vendors": "Boutiques",
+    "count": "{label} ({count})",
+    "supplies": "Fournitures"
   },
   "noResults": {
     "title": "Aucun résultat pour « {query} »",
@@ -62,7 +63,7 @@
   },
   "results": {
     "count": "{count, plural, one {# résultat} other {# résultats}}",
-    "degraded": "Affichage des correspondances par mot-clé (recherche sémantique indisponible)",
+    "degraded": "Résultats simples affichés. Ils peuvent être moins précis pour le moment.",
     "forQuery": "Résultats pour « {query} »"
   },
   "input": {

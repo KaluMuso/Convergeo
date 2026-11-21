@@ -111,7 +111,7 @@ describe("recovery session bootstrap failures and cleanup", () => {
     );
     renderRecovery();
     expect(await screen.findByRole("alert", {}, { timeout: 300 })).toHaveTextContent(
-      "invalid or has expired",
+      "This link is old or wrong",
     );
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Send reset link" })).toHaveAttribute(
@@ -146,9 +146,9 @@ describe("recovery session bootstrap failures and cleanup", () => {
     old.unmount();
     window.history.replaceState({}, "", "/en/reset-password/confirm");
     renderRecovery();
-    expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
+    expect(await screen.findByRole("alert")).toHaveTextContent("This link is old or wrong");
     await act(async () => pending.resolve({ error: null }));
-    expect(screen.getByRole("alert")).toHaveTextContent("invalid or has expired");
+    expect(screen.getByRole("alert")).toHaveTextContent("This link is old or wrong");
     expect(screen.queryByRole("button", { name: "Update password" })).not.toBeInTheDocument();
   });
 
@@ -166,7 +166,7 @@ describe("recovery session bootstrap failures and cleanup", () => {
   it("rejects a code-less visit even with another account already signed in", async () => {
     mocks.session.mockResolvedValue({ data: { session: { user: { id: "other-account" } } } });
     renderRecovery();
-    expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
+    expect(await screen.findByRole("alert")).toHaveTextContent("This link is old or wrong");
     expect(mocks.session).not.toHaveBeenCalled();
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
@@ -184,7 +184,7 @@ describe("recovery session bootstrap failures and cleanup", () => {
       };
     });
     renderRecovery();
-    expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
+    expect(await screen.findByRole("alert")).toHaveTextContent("This link is old or wrong");
     expect(mocks.fetch).not.toHaveBeenCalled();
     expect(mocks.unsubscribe).toHaveBeenCalledOnce();
   });
@@ -211,7 +211,7 @@ describe("recovery session bootstrap failures and cleanup", () => {
         };
       });
       renderRecovery();
-      expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
+      expect(await screen.findByRole("alert")).toHaveTextContent("This link is old or wrong");
       expect(mocks.fetch).not.toHaveBeenCalled();
     },
   );
@@ -228,7 +228,7 @@ describe("recovery session bootstrap failures and cleanup", () => {
     fireEvent.change(password, { target: { value: "fixture-password" } });
     fireEvent.change(confirmation, { target: { value: "fixture-password" } });
     fireEvent.submit(screen.getByRole("button", { name: "Update password" }).closest("form")!);
-    expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
+    expect(await screen.findByRole("alert")).toHaveTextContent("This link is old or wrong");
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
@@ -273,7 +273,7 @@ describe("recovery session bootstrap failures and cleanup", () => {
       target: { value: "fixture-password" },
     });
     fireEvent.submit(screen.getByRole("button", { name: "Update password" }).closest("form")!);
-    expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
+    expect(await screen.findByRole("alert")).toHaveTextContent("This link is old or wrong");
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
