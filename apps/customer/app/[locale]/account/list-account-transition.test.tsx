@@ -66,6 +66,7 @@ vi.mock("../../../lib/api-base-url", () => ({
 }));
 vi.mock("next-intl/server", () => ({
   getMessages: async () => ({}),
+  getRequestConfig: (config: unknown) => config,
   setRequestLocale: () => undefined,
 }));
 
