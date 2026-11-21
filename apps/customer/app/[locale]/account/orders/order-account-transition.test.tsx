@@ -65,6 +65,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next-intl/server", () => ({
   getMessages: async () => ({}),
+  getRequestConfig: (config: unknown) => config,
   setRequestLocale: () => undefined,
 }));
 vi.mock("next-intl", () => ({

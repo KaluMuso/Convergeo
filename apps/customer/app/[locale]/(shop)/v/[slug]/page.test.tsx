@@ -7,6 +7,7 @@ import commonEn from "../../../../../../../packages/i18n/messages/en/common.json
 
 vi.mock("next-intl/server", () => ({
   getMessages: vi.fn(async () => ({ common: commonEn })),
+  getRequestConfig: (config: unknown) => config,
   setRequestLocale: vi.fn(),
 }));
 vi.mock("../../../../../lib/api-base-url", () => ({
