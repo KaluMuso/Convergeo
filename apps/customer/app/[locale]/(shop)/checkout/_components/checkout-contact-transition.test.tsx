@@ -14,19 +14,47 @@ const mocks = vi.hoisted(() => ({
   verify: vi.fn(),
   fetch: vi.fn(),
 }));
-vi.mock("@vergeo/auth/browser-client-lazy", () => ({
-  getBrowserClient: async () => ({
-    auth: {
-      onAuthStateChange: (fn: typeof mocks.authEvent) => {
-        mocks.authEvent = fn;
-        return { data: { subscription: { unsubscribe: vi.fn() } } };
-      },
-      getSession: async () => ({ data: { session: null }, error: null }),
-      signInWithOtp: async () => ({ error: null }),
-      verifyOtp: mocks.verify,
-    },
-  }),
+const browserAuthClient = vi.hoisted(() => ({
+  onAuthStateChange: (fn: typeof mocks.authEvent) => {
+    mocks.authEvent = fn;
+    return { data: { subscription: { unsubscribe: vi.fn() } } };
+  },
+  getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+  signInWithOtp: () => Promise.resolve({ error: null }),
+  verifyOtp: mocks.verify,
 }));
+
+vi.mock("@vergeo/auth/browser-client-lazy", () => ({
+  getBrowserClient: () => Promise.resolve({ auth: browserAuthClient }),
+}));
+vi.mock("@vergeo/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@vergeo/config")>();
+  return {
+    ...actual,
+    createApiClient: ({ getToken }: { getToken: () => string | undefined }) => ({
+      request: async (path: string, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        const token = getToken();
+        if (token) headers.set("Authorization", `Bearer ${token}`);
+        const response = await fetch(`http://localhost${path}`, {
+          ...init,
+          headers,
+        });
+        const body = (await response.json()) as {
+          error?: { code: string; message: string; request_id?: string };
+        };
+        if (!response.ok) {
+          throw new actual.ApiError(
+            body.error?.code ?? "fixture.error",
+            body.error?.message ?? "Fixture error",
+            { status: response.status },
+          );
+        }
+        return body;
+      },
+    }),
+  };
+});
 const router = { push: vi.fn(), replace: vi.fn(), refresh: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 const m = checkoutMessages.checkout;
@@ -92,9 +120,15 @@ const failure = () =>
     503,
   );
 let events: string[];
-beforeEach(() => {
+type CheckoutShellComponent = typeof import("./step-fulfilment").CheckoutShell;
+let CheckoutShell: CheckoutShellComponent;
+
+beforeEach(async () => {
   vi.resetModules();
   vi.stubGlobal("fetch", mocks.fetch);
+  router.push.mockReset();
+  router.replace.mockReset();
+  router.refresh.mockReset();
   mocks.fetch.mockReset();
   mocks.verify.mockReset();
   events = [];
@@ -106,27 +140,33 @@ beforeEach(() => {
   mocks.fetch.mockImplementation(async (url: string) => {
     const path = new URL(url, "http://localhost").pathname;
     events.push(path);
-    if (path.endsWith("/steps/contact"))
-      return json({ verified: true, skipped: false });
+    if (path.endsWith("/steps/contact")) return json({ verified: true, skipped: false });
     if (path.endsWith("/checkout/session")) return json(checkout);
+    if (path.endsWith("/steps/payment-options")) {
+      return json({
+        cod_cap_ngwee: 50_000,
+        available_methods: ["cod", "prepaid"],
+      });
+    }
     return json({});
   });
+  ({ CheckoutShell } = await import("./step-fulfilment"));
 });
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-async function start() {
-  const { CheckoutShell } = await import("./step-fulfilment");
-  const user = userEvent.setup();
-  const view = render(<CheckoutShell locale="en" labels={labels} />);
-  await user.type(
-    await screen.findByLabelText(m.contact.nationalNumber),
-    "971234567",
-  );
+async function fillContactAndOtp(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(await screen.findByLabelText(m.contact.nationalNumber), "971234567");
   await user.click(screen.getByRole("button", { name: m.contact.sendOtp }));
   await user.click(screen.getByLabelText("Digit 1 of 6"));
   await user.keyboard("123456");
+}
+
+async function start() {
+  const user = userEvent.setup({ delay: null });
+  const view = render(<CheckoutShell locale="en" labels={labels} />);
+  await fillContactAndOtp(user);
   return { user, view };
 }
 
@@ -134,9 +174,7 @@ it("persists accepted contact before creating checkout across the real auth-stor
   await start();
   await screen.findByText("Fixture vendor");
   // Then the advisory payment-options read behind the over-COD-cap notice.
-  await waitFor(() =>
-    expect(events).toContain("/checkout/steps/payment-options"),
-  );
+  await waitFor(() => expect(events).toContain("/checkout/steps/payment-options"));
   expect(events).toEqual([
     "verify",
     "/cart/merge",
@@ -145,9 +183,7 @@ it("persists accepted contact before creating checkout across the real auth-stor
     "/checkout/steps/payment-options",
   ]);
   expect(screen.getAllByRole("radio")).toHaveLength(2);
-  const contact = mocks.fetch.mock.calls.find(([url]) =>
-    String(url).endsWith("/steps/contact"),
-  );
+  const contact = mocks.fetch.mock.calls.find(([url]) => String(url).endsWith("/steps/contact"));
   expect(JSON.parse(contact![1].body)).toEqual({ phone: account.user.phone });
   expect(mocks.verify).toHaveBeenCalledOnce();
 });
@@ -209,11 +245,9 @@ for (const verified of [false, "error"]) {
     );
     await start();
     expect(await screen.findByRole("alert")).toHaveTextContent(m.error);
-    expect(
-      mocks.fetch.mock.calls.some(([url]) =>
-        String(url).endsWith("/checkout/session"),
-      ),
-    ).toBe(false);
+    expect(mocks.fetch.mock.calls.some(([url]) => String(url).endsWith("/checkout/session"))).toBe(
+      false,
+    );
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 }
@@ -226,20 +260,14 @@ it("drops a late old-account contact response before requesting its checkout ses
   const normal = mocks.fetch.getMockImplementation()!;
   mocks.fetch.mockImplementation(async (url, init) => {
     const token = new Headers(init?.headers).get("Authorization");
-    if (
-      String(url).endsWith("/steps/contact") &&
-      token === "Bearer fixture-token"
-    )
-      return pending;
+    if (String(url).endsWith("/steps/contact") && token === "Bearer fixture-token") return pending;
     return normal(url, init);
   });
   await start();
   await waitFor(() =>
-    expect(
-      mocks.fetch.mock.calls.some(([url]) =>
-        String(url).endsWith("/steps/contact"),
-      ),
-    ).toBe(true),
+    expect(mocks.fetch.mock.calls.some(([url]) => String(url).endsWith("/steps/contact"))).toBe(
+      true,
+    ),
   );
   await act(async () => {
     mocks.authEvent("SIGNED_OUT", null);
@@ -254,7 +282,5 @@ it("drops a late old-account contact response before requesting its checkout ses
     String(url).endsWith("/checkout/session"),
   );
   expect(sessions).toHaveLength(1);
-  expect(new Headers(sessions[0]![1].headers).get("Authorization")).toBe(
-    "Bearer fixture-token-b",
-  );
+  expect(new Headers(sessions[0]![1].headers).get("Authorization")).toBe("Bearer fixture-token-b");
 });
