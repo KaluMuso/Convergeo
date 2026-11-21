@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { HomeTaskList } from "../../_components/home-tasks";
+import { VendorGrid } from "../../_components/vendor-page";
 import { DashboardSkeleton, ListSkeleton } from "../../_components/vendor-skeletons";
 import { buildHomeTasks } from "../../_lib/home-tasks";
 import { isAuditableApproved } from "../../_lib/kyc-integrity";
@@ -500,7 +501,7 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
       label={t("queue.pullToRefresh")}
       onRefresh={() => load({ background: true })}
     >
-      <div className="flex flex-col gap-4 pb-8">
+      <div className="flex flex-col gap-4 pb-4">
         <header className="space-y-1">
           <h1 className="text-xl font-semibold text-text">{t("queue.title")}</h1>
           <p className="text-sm text-text-2">{t("queue.intro")}</p>
@@ -575,7 +576,7 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
             />
           )
         ) : (
-          <ul className="flex flex-col gap-3">
+          <VendorGrid cols="cards">
             {orders.map((order) => (
               <OrderCard
                 key={order.id}
@@ -585,7 +586,7 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
                 onUpdated={handleUpdated}
               />
             ))}
-          </ul>
+          </VendorGrid>
         )}
       </div>
     </PullToRefreshList>
@@ -774,12 +775,12 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
   });
 
   return (
-    <div className="flex flex-col gap-5 pb-8">
-      <header className="space-y-1 px-1">
+    <div className="flex flex-col gap-4 pb-4">
+      <header className="mb-2 space-y-1">
         <p className="text-xs font-medium uppercase tracking-wide text-text-3">
           {t("home.eyebrow")}
         </p>
-        <h1 className="text-xl font-semibold text-text">{t("home.title")}</h1>
+        <h1 className="text-lg font-semibold text-text">{t("home.title")}</h1>
       </header>
 
       {offline ? (
@@ -793,11 +794,12 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         </p>
       ) : null}
 
-      <HomeTaskList locale={locale} tasks={tasks} />
+      <VendorGrid cols="two">
+        <HomeTaskList locale={locale} tasks={tasks} />
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-text">{t("home.needsAction.heading")}</h2>
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="mb-2 text-lg font-semibold text-text">{t("home.needsAction.heading")}</h2>
           {needsCount > 0 ? (
             <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
               {needsCount}
@@ -823,9 +825,10 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
             ))}
           </ul>
         )}
-      </section>
+        </section>
+      </VendorGrid>
 
-      <section className="rounded-2xl bg-panel p-4 text-panel-text">
+      <section className="rounded-2xl bg-panel p-4 text-panel-text lg:p-5">
         <p className="text-sm text-panel-muted">{t("home.takings.label")}</p>
         <p className="mt-1 font-mono text-3xl font-semibold tracking-tight">{formatK(takings)}</p>
         <p className="mt-1 text-xs text-panel-muted">
@@ -839,30 +842,32 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
       {analyticsSummary ? (
         <section
-          className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-surface p-3"
+          className="rounded-2xl border border-border bg-surface p-4 lg:p-5"
           aria-label={t("home.analytics.ariaLabel")}
         >
-          <div className="space-y-1 px-1">
-            <p className="text-xs text-muted">{t("home.analytics.views")}</p>
-            <p className="font-mono text-lg font-semibold text-text">
-              {analyticsSummary.total_views.toLocaleString()}
-            </p>
-            <p className="text-[10px] text-muted">{t("home.analytics.viewsCaption")}</p>
-          </div>
-          <div className="space-y-1 px-1">
-            <p className="text-xs text-muted">{t("home.analytics.orders")}</p>
-            <p className="font-mono text-lg font-semibold text-text">
-              {analyticsSummary.total_orders.toLocaleString()}
-            </p>
-            <p className="text-[10px] text-muted">{t("home.analytics.ordersCaption")}</p>
-          </div>
-          <div className="space-y-1 px-1">
-            <p className="text-xs text-muted">{t("home.analytics.gmv")}</p>
-            <p className="font-mono text-lg font-semibold text-text">
-              {formatK(analyticsSummary.gmv_ngwee)}
-            </p>
-            <p className="text-[10px] text-muted">{t("home.analytics.gmvCaption")}</p>
-          </div>
+          <VendorGrid cols="stats">
+            <div className="space-y-1 px-1">
+              <p className="text-xs text-muted">{t("home.analytics.views")}</p>
+              <p className="font-mono text-lg font-semibold text-text">
+                {analyticsSummary.total_views.toLocaleString()}
+              </p>
+              <p className="text-[10px] text-muted">{t("home.analytics.viewsCaption")}</p>
+            </div>
+            <div className="space-y-1 px-1">
+              <p className="text-xs text-muted">{t("home.analytics.orders")}</p>
+              <p className="font-mono text-lg font-semibold text-text">
+                {analyticsSummary.total_orders.toLocaleString()}
+              </p>
+              <p className="text-[10px] text-muted">{t("home.analytics.ordersCaption")}</p>
+            </div>
+            <div className="space-y-1 px-1">
+              <p className="text-xs text-muted">{t("home.analytics.gmv")}</p>
+              <p className="font-mono text-lg font-semibold text-text">
+                {formatK(analyticsSummary.gmv_ngwee)}
+              </p>
+              <p className="text-[10px] text-muted">{t("home.analytics.gmvCaption")}</p>
+            </div>
+          </VendorGrid>
         </section>
       ) : null}
 

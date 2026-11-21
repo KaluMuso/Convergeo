@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../lib/api-base-url";
+import { VendorPage } from "../_components/vendor-page";
 import { Badge, Button, FormField, Input, Spinner } from "../listings/new/_lib/ui";
 
 type RfqThread = {
@@ -163,7 +164,7 @@ export default function VendorRfqPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-3">
+    <VendorPage width="full">
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-h2 text-display-ink">{t("title")}</h1>
         <p className="text-sm text-text-2">{t("intro")}</p>
@@ -266,6 +267,6 @@ export default function VendorRfqPage({ params }: PageProps) {
           ))}
         </ul>
       )}
-    </div>
+    </VendorPage>
   );
 }

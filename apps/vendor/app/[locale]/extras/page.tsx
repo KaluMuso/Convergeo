@@ -1,6 +1,8 @@
 import { LOCALES, loadNamespace, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../_components/vendor-page";
+
 import { ExtrasCatalogue } from "./_components/extras-catalogue";
 
 import type { Metadata } from "next";
@@ -28,7 +30,7 @@ export default async function ExtrasPage({ params }: PageProps) {
   const vendor = await loadNamespace(locale as Locale, "vendor");
   const extras = vendor.extras as ExtrasMessages;
   return (
-    <main className="mx-auto w-full max-w-2xl space-y-4 p-4">
+    <VendorPage width="full">
       <header className="space-y-1">
         <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
           {extras.title}
@@ -36,6 +38,6 @@ export default async function ExtrasPage({ params }: PageProps) {
         <p className="m-0 text-sm text-text-2">{extras.intro}</p>
       </header>
       <ExtrasCatalogue />
-    </main>
+    </VendorPage>
   );
 }

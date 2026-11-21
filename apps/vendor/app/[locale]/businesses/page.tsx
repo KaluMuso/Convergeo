@@ -1,6 +1,8 @@
 import { LOCALES, loadNamespace, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../_components/vendor-page";
+
 import { BusinessesOverview } from "./_components/businesses-overview";
 
 import type { Metadata } from "next";
@@ -24,12 +26,12 @@ export default async function BusinessesPage({ params }: PageProps) {
   const vendor = await loadNamespace(locale as Locale, "vendor");
   const branches = vendor.branches as { title: string; intro: string };
   return (
-    <main className="mx-auto w-full max-w-2xl space-y-4 p-4">
+    <VendorPage width="full">
       <header className="space-y-1">
         <h1 className="m-0 font-display text-h1 font-bold text-display-ink">{branches.title}</h1>
         <p className="m-0 text-sm text-text-2">{branches.intro}</p>
       </header>
       <BusinessesOverview locale={locale} />
-    </main>
+    </VendorPage>
   );
 }

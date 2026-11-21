@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../lib/api-base-url";
+import { VendorPage } from "../_components/vendor-page";
 import { Badge, Button, FormField, Input, Spinner } from "../listings/new/_lib/ui";
 
 type QuoteItem = {
@@ -174,24 +175,24 @@ export default function VendorJobsPage({ params }: PageProps) {
 
   if (sessionLoading || loading) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
+      <VendorPage width="full">
         <div className="flex min-h-[40vh] items-center justify-center">
           <Spinner label={t("loading")} />
         </div>
-      </main>
+      </VendorPage>
     );
   }
 
   if (!session) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
+      <VendorPage width="full">
         <p className="text-sm text-text-2">{t("authRequired")}</p>
-      </main>
+      </VendorPage>
     );
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-3 px-4 py-3">
+    <VendorPage width="full" className="gap-3">
       <header className="space-y-1">
         <p className="text-xs font-medium uppercase tracking-wide text-text-2">{t("eyebrow")}</p>
         <h1 className="font-display text-h2 text-display-ink">{t("title")}</h1>
@@ -307,6 +308,6 @@ export default function VendorJobsPage({ params }: PageProps) {
           ))}
         </ul>
       )}
-    </main>
+    </VendorPage>
   );
 }

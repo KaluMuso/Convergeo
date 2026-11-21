@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 
 import { isClipsRouteAccessible } from "../../../lib/route-capabilities";
+import { VendorPage } from "../_components/vendor-page";
 
 import { ClipList } from "./_components/clip-list";
 
@@ -36,8 +37,8 @@ export default async function VendorClipsPage({ params }: PageProps) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col p-0 sm:px-4 sm:py-3">
+    <VendorPage width="full">
       <ClipList locale={locale} />
-    </main>
+    </VendorPage>
   );
 }

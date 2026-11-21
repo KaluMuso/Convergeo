@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../_components/async-state";
+import { VendorPage } from "../../_components/vendor-page";
 import { ListSkeleton } from "../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { KycChecklistCard } from "../_components/kyc-checklist";
@@ -69,33 +70,33 @@ export function StatusPageClient({ locale }: StatusPageClientProps) {
 
   if (sessionLoading || loading) {
     return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
+      <VendorPage width="form">
         <ListSkeleton label={t("onboarding.loading")} rows={5} />
-      </main>
+      </VendorPage>
     );
   }
 
   if (!session) {
     return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
+      <VendorPage width="form" className="min-h-dvh">
         <VendorErrorState
           title={t("onboarding.errors.authRequired")}
           retryLabel={tCommon("common.retry")}
         />
-      </main>
+      </VendorPage>
     );
   }
 
   if (errorKey || !application) {
     return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
+      <VendorPage width="form" className="min-h-dvh">
         <VendorErrorState
           title={t((errorKey ?? "onboarding.errors.loadFailed") as "onboarding.errors.loadFailed")}
           body={t("onboarding.errors.retryHint")}
           retryLabel={tCommon("common.retry")}
           onRetry={() => setReloadKey((value) => value + 1)}
         />
-      </main>
+      </VendorPage>
     );
   }
 
