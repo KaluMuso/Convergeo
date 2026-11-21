@@ -497,7 +497,7 @@ for (const scenario of [
         await readFile(join(output, "assertion-results.json")),
       );
       assert.equal(summary.exitCode, result.exitCode);
-      assert.equal(summary.puppeteerVersion, "25.13.0");
+      assert.equal(summary.puppeteerVersion, "25.17.0");
       assert.match(summary.nodeVersion, /^v\d+\./);
       if (["pass", "warn", "notice", "threshold"].includes(scenario)) {
         assert.deepEqual(summary.browserVersions, ["155.0.8059.39"]);

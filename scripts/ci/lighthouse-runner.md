@@ -1,7 +1,7 @@
 # Performance runner
 
 `pnpm perf:lighthouse` replaces LHCI autorun with the official Lighthouse Node API,
-chrome-launcher and Puppeteer 25.13.0. Its pinned Chrome for Testing revision is
+chrome-launcher and Puppeteer 25.17.0. Its pinned Chrome for Testing revision is
 `155.0.8059.39`, matching the hosted Chrome version selected for measurement.
 For a local run without installed Chrome, install dependencies and run
 `pnpm exec puppeteer browsers install chrome`. `pnpm perf:lighthouse:test` runs
