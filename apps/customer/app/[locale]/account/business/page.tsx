@@ -101,12 +101,14 @@ export default async function AccountBusinessPage({ params }: PageProps) {
       ) : null}
 
       {showForm ? (
-        <BusinessApplyForm
-          locale={locale}
-          initial={status}
-          labels={formLabels}
-          accessToken={accessToken}
-        />
+        <div className="max-w-2xl">
+          <BusinessApplyForm
+            locale={locale}
+            initial={status}
+            labels={formLabels}
+            accessToken={accessToken}
+          />
+        </div>
       ) : null}
     </section>
   );

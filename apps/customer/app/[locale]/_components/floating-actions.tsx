@@ -1,14 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 export type FloatingActionsLabels = {
   ask: string;
@@ -38,11 +31,7 @@ type SpeechRecognitionLike = {
   lang: string;
   interimResults: boolean;
   continuous: boolean;
-  onresult:
-    | ((event: {
-        results: ArrayLike<ArrayLike<{ transcript: string }>>;
-      }) => void)
-    | null;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
   onend: (() => void) | null;
   onerror: (() => void) | null;
   start: () => void;
@@ -72,6 +61,11 @@ function hasStickyBuyBar(pathname: string): boolean {
   return /\/(p|l)\/[^/]+/.test(pathname);
 }
 
+/** Account hub: no mobile tab bar — position the stack so primary actions stay clear. */
+export function isAccountPath(pathname: string): boolean {
+  return /\/account(\/|$)/.test(pathname);
+}
+
 export function isHomePath(pathname: string, locale: string): boolean {
   return pathname === `/${locale}` || pathname === `/${locale}/`;
 }
@@ -80,15 +74,12 @@ export function isHomePath(pathname: string, locale: string): boolean {
  * Bottom-right floating actions: Ask Vergeo (typed or dictated) and, on the
  * home feed, a toggle that opens the footer as an overlay sheet.
  */
-export function FloatingActions({
-  locale,
-  labels,
-  footer,
-}: FloatingActionsProps) {
+export function FloatingActions({ locale, labels, footer }: FloatingActionsProps) {
   const pathname = usePathname() ?? `/${locale}`;
   const router = useRouter();
   const home = isHomePath(pathname, locale);
   const raised = hasStickyBuyBar(pathname);
+  const account = isAccountPath(pathname);
 
   const [askOpen, setAskOpen] = useState(false);
   const [footerOpen, setFooterOpen] = useState(false);
@@ -172,9 +163,7 @@ export function FloatingActions({
     const q = query.trim();
     stopListening();
     setAskOpen(false);
-    router.push(
-      q ? `/${locale}/ask?q=${encodeURIComponent(q)}` : `/${locale}/ask`,
-    );
+    router.push(q ? `/${locale}/ask?q=${encodeURIComponent(q)}` : `/${locale}/ask`);
   };
 
   const onAskPage = pathname.startsWith(`/${locale}/ask`);
@@ -184,7 +173,13 @@ export function FloatingActions({
       {home ? null : footer}
 
       <div
-        className={`v-fab-stack ${raised ? "v-fab-stack--raised" : ""}`}
+        className={[
+          "v-fab-stack",
+          raised ? "v-fab-stack--raised" : "",
+          account ? "v-fab-stack--account" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         data-testid="floating-actions"
       >
         {home ? (
@@ -208,11 +203,7 @@ export function FloatingActions({
               strokeWidth="2"
               strokeLinecap="round"
             >
-              {footerOpen ? (
-                <path d="M6 9l6 6 6-6" />
-              ) : (
-                <path d="M4 7h16M4 12h16M4 17h10" />
-              )}
+              {footerOpen ? <path d="M6 9l6 6 6-6" /> : <path d="M4 7h16M4 12h16M4 17h10" />}
             </svg>
           </button>
         ) : null}
@@ -260,10 +251,7 @@ export function FloatingActions({
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2
-                id={titleId}
-                className="m-0 font-display text-lg font-bold text-text"
-              >
+              <h2 id={titleId} className="m-0 font-display text-lg font-bold text-text">
                 {labels.askTitle}
               </h2>
               <p className="m-0 mt-1 text-sm text-text-2">{labels.askHint}</p>
@@ -345,10 +333,7 @@ export function FloatingActions({
             </button>
           </form>
           {voiceSupported ? null : (
-            <p
-              className="m-0 mt-2 text-sm text-text-3"
-              data-testid="fab-voice-unsupported"
-            >
+            <p className="m-0 mt-2 text-sm text-text-3" data-testid="fab-voice-unsupported">
               {labels.voiceUnsupported}
             </p>
           )}

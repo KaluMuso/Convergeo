@@ -150,9 +150,15 @@ body {
   bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* Account: no shop tab bar — lift above page actions; content uses extra pb in layout. */
+.v-fab-stack--account:not(.v-fab-stack--raised) {
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
 @media (min-width: 48rem) {
   .v-fab-stack,
-  .v-fab-stack--raised {
+  .v-fab-stack--raised,
+  .v-fab-stack--account {
     right: var(--sp-6);
     bottom: calc(var(--sp-6) + env(safe-area-inset-bottom, 0px));
   }
