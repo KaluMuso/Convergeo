@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: nav.push }),
 }));
 
-import { FloatingActions, isHomePath } from "./floating-actions";
+import { FloatingActions, isAccountPath, isHomePath } from "./floating-actions";
 
 const labels = {
   ask: "Ask Vergeo",
@@ -59,7 +59,9 @@ describe("FloatingActions", () => {
     nav.pathname = "/en/c/all";
     render(<FloatingActions locale="en" labels={labels} footer={null} />);
     fireEvent.click(screen.getByRole("button", { name: "Ask Vergeo" }));
-    fireEvent.change(screen.getByTestId("fab-ask-input"), { target: { value: "solar panel" } });
+    fireEvent.change(screen.getByTestId("fab-ask-input"), {
+      target: { value: "solar panel" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Ask" }));
     expect(nav.push).toHaveBeenCalledWith("/en/ask?q=solar%20panel");
   });
@@ -100,5 +102,17 @@ describe("FloatingActions", () => {
     expect(isHomePath("/en", "en")).toBe(true);
     expect(isHomePath("/en/", "en")).toBe(true);
     expect(isHomePath("/en/search", "en")).toBe(false);
+  });
+
+  it("lifts the stack on account routes", () => {
+    nav.pathname = "/en/account/business";
+    render(<FloatingActions locale="en" labels={labels} footer={null} />);
+    expect(screen.getByTestId("floating-actions")).toHaveClass("v-fab-stack--account");
+  });
+
+  it("detects account paths", () => {
+    expect(isAccountPath("/en/account")).toBe(true);
+    expect(isAccountPath("/en/account/business")).toBe(true);
+    expect(isAccountPath("/en/search")).toBe(false);
   });
 });

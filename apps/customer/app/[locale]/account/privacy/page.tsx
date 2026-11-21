@@ -50,7 +50,7 @@ export default function AccountPrivacyPage() {
   }, []);
 
   return (
-    <div className="flex w-full max-w-lg flex-col gap-8">
+    <div className="flex w-full max-w-2xl flex-col gap-8">
       <PrivacyIntro locale={locale} />
       <DeliveryConsentSection locale={locale} />
       <AnalyticsSection />
