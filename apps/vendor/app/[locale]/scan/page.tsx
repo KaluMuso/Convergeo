@@ -1,6 +1,8 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../_components/vendor-page";
+
 import { ScanView } from "./_components/scan-view";
 
 import type { Metadata } from "next";
@@ -29,8 +31,8 @@ export default async function VendorScanPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
+    <VendorPage width="full">
       <ScanView />
-    </main>
+    </VendorPage>
   );
 }

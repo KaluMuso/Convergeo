@@ -1,6 +1,8 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../_components/vendor-page";
+
 import { AnalyticsView } from "./_components/analytics-view";
 
 import type { Metadata } from "next";
@@ -31,8 +33,8 @@ export default async function AnalyticsPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
+    <VendorPage width="full">
       <AnalyticsView />
-    </main>
+    </VendorPage>
   );
 }

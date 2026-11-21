@@ -1,6 +1,7 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../../_components/vendor-page";
 import { PayoutMethodForm } from "../_components/payout-method-form";
 
 import type { Metadata } from "next";
@@ -31,8 +32,8 @@ export default async function PayoutMethodPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
+    <VendorPage width="form">
       <PayoutMethodForm locale={locale} />
-    </main>
+    </VendorPage>
   );
 }

@@ -1,6 +1,7 @@
 import { LOCALES } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "./_components/vendor-page";
 import { VendorHomeView } from "./orders/_components/order-card";
 
 type PageProps = {
@@ -16,8 +17,8 @@ export default async function HomePage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col p-0 sm:px-4 sm:py-3">
+    <VendorPage width="full">
       <VendorHomeView locale={locale} />
-    </main>
+    </VendorPage>
   );
 }

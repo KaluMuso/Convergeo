@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 
 import { isClipsRouteAccessible } from "../../../../lib/route-capabilities";
+import { VendorPage } from "../../_components/vendor-page";
 import { ClipComposer } from "../_components/clip-composer";
 
 import type { Metadata } from "next";
@@ -38,8 +39,8 @@ export default async function NewClipPage({ params }: PageProps) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col p-0 sm:px-4 sm:py-3">
+    <VendorPage width="form">
       <ClipComposer />
-    </main>
+    </VendorPage>
   );
 }

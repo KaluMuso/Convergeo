@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { VendorPage } from "../../_components/vendor-page";
 import { Button, Spinner } from "../../listings/new/_lib/ui";
 
 type MarkCompleteResponse = {
@@ -85,16 +86,16 @@ export default function VendorJobCompletePage({ params }: PageProps) {
 
   if (sessionLoading) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
+      <VendorPage width="full">
         <div className="flex min-h-[40vh] items-center justify-center">
           <Spinner label={t("marking")} />
         </div>
-      </main>
+      </VendorPage>
     );
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-3 px-4 py-3">
+    <VendorPage width="full" className="gap-3">
       <header className="space-y-1">
         <h1 className="font-display text-h2 text-display-ink">{t("title")}</h1>
         <p className="text-sm text-text-2">{t("intro")}</p>
@@ -130,6 +131,6 @@ export default function VendorJobCompletePage({ params }: PageProps) {
           {t("backToJobs")}
         </Link>
       </section>
-    </main>
+    </VendorPage>
   );
 }

@@ -1,6 +1,8 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../../../_components/vendor-page";
+
 import { TicketTypeConfig } from "./_components/ticket-type-config";
 
 import type { Metadata } from "next";
@@ -47,8 +49,8 @@ export default async function EventTicketsPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
+    <VendorPage width="full">
       <TicketTypeConfig locale={locale} eventId={id} />
-    </main>
+    </VendorPage>
   );
 }

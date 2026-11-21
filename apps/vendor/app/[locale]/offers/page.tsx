@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 
 import { isBundlesRouteAccessible } from "../../../lib/route-capabilities";
+import { VendorPage } from "../_components/vendor-page";
 
 import { OffersList } from "./_components/offers-list";
 
@@ -31,8 +32,8 @@ export default async function OffersPage({ params }: PageProps) {
     notFound();
   }
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
+    <VendorPage width="full">
       <OffersList locale={locale} />
-    </main>
+    </VendorPage>
   );
 }
