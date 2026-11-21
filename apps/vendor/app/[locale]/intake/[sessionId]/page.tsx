@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 
 import { isIntakeRouteAccessible } from "../../../../lib/route-capabilities";
+import { VendorPage } from "../../_components/vendor-page";
 import { IntakeReview } from "../_components/intake-review";
 
 import type { Metadata } from "next";
@@ -62,8 +63,8 @@ export default async function IntakeReviewPage({ params }: PageProps) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col p-0 sm:px-4 sm:py-3">
+    <VendorPage width="full">
       <IntakeReview locale={locale} sessionId={sessionId} />
-    </main>
+    </VendorPage>
   );
 }

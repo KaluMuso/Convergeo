@@ -1,6 +1,7 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../../_components/vendor-page";
 import { EventForm } from "../_components/event-form";
 
 import type { Metadata } from "next";
@@ -31,8 +32,8 @@ export default async function NewEventPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
+    <VendorPage width="form">
       <EventForm locale={locale} mode="create" />
-    </main>
+    </VendorPage>
   );
 }

@@ -1,6 +1,8 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../_components/vendor-page";
+
 import { SettingsView } from "./_components/settings-view";
 
 import type { Metadata } from "next";
@@ -29,8 +31,8 @@ export default async function SettingsPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
+    <VendorPage width="form">
       <SettingsView locale={locale} />
-    </main>
+    </VendorPage>
   );
 }

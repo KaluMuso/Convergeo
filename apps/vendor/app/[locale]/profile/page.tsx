@@ -1,6 +1,8 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../_components/vendor-page";
+
 import { ProfileEditor } from "./_components/profile-editor";
 
 import type { Metadata } from "next";
@@ -29,8 +31,8 @@ export default async function ProfilePage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col p-0 sm:px-4 sm:py-3">
+    <VendorPage width="form">
       <ProfileEditor />
-    </main>
+    </VendorPage>
   );
 }

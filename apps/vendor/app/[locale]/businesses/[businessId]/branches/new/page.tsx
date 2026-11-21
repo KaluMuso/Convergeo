@@ -1,6 +1,7 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../../../../_components/vendor-page";
 import { AddBranchForm } from "../../../_components/add-branch-form";
 
 import type { Metadata } from "next";
@@ -26,7 +27,7 @@ export default async function NewBranchPage({ params }: PageProps) {
   const vendor = await loadNamespace(locale as Locale, "vendor");
   const branches = vendor.branches as { form: { title: string; intro: string } };
   return (
-    <main className="mx-auto w-full max-w-lg space-y-4 p-4">
+    <VendorPage width="form">
       <header className="space-y-1">
         <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
           {branches.form.title}
@@ -34,6 +35,6 @@ export default async function NewBranchPage({ params }: PageProps) {
         <p className="m-0 text-sm text-text-2">{branches.form.intro}</p>
       </header>
       <AddBranchForm locale={locale} businessId={businessId} />
-    </main>
+    </VendorPage>
   );
 }
