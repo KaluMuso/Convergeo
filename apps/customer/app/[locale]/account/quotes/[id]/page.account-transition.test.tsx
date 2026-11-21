@@ -60,7 +60,10 @@ vi.mock("next/navigation", () => ({
   },
   useRouter: () => ({ refresh: mocks.refresh }),
 }));
-vi.mock("next-intl/server", () => ({ setRequestLocale: vi.fn() }));
+vi.mock("next-intl/server", () => ({
+  getRequestConfig: (config: unknown) => config,
+  setRequestLocale: vi.fn(),
+}));
 
 import Page from "./page";
 
