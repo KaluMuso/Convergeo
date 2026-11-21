@@ -155,6 +155,24 @@ def node_inputs(plan: Plan, root: Path) -> None:
                 return slot
         return None
 
+    def bundled_by_locked_owner(canonical: Path, name: str) -> bool:
+        # Packages shipped inside a locked package's tarball (bundledDependencies,
+        # e.g. @tailwindcss/oxide-wasm32-wasi -> @emnapi/core) have no lock entry
+        # of their own; their integrity is covered by the owner's lock hash.
+        modules = canonical.parent.parent if name.startswith("@") else canonical.parent
+        if modules.name != "node_modules":
+            return False
+        owner = modules.parent
+        owner_manifest = owner / "package.json"
+        if not owner_manifest.is_file():
+            return False
+        owner_data = json.loads(owner_manifest.read_text())
+        bundled = owner_data.get("bundledDependencies") or owner_data.get("bundleDependencies") or []
+        return (
+            name in bundled
+            and f"{owner_data.get('name')}@{owner_data.get('version')}" in locked
+        )
+
     def visit(slot: Path) -> None:
         canonical = slot.resolve(strict=True)
         require(
@@ -176,7 +194,7 @@ def node_inputs(plan: Plan, root: Path) -> None:
                     and data["version"] == "1.56.1",
                     "unqualified standalone browser dependency",
                 )
-            else:
+            elif not bundled_by_locked_owner(canonical, data["name"]):
                 require(
                     f"{data['name']}@{data['version']}" in locked,
                     f"installed Node version differs from lock: {data['name']}@{data['version']}",
