@@ -78,7 +78,7 @@ describe("vendor invite acceptance", () => {
   ])("rejects missing or wrong-purpose links without touching Auth: %s", async (url) => {
     window.history.replaceState({}, "", url);
     show();
-    expect(await screen.findByRole("alert")).toHaveTextContent("invalid or expired");
+    expect(await screen.findByRole("alert")).toHaveTextContent("invite link is old or wrong");
     expect(mocks.client).not.toHaveBeenCalled();
     expect(mocks.fetch).not.toHaveBeenCalled();
     expect(window.location.hash).toBe("");
@@ -125,7 +125,7 @@ describe("vendor invite acceptance", () => {
     });
     window.history.replaceState({}, "", "/en/accept-invite#token_hash=invalid&type=invite");
     show();
-    expect(await screen.findByRole("alert")).toHaveTextContent("invalid or expired");
+    expect(await screen.findByRole("alert")).toHaveTextContent("invite link is old or wrong");
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
@@ -204,7 +204,7 @@ describe("vendor invite acceptance", () => {
       target: { value: "fixture-password" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Set password" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("invalid or expired");
+    expect(await screen.findByRole("alert")).toHaveTextContent("invite link is old or wrong");
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
@@ -244,7 +244,7 @@ describe("vendor invite acceptance", () => {
     await waitFor(() => expect(mocks.verify).toHaveBeenCalledOnce());
     view.unmount();
     show();
-    expect(await screen.findByRole("alert")).toHaveTextContent("invalid or expired");
+    expect(await screen.findByRole("alert")).toHaveTextContent("invite link is old or wrong");
     expect(mocks.verify).toHaveBeenCalledOnce();
     expect(mocks.fetch).not.toHaveBeenCalled();
     expect(screen.getByRole("link", { name: "Try password recovery" })).toHaveAttribute(

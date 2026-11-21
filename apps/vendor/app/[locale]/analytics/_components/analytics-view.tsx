@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Spinner } from "../../../../../../packages/ui/src/spinner";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
+import { VendorGrid } from "../../_components/vendor-page";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { createAnalyticsClient, type AnalyticsWindow } from "../_lib/analytics-client";
 
@@ -25,7 +26,7 @@ type StatCardProps = {
 
 function StatCard({ label, value, sparklineLabel, series }: StatCardProps) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
+    <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 lg:p-5">
       <span className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>
       <span className="font-mono text-lg font-semibold">{value}</span>
       <Sparkline label={sparklineLabel} values={series} />
@@ -95,10 +96,10 @@ export function AnalyticsView() {
   const isEmpty = totals.sales === 0 && totals.orders === 0 && totals.views === 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
+    <div className="flex flex-col gap-4">
+      <header className="mb-2 flex flex-col gap-1">
         <p className="text-sm text-muted">{t("analytics.eyebrow")}</p>
-        <h1 className="font-display text-2xl font-semibold">{t("analytics.title")}</h1>
+        <h1 className="text-lg font-semibold text-text">{t("analytics.title")}</h1>
         <p className="text-sm text-muted">{t("analytics.intro")}</p>
       </header>
 
@@ -153,7 +154,7 @@ export function AnalyticsView() {
 
       {!loading && !errorKey && data && !isEmpty ? (
         <>
-          <section className="grid gap-3">
+          <VendorGrid cols="stats">
             <StatCard
               label={t("analytics.cards.sales")}
               series={data.sales_ngwee_by_day}
@@ -172,7 +173,7 @@ export function AnalyticsView() {
               sparklineLabel={t("analytics.sparkline.views")}
               value={String(totals.views)}
             />
-          </section>
+          </VendorGrid>
 
           <section className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">

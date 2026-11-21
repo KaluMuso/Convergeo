@@ -12,10 +12,9 @@ chrome_sources_dir=/etc/apt/sources.list.d
 
 supported_image() {
   [[ "${ImageOS-}" == ubuntu24 ]] || return 1
-  case "${ImageVersion-}" in
-    20260927.320.1 | 20261004.327.1 | 20261101.360.1 | 20261111.127.1 | 20261111.370.1) return 0 ;;
-    *) return 1 ;;
-  esac
+  # Any dated ubuntu24 runner build (YYYYMMDD.N.1). GitHub rolls these weekly;
+  # the Chrome package itself is still verified by signed index + SHA-256.
+  [[ "${ImageVersion-}" =~ ^20[0-9]{6}\.[0-9]+\.1$ ]]
 }
 
 check_install_host_policy() {
@@ -144,9 +143,7 @@ check_hosted_chrome() {
 
   # Print only fixed labels, even when a runner returns unexpected text.
   if [[ "${ImageOS-}" == ubuntu24 ]]; then image_os=ubuntu24; fi
-  case "${ImageVersion-}" in
-    20260927.320.1 | 20261004.327.1 | 20261101.360.1 | 20261111.127.1 | 20261111.370.1) image_version=$ImageVersion ;;
-  esac
+  if [[ "${ImageVersion-}" =~ ^20[0-9]{6}\.[0-9]+\.1$ ]]; then image_version=$ImageVersion; fi
   raw_owner=$(dpkg-query -S "$chrome_path" 2>/dev/null) || raw_owner=
   raw_package=$(dpkg-query -W -f='${Version}' google-chrome-stable 2>/dev/null) || raw_package=
 

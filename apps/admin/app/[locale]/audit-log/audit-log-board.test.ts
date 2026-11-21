@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAuditQuery, type AuditFilters } from "./audit-log-board";
+import {
+  buildAuditQuery,
+  entityKey,
+  type AuditEntry,
+  type AuditFilters,
+} from "./audit-log-board";
 
 const EMPTY: AuditFilters = {
   actor: "",
@@ -45,5 +50,30 @@ describe("audit log query builder", () => {
     expect(buildAuditQuery({ ...EMPTY, entityType: "Order;drop" }, null)).toEqual({
       invalid: true,
     });
+  });
+});
+
+describe("entityKey", () => {
+  const base: AuditEntry = {
+    id: "a1",
+    at: "2026-11-19T16:35:25Z",
+    actor: null,
+    actor_roles: null,
+    action: "config.feature_flag.update",
+    entity_type: "feature_flag",
+    entity_id: null,
+    outcome: "success",
+    request_id: null,
+    reason: null,
+    before: { enabled: false, entity_key: "vendor_weekly_digest" },
+    after: { enabled: true, entity_key: "vendor_weekly_digest" },
+  };
+
+  it("returns the text key stored for flags and config", () => {
+    expect(entityKey(base)).toBe("vendor_weekly_digest");
+  });
+
+  it("returns null when no key is stored", () => {
+    expect(entityKey({ ...base, before: null, after: { enabled: true } })).toBeNull();
   });
 });

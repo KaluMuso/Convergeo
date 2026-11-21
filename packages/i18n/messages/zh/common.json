@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Convergeo",
-    "tagline": "赞比亚的线上市集——货到付款"
+    "tagline": "赞比亚的市场 — 货到付款"
   },
   "meta": {
     "defaultDescription": "在 Convergeo 上选购商品、预订服务并发现赞比亚各地活动——多商家市场平台。",
@@ -110,5 +110,10 @@
   },
   "codTrust": {
     "line": "货到付款 → 我们送货 → 您确认收货"
+  },
+  "social": {
+    "facebook": "https://www.facebook.com/",
+    "twitter": "https://twitter.com/",
+    "instagram": "https://www.instagram.com/"
   }
 }

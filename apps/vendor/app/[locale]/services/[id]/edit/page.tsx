@@ -1,6 +1,8 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../../../_components/vendor-page";
+
 import { ServiceEditView } from "./_components/service-edit-view";
 
 import type { Metadata } from "next";
@@ -46,8 +48,8 @@ export default async function EditServicePage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
+    <VendorPage width="form">
       <ServiceEditView locale={locale} serviceId={id} />
-    </main>
+    </VendorPage>
   );
 }

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 
 import { isBundlesRouteAccessible } from "../../../../lib/route-capabilities";
+import { VendorPage } from "../../_components/vendor-page";
 import { OfferForm } from "../_components/offer-form";
 
 import type { Metadata } from "next";
@@ -30,8 +31,8 @@ export default async function NewOfferPage({ params }: PageProps) {
     notFound();
   }
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
+    <VendorPage width="form">
       <OfferForm locale={locale} mode="create" />
-    </main>
+    </VendorPage>
   );
 }

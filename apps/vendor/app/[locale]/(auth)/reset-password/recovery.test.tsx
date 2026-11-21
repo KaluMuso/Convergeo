@@ -296,7 +296,7 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
       }
       await renderRoute(true);
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        "invalid or has expired",
+        "This link is old or wrong",
       );
       expect(
         screen.getByRole("link", { name: "Send reset link" }),
@@ -322,10 +322,10 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
       );
     fireEvent.change(password, { target: { value: "short" } });
     submit();
-    expect(screen.getByRole("alert")).toHaveTextContent("at least 8");
+    expect(screen.getByRole("alert")).toHaveTextContent("8 or more");
     fireEvent.change(password, { target: { value: "fixture-password" } });
     submit();
-    expect(screen.getByRole("alert")).toHaveTextContent("do not match");
+    expect(screen.getByRole("alert")).toHaveTextContent("are not the same");
     expect(mocks.update).not.toHaveBeenCalled();
     fireEvent.change(confirm, { target: { value: "fixture-password" } });
     mocks.fetch.mockResolvedValueOnce({
@@ -378,12 +378,12 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
       });
       await renderRoute(true);
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        "invalid or has expired",
+        "This link is old or wrong",
       );
       cleanup();
       await renderRoute(true);
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        "invalid or has expired",
+        "This link is old or wrong",
       );
       expect(mocks.exchange).toHaveBeenCalledTimes(2);
       expect(mocks.update).not.toHaveBeenCalled();
@@ -492,11 +492,11 @@ describe("vendor recovery route wiring", () => {
     window.history.replaceState({}, "", "/en/reset-password/confirm");
     await renderRoute(true);
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "invalid or has expired",
+      "This link is old or wrong",
     );
     await act(async () => resolve({ error: null }));
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "invalid or has expired",
+      "This link is old or wrong",
     );
     expect(
       screen.queryByRole("button", { name: "Update password" }),

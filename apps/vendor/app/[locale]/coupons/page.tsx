@@ -1,6 +1,8 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../_components/vendor-page";
+
 import { VendorCoupons } from "./_components/vendor-coupons";
 
 import type { Metadata } from "next";
@@ -29,8 +31,8 @@ export default async function VendorCouponsPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
+    <VendorPage width="full">
       <VendorCoupons locale={locale} />
-    </main>
+    </VendorPage>
   );
 }

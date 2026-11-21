@@ -4,6 +4,8 @@ import { useTheme } from "@vergeo/ui/src/theme-provider";
 
 type HeaderThemeToggleProps = {
   labels: { label: string; light: string; dark: string; system: string };
+  /** Phones: show the word under the icon so the button is not a bare icon. */
+  caption?: boolean;
 };
 
 /**
@@ -11,7 +13,7 @@ type HeaderThemeToggleProps = {
  * The full radio choice lives in Account → Preferences. Persisted per device
  * (localStorage via ThemeProvider); there is no profile field for it yet.
  */
-export function HeaderThemeToggle({ labels }: HeaderThemeToggleProps) {
+export function HeaderThemeToggle({ labels, caption = false }: HeaderThemeToggleProps) {
   const { theme, setTheme } = useTheme();
   const order = ["system", "light", "dark"] as const;
   const next = order[(order.indexOf(theme) + 1) % order.length] ?? "system";
@@ -29,7 +31,11 @@ export function HeaderThemeToggle({ labels }: HeaderThemeToggleProps) {
       aria-label={`${labels.label}: ${current}`}
       title={`${labels.label}: ${current}`}
       onClick={() => setTheme(next)}
-      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+      className={
+        caption
+          ? "inline-flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded px-1 text-micro font-semibold text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+          : "inline-flex min-h-11 min-w-11 items-center justify-center rounded text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+      }
     >
       <svg
         aria-hidden
@@ -55,6 +61,7 @@ export function HeaderThemeToggle({ labels }: HeaderThemeToggleProps) {
           </>
         )}
       </svg>
+      {caption ? <span aria-hidden>{labels.label}</span> : null}
     </button>
   );
 }

@@ -14,6 +14,7 @@ import {
   vendorNotificationsApi,
   vendorNotificationsRequest,
 } from "../../../lib/notifications-client";
+import { VendorPage } from "../_components/vendor-page";
 
 /** Vendor notifications — full paginated list + flag-gated phone alerts. */
 export default function VendorNotificationsPage() {
@@ -23,7 +24,7 @@ export default function VendorNotificationsPage() {
   const copy = useMemo(() => buildNotificationCopy(t), [t]);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-3">
+    <VendorPage width="full">
       <h1 className="font-display text-h2 text-display-ink">{t("center.title")}</h1>
       <p className="mb-4 mt-1 text-sm text-text-2">{t("center.pageDescription")}</p>
       <WebPushOptIn
@@ -46,6 +47,6 @@ export default function VendorNotificationsPage() {
         variant="page"
         onNavigate={(href) => router.push(href)}
       />
-    </main>
+    </VendorPage>
   );
 }

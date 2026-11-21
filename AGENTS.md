@@ -2,6 +2,10 @@
 
 Project overview, decisions, and conventions live in `CLAUDE.md` and `docs/`. Standard commands are in `README.md` (JS/TS) and `services/api/README.md` (Python API).
 
+## Multi-agent work (read first)
+
+Several agents build this repo: Claude (architect, reviewer and merge captain), Cursor and Grok Build (implementers), Grok Bot (routines) and King (founder, approver). **Before starting any task, read `docs/ops/agent-board.md`, claim your row, and follow its rules.** Task prompts live in `prompts/agents/`. Never merge to `master` or `release/*`. Never touch `supabase/migrations/`, `scripts/ci/` or `.github/workflows/`, or payments, auth, RLS or money code, without Claude's review. In Cursor, use Grok or Composer models.
+
 ## Git branching and cloud task identity
 
 - An explicit user-specified source branch, commit and PR target take precedence over generic branching defaults.

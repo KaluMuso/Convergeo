@@ -201,7 +201,7 @@ describe("WP10H existing checkout group handoff", () => {
         `/checkout/session/${query.session ?? query.group}`,
         { method: "GET" },
       );
-      expect(screen.getByText("Payment: Unavailable")).toBeInTheDocument();
+      expect(screen.getByText("Payment: Not available")).toBeInTheDocument();
       expectReadOnly();
       expect(mocks.request).not.toHaveBeenCalledWith("/checkout/session", {
         method: "POST",
@@ -253,7 +253,7 @@ describe("WP10H existing checkout group handoff", () => {
     );
     expect(screen.getByRole("status").textContent).toBe("Statut : En attente");
     expect(screen.getByText("Paiement: Indisponible")).toBeInTheDocument();
-    expect(screen.queryByText("Payment: Unavailable")).not.toBeInTheDocument();
+    expect(screen.queryByText("Payment: Not available")).not.toBeInTheDocument();
     expectReadOnly();
   });
 
@@ -295,7 +295,7 @@ describe("WP10H existing checkout group handoff", () => {
     async (changes) => {
       mocks.request.mockResolvedValue(status(firstId, changes));
       await visitCheckout({ session: firstId });
-      await screen.findByText("Reservation expired");
+      await screen.findByText("Time is up");
       expectReadOnly();
     },
   );
@@ -381,9 +381,7 @@ describe("WP10H existing checkout group handoff", () => {
     mocks.request.mockResolvedValue(status(secondId, { expired: true }));
     view.rerender(await checkoutElement({ session: secondId }, "fr"));
     await waitFor(() =>
-      expect(screen.getByRole("status").textContent).toBe(
-        "Réservation expirée",
-      ),
+      expect(screen.getByRole("status").textContent).toBe("Le temps est écoulé"),
     );
     expectReadOnly();
   });
@@ -420,7 +418,7 @@ describe("WP10H existing checkout group handoff", () => {
     await act(async () => {
       vi.advanceTimersByTime(1);
     });
-    expect(screen.getByRole("status").textContent).toBe("Reservation expired");
+    expect(screen.getByRole("status").textContent).toBe("Time is up");
     expect(vi.getTimerCount()).toBe(0);
     expect(mocks.request).toHaveBeenCalledTimes(1);
     expectReadOnly();
@@ -486,7 +484,7 @@ describe("WP10H existing checkout group handoff", () => {
     );
     expect(ordinary.querySelector("h2")?.textContent).toBe("Vos coordonnées");
     expect(ordinary.body.textContent).toContain(
-      "Nous les utiliserons pour envoyer les mises à jour de commande sur WhatsApp ou SMS.",
+      "Nous envoyons les nouvelles de la commande à ce numéro par WhatsApp ou SMS.",
     );
     expect(
       ordinary.querySelector('[data-testid="checkout-loading-skeleton"]'),

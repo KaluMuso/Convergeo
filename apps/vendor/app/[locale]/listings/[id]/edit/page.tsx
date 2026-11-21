@@ -1,6 +1,8 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { VendorPage } from "../../../_components/vendor-page";
+
 import { ListingEditForm } from "./_components/listing-edit-form";
 
 import type { Metadata } from "next";
@@ -47,8 +49,8 @@ export default async function EditListingPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col px-4 py-3">
+    <VendorPage width="form">
       <ListingEditForm locale={locale} listingId={id} />
-    </main>
+    </VendorPage>
   );
 }

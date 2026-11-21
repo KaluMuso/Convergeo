@@ -1,3 +1,4 @@
+import { VendorPage } from "../../_components/vendor-page";
 import { hasAuditableKycRecord, type KycIntegrityInput } from "../../_lib/kyc-integrity";
 
 import type { KycStatus } from "../_lib/types";
@@ -96,7 +97,7 @@ export function StatusScreen({
         : labels.pending.cta;
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-4 p-4">
+    <VendorPage width="form">
       <header>
         <h1 className="font-display text-h3 text-display-ink">{labels.heading}</h1>
       </header>
@@ -132,6 +133,6 @@ export function StatusScreen({
           </div>
         ) : null}
       </section>
-    </main>
+    </VendorPage>
   );
 }

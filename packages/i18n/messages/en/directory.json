@@ -1,12 +1,12 @@
 {
   "index": {
-    "title": "Vendors",
+    "title": "Shops",
     "subtitle": "Discover sellers and businesses across Zambia",
     "results": "{count, plural, one {# business} other {# businesses}}",
     "searchPlaceholder": "Search businesses",
     "searchLabel": "Search directory",
     "viewProfile": "View store",
-    "becomeVendor": "Become a vendor",
+    "becomeVendor": "Open your shop",
     "heroPitch": "List your business, reach customers across Zambia, and get paid securely."
   },
   "filters": {
@@ -16,7 +16,7 @@
     "badges": "Badges",
     "allCategories": "All categories",
     "allLocations": "All locations",
-    "preferred": "Preferred vendor",
+    "preferred": "Preferred shop",
     "verified": "Verified",
     "apply": "Apply filters",
     "clear": "Clear filters",
@@ -42,7 +42,7 @@
     "selfListed": "Self-listed",
     "idVerified": "ID verified",
     "sectorVerified": "Sector verified",
-    "preferred": "Preferred vendor"
+    "preferred": "Preferred shop"
   },
   "tiers": {
     "bronze": "Bronze",
@@ -73,14 +73,14 @@
     "reviewsHeading": "Customer reviews",
     "reviewsSummary": "{rating, number, ::.1} average from {count, plural, one {# review} other {# reviews}}",
     "noReviews": "No reviews yet",
-    "preferredBadge": "Preferred vendor",
-    "verifiedBadge": "Verified vendor",
+    "preferredBadge": "Preferred shop",
+    "verifiedBadge": "Verified seller (ID checked)",
     "shareTitle": "{name} on Convergeo",
     "statRating": "Rating",
     "statReviews": "Reviews",
     "statListings": "Products",
     "statOrders": "Orders",
-    "offeringsAria": "Vendor offerings",
+    "offeringsAria": "What this shop sells",
     "tabProducts": "Products",
     "tabServices": "Services",
     "tabEvents": "Events",
