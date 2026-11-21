@@ -88,6 +88,16 @@ test("empty staged set is a no-op, including index bytes", async (t) => {
   await repo.clean();
 });
 
+test("explicit file list limits formatting to staged intersection", async (t) => {
+  const repo = await repository(t);
+  await repo.stage("a.js", "const a=1\n");
+  await repo.stage("b.js", "const b=1\n");
+  assert.equal((await repo.run({ files: ["a.js"] })).formatted, 1);
+  assert.equal(repo.blob("a.js").toString(), "const a = 1;\n");
+  assert.equal(repo.blob("b.js").toString(), "const b=1\n");
+  await repo.clean();
+});
+
 test("formats all literal filenames; preserves executable modes and unrelated bytes", async (t) => {
   const repo = await repository(t);
   const names = [

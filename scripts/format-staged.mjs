@@ -15,7 +15,12 @@ const MAX_OUTPUT = 256 * 1024 * 1024;
 
 async function command(args, { cwd, env = process.env, input, allowed = [0] }) {
   return new Promise((resolve, reject) => {
-    const child = spawn("git", args, { cwd, env, stdio: ["pipe", "pipe", "pipe"] });
+    // Literal paths (e.g. apps/.../[locale]/...) must not be quotepath-escaped on Windows.
+    const child = spawn("git", ["-c", "core.quotepath=false", ...args], {
+      cwd,
+      env,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     const stdout = [];
     const stderr = [];
     let size = 0;
@@ -51,6 +56,26 @@ function records(buffer) {
   if (!buffer.length) return [];
   if (buffer.at(-1) !== 0) throw new Error("Invalid NUL-delimited Git output");
   return text(buffer.subarray(0, -1)).split("\0");
+}
+
+/** Repo-relative POSIX path for argv / lefthook {staged_files} (no glob expansion). */
+function normalizeRepoRelative(root, file) {
+  const normalized = file.replace(/\\/g, "/");
+  const absolute = path.isAbsolute(normalized)
+    ? path.resolve(normalized)
+    : path.resolve(root, normalized);
+  if (!absolute.startsWith(`${root}${path.sep}`))
+    throw new Error(`Path outside repository: ${JSON.stringify(file)}`);
+  const relative = path.relative(root, absolute);
+  if (!relative || relative.startsWith(".."))
+    throw new Error(`Unsafe repository path: ${JSON.stringify(file)}`);
+  return relative.split(path.sep).join("/");
+}
+
+function parseExplicitFiles(argv, root) {
+  const raw = argv.slice(2).filter((item) => item && !item.startsWith("-"));
+  if (!raw.length) return null;
+  return raw.map((item) => normalizeRepoRelative(root, item));
 }
 
 async function readOptional(file) {
@@ -143,12 +168,23 @@ async function cleanupFailure(error, { committed, primaryError, location }) {
     );
 }
 
-export async function formatStaged({ cwd = process.cwd(), env = process.env, onPhase } = {}) {
+export async function formatStaged({
+  cwd = process.cwd(),
+  env = process.env,
+  onPhase,
+  files: explicitFiles = null,
+} = {}) {
   const git = (args, options = {}) => command(args, { cwd, env, ...options });
   const root = path.resolve(
     text((await git(["rev-parse", "--show-toplevel"])).output).replace(/\n$/, ""),
   );
   cwd = root;
+  const onlyFiles =
+    explicitFiles === null
+      ? parseExplicitFiles(process.argv, root)
+      : explicitFiles.length
+        ? explicitFiles.map((item) => normalizeRepoRelative(root, item))
+        : null;
   // --path-format preserves linked-worktree and GIT_INDEX_FILE semantics.
   const index = text(
     (await git(["rev-parse", "--path-format=absolute", "--git-path", "index"])).output,
@@ -211,7 +247,7 @@ export async function formatStaged({ cwd = process.cwd(), env = process.env, onP
     } else await git(["read-tree", "--empty"], { env: temporaryEnv });
     if ((await git(["ls-files", "--unmerged", "-z"])).output.length)
       throw new Error("Unmerged index; resolve conflicts before formatting");
-    const names = records(
+    let names = records(
       (
         await git([
           "diff",
@@ -224,6 +260,11 @@ export async function formatStaged({ cwd = process.cwd(), env = process.env, onP
         ])
       ).output,
     );
+    if (!names.length) return { formatted: 0 };
+    if (onlyFiles?.length) {
+      const wanted = new Set(onlyFiles);
+      names = names.filter((name) => wanted.has(name));
+    }
     if (!names.length) return { formatted: 0 };
     const entries = new Map(
       records((await git(["ls-files", "--stage", "-z"])).output).map((record) => {
@@ -515,7 +556,7 @@ export async function formatStaged({ cwd = process.cwd(), env = process.env, onP
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  formatStaged()
+  formatStaged({ explicitFiles: undefined })
     .then(({ formatted }) => {
       console.log(`Staged formatter: ${formatted} file(s) formatted`);
     })
