@@ -66,7 +66,7 @@ done
 set_fixture other-os 20261004.327.1 158.0.8127.36 158.0.8127.36-1
 if check_hosted_chrome >/dev/null 2>&1; then exit 1; fi
 
-set_fixture ubuntu24 20261011.333.1 158.0.8127.36 158.0.8127.36-1
+set_fixture ubuntu24 not-a-version 158.0.8127.36 158.0.8127.36-1
 if output=$(check_hosted_chrome 2>&1); then exit 1; fi
 [[ "$output" == *'ImageVersion=unknown'* ]]
 
@@ -81,7 +81,7 @@ if output=$(check_hosted_chrome 2>&1); then exit 1; fi
 
 # Unknown hosts cannot start a download or a privileged package install.
 download_verified_chrome() { : > "$fixture/unexpected-install"; }
-set_fixture ubuntu24 20261011.333.1 158.0.8127.36 158.0.8127.36-1
+set_fixture ubuntu24 not-a-version 158.0.8127.36 158.0.8127.36-1
 if install_verified_hosted_chrome >/dev/null 2>&1; then exit 1; fi
 [[ ! -e "$fixture/unexpected-install" ]]
 
