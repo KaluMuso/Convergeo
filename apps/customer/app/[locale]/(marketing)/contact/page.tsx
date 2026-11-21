@@ -74,8 +74,8 @@ export default async function ContactPage({ params }: PageProps) {
   const whatsappHref = buildWhatsappLink();
 
   return (
-    <main id="marketing-main" className="mx-auto w-full max-w-2xl px-4 py-8">
-      <header className="mb-8 space-y-3">
+    <main id="marketing-main" className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <header className="mx-auto mb-6 max-w-3xl space-y-3">
         <p className="text-sm font-semibold uppercase tracking-wide text-primary">
           {t("hero.eyebrow")}
         </p>
@@ -83,28 +83,30 @@ export default async function ContactPage({ params }: PageProps) {
         <p className="text-body text-text-2">{t("hero.subhead")}</p>
       </header>
 
-      {whatsappHref ? (
-        <section className="mb-8 space-y-3 rounded-lg border border-border bg-bg-2 p-6">
-          <h2 className="font-display text-h2 text-display-ink">{t("whatsapp.heading")}</h2>
-          <p className="text-body text-text">{t("whatsapp.body")}</p>
-          <a
-            className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-5 text-body font-medium text-surface"
-            href={whatsappHref}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            {t("whatsapp.cta")}
-          </a>
-          <p className="text-sm text-text-2">{t("whatsapp.hint")}</p>
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {whatsappHref ? (
+          <section className="space-y-3 rounded-lg border border-border bg-bg-2 p-4 lg:p-5">
+            <h2 className="font-display text-h2 text-display-ink">{t("whatsapp.heading")}</h2>
+            <p className="text-body text-text">{t("whatsapp.body")}</p>
+            <a
+              className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-5 text-body font-medium text-surface"
+              href={whatsappHref}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              {t("whatsapp.cta")}
+            </a>
+            <p className="text-sm text-text-2">{t("whatsapp.hint")}</p>
+          </section>
+        ) : null}
+
+        <section className="space-y-2 rounded-lg border border-border bg-surface p-4 lg:p-5">
+          <h2 className="font-display text-h3 text-display-ink">{t("hours.heading")}</h2>
+          <p className="text-body text-text-2">{t("hours.body")}</p>
         </section>
-      ) : null}
+      </div>
 
-      <section className="mb-8 space-y-2">
-        <h2 className="font-display text-h3 text-display-ink">{t("hours.heading")}</h2>
-        <p className="text-body text-text-2">{t("hours.body")}</p>
-      </section>
-
-      <section className="space-y-4">
+      <section className="mx-auto max-w-2xl space-y-4">
         <h2 className="font-display text-h2 text-display-ink">{t("form.heading")}</h2>
         <ContactForm labels={buildLabels(t)} />
       </section>

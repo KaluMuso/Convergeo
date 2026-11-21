@@ -76,11 +76,15 @@ export default async function AccountTicketsPage({ params }: PageProps) {
   const accessToken = await getAccountAccessToken(locale);
   const baseMessages = await getMessages();
   const eventsMessages = await loadNamespace(locale as Locale, "events");
-  const messages = { ...baseMessages, events: eventsMessages } as AbstractIntlMessages;
-  const t = createTranslator({ locale, messages, namespace: "events.wallet" }) as (
-    key: string,
-    values?: Record<string, string | number>,
-  ) => string;
+  const messages = {
+    ...baseMessages,
+    events: eventsMessages,
+  } as AbstractIntlMessages;
+  const t = createTranslator({
+    locale,
+    messages,
+    namespace: "events.wallet",
+  }) as (key: string, values?: Record<string, string | number>) => string;
 
   const tickets = await fetchWalletTickets(accessToken);
 
@@ -98,7 +102,7 @@ export default async function AccountTicketsPage({ params }: PageProps) {
     return (
       <div className="space-y-6">
         {claimBanner}
-        <section className="space-y-4 rounded border border-border bg-surface p-6 text-center">
+        <section className="space-y-4 rounded border border-border bg-surface p-4 py-8 text-center lg:p-5">
           <h2 className="font-display text-h2 text-display-ink">{t("emptyTitle")}</h2>
           <p className="text-sm text-text-2">{t("emptyBody")}</p>
           <LinkButton
@@ -115,13 +119,13 @@ export default async function AccountTicketsPage({ params }: PageProps) {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-4 sm:space-y-6">
       {claimBanner}
       <header className="space-y-1">
         <h2 className="font-display text-h2 text-display-ink">{t("title")}</h2>
       </header>
 
-      <ul className="space-y-3">
+      <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {tickets.map((ticket) => {
           const startsAt = new Date(ticket.instance.starts_at).toLocaleString(locale, {
             dateStyle: "medium",
@@ -132,7 +136,7 @@ export default async function AccountTicketsPage({ params }: PageProps) {
           return (
             <li
               key={ticket.id}
-              className="flex flex-col gap-3 rounded border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 rounded border border-border bg-surface p-4 lg:p-5 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0 space-y-1">
                 <p className="text-sm font-medium text-display-ink">{ticket.event.title}</p>

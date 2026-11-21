@@ -44,35 +44,37 @@ export default async function AccountPreferencesPage({ params }: PageProps) {
   const preferences = await api.getPreferences();
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
+    <section className="space-y-4 sm:space-y-6">
+      <header className="max-w-2xl space-y-1">
         <h2 className="font-display text-h2 text-display-ink">{t("preferences.title")}</h2>
         <p className="text-sm text-text-2">{t("preferences.description")}</p>
       </header>
-      <PreferencesForm
-        accessToken={accessToken}
-        locale={locale}
-        initialPrefs={preferences.notif_prefs}
-        localeSwitcherLabels={localeSwitcherLabels}
-        labels={{
-          themeTitle: t("preferences.themeTitle"),
-          themeDescription: t("preferences.themeDescription"),
-          themeLight: t("preferences.themeLight"),
-          themeDark: t("preferences.themeDark"),
-          themeSystem: t("preferences.themeSystem"),
-          notificationsTitle: t("preferences.notificationsTitle"),
-          whatsapp: t("preferences.whatsapp"),
-          whatsappHelp: t("preferences.whatsappHelp"),
-          sms: t("preferences.sms"),
-          smsHelp: t("preferences.smsHelp"),
-          email: t("preferences.email"),
-          emailHelp: t("preferences.emailHelp"),
-          save: t("preferences.save"),
-          saving: t("preferences.saving"),
-          saved: t("preferences.saved"),
-          error: t("preferences.error"),
-        }}
-      />
+      <div className="max-w-2xl">
+        <PreferencesForm
+          accessToken={accessToken}
+          locale={locale}
+          initialPrefs={preferences.notif_prefs}
+          localeSwitcherLabels={localeSwitcherLabels}
+          labels={{
+            themeTitle: t("preferences.themeTitle"),
+            themeDescription: t("preferences.themeDescription"),
+            themeLight: t("preferences.themeLight"),
+            themeDark: t("preferences.themeDark"),
+            themeSystem: t("preferences.themeSystem"),
+            notificationsTitle: t("preferences.notificationsTitle"),
+            whatsapp: t("preferences.whatsapp"),
+            whatsappHelp: t("preferences.whatsappHelp"),
+            sms: t("preferences.sms"),
+            smsHelp: t("preferences.smsHelp"),
+            email: t("preferences.email"),
+            emailHelp: t("preferences.emailHelp"),
+            save: t("preferences.save"),
+            saving: t("preferences.saving"),
+            saved: t("preferences.saved"),
+            error: t("preferences.error"),
+          }}
+        />
+      </div>
     </section>
   );
 }

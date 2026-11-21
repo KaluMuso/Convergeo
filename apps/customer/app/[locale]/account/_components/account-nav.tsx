@@ -56,7 +56,7 @@ export function AccountNav({ locale, labels }: AccountNavProps) {
 
   return (
     <nav aria-label={labels.ariaLabel} className="mb-6" data-testid="account-nav">
-      <Rail className="flex gap-2 pb-1">
+      <Rail className="flex flex-nowrap gap-2 pb-1 scrollbar-none">
         {NAV_ITEMS.map((item) => {
           const href = item.href(locale);
           const isActive =

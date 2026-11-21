@@ -44,7 +44,10 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return buildPageMetadata(locale, "orders", "detail.title", { index: false, follow: false });
+  return buildPageMetadata(locale, "orders", "detail.title", {
+    index: false,
+    follow: false,
+  });
 }
 
 type PageProps = {
@@ -165,9 +168,12 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
     (order as OrderDetail & { dispatch_events?: DispatchOrderEvent[] }).dispatch_events ?? [];
   const dispatchDetails = extractDispatchFromEvents(dispatchEvents);
 
+  const colMain = "min-w-0 lg:col-start-1";
+  const colAside = "min-w-0 lg:col-start-2";
+
   const content = (
-    <section className="space-y-6">
-      <header className="space-y-2">
+    <section className="space-y-4 sm:space-y-6 lg:grid lg:grid-cols-[2fr_1fr] lg:items-start lg:gap-6 lg:space-y-0">
+      <header className={`space-y-2 lg:col-span-2 ${colMain}`}>
         <Link
           href={`/${locale}/account/orders`}
           className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
@@ -188,17 +194,21 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       </header>
 
       {isCod ? (
-        <CodTrustLine
-          text={createTranslator({ locale, messages, namespace: "codTrust" })("line")}
-          testId="order-cod-trust"
-        />
+        <div className={colMain}>
+          <CodTrustLine
+            text={createTranslator({ locale, messages, namespace: "codTrust" })("line")}
+            testId="order-cod-trust"
+          />
+        </div>
       ) : null}
 
-      <OrderTimeline timeline={order.timeline} labels={timelineLabels} />
+      <div className={colMain}>
+        <OrderTimeline timeline={order.timeline} labels={timelineLabels} />
+      </div>
 
       <section
         aria-labelledby="order-help-heading"
-        className="space-y-2 rounded border border-border bg-bg-2 p-4"
+        className={`space-y-2 rounded border border-border bg-bg-2 p-4 lg:p-5 ${colAside}`}
         data-testid="order-help"
       >
         <h3 id="order-help-heading" className="text-sm font-semibold text-display-ink">
@@ -216,102 +226,112 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       </section>
 
       {courierDelivery ? (
-        <CourierDeliveryBlock
-          delivery={courierDelivery}
-          labels={{
-            title: t("courier.title"),
-            courier: t("courier.courier"),
-            reference: t("courier.reference"),
-            statuses: {
-              requested: t("courier.statuses.requested"),
-              accepted: t("courier.statuses.accepted"),
-              picked_up: t("courier.statuses.picked_up"),
-              delivered: t("courier.statuses.delivered"),
-              failed: t("courier.statuses.failed"),
-              cancelled: t("courier.statuses.cancelled"),
-            },
-            codDue: (amount) =>
-              doorPayment ? t("doorPay.amountDue", { amount }) : t("courier.codDue", { amount }),
-            handoverTitle: t("courier.handoverTitle"),
-            handoverBody: t("courier.handoverBody"),
-            handoverAria: (code) => t("courier.handoverAria", { code }),
-            failedBody: t("courier.failedBody"),
-          }}
-        />
+        <div className={colMain}>
+          <CourierDeliveryBlock
+            delivery={courierDelivery}
+            labels={{
+              title: t("courier.title"),
+              courier: t("courier.courier"),
+              reference: t("courier.reference"),
+              statuses: {
+                requested: t("courier.statuses.requested"),
+                accepted: t("courier.statuses.accepted"),
+                picked_up: t("courier.statuses.picked_up"),
+                delivered: t("courier.statuses.delivered"),
+                failed: t("courier.statuses.failed"),
+                cancelled: t("courier.statuses.cancelled"),
+              },
+              codDue: (amount) =>
+                doorPayment ? t("doorPay.amountDue", { amount }) : t("courier.codDue", { amount }),
+              handoverTitle: t("courier.handoverTitle"),
+              handoverBody: t("courier.handoverBody"),
+              handoverAria: (code) => t("courier.handoverAria", { code }),
+              failedBody: t("courier.failedBody"),
+            }}
+          />
+        </div>
       ) : null}
 
       {doorPayment ? (
-        <DoorPaymentBlock
-          orderId={order.id}
-          accessToken={accessToken}
-          initial={doorPayment}
-          labels={{
-            title: t("doorPay.title"),
-            intro: (amount) => t("doorPay.intro", { amount }),
-            waitingRider: t("doorPay.waitingRider"),
-            payNow: t("doorPay.payNow"),
-            sending: t("doorPay.sending"),
-            otherNumber: t("doorPay.otherNumber"),
-            phoneLabel: t("doorPay.phoneLabel"),
-            phoneHelp: t("doorPay.phoneHelp"),
-            pending: t("doorPay.pending"),
-            checkStatus: t("doorPay.checkStatus"),
-            checking: t("doorPay.checking"),
-            failed: t("doorPay.failed"),
-            attemptsLeft: (count) => t("doorPay.attemptsLeft", { count }),
-            noAttemptsLeft: t("doorPay.noAttemptsLeft"),
-            paid: t("doorPay.paid"),
-            cash: (amount) => t("doorPay.cash", { amount }),
-            errors: {
-              invalidPhone: t("doorPay.errors.invalidPhone"),
-              operatorUnsupported: t("doorPay.errors.operatorUnsupported"),
-              inFlight: t("doorPay.errors.inFlight"),
-              generic: t("doorPay.errors.generic"),
-            },
-          }}
-        />
+        <div className={colMain}>
+          <DoorPaymentBlock
+            orderId={order.id}
+            accessToken={accessToken}
+            initial={doorPayment}
+            labels={{
+              title: t("doorPay.title"),
+              intro: (amount) => t("doorPay.intro", { amount }),
+              waitingRider: t("doorPay.waitingRider"),
+              payNow: t("doorPay.payNow"),
+              sending: t("doorPay.sending"),
+              otherNumber: t("doorPay.otherNumber"),
+              phoneLabel: t("doorPay.phoneLabel"),
+              phoneHelp: t("doorPay.phoneHelp"),
+              pending: t("doorPay.pending"),
+              checkStatus: t("doorPay.checkStatus"),
+              checking: t("doorPay.checking"),
+              failed: t("doorPay.failed"),
+              attemptsLeft: (count) => t("doorPay.attemptsLeft", { count }),
+              noAttemptsLeft: t("doorPay.noAttemptsLeft"),
+              paid: t("doorPay.paid"),
+              cash: (amount) => t("doorPay.cash", { amount }),
+              errors: {
+                invalidPhone: t("doorPay.errors.invalidPhone"),
+                operatorUnsupported: t("doorPay.errors.operatorUnsupported"),
+                inFlight: t("doorPay.errors.inFlight"),
+                generic: t("doorPay.errors.generic"),
+              },
+            }}
+          />
+        </div>
       ) : null}
 
       {courierDelivery ? null : (
-        <DispatchTimeline
-          fulfilment={order.fulfilment}
-          status={order.status}
-          courier={dispatchDetails.courier}
-          trackingNote={dispatchDetails.trackingNote}
-          statusUpdates={buildDispatchStatusUpdates(
-            order.timeline,
-            {
-              processing: t("timeline.processing"),
-              shipped: t("timeline.shipped"),
-              delivered: t("timeline.delivered"),
-            },
-            dispatchEvents,
-          )}
-          labels={{
-            title: t("dispatch.title"),
-            courier: t("dispatch.courier"),
-            tracking: t("dispatch.tracking"),
-            empty: t("dispatch.empty"),
-            statusUpdates: t("dispatch.statusUpdates"),
-          }}
-        />
+        <div className={colMain}>
+          <DispatchTimeline
+            fulfilment={order.fulfilment}
+            status={order.status}
+            courier={dispatchDetails.courier}
+            trackingNote={dispatchDetails.trackingNote}
+            statusUpdates={buildDispatchStatusUpdates(
+              order.timeline,
+              {
+                processing: t("timeline.processing"),
+                shipped: t("timeline.shipped"),
+                delivered: t("timeline.delivered"),
+              },
+              dispatchEvents,
+            )}
+            labels={{
+              title: t("dispatch.title"),
+              courier: t("dispatch.courier"),
+              tracking: t("dispatch.tracking"),
+              empty: t("dispatch.empty"),
+              statusUpdates: t("dispatch.statusUpdates"),
+            }}
+          />
+        </div>
       )}
 
       {order.pickup ? (
-        <PickupCredentialsBlock
-          pickup={order.pickup}
-          labels={{
-            title: t("pickup.title"),
-            qrLabel: t("pickup.qrLabel"),
-            pinLabel: t("pickup.pinLabel"),
-            stubBody: t("pickup.stubBody"),
-            pinAria: String(t.raw("pickup.pinAria")),
-            sentToRecipient: t("gift.pinSentToRecipient"),
-          }}
-        />
+        <div className={colMain}>
+          <PickupCredentialsBlock
+            pickup={order.pickup}
+            labels={{
+              title: t("pickup.title"),
+              qrLabel: t("pickup.qrLabel"),
+              pinLabel: t("pickup.pinLabel"),
+              stubBody: t("pickup.stubBody"),
+              pinAria: String(t.raw("pickup.pinAria")),
+              sentToRecipient: t("gift.pinSentToRecipient"),
+            }}
+          />
+        </div>
       ) : null}
 
-      <section className="space-y-2 rounded border border-border bg-surface p-4">
+      <section
+        className={`space-y-2 rounded border border-border bg-surface p-4 lg:p-5 ${colAside}`}
+      >
         <h3 className="font-display text-h3 text-display-ink">{t("detail.title")}</h3>
         <ul className="divide-y divide-border">
           {order.items.map((item: OrderItem) => (
@@ -363,7 +383,9 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       </section>
 
       {order.is_gift ? (
-        <section className="space-y-2 rounded border border-border bg-surface p-4">
+        <section
+          className={`space-y-2 rounded border border-border bg-surface p-4 lg:p-5 ${colMain}`}
+        >
           <h3 className="font-display text-h3 text-display-ink">{t("gift.title")}</h3>
           <p className="text-sm text-text-2">{t("gift.body")}</p>
           <Link
@@ -375,108 +397,120 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
         </section>
       ) : null}
 
-      <InvoiceLinkBlock
-        invoice={order.invoice}
-        labels={{
-          title: t("invoice.title"),
-          download: t("invoice.download"),
-          stubHelp: t("invoice.stubHelp"),
-          unavailable: t("invoice.unavailable"),
-        }}
-      />
+      <div className={colMain}>
+        <InvoiceLinkBlock
+          invoice={order.invoice}
+          labels={{
+            title: t("invoice.title"),
+            download: t("invoice.download"),
+            stubHelp: t("invoice.stubHelp"),
+            unavailable: t("invoice.unavailable"),
+          }}
+        />
+      </div>
 
-      <BuyAgain
-        orderId={order.id}
-        accessToken={accessToken}
-        locale={locale}
-        status={order.status}
-        labels={buildBuyAgainLabels(t)}
-      />
+      <div className={colAside}>
+        <BuyAgain
+          orderId={order.id}
+          accessToken={accessToken}
+          locale={locale}
+          status={order.status}
+          labels={buildBuyAgainLabels(t)}
+        />
+      </div>
 
-      <ConfirmReceivedBlock
-        orderId={order.id}
-        accessToken={accessToken}
-        status={order.status}
-        labels={{
-          title: t("confirm.title"),
-          // COD never touches escrow: no "held/released" wording on cash orders.
-          body: isCod ? t("confirm.bodyCod") : t("confirm.body"),
-          trust: isCod
-            ? createTranslator({ locale, messages, namespace: "codTrust" })("line")
-            : t("confirm.trust"),
-          button: t("confirm.button"),
-          confirming: t("confirm.confirming"),
-          done: t("confirm.done"),
-          doneBody: isCod ? t("confirm.doneBodyCod") : t("confirm.doneBody"),
-          error: t("confirm.error"),
-        }}
-      />
+      <div className={colMain}>
+        <ConfirmReceivedBlock
+          orderId={order.id}
+          accessToken={accessToken}
+          status={order.status}
+          labels={{
+            title: t("confirm.title"),
+            // COD never touches escrow: no "held/released" wording on cash orders.
+            body: isCod ? t("confirm.bodyCod") : t("confirm.body"),
+            trust: isCod
+              ? createTranslator({ locale, messages, namespace: "codTrust" })("line")
+              : t("confirm.trust"),
+            button: t("confirm.button"),
+            confirming: t("confirm.confirming"),
+            done: t("confirm.done"),
+            doneBody: isCod ? t("confirm.doneBodyCod") : t("confirm.doneBody"),
+            error: t("confirm.error"),
+          }}
+        />
+      </div>
 
-      <ReportProblemBlock
-        orderId={order.id}
-        accessToken={accessToken}
-        status={order.status}
-        labels={{
-          title: t("report.title"),
-          body: t("report.body"),
-          categoryLabel: t("report.categoryLabel"),
-          categoryFaulty: t("report.categoryFaulty"),
-          categoryWrong: t("report.categoryWrong"),
-          categoryNotDelivered: t("report.categoryNotDelivered"),
-          categoryOther: t("report.categoryOther"),
-          descriptionLabel: t("report.descriptionLabel"),
-          descriptionPlaceholder: t("report.descriptionPlaceholder"),
-          evidenceLabel: t("report.evidenceLabel"),
-          evidenceHelp: t("report.evidenceHelp"),
-          addEvidence: t("report.addEvidence"),
-          uploading: t("report.uploading"),
-          submit: t("report.submit"),
-          submitting: t("report.submitting"),
-          successLane1: t("report.successLane1"),
-          successDispute: t("report.successDispute"),
-          successSupport: t("report.successSupport"),
-          successGuidance: t("report.successGuidance"),
-          error: t("report.error"),
-          requiredDescription: t("report.requiredDescription"),
-        }}
-      />
+      <div className={colMain}>
+        <ReportProblemBlock
+          orderId={order.id}
+          accessToken={accessToken}
+          status={order.status}
+          labels={{
+            title: t("report.title"),
+            body: t("report.body"),
+            categoryLabel: t("report.categoryLabel"),
+            categoryFaulty: t("report.categoryFaulty"),
+            categoryWrong: t("report.categoryWrong"),
+            categoryNotDelivered: t("report.categoryNotDelivered"),
+            categoryOther: t("report.categoryOther"),
+            descriptionLabel: t("report.descriptionLabel"),
+            descriptionPlaceholder: t("report.descriptionPlaceholder"),
+            evidenceLabel: t("report.evidenceLabel"),
+            evidenceHelp: t("report.evidenceHelp"),
+            addEvidence: t("report.addEvidence"),
+            uploading: t("report.uploading"),
+            submit: t("report.submit"),
+            submitting: t("report.submitting"),
+            successLane1: t("report.successLane1"),
+            successDispute: t("report.successDispute"),
+            successSupport: t("report.successSupport"),
+            successGuidance: t("report.successGuidance"),
+            error: t("report.error"),
+            requiredDescription: t("report.requiredDescription"),
+          }}
+        />
+      </div>
 
-      <ReviewPromptBlock
-        orderId={order.id}
-        accessToken={accessToken}
-        status={order.status}
-        labels={{
-          title: t("reviewPrompt.title"),
-          body: t("reviewPrompt.body"),
-          itemLabel: t("reviewPrompt.itemLabel"),
-          ratingLabel: t("reviewPrompt.ratingLabel"),
-          starsAria: String(t.raw("reviewPrompt.starsAria")),
-          bodyLabel: t("reviewPrompt.bodyLabel"),
-          bodyPlaceholder: t("reviewPrompt.bodyPlaceholder"),
-          submit: t("reviewPrompt.submit"),
-          submitting: t("reviewPrompt.submitting"),
-          success: t("reviewPrompt.success"),
-          error: t("reviewPrompt.error"),
-          editNotice: t("reviewPrompt.editNotice"),
-          loading: t("reviewPrompt.loading"),
-          starFilled: t("reviewPrompt.starFilled"),
-          starEmpty: t("reviewPrompt.starEmpty"),
-        }}
-      />
+      <div className={colMain}>
+        <ReviewPromptBlock
+          orderId={order.id}
+          accessToken={accessToken}
+          status={order.status}
+          labels={{
+            title: t("reviewPrompt.title"),
+            body: t("reviewPrompt.body"),
+            itemLabel: t("reviewPrompt.itemLabel"),
+            ratingLabel: t("reviewPrompt.ratingLabel"),
+            starsAria: String(t.raw("reviewPrompt.starsAria")),
+            bodyLabel: t("reviewPrompt.bodyLabel"),
+            bodyPlaceholder: t("reviewPrompt.bodyPlaceholder"),
+            submit: t("reviewPrompt.submit"),
+            submitting: t("reviewPrompt.submitting"),
+            success: t("reviewPrompt.success"),
+            error: t("reviewPrompt.error"),
+            editNotice: t("reviewPrompt.editNotice"),
+            loading: t("reviewPrompt.loading"),
+            starFilled: t("reviewPrompt.starFilled"),
+            starEmpty: t("reviewPrompt.starEmpty"),
+          }}
+        />
+      </div>
 
-      <OrderPostDeliveryActions
-        locale={locale}
-        orderId={order.id}
-        status={order.status}
-        labels={{
-          actionsTitle: t("detail.actionsTitle"),
-          requestReturn: t("detail.requestReturn"),
-          openDispute: t("detail.openDispute"),
-        }}
-      />
+      <div className={colMain}>
+        <OrderPostDeliveryActions
+          locale={locale}
+          orderId={order.id}
+          status={order.status}
+          labels={{
+            actionsTitle: t("detail.actionsTitle"),
+            requestReturn: t("detail.requestReturn"),
+            openDispute: t("detail.openDispute"),
+          }}
+        />
+      </div>
 
       {otherOrders.length > 0 ? (
-        <section className="space-y-3">
+        <section className={`space-y-3 lg:col-span-2 ${colMain}`}>
           <h3 className="font-display text-h3 text-display-ink">{t("detail.relatedTitle")}</h3>
           <ul className="space-y-2">
             {otherOrders.map((related: OrderSummary) => (

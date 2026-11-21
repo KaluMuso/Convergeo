@@ -17,7 +17,10 @@ type MarketingTranslator = (key: string, values?: Record<string, string | number
 async function getMarketingTranslator(locale: string): Promise<MarketingTranslator> {
   const baseMessages = await getMessages();
   const marketingMessages = await loadNamespace(locale as Locale, "marketing");
-  const messages = { ...baseMessages, marketing: marketingMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    marketing: marketingMessages,
+  } as AbstractIntlMessages;
   return createTranslator({
     locale,
     messages,
@@ -66,66 +69,70 @@ export default async function HelpArticlePage({ params }: PageProps) {
   };
 
   return (
-    <main id="marketing-main" className="mx-auto w-full max-w-2xl px-4 py-8">
-      <script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
-        type="application/ld+json"
-      />
+    <main id="marketing-main" className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-3xl">
+        <script
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+          type="application/ld+json"
+        />
 
-      <nav className="mb-6">
-        <Link
-          className="inline-flex min-h-11 items-center text-sm text-primary underline-offset-2 hover:underline"
-          href={`/${locale}/help`}
-        >
-          {t("article.backToHelp")}
-        </Link>
-      </nav>
+        <nav className="mb-6">
+          <Link
+            className="inline-flex min-h-11 items-center text-sm text-primary underline-offset-2 hover:underline"
+            href={`/${locale}/help`}
+          >
+            {t("article.backToHelp")}
+          </Link>
+        </nav>
 
-      <header className="mb-6 space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-wide text-primary">
-          {t("article.inCategory", { category: t(`categories.${article.category}`) })}
-        </p>
-        <h1 className="font-display text-h1 text-display-ink">{article.title}</h1>
-      </header>
+        <header className="mb-6 space-y-2">
+          <p className="text-sm font-semibold uppercase tracking-wide text-primary">
+            {t("article.inCategory", {
+              category: t(`categories.${article.category}`),
+            })}
+          </p>
+          <h1 className="font-display text-h1 text-display-ink">{article.title}</h1>
+        </header>
 
-      {article.comingSoon ? (
-        <p
-          role="note"
-          data-testid="help-coming-soon-notice"
-          className="mb-6 rounded-lg border border-border bg-primary-tint p-4 text-sm font-medium text-primary-deep"
-        >
-          {t("article.comingSoon")}
-        </p>
-      ) : null}
+        {article.comingSoon ? (
+          <p
+            role="note"
+            data-testid="help-coming-soon-notice"
+            className="mb-6 rounded-lg border border-border bg-primary-tint p-4 text-sm font-medium text-primary-deep"
+          >
+            {t("article.comingSoon")}
+          </p>
+        ) : null}
 
-      <article className="mb-10">
-        <Markdown content={article.body} />
-      </article>
+        <article className="mb-6">
+          <Markdown content={article.body} />
+        </article>
 
-      {related.length > 0 ? (
-        <section className="mb-10 space-y-3">
-          <h2 className="font-display text-h3 text-display-ink">{t("article.relatedHeading")}</h2>
-          <ul className="space-y-2">
-            {related.map((item) => (
-              <li key={item.slug}>
-                <Link
-                  className="text-primary underline-offset-2 hover:underline"
-                  href={`/${locale}/help/${item.slug}`}
-                >
-                  {item.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
+        {related.length > 0 ? (
+          <section className="mb-6 space-y-3">
+            <h2 className="font-display text-h3 text-display-ink">{t("article.relatedHeading")}</h2>
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {related.map((item) => (
+                <li key={item.slug}>
+                  <Link
+                    className="text-primary underline-offset-2 hover:underline"
+                    href={`/${locale}/help/${item.slug}`}
+                  >
+                    {item.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <section className="space-y-3 rounded-lg border border-border bg-bg-2 p-4 lg:p-5">
+          <h2 className="font-display text-h3 text-display-ink">{t("article.notHelpful")}</h2>
+          <LinkButton href={`/${locale}/contact`} variant="primary" LinkComponent={Link}>
+            {t("article.contactCta")}
+          </LinkButton>
         </section>
-      ) : null}
-
-      <section className="space-y-3 rounded-lg border border-border bg-bg-2 p-6">
-        <h2 className="font-display text-h3 text-display-ink">{t("article.notHelpful")}</h2>
-        <LinkButton href={`/${locale}/contact`} variant="primary" LinkComponent={Link}>
-          {t("article.contactCta")}
-        </LinkButton>
-      </section>
+      </div>
     </main>
   );
 }

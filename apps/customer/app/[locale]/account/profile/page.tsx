@@ -51,40 +51,42 @@ export default async function AccountProfilePage({ params }: PageProps) {
   const showBirthday = config.birthdays || Boolean(birthday?.consented);
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
+    <section className="space-y-4 sm:space-y-6">
+      <header className="max-w-2xl space-y-1">
         <h2 className="font-display text-h2 text-display-ink">{t("profile.title")}</h2>
         <p className="text-sm text-text-2">{t("profile.description")}</p>
       </header>
-      <ProfileForm
-        locale={locale}
-        accessToken={accessToken}
-        initialProfile={profile}
-        labels={{
-          nameLabel: t("profile.nameLabel"),
-          namePlaceholder: t("profile.namePlaceholder"),
-          localeLabel: t("profile.localeLabel"),
-          phoneLabel: t("profile.phoneLabel"),
-          phoneHelp: t("profile.phoneHelp"),
-          save: t("profile.save"),
-          saving: t("profile.saving"),
-          updated: String(t.raw("profile.updated")),
-          error: t("profile.error"),
-          locales: {
-            en: t("locales.en"),
-            bem: t("locales.bem"),
-            nya: t("locales.nya"),
-            fr: t("locales.fr"),
-          },
-        }}
-      />
-      {showBirthday ? (
-        <BirthdayForm
+      <div className="max-w-2xl space-y-4 sm:space-y-6">
+        <ProfileForm
+          locale={locale}
           accessToken={accessToken}
-          initial={birthday}
-          labels={t.raw("birthday") as BirthdayLabels}
+          initialProfile={profile}
+          labels={{
+            nameLabel: t("profile.nameLabel"),
+            namePlaceholder: t("profile.namePlaceholder"),
+            localeLabel: t("profile.localeLabel"),
+            phoneLabel: t("profile.phoneLabel"),
+            phoneHelp: t("profile.phoneHelp"),
+            save: t("profile.save"),
+            saving: t("profile.saving"),
+            updated: String(t.raw("profile.updated")),
+            error: t("profile.error"),
+            locales: {
+              en: t("locales.en"),
+              bem: t("locales.bem"),
+              nya: t("locales.nya"),
+              fr: t("locales.fr"),
+            },
+          }}
         />
-      ) : null}
+        {showBirthday ? (
+          <BirthdayForm
+            accessToken={accessToken}
+            initial={birthday}
+            labels={t.raw("birthday") as BirthdayLabels}
+          />
+        ) : null}
+      </div>
     </section>
   );
 }

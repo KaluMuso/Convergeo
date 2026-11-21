@@ -59,8 +59,8 @@ export default async function HelpPage({ params }: PageProps) {
   const clientMessages = await loadMarketing(locale);
 
   return (
-    <main id="marketing-main" className="mx-auto w-full max-w-2xl px-4 py-8">
-      <header className="mb-8 space-y-3">
+    <main id="marketing-main" className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <header className="mx-auto mb-6 max-w-3xl space-y-3">
         <p className="text-sm font-semibold uppercase tracking-wide text-primary">
           {t("hero.eyebrow")}
         </p>
@@ -72,7 +72,7 @@ export default async function HelpPage({ params }: PageProps) {
         <HelpSearch index={index} locale={locale} />
       </NextIntlClientProvider>
 
-      <section className="mt-12 space-y-3 rounded-lg border border-border bg-bg-2 p-6">
+      <section className="mx-auto mt-6 max-w-3xl space-y-3 rounded-lg border border-border bg-bg-2 p-4 lg:p-5">
         <h2 className="font-display text-h2 text-display-ink">{t("cta.heading")}</h2>
         <p className="text-body text-text-2">{t("cta.body")}</p>
         <div className="flex flex-col gap-3 sm:flex-row">
