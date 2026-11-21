@@ -34,7 +34,7 @@ describe("closed CI media endpoint", () => {
     expect(response.headers.get("content-type")).toBe("image/webp");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(read).toHaveBeenCalledWith(
-      expect.stringContaining("ci-fixtures/smartphone-x1-720.webp"),
+      expect.stringMatching(/ci-fixtures[\\/]smartphone-x1-720\.webp$/),
     );
   });
   for (const suffix of [
