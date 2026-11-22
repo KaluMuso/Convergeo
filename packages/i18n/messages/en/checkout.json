@@ -181,12 +181,29 @@
         "tip2": "Add your area and street, and something that marks your gate, like its colour.",
         "tip3": "Keep your phone on. The rider may call your checkout number to find you.",
         "landmarkRequired": "Add a landmark and area so the rider can find you.",
-        "cutoffTitle": "When will it be sent?",
+        "cutoffTitle": "Order before 2 pm, get it today",
         "cutoffBefore": "Order before 14:00 (Lusaka time) and items in stock usually go out today, after the seller says yes.",
         "cutoffAfter": "It's after 14:00 in Lusaka, so items in stock usually go out tomorrow, after the seller says yes.",
-        "cutoffMadeToOrder": "Items made for you go out when they are ready. Each item shows how many days."
+        "cutoffMadeToOrder": "Items made for you go out when they are ready. Each item shows how many days.",
+        "promiseToday": "Delivery today, {start}–{end}",
+        "promiseTomorrow": "Delivery tomorrow, {start}–{end}",
+        "promiseLater": "Delivery on {date}, {start}–{end}"
       },
-      "notOffered": "This seller does not offer that hand-over option for an item in your cart."
+      "notOffered": "This seller does not offer that hand-over option for an item in your cart.",
+      "area": {
+        "label": "Your area",
+        "help": "Pick your area so we can price the trip from the shop to you. Optional.",
+        "searchPlaceholder": "Search, e.g. Kabulonga",
+        "noMatch": "No area matches. Type your landmark below and we'll find you.",
+        "notListed": "Area not listed? Skip this and describe your landmark below.",
+        "change": "Change",
+        "selected": "Area: {area}",
+        "unavailable": "The area list didn't load. Your landmark below is enough.",
+        "typeLabel": "This address is",
+        "home": "Home",
+        "work": "Work",
+        "workHelp": "We deliver to work addresses on weekdays before 16:45, while the office is open."
+      }
     },
     "countdown": {
       "label": "Your items are kept for",

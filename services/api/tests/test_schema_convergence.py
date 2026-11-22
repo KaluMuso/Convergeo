@@ -154,8 +154,11 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261117020000",
     # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
     # intercity reference rate cards (additive).
-    "20261116180000",
-    "20261116180100",
+    "20261122100000",
+    "20261122100100",
+    # Area-pair delivery pricing schema + Lusaka area seed (additive).
+    "20261122100200",
+    "20261122100300",
 ]
 
 def _module() -> Any:
@@ -198,7 +201,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 189
+    assert len(sql_files) == len(migrations) == 193
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -247,8 +250,9 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     points_digest = ["20261117010100", "20261117010200"]
     never_silent = ["20261117010300"]
     plan_limits = ["20261117020000"]
-    logistics = ["20261116180000", "20261116180100"]
-    assert actual_versions[-52:] == (
+    logistics = ["20261122100000", "20261122100100"]
+    area_pricing = ["20261122100200", "20261122100300"]
+    assert actual_versions[-54:] == (
         repairs
         + post_repair
         + queued_features
@@ -275,6 +279,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + never_silent
         + plan_limits
         + logistics
+        + area_pricing
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 

@@ -141,8 +141,11 @@ PENDING_REPAIR_VERSIONS = {
     "20261117020000",
     # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
     # intercity reference rate cards (additive).
-    "20261116180000",
-    "20261116180100",
+    "20261122100000",
+    "20261122100100",
+    # Area-pair delivery pricing schema + Lusaka area seed (additive).
+    "20261122100200",
+    "20261122100300",
 }
 
 

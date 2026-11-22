@@ -123,8 +123,12 @@ FORWARD = [
     "20261117020000_plan_limits_trials_extras.sql",
     # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
     # intercity reference rate cards (additive).
-    "20261116180000_logistics_phase1.sql",
-    "20261116180100_intercity_rate_cards.sql",
+    "20261122100000_logistics_phase1.sql",
+    "20261122100100_intercity_rate_cards.sql",
+    # Area-pair delivery pricing: areas, area_distances (estimate), shadow log,
+    # address area/type, settings; seed of 63 Lusaka areas (additive).
+    "20261122100200_delivery_area_pricing.sql",
+    "20261122100300_delivery_areas_seed.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -498,7 +502,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 189 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 193 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")
