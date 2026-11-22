@@ -87,6 +87,7 @@ export default async function AuthLayout({ children, params }: AuthLayoutProps) 
         <AuthSlimFooter
           locale={locale}
           labels={{
+            navLabel: tAuth("footer.navLabel"),
             help: tLegal("footer.links.help"),
             privacy: tLegal("footer.links.privacy"),
             terms: tLegal("footer.links.terms"),

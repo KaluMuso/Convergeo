@@ -178,7 +178,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   setRequestLocale(locale);
 
-  const [tRaw, merch, baseMessages, directoryMessages, feedPage, streamPage] = await Promise.all([
+  const [tRaw, merch, baseMessages, directoryMessages, feedPage, streamLoad] = await Promise.all([
     getCatalogTranslator(locale),
     loadHomeMerchData({ merchPreview }),
     getMessages(),
@@ -261,7 +261,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
     empty: {
       title: t("home.feed.stream.emptyTitle"),
       body: t("home.feed.stream.emptyBody"),
-      cta: t("home.sellCta.cta"),
+      cta: t("home.feed.stream.emptyCta"),
     },
   };
 
@@ -414,13 +414,13 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
           page={feedPage}
           locale={locale}
           labels={feedLabels}
-          streamFollows={streamPage.items.length > 0}
+          streamFollows={streamLoad.status === "ok" && streamLoad.page.items.length > 0}
         />
       ) : null}
 
       {/* "Popular now": first batch is SSR; only later pages load on the client. */}
       <HomeListingStream
-        page={streamPage}
+        stream={streamLoad}
         sectionListingIds={listingIdsOf(feedPage.sections)}
         locale={locale}
         cardLabels={railLabels}

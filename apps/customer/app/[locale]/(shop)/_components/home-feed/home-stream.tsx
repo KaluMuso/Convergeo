@@ -14,25 +14,30 @@ import {
 import { HomeStreamClient } from "./home-stream-client-lazy";
 import { HomeStreamEmpty, type HomeStreamEmptyLabels } from "./home-stream-empty";
 
-const EMPTY_STREAM: HomeStreamPage = { items: [], next_cursor: null };
+export type HomeStreamFirstPageResult =
+  { status: "ok"; page: HomeStreamPage } | { status: "error" };
 
 /**
- * First stream page, fetched during SSR (anonymous, ISR-cacheable). Any failure
- * yields an empty stream so the home renders exactly as it did before.
+ * First stream page, fetched during SSR (anonymous, ISR-cacheable). Failures are
+ * distinct from an empty catalogue so the UI never shows the marketing empty
+ * state when the API could not be reached.
  */
-export async function loadHomeStreamFirstPage(): Promise<HomeStreamPage> {
+export async function loadHomeStreamFirstPage(): Promise<HomeStreamFirstPageResult> {
   const url = absoluteApiUrl(`/home/stream?limit=${HOME_STREAM_PAGE_SIZE}`);
-  if (!url) return EMPTY_STREAM;
+  if (!url) return { status: "error" };
   try {
     const page = await fetchJson<HomeStreamPage>(url, {
       next: { revalidate: 60 },
     });
     return {
-      items: Array.isArray(page.items) ? page.items : [],
-      next_cursor: typeof page.next_cursor === "string" ? page.next_cursor : null,
+      status: "ok",
+      page: {
+        items: Array.isArray(page.items) ? page.items : [],
+        next_cursor: typeof page.next_cursor === "string" ? page.next_cursor : null,
+      },
     };
   } catch {
-    return EMPTY_STREAM;
+    return { status: "error" };
   }
 }
 
@@ -50,24 +55,31 @@ export type HomeStreamSectionLabels = StreamLabels & {
 };
 
 export function HomeListingStream({
-  page,
+  stream,
   sectionListingIds,
   locale,
   cardLabels,
   labels,
 }: {
-  page: HomeStreamPage;
+  stream: HomeStreamFirstPageResult;
   sectionListingIds: string[];
   locale: string;
   cardLabels: FeedLabels["card"];
   labels: HomeStreamSectionLabels;
 }) {
+  if (stream.status === "error") {
+    return null;
+  }
+
+  const page = stream.page;
   const shown = new Set(sectionListingIds);
   const first: FeedListingWire[] = page.items.filter((item) => !shown.has(item.id));
   const { title, empty, ...controlLabels } = labels;
-  const streamExhausted = first.length === 0 && !page.next_cursor;
 
-  if (streamExhausted) {
+  if (first.length === 0 && !page.next_cursor) {
+    if (page.items.length > 0) {
+      return null;
+    }
     return (
       <section
         aria-labelledby="home-stream-title"

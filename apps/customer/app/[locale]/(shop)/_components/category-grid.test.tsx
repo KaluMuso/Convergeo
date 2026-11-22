@@ -106,7 +106,7 @@ describe("CategoryGrid (CUST-HOME-01)", () => {
       />,
     );
     const label = screen.getByText("Personal Care & Beauty");
-    expect(label).toHaveClass("line-clamp-2", "leading-snug", "min-h-[2.5rem]");
+    expect(label).toHaveClass("line-clamp-2", "leading-snug", "min-h-10");
   });
 
   it("uses a denser marketplace category grid on desktop", () => {

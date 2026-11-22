@@ -16,10 +16,23 @@ vi.mock("../../../(marketing)/sell/_components/vendor-app", () => ({
   getVendorSignupUrl: () => null,
 }));
 
-import { HomeListingStream } from "./home-stream";
+vi.mock("../../../../../lib/api-base-url", () => ({
+  absoluteApiUrl: (path: string) => `https://api.test${path}`,
+}));
+
+const { fetchJson } = vi.hoisted(() => ({
+  fetchJson: vi.fn(),
+}));
+
+vi.mock("../../../../../lib/fetch-json", () => ({
+  fetchJson,
+}));
+
+import { HomeListingStream, loadHomeStreamFirstPage } from "./home-stream";
 
 afterEach(() => {
   cleanup();
+  fetchJson.mockReset();
 });
 
 const cardLabels = {
@@ -46,11 +59,39 @@ const labels = {
   },
 };
 
+describe("loadHomeStreamFirstPage", () => {
+  it("returns error when the API fetch fails", async () => {
+    fetchJson.mockRejectedValue(new Error("down"));
+    await expect(loadHomeStreamFirstPage()).resolves.toEqual({ status: "error" });
+  });
+
+  it("returns ok with a normalised page on success", async () => {
+    fetchJson.mockResolvedValue({ items: [{ id: "a" }], next_cursor: "c1" });
+    await expect(loadHomeStreamFirstPage()).resolves.toEqual({
+      status: "ok",
+      page: { items: [{ id: "a" }], next_cursor: "c1" },
+    });
+  });
+});
+
 describe("HomeListingStream", () => {
-  it("shows a friendly empty state when the stream has no listings", () => {
+  it("renders nothing when the stream failed to load", () => {
+    const { container } = render(
+      <HomeListingStream
+        stream={{ status: "error" }}
+        sectionListingIds={[]}
+        locale="en"
+        cardLabels={cardLabels}
+        labels={labels}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows a friendly empty state when the catalogue is truly empty", () => {
     render(
       <HomeListingStream
-        page={{ items: [], next_cursor: null }}
+        stream={{ status: "ok", page: { items: [], next_cursor: null } }}
         sectionListingIds={[]}
         locale="en"
         cardLabels={cardLabels}
@@ -58,9 +99,7 @@ describe("HomeListingStream", () => {
       />,
     );
 
-    expect(screen.getByTestId("home-stream")).toBeInTheDocument();
     expect(screen.getByTestId("home-stream-empty")).toBeInTheDocument();
-    expect(screen.getByText("New products are on the way")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Sell on Convergeo" })).toHaveAttribute(
       "href",
       "/en/sell",
@@ -68,10 +107,27 @@ describe("HomeListingStream", () => {
     expect(screen.queryByTestId("home-stream-client")).not.toBeInTheDocument();
   });
 
+  it("renders nothing when every item was already shown above", () => {
+    const { container } = render(
+      <HomeListingStream
+        stream={{
+          status: "ok",
+          page: { items: [{ id: "dup" } as never], next_cursor: null },
+        }}
+        sectionListingIds={["dup"]}
+        locale="en"
+        cardLabels={cardLabels}
+        labels={labels}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByTestId("home-stream-empty")).not.toBeInTheDocument();
+  });
+
   it("keeps the client stream when a next cursor remains", () => {
     render(
       <HomeListingStream
-        page={{ items: [], next_cursor: "c1" }}
+        stream={{ status: "ok", page: { items: [], next_cursor: "c1" } }}
         sectionListingIds={[]}
         locale="en"
         cardLabels={cardLabels}

@@ -243,7 +243,8 @@
         "loadMore": "Load more",
         "moreLoaded": "{count} more items loaded.",
         "emptyTitle": "New products are on the way",
-        "emptyBody": "Sellers are listing more every week. Meanwhile, browse categories or start selling."
+        "emptyBody": "Sellers are listing more every week. Meanwhile, browse categories or start selling.",
+        "emptyCta": "Sell on Convergeo"
       }
     },
     "trustStrip": {

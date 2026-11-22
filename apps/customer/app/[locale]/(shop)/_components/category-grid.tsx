@@ -143,7 +143,7 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
           const imagePublicId = imageMap.get(category.slug) ?? defaultCategoryImage(category.slug);
 
           return (
-            <li key={category.id} className="w-[5.25rem] shrink-0 snap-start md:w-auto">
+            <li key={category.id} className="w-20 shrink-0 snap-start md:w-auto">
               <Link
                 href={`/${locale}/c/${category.slug}`}
                 aria-label={t("home.categories.browseLabel", { category: category.name })}
@@ -169,7 +169,7 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
                     <CategoryFallbackMark index={index} />
                   )}
                 </span>
-                <span className="line-clamp-2 min-h-[2.5rem] w-full text-xs font-medium leading-snug text-text group-hover:text-primary md:min-h-[2.75rem]">
+                <span className="line-clamp-2 min-h-10 w-full text-xs font-medium leading-snug text-text group-hover:text-primary md:min-h-11">
                   {category.name}
                 </span>
               </Link>
