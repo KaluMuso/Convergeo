@@ -104,6 +104,13 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "GET /admin/audit-log",
         }
     ),
+    # Matching rider cash to the ledger is a finance power (logistics phase 1).
+    "cod.reconcile": frozenset(
+        {
+            "GET /admin/logistics/cash/cash-up",
+            "POST /admin/logistics/cash/remittances",
+        }
+    ),
     "products.manage": frozenset(
         {
             # Shared canonical photos (#798).
@@ -359,6 +366,14 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "POST /admin/flags/{flag_id}/unpublish",
         "POST /admin/flags/{flag_id}/warn-vendor",
         "PUT /admin/translations/overrides",
+        # Area-pair pricing: shadow/live switch, formula and distance table stay with
+        # full admins (operators only flip rain mode).
+        "GET /admin/logistics/area-distances",
+        "GET /admin/logistics/area-pricing/settings",
+        "GET /admin/logistics/areas",
+        "PATCH /admin/logistics/area-distances/{from_area}/{to_area}",
+        "PATCH /admin/logistics/area-pricing",
+        "PUT /admin/logistics/area-pricing/settings",
     }
 )
 
