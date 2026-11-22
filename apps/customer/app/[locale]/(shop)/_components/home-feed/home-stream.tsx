@@ -12,6 +12,7 @@ import {
   type StreamLabels,
 } from "./feed-types";
 import { HomeStreamClient } from "./home-stream-client-lazy";
+import { HomeStreamEmpty, type HomeStreamEmptyLabels } from "./home-stream-empty";
 
 const EMPTY_STREAM: HomeStreamPage = { items: [], next_cursor: null };
 
@@ -28,8 +29,7 @@ export async function loadHomeStreamFirstPage(): Promise<HomeStreamPage> {
     });
     return {
       items: Array.isArray(page.items) ? page.items : [],
-      next_cursor:
-        typeof page.next_cursor === "string" ? page.next_cursor : null,
+      next_cursor: typeof page.next_cursor === "string" ? page.next_cursor : null,
     };
   } catch {
     return EMPTY_STREAM;
@@ -38,15 +38,17 @@ export async function loadHomeStreamFirstPage(): Promise<HomeStreamPage> {
 
 /** Listing ids already shown by feed sections (so the stream never repeats them). */
 export function listingIdsOf(sections: FeedSection[]): string[] {
-  return sections.flatMap((section) =>
-    section.listings.map((listing) => listing.id),
-  );
+  return sections.flatMap((section) => section.listings.map((listing) => listing.id));
 }
 
 /**
  * "Popular now" stream that follows the admin-configured sections. The first
  * batch is rendered on the server; the client island loads the rest.
  */
+export type HomeStreamSectionLabels = StreamLabels & {
+  empty: HomeStreamEmptyLabels;
+};
+
 export function HomeListingStream({
   page,
   sectionListingIds,
@@ -58,14 +60,28 @@ export function HomeListingStream({
   sectionListingIds: string[];
   locale: string;
   cardLabels: FeedLabels["card"];
-  labels: StreamLabels;
+  labels: HomeStreamSectionLabels;
 }) {
   const shown = new Set(sectionListingIds);
-  const first: FeedListingWire[] = page.items.filter(
-    (item) => !shown.has(item.id),
-  );
-  if (first.length === 0 && !page.next_cursor) return null;
-  const { title, ...controlLabels } = labels;
+  const first: FeedListingWire[] = page.items.filter((item) => !shown.has(item.id));
+  const { title, empty, ...controlLabels } = labels;
+  const streamExhausted = first.length === 0 && !page.next_cursor;
+
+  if (streamExhausted) {
+    return (
+      <section
+        aria-labelledby="home-stream-title"
+        className="home-rail flex flex-col gap-3 lg:gap-4"
+        data-testid="home-stream"
+      >
+        <h2 id="home-stream-title" className="font-display text-h2 text-display-ink">
+          {title}
+        </h2>
+        <HomeStreamEmpty locale={locale} labels={empty} />
+      </section>
+    );
+  }
+
   const seenIds = [...sectionListingIds, ...first.map((item) => item.id)];
   return (
     <section
@@ -73,10 +89,7 @@ export function HomeListingStream({
       className="home-rail flex flex-col gap-3 lg:gap-4"
       data-testid="home-stream"
     >
-      <h2
-        id="home-stream-title"
-        className="font-display text-h2 text-display-ink"
-      >
+      <h2 id="home-stream-title" className="font-display text-h2 text-display-ink">
         {title}
       </h2>
       <HomeStreamClient

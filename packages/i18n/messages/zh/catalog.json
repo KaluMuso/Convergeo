@@ -238,7 +238,9 @@
       "stream": {
         "title": "当前热门",
         "loadMore": "加载更多",
-        "moreLoaded": "已加载更多 {count} 件商品。"
+        "moreLoaded": "已加载更多 {count} 件商品。",
+        "emptyTitle": "新品即将上架",
+        "emptyBody": "卖家每周都会上新。与此同时，您可以浏览分类或开始销售。"
       }
     },
     "trustStrip": {

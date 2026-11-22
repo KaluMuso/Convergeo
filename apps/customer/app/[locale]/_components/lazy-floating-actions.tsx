@@ -7,8 +7,12 @@ import type { FloatingActionsLabels } from "./floating-actions";
 
 type Props = { locale: string; labels: FloatingActionsLabels; footer: ReactNode };
 
-function isHome(pathname: string, locale: string): boolean {
+function isHomePath(pathname: string, locale: string): boolean {
   return pathname === `/${locale}` || pathname === `/${locale}/`;
+}
+
+function isAuthPath(pathname: string): boolean {
+  return /^\/[^/]+\/(login|signup|otp|welcome|reset-password)(\/|$)/.test(pathname);
 }
 
 /**
@@ -48,5 +52,5 @@ export function LazyFloatingActions({ locale, labels, footer }: Props) {
   if (Loaded) {
     return <Loaded locale={locale} labels={labels} footer={footer} />;
   }
-  return isHome(pathname, locale) ? null : <>{footer}</>;
+  return isHomePath(pathname, locale) || isAuthPath(pathname) ? null : <>{footer}</>;
 }

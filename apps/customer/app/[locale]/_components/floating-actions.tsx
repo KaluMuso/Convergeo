@@ -70,6 +70,17 @@ export function isHomePath(pathname: string, locale: string): boolean {
   return pathname === `/${locale}` || pathname === `/${locale}/`;
 }
 
+export function isAuthPath(pathname: string): boolean {
+  return /^\/[^/]+\/(login|signup|otp|welcome|reset-password)(\/|$)/.test(pathname);
+}
+
+export function isFabLiftedPath(pathname: string, locale: string): boolean {
+  if (isHomePath(pathname, locale)) return true;
+  if (/\/help(\/|$)/.test(pathname)) return true;
+  if (/\/wishlist(\/|$)/.test(pathname)) return true;
+  return false;
+}
+
 /**
  * Bottom-right floating actions: Ask Vergeo (typed or dictated) and, on the
  * home feed, a toggle that opens the footer as an overlay sheet.
@@ -80,6 +91,8 @@ export function FloatingActions({ locale, labels, footer }: FloatingActionsProps
   const home = isHomePath(pathname, locale);
   const raised = hasStickyBuyBar(pathname);
   const account = isAccountPath(pathname);
+  const auth = isAuthPath(pathname);
+  const lifted = isFabLiftedPath(pathname, locale);
 
   const [askOpen, setAskOpen] = useState(false);
   const [footerOpen, setFooterOpen] = useState(false);
@@ -170,13 +183,14 @@ export function FloatingActions({ locale, labels, footer }: FloatingActionsProps
 
   return (
     <>
-      {home ? null : footer}
+      {home || auth ? null : footer}
 
       <div
         className={[
           "v-fab-stack",
           raised ? "v-fab-stack--raised" : "",
           account ? "v-fab-stack--account" : "",
+          lifted ? "v-fab-stack--lifted" : "",
         ]
           .filter(Boolean)
           .join(" ")}

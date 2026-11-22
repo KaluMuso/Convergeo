@@ -10,7 +10,13 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: nav.push }),
 }));
 
-import { FloatingActions, isAccountPath, isHomePath } from "./floating-actions";
+import {
+  FloatingActions,
+  isAccountPath,
+  isAuthPath,
+  isFabLiftedPath,
+  isHomePath,
+} from "./floating-actions";
 
 const labels = {
   ask: "Ask Vergeo",
@@ -114,5 +120,31 @@ describe("FloatingActions", () => {
     expect(isAccountPath("/en/account")).toBe(true);
     expect(isAccountPath("/en/account/business")).toBe(true);
     expect(isAccountPath("/en/search")).toBe(false);
+  });
+
+  it("hides the marketing footer on auth routes", () => {
+    nav.pathname = "/en/login";
+    render(<FloatingActions locale="en" labels={labels} footer={<footer>Site links</footer>} />);
+    expect(screen.queryByText("Site links")).not.toBeInTheDocument();
+  });
+
+  it("lifts the stack on home, help, and saved routes", () => {
+    nav.pathname = "/en/help";
+    const { unmount } = render(<FloatingActions locale="en" labels={labels} footer={null} />);
+    expect(screen.getByTestId("floating-actions")).toHaveClass("v-fab-stack--lifted");
+    unmount();
+    nav.pathname = "/en/wishlist";
+    render(<FloatingActions locale="en" labels={labels} footer={null} />);
+    expect(screen.getByTestId("floating-actions")).toHaveClass("v-fab-stack--lifted");
+  });
+
+  it("detects auth and lifted paths", () => {
+    expect(isAuthPath("/en/login")).toBe(true);
+    expect(isAuthPath("/en/signup")).toBe(true);
+    expect(isAuthPath("/en/search")).toBe(false);
+    expect(isFabLiftedPath("/en", "en")).toBe(true);
+    expect(isFabLiftedPath("/en/help", "en")).toBe(true);
+    expect(isFabLiftedPath("/en/wishlist", "en")).toBe(true);
+    expect(isFabLiftedPath("/en/p/item", "en")).toBe(false);
   });
 });
