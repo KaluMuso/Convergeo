@@ -602,9 +602,6 @@ function IdentityCheckoutShell({
     (cartStore.cart!.ticket_lines?.length ?? 0) === 0;
   const cartLoading =
     !checkoutSession && (cartStore.loading || (cartStore.cart === null && !cartStore.loadError));
-  useEffect(() => {
-    if (cartIsEmpty) router.replace(cartPath);
-  }, [cartIsEmpty, cartPath, router]);
 
   useEffect(() => {
     if (
@@ -715,7 +712,16 @@ function IdentityCheckoutShell({
   );
 
   if (cartIsEmpty) {
-    return <div className="space-y-4" data-testid="checkout-empty-cart" aria-busy="true" />;
+    // Render the empty state in place (no client redirect): navigating away mid-load
+    // broke Lighthouse and axe on /checkout, and a stable page is clearer for shoppers.
+    return (
+      <div role="status" className="space-y-3" data-testid="checkout-empty-cart">
+        <p className="font-body text-sm text-text">{labels.emptyCart}</p>
+        <Link href={cartPath} className="font-body text-sm underline">
+          {labels.backToCart}
+        </Link>
+      </div>
+    );
   }
 
   if (busy) {
