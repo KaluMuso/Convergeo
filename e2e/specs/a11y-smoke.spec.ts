@@ -15,6 +15,15 @@ test.describe("a11y-smoke", () => {
       if (expectedViewport) expect(page.viewportSize()).toEqual(expectedViewport);
       await page.goto(path(route));
       await page.waitForLoadState("domcontentloaded");
+      // /checkout with an empty cart client-redirects to /cart once the cart loads;
+      // let navigation settle so axe never runs in a context that is being torn down.
+      await page.waitForLoadState("networkidle");
+      let settledUrl = "";
+      while (settledUrl !== page.url()) {
+        settledUrl = page.url();
+        await page.waitForTimeout(500);
+      }
+      await page.waitForLoadState("load");
 
       // axe-core pins playwright-core Page; @playwright/test Page is structurally compatible.
       const results = await new AxeBuilder({ page: page as unknown as AxePage })
