@@ -30,7 +30,15 @@
       "ci/**": false,
       "ops/**": false,
       "docs/**": false,
-      "grok/**": false
+      "grok/**": false,
+      "fix/**": false,
+      "feat/**": false,
+      "cursor/**": false,
+      "test/**": false,
+      "chore/**": false,
+      "refactor/**": false,
+      "perf/**": false,
+      "release/**": false
     }
   }
 }
