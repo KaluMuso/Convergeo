@@ -96,9 +96,7 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
         payload["deposit_ngwee"] = MONEY_NGEWEE
         payload["total_job_ngwee"] = MONEY_NGEWEE * 2
     elif template_id == "compliance_confirmation":
-        payload["confirmation_body"] = (
-            "You have been unsubscribed from Vergeo5 marketing messages."
-        )
+        payload["confirmation_body"] = "You have been unsubscribed from Vergeo5 marketing messages."
     elif template_id == "event_cancelled":
         payload["event_title"] = "Jazz Night"
         payload["event_date"] = "15 Aug 2026, 18:00 UTC"

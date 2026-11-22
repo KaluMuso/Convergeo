@@ -482,6 +482,11 @@ def test_courier_dispatch_requires_consent(monkeypatch: pytest.MonkeyPatch) -> N
     }
     monkeypatch.setattr(dispatch_service, "load_order_dispatch_context", lambda _id: order)
     monkeypatch.setattr(dispatch_service, "DISPATCHABLE_ORDER_STATUSES", frozenset({"confirmed"}))
+    monkeypatch.setattr(
+        dispatch_service,
+        "_attempt_history",
+        lambda _id: dispatch_service._AttemptHistory(0, None, False),
+    )
     courier_loaded = MagicMock()
     monkeypatch.setattr(dispatch_service, "load_courier", courier_loaded)
     with pytest.raises(AppError) as refused:

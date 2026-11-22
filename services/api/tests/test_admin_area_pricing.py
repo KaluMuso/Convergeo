@@ -17,7 +17,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from app.core.auth import admin_permission_for_request
+from app.core.auth import admin_permissions_for_request
 from app.core.ratelimit_policies import POLICIES
 from app.main import create_app
 from app.services.ledger.templates import delivery_fee_capture, delivery_fee_vendor_charge
@@ -274,12 +274,12 @@ def test_settings_edit_is_full_admin_only(
     client: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Operators with logistics.manage flip rain mode; the price formula stays with admins.
-    assert admin_permission_for_request(SETTINGS_URL, "PUT") is None
+    assert admin_permissions_for_request(SETTINGS_URL, "PUT") == frozenset()
     assert (
-        admin_permission_for_request(
+        admin_permissions_for_request(
             "/admin/logistics/area-distances/{from_area}/{to_area}", "PATCH"
         )
-        is None
+        == frozenset()
     )
     for roles in [("customer",), ("vendor",), ("moderator",)]:
         _as(monkeypatch, *roles)

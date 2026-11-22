@@ -161,6 +161,7 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261122100300",
 ]
 
+
 def _module() -> Any:
     spec = importlib.util.spec_from_file_location("schema_convergence", MODULE_PATH)
     assert spec is not None and spec.loader is not None
@@ -827,9 +828,7 @@ def test_preflight_adapter_forbids_manifest_self_mutation() -> None:
 def test_deploy_staging_runs_preflight_before_db_push() -> None:
     workflow = DEPLOY_STAGING_WORKFLOW.read_text(encoding="utf-8")
     preflight = workflow.index("preflight-staging-schema-convergence.sh")
-    routing = workflow.index(
-        "unset PGHOST PGHOSTADDR PGPORT PGSERVICE PGSERVICEFILE PGOPTIONS"
-    )
+    routing = workflow.index("unset PGHOST PGHOSTADDR PGPORT PGSERVICE PGSERVICEFILE PGOPTIONS")
     adoption = workflow.index("python3 scripts/ci/guard_shared_service_adoption.py")
     push = workflow.index('supabase db push --db-url "${SUPABASE_DB_URL}" --include-all')
     reconcile = workflow.index("reconcile-staging-migrations.sh")

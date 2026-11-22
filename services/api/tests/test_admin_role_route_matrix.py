@@ -88,6 +88,15 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "POST /admin/dispatch/requests/{dispatch_id}/notify",
             "POST /admin/dispatch/requests/{dispatch_id}/transition",
             "POST /admin/orders/{order_id}/dispatch",
+            # Logistics phase 1 + area-pair pricing (rain mode only; shadow/live stay admin).
+            "GET /admin/logistics/cash/custody",
+            "GET /admin/logistics/intercity-rates",
+            "GET /admin/logistics/margin-report",
+            "GET /admin/logistics/pricing-switches",
+            "PATCH /admin/dispatch/requests/{dispatch_id}/cost",
+            "PATCH /admin/logistics/rain-mode",
+            "POST /admin/dispatch/requests/{dispatch_id}/complete",
+            "POST /admin/dispatch/requests/{dispatch_id}/returned",
         }
     ),
     "audit.read": frozenset(
