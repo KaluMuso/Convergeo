@@ -25,8 +25,8 @@ import {
   type ContactStepLabels,
 } from "./step-contact";
 
-import type { CheckoutExtrasLabels } from "./checkout-extras";
 import type { AreaPickerLabels } from "./area-picker";
+import type { CheckoutExtrasLabels } from "./checkout-extras";
 import type { PaymentOptions, PaymentStepLabels, ValidatedPayment } from "./step-payment";
 import type { ReviewPayment, ReviewStepLabels } from "./step-review";
 import type { FulfilmentMode, LeadTimePhrases, SaleUnit } from "../../_components/sale-quantity";
