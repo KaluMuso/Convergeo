@@ -155,10 +155,25 @@ body {
   bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 
+.v-fab-stack--lifted:not(.v-fab-stack--raised):not(.v-fab-stack--account) {
+  bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 47.99rem) {
+  .v-home-fab-pad {
+    padding-bottom: var(--sp-6);
+  }
+
+  .v-fab-scroll-pad {
+    padding-bottom: calc(var(--sp-10) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (min-width: 48rem) {
   .v-fab-stack,
   .v-fab-stack--raised,
-  .v-fab-stack--account {
+  .v-fab-stack--account,
+  .v-fab-stack--lifted {
     right: var(--sp-6);
     bottom: calc(var(--sp-6) + env(safe-area-inset-bottom, 0px));
   }

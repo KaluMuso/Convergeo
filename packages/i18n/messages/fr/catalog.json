@@ -238,7 +238,10 @@
       "stream": {
         "title": "Populaire en ce moment",
         "loadMore": "Voir plus",
-        "moreLoaded": "{count} articles de plus chargés."
+        "moreLoaded": "{count} articles de plus chargés.",
+        "emptyTitle": "De nouveaux produits arrivent",
+        "emptyBody": "Les vendeurs ajoutent des articles chaque semaine. En attendant, parcourez les catégories ou commencez à vendre.",
+        "emptyCta": "Vendre sur Convergeo"
       }
     },
     "trustStrip": {
