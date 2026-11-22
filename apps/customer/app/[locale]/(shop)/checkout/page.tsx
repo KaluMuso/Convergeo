@@ -1,4 +1,5 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -10,6 +11,7 @@ import { GroupCheckoutLazy } from "./_components/group-checkout-lazy";
 import { LazyTicketCheckout } from "./_components/lazy-ticket-checkout";
 import { CheckoutShell } from "./_components/step-fulfilment";
 import { resolveGroupParam } from "./_lib/group-checkout";
+import { isProductCartEmpty, readProductCartSnapshot } from "./_lib/server-product-cart";
 
 import type { CheckoutExtrasLabels } from "./_components/checkout-extras";
 import type { GroupCheckoutLabels } from "./_components/group-checkout";
@@ -58,11 +60,7 @@ function buildGroupLabels(
     payCtaTemplate: t.raw("checkout.group.payCta") as string,
     viewOrder: t("checkout.group.viewOrder"),
     escrowTitle: shell.review.escrowTitle,
-    escrowSteps: [
-      shell.review.escrowStep1,
-      shell.review.escrowStep2,
-      shell.review.escrowStep3,
-    ],
+    escrowSteps: [shell.review.escrowStep1, shell.review.escrowStep2, shell.review.escrowStep3],
     payment: shell.payment,
   };
 }
@@ -76,10 +74,7 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-function buildCheckoutLabels(
-  locale: string,
-  messages: AbstractIntlMessages,
-): CheckoutShellLabels {
+function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): CheckoutShellLabels {
   const t = createTranslator({ locale, messages, namespace: "checkout" });
 
   return {
@@ -215,9 +210,7 @@ function buildCheckoutLabels(
         sqm: t("cart.saleUnits.sqm"),
       },
       madeToOrderLeadTime: String(t.raw("cart.madeToOrderLeadTime")),
-      leadTimeWhen: readLeadTimePhrases((form) =>
-        String(t.raw(`cart.leadTimeWhen.${form}`)),
-      ),
+      leadTimeWhen: readLeadTimePhrases((form) => String(t.raw(`cart.leadTimeWhen.${form}`))),
       estimatedReady: String(t.raw("checkout.review.estimatedReady")),
       estimatedDelivery: String(t.raw("checkout.review.estimatedDelivery")),
       subtotal: t("checkout.review.subtotal"),
@@ -285,10 +278,7 @@ function buildCheckoutLabels(
   };
 }
 
-export default async function CheckoutPage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function CheckoutPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {
@@ -314,9 +304,7 @@ export default async function CheckoutPage({
     const depositGroupId = resolveGroupParam(query);
     if (
       typeof depositGroupId === "string" &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        depositGroupId,
-      )
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(depositGroupId)
     ) {
       const labels = buildCheckoutLabels(locale, messages);
       return (
@@ -338,9 +326,7 @@ export default async function CheckoutPage({
     hasGroup &&
     !hasSession &&
     typeof query.group === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      query.group,
-    )
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query.group)
   ) {
     const labels = buildCheckoutLabels(locale, messages);
     const checkoutT = createTranslator({
@@ -378,9 +364,7 @@ export default async function CheckoutPage({
     const groupId =
       hasSession !== hasGroup &&
       typeof suppliedId === "string" &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        suppliedId,
-      )
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(suppliedId)
         ? suppliedId
         : null;
     const t = createTranslator({ locale, messages, namespace: "checkout" });
@@ -418,6 +402,11 @@ export default async function CheckoutPage({
       </div>
     );
   }
+  const snapshot = await readProductCartSnapshot();
+  if (snapshot && isProductCartEmpty(snapshot)) {
+    redirect(`/${locale}/cart`);
+  }
+
   const labels = buildCheckoutLabels(locale, messages);
 
   return (

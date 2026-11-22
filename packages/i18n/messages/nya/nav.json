@@ -21,6 +21,15 @@
     "featuredTitle": "Zatsopano pa Convergeo",
     "featuredPromo": "Fananani ogulitsa ndikulipira cash on delivery pa ma-order oyenera.",
     "featuredPromoCta": "Sakani msika",
+    "fallbackCategoryRoots": {
+      "groceries-staples": "Groceries & staples",
+      "personal-care-beauty": "Personal care & beauty",
+      "fashion": "Fashion & fabric",
+      "electronics": "Electronics & phones",
+      "home-living": "Home & living",
+      "office-stationery": "Office & stationery",
+      "light-hardware": "Light hardware & tools"
+    },
     "directory": "Malo a ogulitsa",
     "services": "Ntchito",
     "events": "Zochitika",

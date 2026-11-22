@@ -48,9 +48,7 @@ function isFocusInMegaMenuPanel(element: Element | null): boolean {
 describe("CategoryMegaMenu", () => {
   it("clamps the panel to the viewport and repositions on resize", async () => {
     const user = userEvent.setup();
-    const viewport = vi
-      .spyOn(document.documentElement, "clientWidth", "get")
-      .mockReturnValue(1024);
+    const viewport = vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(1024);
     render(
       <CategoryMegaMenu
         locale="en"
@@ -113,9 +111,10 @@ describe("CategoryMegaMenu", () => {
       "href",
       "/en/c/electronics",
     );
-    expect(
-      screen.getByRole("link", { name: "View all categories" }),
-    ).toHaveAttribute("href", "/en/categories");
+    expect(screen.getByRole("link", { name: "View all categories" })).toHaveAttribute(
+      "href",
+      "/en/categories",
+    );
     expect(screen.getByTestId("mega-menu-featured")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Itel A70/i })).toHaveAttribute(
       "href",
@@ -196,9 +195,7 @@ describe("CategoryMegaMenu", () => {
     const trigger = screen.getByRole("button", { name: /all categories/i });
     await user.click(trigger);
     await screen.findByRole("link", { name: "Phones" });
-    expect(
-      screen.getByRole("dialog", { name: labels.panelAria }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: labels.panelAria })).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
     expect(trigger).toHaveAttribute("aria-expanded", "false");
@@ -225,6 +222,44 @@ describe("CategoryMegaMenu", () => {
 
     await user.click(screen.getByRole("button", { name: /all categories/i }));
     expect(await screen.findByText("No categories")).toBeInTheDocument();
+  });
+
+  it("shows static top-level roots when the default catalogue loader fails", async () => {
+    const user = userEvent.setup();
+    const fallbackLabels = {
+      electronics: "Electronics & phones",
+      fashion: "Fashion & fabric",
+      "groceries-staples": "Groceries",
+      "personal-care-beauty": "Beauty",
+      "home-living": "Home",
+      "office-stationery": "Office",
+      "light-hardware": "Tools",
+    };
+    render(
+      <CategoryMegaMenu
+        locale="en"
+        labels={{
+          ...labels,
+          fallbackRootLabels: fallbackLabels,
+        }}
+        loadCategories={() => Promise.reject(new Error("network down"))}
+        loadFeaturedContent={() =>
+          Promise.resolve({
+            minis: [],
+            promoText: labels.featuredPromo,
+            promoCtaLabel: labels.featuredPromoCta,
+            promoHref: "/en/search",
+          })
+        }
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /all categories/i }));
+    const electronics = await screen.findByRole("link", {
+      name: "Electronics & phones",
+    });
+    expect(electronics).toHaveAttribute("href", "/en/c/electronics");
+    expect(screen.queryByText(labels.loading)).not.toBeInTheDocument();
   });
 
   it("buildCategoryTree nests children under parents and drops prohibited nodes", () => {

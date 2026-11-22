@@ -21,6 +21,15 @@
     "featuredTitle": "New on Convergeo",
     "featuredPromo": "Compare sellers and pay cash on delivery on eligible orders.",
     "featuredPromoCta": "Search the marketplace",
+    "fallbackCategoryRoots": {
+      "groceries-staples": "Groceries & staples",
+      "personal-care-beauty": "Personal care & beauty",
+      "fashion": "Fashion & fabric",
+      "electronics": "Electronics & phones",
+      "home-living": "Home & living",
+      "office-stationery": "Office & stationery",
+      "light-hardware": "Light hardware & tools"
+    },
     "directory": "Shops",
     "services": "Services",
     "events": "Events",

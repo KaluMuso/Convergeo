@@ -5,20 +5,11 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { BrandLogo } from "./brand-logo";
-import {
-  CartNavTrigger,
-  getCartItemCount,
-  setStoreState,
-  useCartStore,
-} from "./cart/cart-store";
+import { CartNavTrigger, getCartItemCount, setStoreState, useCartStore } from "./cart/cart-store";
 import { CategoryMegaMenu } from "./category-mega-menu";
 import { DesktopHeaderSearch } from "./desktop-header-search";
 import { HeaderThemeToggle } from "./header-theme-toggle";
-import {
-  MerchPreviewLink,
-  useMerchPreviewToken,
-  withMerchPreviewParam,
-} from "./merch-preview-nav";
+import { MerchPreviewLink, useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
 
 import type { SearchInputLabels } from "./search/search-input";
 
@@ -37,6 +28,7 @@ export type ShopHeaderLabels = {
   featuredTitle: string;
   featuredPromo: string;
   featuredPromoCta: string;
+  fallbackCategoryRoots: Record<string, string>;
   directory: string;
   services: string;
   events: string;
@@ -105,10 +97,7 @@ export function ShopHeader({
     };
     const w = window as Window &
       typeof globalThis & {
-        requestIdleCallback?: (
-          cb: () => void,
-          opts?: { timeout: number },
-        ) => number;
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
         cancelIdleCallback?: (id: number) => void;
       };
     let idleId: number | undefined;
@@ -132,10 +121,7 @@ export function ShopHeader({
   const cartCount = getCartItemCount(cart);
   const cartCountLabel =
     cartCount > 0
-      ? labels.cartWithCount.replace(
-          "{count}",
-          String(cartCount > 99 ? 99 : cartCount),
-        )
+      ? labels.cartWithCount.replace("{count}", String(cartCount > 99 ? 99 : cartCount))
       : undefined;
 
   const [scrolled, setScrolled] = useState(false);
@@ -191,6 +177,7 @@ export function ShopHeader({
         featuredTitle: labels.featuredTitle,
         featuredPromo: labels.featuredPromo,
         featuredPromoCta: labels.featuredPromoCta,
+        fallbackRootLabels: labels.fallbackCategoryRoots,
       }}
     />
   );
@@ -215,9 +202,7 @@ export function ShopHeader({
     />
   );
 
-  const themeToggle = labels.theme ? (
-    <HeaderThemeToggle labels={labels.theme} />
-  ) : null;
+  const themeToggle = labels.theme ? <HeaderThemeToggle labels={labels.theme} /> : null;
 
   return (
     <header

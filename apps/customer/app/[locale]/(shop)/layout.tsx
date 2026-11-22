@@ -1,16 +1,6 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
-import {
-  IconAccount,
-  IconAsk,
-  IconHome,
-  IconOrders,
-  IconSearch,
-} from "@vergeo/ui/src/icons";
-import {
-  createTranslator,
-  NextIntlClientProvider,
-  type AbstractIntlMessages,
-} from "next-intl";
+import { IconAccount, IconAsk, IconHome, IconOrders, IconSearch } from "@vergeo/ui/src/icons";
+import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { NotificationBellIsland } from "../_components/notification-bell-island";
@@ -19,6 +9,7 @@ import { TopUtilityBarSlot } from "../_components/top-utility-bar-slot";
 import { BottomNavClient } from "./_components/bottom-nav-client";
 import { LazyCartHostSlot } from "./_components/cart/lazy-cart-host-slot";
 import InstallPrompt from "./_components/install-prompt";
+import { MEGA_MENU_FALLBACK_ROOT_SLUGS } from "./_components/mega-menu-fallback-slugs";
 import { MobileHeaderSearch } from "./_components/mobile-header-search";
 import { ServiceInfoBar } from "./_components/service-info-bar";
 import { ShopHeader } from "./_components/shop-header";
@@ -28,21 +19,25 @@ type ShopLayoutProps = {
   params: Promise<{ locale: string }>;
 };
 
-export default async function ShopLayout({
-  children,
-  params,
-}: ShopLayoutProps) {
+function fallbackCategoryRootLabels(t: (key: string) => string): Record<string, string> {
+  const labels: Record<string, string> = {};
+  for (const slug of MEGA_MENU_FALLBACK_ROOT_SLUGS) {
+    labels[slug] = t(`shop.fallbackCategoryRoots.${slug}`);
+  }
+  return labels;
+}
+
+export default async function ShopLayout({ children, params }: ShopLayoutProps) {
   const { locale } = await params;
   setRequestLocale(locale);
 
   const baseMessages = await getMessages();
-  const [catalogMessages, searchMessages, navMessages, checkoutMessages] =
-    await Promise.all([
-      loadNamespace(locale as Locale, "catalog"),
-      loadNamespace(locale as Locale, "search"),
-      loadNamespace(locale as Locale, "nav"),
-      loadNamespace(locale as Locale, "checkout"),
-    ]);
+  const [catalogMessages, searchMessages, navMessages, checkoutMessages] = await Promise.all([
+    loadNamespace(locale as Locale, "catalog"),
+    loadNamespace(locale as Locale, "search"),
+    loadNamespace(locale as Locale, "nav"),
+    loadNamespace(locale as Locale, "checkout"),
+  ]);
   const messages = {
     ...baseMessages,
     catalog: catalogMessages,
@@ -129,6 +124,7 @@ export default async function ShopLayout({
           featuredTitle: t("shop.featuredTitle"),
           featuredPromo: t("shop.featuredPromo"),
           featuredPromoCta: t("shop.featuredPromoCta"),
+          fallbackCategoryRoots: fallbackCategoryRootLabels(t),
           directory: t("shop.directory"),
           services: t("shop.services"),
           events: t("shop.events"),
@@ -167,11 +163,7 @@ export default async function ShopLayout({
       >
         {children}
       </main>
-      <BottomNavClient
-        items={bottomItems}
-        ariaLabel={t("shop.bottomAriaLabel")}
-        locale={locale}
-      />
+      <BottomNavClient items={bottomItems} ariaLabel={t("shop.bottomAriaLabel")} locale={locale} />
       <LazyCartHostSlot locale={locale} />
       {/* Lets a returning PWA user explicitly activate a waiting worker. */}
       <InstallPrompt />
