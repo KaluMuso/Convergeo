@@ -21,6 +21,15 @@
     "featuredTitle": "Convergeo 新品",
     "featuredPromo": "比较卖家，符合条件的订单可货到付现。",
     "featuredPromoCta": "搜索市场",
+    "fallbackCategoryRoots": {
+      "groceries-staples": "食品杂货",
+      "personal-care-beauty": "个护美妆",
+      "fashion": "服饰面料",
+      "electronics": "电子与手机",
+      "home-living": "家居生活",
+      "office-stationery": "办公文具",
+      "light-hardware": "轻五金工具"
+    },
     "directory": "店铺",
     "services": "服务",
     "events": "活动",

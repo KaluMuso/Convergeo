@@ -21,6 +21,15 @@
     "featuredTitle": "Nouveau sur Convergeo",
     "featuredPromo": "Comparez les vendeurs et payez en espèces à la livraison pour les commandes éligibles.",
     "featuredPromoCta": "Rechercher sur la marketplace",
+    "fallbackCategoryRoots": {
+      "groceries-staples": "Épicerie & produits de base",
+      "personal-care-beauty": "Soins personnels & beauté",
+      "fashion": "Mode & tissus",
+      "electronics": "Électronique & téléphones",
+      "home-living": "Maison & décoration",
+      "office-stationery": "Bureau & papeterie",
+      "light-hardware": "Quincaillerie légère & outils"
+    },
     "directory": "Boutiques",
     "services": "Services",
     "events": "Événements",

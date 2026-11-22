@@ -57,6 +57,19 @@ vi.mock("@vergeo/config", async (importOriginal) => {
 });
 const router = { push: vi.fn(), replace: vi.fn(), refresh: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("../../_components/cart/cart-store", () => ({
+  useCartStore: () => ({
+    cart: {
+      cart_id: "fixture-cart",
+      items: [{ id: "line-1" }],
+      vendor_groups: [],
+      subtotal_ngwee: 100,
+      conflicts: [],
+    },
+    loading: false,
+    loadError: false,
+  }),
+}));
 const m = checkoutMessages.checkout;
 const labels = {
   ...m,

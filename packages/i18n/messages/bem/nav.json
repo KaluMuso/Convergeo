@@ -21,6 +21,15 @@
     "featuredTitle": "Ifintu ifipya pa Convergeo",
     "featuredPromo": "Fikulanisheni abacushi no kulipila cash on delivery ku ma-order ayasuminishwa.",
     "featuredPromoCta": "Sakileni msika",
+    "fallbackCategoryRoots": {
+      "groceries-staples": "Groceries & staples",
+      "personal-care-beauty": "Personal care & beauty",
+      "fashion": "Fashion & fabric",
+      "electronics": "Electronics & phones",
+      "home-living": "Home & living",
+      "office-stationery": "Office & stationery",
+      "light-hardware": "Light hardware & tools"
+    },
     "directory": "Malo a basellers",
     "services": "Imilimo",
     "events": "Ificitike",
