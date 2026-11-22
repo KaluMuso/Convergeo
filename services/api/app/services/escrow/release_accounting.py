@@ -347,6 +347,122 @@ def capture_order_delivery_fee(*, order_id: str, delivery_fee_ngwee: int) -> str
     return posted.id
 
 
+def delivery_funding_idempotency_key(order_id: str) -> str:
+    """One funding leg per order, shared by the prepaid release and COD paths."""
+    return f"delivery-funding-{order_id}"
+
+
+def post_order_delivery_funding(*, order_id: str) -> str | None:
+    """Book a vendor- or platform-funded delivery fee to delivery_revenue (idempotent).
+
+    Logistics phase 1: when the customer paid no delivery fee because the vendor
+    offered free delivery (``delivery_funding='vendor'``) the fee is charged to
+    the vendor payable; when the automatic rule waived it
+    (``'platform'``) it is reclassified out of commission revenue. Either way the
+    ledger stays balanced and delivery_revenue carries the full delivery cost.
+    ``customer`` / ``vendor_self`` orders post nothing. Ledger or lookup errors
+    raise (fail closed: the caller must not report the release as complete).
+    """
+    order_sql = _sql_uuid(order_id)
+    result = run_sql_script(
+        "SELECT delivery_funding || '|' || delivery_funded_ngwee::text || '|' || "
+        "vendor_id::text || '|' || fulfilment "
+        f"FROM public.orders WHERE id = {order_sql};"
+    )
+    if not result.ok or not result.rows:
+        raise ReleaseAccountingError("delivery_funding_lookup_failed")
+    funding, funded_raw, vendor_id, fulfilment = result.rows[0].split("|")
+    funded = int(funded_raw)
+    if fulfilment != "delivery" or funded <= 0 or funding not in {"vendor", "platform"}:
+        return None
+    if funding == "vendor":
+        posted = post_transaction(
+            idempotency_key=delivery_funding_idempotency_key(order_id),
+            template=LedgerTemplate.DELIVERY_FEE_VENDOR_CHARGE,
+            order_id=order_id,
+            funded_ngwee=funded,
+            vendor_id=vendor_id,
+        )
+    else:
+        subsidy = platform_subsidy_cap_ngwee(order_id=order_id, funded_ngwee=funded)
+        if subsidy <= 0:
+            return None
+        posted = post_transaction(
+            idempotency_key=delivery_funding_idempotency_key(order_id),
+            template=LedgerTemplate.DELIVERY_FEE_PLATFORM_SUBSIDY,
+            order_id=order_id,
+            funded_ngwee=subsidy,
+        )
+    return posted.id
+
+
+def platform_subsidy_cap_ngwee(*, order_id: str, funded_ngwee: int) -> int:
+    """Commission that may still fund this order's automatic free delivery (ngwee).
+
+    Checkout decides eligibility once for the whole basket (all vendor orders of
+    the checkout group): waived fees <= share_bps of the *basket* commission. If a
+    sibling order is later cancelled or refunded, its commission is never earned,
+    so booking the full waived fee here could debit more from commission_revenue
+    than the rule allows. Cap at release instead of re-pricing on cancel:
+
+        budget = net commission captured across the basket's orders (this order's
+                 own commission is captured just before this call)
+                 * share_bps // 10_000
+                 - subsidy already reclassified for sibling orders
+        subsidy = clamp(budget, 0, funded_ngwee)
+
+    Integer ngwee only (floor division). Conservative by design: when a sibling
+    has not released yet its commission is not counted, so the subsidy can be
+    lower than the waived fee but never above the rule. The unfunded remainder is
+    simply not reclassified (the customer is never re-charged).
+    """
+    from app.services.logistics.delivery_pricing import (
+        BPS_DENOMINATOR,
+        DEFAULT_AUTO_FREE_COMMISSION_SHARE_BPS,
+    )
+
+    if funded_ngwee <= 0:
+        return 0
+    order_sql = _sql_uuid(order_id)
+    funding_prefix = sql_literal(delivery_funding_idempotency_key("") + "%")
+    script = f"""
+WITH basket AS (
+  SELECT o.id FROM public.orders o
+  WHERE o.checkout_group_id = (
+    SELECT checkout_group_id FROM public.orders WHERE id = {order_sql}
+  )
+), commission AS (
+  SELECT lt.order_id, lt.idempotency_key, lp.amount_ngwee
+  FROM public.ledger_transactions lt
+  INNER JOIN public.ledger_postings lp ON lp.transaction_id = lt.id
+  INNER JOIN public.ledger_accounts la ON la.id = lp.account_id
+  WHERE lt.order_id IN (SELECT id FROM basket) AND la.kind = 'commission_revenue'
+)
+SELECT
+  (-coalesce(sum(amount_ngwee) FILTER (
+     WHERE idempotency_key NOT LIKE {funding_prefix}), 0))::text
+  || '|' ||
+  coalesce(sum(amount_ngwee) FILTER (
+     WHERE idempotency_key LIKE {funding_prefix} AND order_id <> {order_sql}), 0)::text
+  || '|' ||
+  coalesce((
+    SELECT value #>> '{{}}' FROM public.platform_config
+    WHERE key = 'auto_free_delivery_commission_share_bps'
+      AND (value #>> '{{}}') ~ '^[0-9]+$'
+  ), '{DEFAULT_AUTO_FREE_COMMISSION_SHARE_BPS}')
+FROM commission;
+"""
+    result = run_sql_script(script)
+    if not result.ok or not result.rows:
+        raise ReleaseAccountingError("delivery_subsidy_lookup_failed")
+    captured_raw, sibling_raw, share_raw = result.rows[0].split("|")
+    captured = max(0, int(captured_raw))
+    sibling_subsidy = max(0, int(sibling_raw))
+    share_bps = min(int(share_raw), BPS_DENOMINATOR)
+    budget = captured * share_bps // BPS_DENOMINATOR - sibling_subsidy
+    return max(0, min(funded_ngwee, budget))
+
+
 def order_has_refund_remainder(order_id: str) -> bool:
     """True when a partial PRE_RELEASE refund left escrow for the vendor.
 

@@ -121,6 +121,10 @@ FORWARD = [
     "20261117010300_in_app_never_silent_events.sql",
     # Plan limits on active listings, trials, paid extras (additive, reversible).
     "20261117020000_plan_limits_trials_extras.sql",
+    # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
+    # intercity reference rate cards (additive).
+    "20261116180000_logistics_phase1.sql",
+    "20261116180100_intercity_rate_cards.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -164,7 +168,7 @@ def financial_identities() -> dict[str, list[str]]:
     """Bind this NEW proposal's concrete inventory, without an approval claim."""
     manifest = json.loads((ROOT / "scripts/ci/coordinator-gate-inputs.json").read_text())
     identities: dict[str, list[str]] = manifest["financial"]
-    for group, count in (("f1", 6), ("f2", 43), ("related", 764)):
+    for group, count in (("f1", 6), ("f2", 43), ("related", 828)):
         if len(identities[group]) != count or len(set(identities[group])) != count:
             raise RuntimeError("Financial concrete identity binding differs: " + group)
     require_collection(F1_NODES, identities["f1"], 0)
@@ -436,12 +440,13 @@ class Runner:
         ET.ElementTree(xml_root).write(merged, encoding="unicode")
         related, _ = report.related_report(Path(self.env.pop("F2_COLLECTION_OUTPUT")), merged,
                                           int(any(exits)), collection_rc)
-        # Reviewer bound 764 identities (760 + four #759 C1 guards).
+        # Reviewer bound 764 identities (760 + four #759 C1 guards); logistics phase 1
+        # (#788) adds the ready_for_collection / return transitions: 828.
         # Do not silently accept a reduced collection.
-        if related.get("expected") != 764:
+        if related.get("expected") != 828:
             related["accepted"] = False
             related["inventory_error"] = (
-                "Expected the independently reviewed 764 related identities"
+                "Expected the independently reviewed 828 related identities"
             )
         results["related"] = related
         self.write_result()

@@ -73,6 +73,7 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: W8 bundles & offers (additive, reversible).
         # + 1 reviewed: Unified cart slice 1 (additive, reversible).
         # + 1 reviewed: Rate-limit scope constraint re-sync (additive, hotfix-ported).
+        # + 2 reviewed: logistics phase 1 + intercity reference rate cards (additive).
         # + 2 reviewed: Coupons / gift orders / birthdays + collection coupon funding (additive).
         # + 1 reviewed: Listing fulfilment options + Class D may be sold new (additive, reversible).
         # + 2 reviewed: Events collaboration tables + rate-limit scopes (additive, reversible).

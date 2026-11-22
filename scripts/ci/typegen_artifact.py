@@ -100,6 +100,10 @@ POST_REPAIR_ORDER = [
     "20261117010300",
     # Plan limits on active listings, trials, paid extras (additive, reversible).
     "20261117020000",
+    # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
+    # intercity reference rate cards (additive).
+    "20261116180000",
+    "20261116180100",
 ]
 TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
 Run = Callable[[list[str], Path], str]

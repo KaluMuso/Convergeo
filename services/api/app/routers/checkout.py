@@ -36,6 +36,7 @@ from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.coupons.rules import MIN_PAYABLE_NGWEE
 from app.services.events.gmv_reservation import release_gmv_reservation
 from app.services.listings.class_rules import listing_lead_time_days
+from app.services.logistics.delivery_pricing import RawLine, price_checkout_delivery
 from app.services.offers.apply import OfferPricing, price_unified
 from app.services.payments.state import expire_checkout_group_if_unpaid
 from app.services.rfq.listing_cart_authority import (
@@ -241,6 +242,10 @@ class GroupFulfilmentResult(BaseModel):
     delivery_fee_ngwee: int
     subtotal_ngwee: int
     pickup_location: PickupLocationOut | None = None
+    #: customer | vendor | vendor_self | platform (logistics phase 1).
+    delivery_funding: Literal["customer", "vendor", "vendor_self", "platform"] = "customer"
+    #: Zone fee the customer does NOT pay because the vendor or platform funds it.
+    delivery_waived_ngwee: int = 0
 
 
 class FulfilmentStepResponse(BaseModel):
@@ -420,11 +425,18 @@ def compute_group_delivery_fee_ngwee(
     subtotal_ngwee: int,
     zone_key: str | None,
     zone_fees: dict[str, int],
-    free_delivery_threshold_ngwee: int,
+    free_delivery_threshold_ngwee: int | None = None,
 ) -> int:
+    """The zone fee for one delivered vendor group, before funding rules.
+
+    The per-vendor "free above K200" rule was retired on 2026-11-13 (logistics
+    phase 1): ``free_delivery_threshold_ngwee`` and ``subtotal_ngwee`` are
+    accepted for call compatibility and ignored. Who pays (customer, vendor
+    free delivery, automatic free delivery) is decided by
+    ``app.services.logistics.delivery_pricing.price_delivery_groups``.
+    """
+    del subtotal_ngwee, free_delivery_threshold_ngwee
     if zone_key is None:
-        return 0
-    if subtotal_ngwee >= free_delivery_threshold_ngwee:
         return 0
     return zone_fees.get(zone_key, 0)
 
@@ -1097,10 +1109,8 @@ async def create_checkout_session(
     line_views, ticket_lines, offer_pricing = price_unified(
         line_views, ticket_lines, service.client, customer_id=current_user.id
     )
-    vendor_groups = group_by_vendor(
-        line_views,
-        free_delivery_threshold_ngwee=_load_free_delivery_threshold(service),
-    )
+    # Logistics phase 1: no per-vendor "free above K200"; delivery is priced below.
+    vendor_groups = group_by_vendor(line_views)
     product_subtotal = (
         sum(line.line_total_ngwee for line in line_views)
         if offer_pricing is not None
@@ -1399,8 +1409,7 @@ async def validate_fulfilment_step(
     line_views, ticket_lines, _offer_pricing = price_unified(
         line_views, ticket_lines, service.client, customer_id=current_user.id
     )
-    free_threshold = _load_free_delivery_threshold(service)
-    vendor_groups = group_by_vendor(line_views, free_delivery_threshold_ngwee=free_threshold)
+    vendor_groups = group_by_vendor(line_views)
     groups_by_vendor = {group.vendor_id: group for group in vendor_groups}
     choices_by_vendor = {choice.vendor_id: choice for choice in body.groups}
 
@@ -1449,6 +1458,26 @@ async def validate_fulfilment_step(
     _enforce_listing_fulfilment_options(service, groups_by_vendor, choices_by_vendor)
 
     pickup_locations = _fetch_vendor_locations(service, list(groups_by_vendor))
+    delivery_prices = price_checkout_delivery(
+        service.client,
+        raw_lines=[
+            RawLine(
+                vendor_id=line.vendor_id,
+                listing_id=line.listing_id,
+                qty=line.qty,
+                unit_price_ngwee=line.unit_price_ngwee,
+                wholesale=line.wholesale,
+            )
+            for line in line_views
+        ],
+        delivery_zones={
+            vendor_id: (
+                resolved_zone if choices_by_vendor[vendor_id].fulfilment == "delivery" else None
+            )
+            for vendor_id in groups_by_vendor
+        },
+        zone_fees=zone_fees,
+    )
     results: list[GroupFulfilmentResult] = []
     total_delivery_fee = 0
     subtotal = 0
@@ -1458,6 +1487,7 @@ async def validate_fulfilment_step(
         group_subtotal = group.subtotal_ngwee
         subtotal += group_subtotal
 
+        price = delivery_prices.get(vendor_id)
         if choice.fulfilment == "pickup":
             fee = 0
             zone_key = None
@@ -1467,12 +1497,7 @@ async def validate_fulfilment_step(
             zone_label = (
                 str(zones[zone_key].get("label")) if zone_key and zone_key in zones else None
             )
-            fee = compute_group_delivery_fee_ngwee(
-                subtotal_ngwee=group_subtotal,
-                zone_key=zone_key,
-                zone_fees=zone_fees,
-                free_delivery_threshold_ngwee=free_threshold,
-            )
+            fee = price.customer_fee_ngwee if price is not None else 0
 
         total_delivery_fee += fee
         results.append(
@@ -1484,6 +1509,16 @@ async def validate_fulfilment_step(
                 delivery_fee_ngwee=fee,
                 subtotal_ngwee=group_subtotal,
                 pickup_location=pickup_locations.get(vendor_id),
+                delivery_funding=(
+                    price.funding
+                    if price is not None and choice.fulfilment == "delivery"
+                    else "customer"
+                ),
+                delivery_waived_ngwee=(
+                    zone_fees.get(zone_key, 0)
+                    if price is not None and zone_key is not None and price.funding != "customer"
+                    else 0
+                ),
             )
         )
 

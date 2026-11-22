@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   doorPaymentActions,
+  riderCashDueNgwee,
   actionsFor,
+  groupReadyOrders,
+  nextJobKind,
   buildCourierPayload,
   canNotify,
   classifyHandoverError,
@@ -70,11 +73,31 @@ function dispatch(overrides: Partial<Dispatch> = {}): Dispatch {
 describe("groupDispatches", () => {
   it("puts in-flight work first in pipeline order and closed work last", () => {
     const grouped = groupDispatches([
-      dispatch({ id: "a", status: "picked_up", requested_at: "2026-11-09T07:00:00Z" }),
-      dispatch({ id: "b", status: "delivered", requested_at: "2026-11-09T06:00:00Z" }),
-      dispatch({ id: "c", status: "requested", requested_at: "2026-11-09T09:00:00Z" }),
-      dispatch({ id: "d", status: "requested", requested_at: "2026-11-09T08:00:00Z" }),
-      dispatch({ id: "e", status: "failed", requested_at: "2026-11-09T09:30:00Z" }),
+      dispatch({
+        id: "a",
+        status: "picked_up",
+        requested_at: "2026-11-09T07:00:00Z",
+      }),
+      dispatch({
+        id: "b",
+        status: "delivered",
+        requested_at: "2026-11-09T06:00:00Z",
+      }),
+      dispatch({
+        id: "c",
+        status: "requested",
+        requested_at: "2026-11-09T09:00:00Z",
+      }),
+      dispatch({
+        id: "d",
+        status: "requested",
+        requested_at: "2026-11-09T08:00:00Z",
+      }),
+      dispatch({
+        id: "e",
+        status: "failed",
+        requested_at: "2026-11-09T09:30:00Z",
+      }),
     ]);
     expect(grouped.active.map((item) => item.id)).toEqual(["d", "c", "a"]);
     expect(grouped.closed.map((item) => item.id)).toEqual(["e", "b"]);
@@ -84,8 +107,14 @@ describe("groupDispatches", () => {
 describe("couriersForOrder", () => {
   const all = [
     courier({ id: "everywhere" }),
-    courier({ id: "zone-a", zones: [{ zone_key: "lusaka_a", price_ngwee: 2_500 }] }),
-    courier({ id: "zone-c", zones: [{ zone_key: "lusaka_c", price_ngwee: null }] }),
+    courier({
+      id: "zone-a",
+      zones: [{ zone_key: "lusaka_a", price_ngwee: 2_500 }],
+    }),
+    courier({
+      id: "zone-c",
+      zones: [{ zone_key: "lusaka_c", price_ngwee: null }],
+    }),
     courier({ id: "inactive", active: false }),
     courier({ id: "api", integration_kind: "api" }),
   ];
@@ -113,19 +142,94 @@ describe("actionsFor", () => {
     expect(actionsFor(dispatch())).toEqual(["accept", "fail", "cancel"]);
     expect(
       actionsFor(
-        dispatch({ status: "accepted", allowed_next: ["picked_up", "failed", "cancelled"] }),
+        dispatch({
+          status: "accepted",
+          allowed_next: ["picked_up", "failed", "cancelled"],
+        }),
       ),
     ).toEqual(["pickUp", "fail", "cancel"]);
   });
 
-  it("offers handover code first, photo proof second, once picked up", () => {
+  it("offers the combined delivered + cash step first, once picked up", () => {
     expect(
-      actionsFor(dispatch({ status: "picked_up", allowed_next: ["delivered", "failed"] })),
-    ).toEqual(["verifyHandover", "deliverWithPhoto", "fail"]);
+      actionsFor(
+        dispatch({
+          status: "picked_up",
+          allowed_next: ["delivered", "failed"],
+        }),
+      ),
+    ).toEqual([
+      "complete",
+      "verifyHandover",
+      "deliverWithPhoto",
+      "fail",
+      "recordCost",
+    ]);
   });
 
-  it("offers nothing for terminal dispatches", () => {
-    expect(actionsFor(dispatch({ status: "delivered", allowed_next: [] }))).toEqual([]);
+  it("offers only the courier cost for terminal dispatches", () => {
+    expect(
+      actionsFor(dispatch({ status: "delivered", allowed_next: [] })),
+    ).toEqual(["recordCost"]);
+    expect(
+      actionsFor(dispatch({ status: "requested", allowed_next: [] })),
+    ).toEqual([]);
+  });
+
+  it("closes a return only by the shop's acknowledgement", () => {
+    expect(
+      actionsFor(
+        dispatch({
+          status: "picked_up",
+          allowed_next: ["delivered", "failed"],
+          direction: "return",
+        }),
+      ),
+    ).toEqual(["fail", "returned", "recordCost"]);
+  });
+
+  it("groups ready orders by checkout and address, and picks the next job", () => {
+    const base = {
+      order_reference: "ord-x",
+      status: "ready",
+      vendor_name: "Shop",
+      delivery_zone: "lusaka_a",
+      cod: true,
+      cod_amount_ngwee: 1000,
+      subtotal_ngwee: 1000,
+      delivery_fee_ngwee: 0,
+      item_count: 1,
+      created_at: "2026-11-13T08:00:00Z",
+      last_failed_reason: null,
+    };
+    const groups = groupReadyOrders([
+      {
+        ...base,
+        order_id: "a",
+        group_key: "g1:addr",
+        dropoff_landmark: "Kabulonga Spar",
+      },
+      {
+        ...base,
+        order_id: "b",
+        group_key: "g1:addr",
+        dropoff_landmark: "Kabulonga Spar",
+      },
+      { ...base, order_id: "c", group_key: null },
+    ]);
+    expect(
+      groups.map((group) => group.orders.map((order) => order.order_id)),
+    ).toEqual([["a", "b"], ["c"]]);
+    expect(groups[0]?.landmark).toBe("Kabulonga Spar");
+    expect(nextJobKind({ status: "ready", delivery_attempts: 0 })).toBe(
+      "first",
+    );
+    expect(nextJobKind({ status: "shipped", delivery_attempts: 1 })).toBe(
+      "retry",
+    );
+    expect(nextJobKind({ status: "shipped", delivery_attempts: 2 })).toBe(
+      "returnOnly",
+    );
   });
 
   it("maps actions back to target statuses", () => {
@@ -152,7 +256,9 @@ describe("input validation", () => {
 
   it("accepts Cloudinary public ids but never URLs", () => {
     expect(isPodPublicIdWellFormed("convergeo/pod/ord-1a2b3c4d")).toBe(true);
-    expect(isPodPublicIdWellFormed("https://res.cloudinary.com/x.jpg")).toBe(false);
+    expect(isPodPublicIdWellFormed("https://res.cloudinary.com/x.jpg")).toBe(
+      false,
+    );
     expect(isPodPublicIdWellFormed("")).toBe(false);
   });
 });
@@ -173,8 +279,12 @@ describe("handover error classification", () => {
         details: { retry_after: 900 },
       }),
     ).toEqual({ kind: "locked", attemptsRemaining: 0, retryAfter: 900 });
-    expect(classifyHandoverError({ code: "rate_limited", status: 429 }).kind).toBe("rateLimited");
-    expect(classifyHandoverError({ code: "boom", status: 500 }).kind).toBe("generic");
+    expect(
+      classifyHandoverError({ code: "rate_limited", status: 429 }).kind,
+    ).toBe("rateLimited");
+    expect(classifyHandoverError({ code: "boom", status: 500 }).kind).toBe(
+      "generic",
+    );
   });
 });
 
@@ -193,7 +303,9 @@ describe("stale requested dispatch (45 minutes)", () => {
   it("flags requested dispatches waiting 45+ minutes", () => {
     expect(minutesWaiting("2026-11-09T08:00:00.000Z", now)).toBe(46);
     expect(isStale(dispatch(), now)).toBe(true);
-    expect(isStale(dispatch({ requested_at: "2026-11-09T08:30:00.000Z" }), now)).toBe(false);
+    expect(
+      isStale(dispatch({ requested_at: "2026-11-09T08:30:00.000Z" }), now),
+    ).toBe(false);
     expect(isStale(dispatch({ status: "accepted" }), now)).toBe(false);
   });
 });
@@ -242,10 +354,10 @@ describe("courier form", () => {
   });
 
   it("round-trips an existing courier into the form", () => {
-    const form = courierToForm(courier({ zones: [{ zone_key: "lusaka_b", price_ngwee: 4_500 }] }), [
-      "lusaka_a",
-      "lusaka_b",
-    ]);
+    const form = courierToForm(
+      courier({ zones: [{ zone_key: "lusaka_b", price_ngwee: 4_500 }] }),
+      ["lusaka_a", "lusaka_b"],
+    );
     expect(form.zones).toEqual({
       lusaka_a: { enabled: false, priceKwacha: "" },
       lusaka_b: { enabled: true, priceKwacha: "45.00" },
@@ -265,25 +377,62 @@ describe("doorPaymentActions (pay at the door)", () => {
   });
 
   it("only offers a status check while a prompt is live", () => {
-    expect(doorPaymentActions({ ...base, door_payment_state: "pending" })).toEqual(["poll"]);
+    expect(
+      doorPaymentActions({ ...base, door_payment_state: "pending" }),
+    ).toEqual(["poll"]);
   });
 
   it("offers nothing once settled or in exception, or for prepaid / not picked up", () => {
     for (const state of ["paid", "cash", "exception"] as const) {
-      expect(doorPaymentActions({ ...base, door_payment_state: state })).toEqual([]);
+      expect(
+        doorPaymentActions({ ...base, door_payment_state: state }),
+      ).toEqual([]);
     }
-    expect(doorPaymentActions({ ...base, cod_amount_ngwee: 0, door_payment_state: null })).toEqual(
-      [],
-    );
-    expect(doorPaymentActions({ ...base, status: "accepted", door_payment_state: null })).toEqual(
-      [],
-    );
+    expect(
+      doorPaymentActions({
+        ...base,
+        cod_amount_ngwee: 0,
+        door_payment_state: null,
+      }),
+    ).toEqual([]);
+    expect(
+      doorPaymentActions({
+        ...base,
+        status: "accepted",
+        door_payment_state: null,
+      }),
+    ).toEqual([]);
   });
 
   it("allows a retry or cash after a failed prompt", () => {
-    expect(doorPaymentActions({ ...base, door_payment_state: "failed" })).toEqual([
-      "request",
-      "cash",
-    ]);
+    expect(
+      doorPaymentActions({ ...base, door_payment_state: "failed" }),
+    ).toEqual(["request", "cash"]);
+  });
+});
+
+describe("riderCashDueNgwee (rider custody)", () => {
+  it("is the COD amount for cash jobs and the cash fallback", () => {
+    expect(
+      riderCashDueNgwee({ cod_amount_ngwee: 45_000, door_payment_state: null }),
+    ).toBe(45_000);
+    expect(
+      riderCashDueNgwee({
+        cod_amount_ngwee: 45_000,
+        door_payment_state: "cash",
+      }),
+    ).toBe(45_000);
+  });
+
+  it("is zero for an order paid by mobile money at the door, and for prepaid", () => {
+    expect(
+      riderCashDueNgwee({
+        cod_amount_ngwee: 45_000,
+        door_payment_state: "paid",
+      }),
+    ).toBe(0);
+    expect(
+      riderCashDueNgwee({ cod_amount_ngwee: 0, door_payment_state: null }),
+    ).toBe(0);
   });
 });

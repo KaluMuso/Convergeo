@@ -118,6 +118,10 @@ REVIEWED_SUFFIX = (
     "20261117010300_in_app_never_silent_events.sql",
     # Plan limits on active listings, trials, paid extras (additive, reversible).
     "20261117020000_plan_limits_trials_extras.sql",
+    # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
+    # intercity reference rate cards (additive).
+    "20261116180000_logistics_phase1.sql",
+    "20261116180100_intercity_rate_cards.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
