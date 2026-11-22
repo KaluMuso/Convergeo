@@ -131,7 +131,10 @@
       "stream": {
         "title": "Popular now",
         "loadMore": "Load more",
-        "moreLoaded": "{count} more items loaded."
+        "moreLoaded": "{count} more items loaded.",
+        "emptyTitle": "New products are on the way",
+        "emptyBody": "Sellers are listing more every week. Meanwhile, browse categories or start selling.",
+        "emptyCta": "Sambeni ukushitisha"
       }
     },
     "trustStrip": {
