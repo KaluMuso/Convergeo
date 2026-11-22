@@ -97,14 +97,6 @@ vi.mock("../_components/step-contact", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../_components/step-contact")>()),
   StepContact: () => null,
 }));
-vi.mock("../_lib/server-product-cart", () => ({
-  readProductCartSnapshot: vi.fn().mockResolvedValue({
-    itemCount: 1,
-    ticketCount: 0,
-  }),
-  isProductCartEmpty: (snapshot: { itemCount: number; ticketCount: number }) =>
-    snapshot.itemCount === 0 && snapshot.ticketCount === 0,
-}));
 vi.mock("../../_components/cart/cart-store", () => ({
   useCartStore: () => ({
     cart: {
@@ -221,12 +213,13 @@ describe("WP10H existing checkout group handoff", () => {
     expect(mocks.network).not.toHaveBeenCalled();
   });
 
-  it("preserves the empty-product-cart redirect when no handoff is supplied", async () => {
+  it("renders product checkout without a server cart redirect when no handoff is supplied", async () => {
     await visitCheckout({});
-    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/en/cart"));
-    expect(mocks.request).toHaveBeenCalledWith("/checkout/session", {
-      method: "POST",
-    });
+    await waitFor(() =>
+      expect(mocks.request).toHaveBeenCalledWith("/checkout/session", {
+        method: "POST",
+      }),
+    );
     expect(mocks.network).not.toHaveBeenCalled();
   });
 

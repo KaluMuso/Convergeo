@@ -72,6 +72,22 @@ export function BottomNavClient({ items, ariaLabel, locale }: BottomNavClientPro
   if (!shouldRenderShopBottomNav(resolvedPath, locale)) {
     return null;
   }
+  return (
+    <BottomNavClientInner
+      items={items}
+      ariaLabel={ariaLabel}
+      locale={locale}
+      resolvedPath={resolvedPath}
+    />
+  );
+}
+
+function BottomNavClientInner({
+  items,
+  ariaLabel,
+  locale,
+  resolvedPath,
+}: BottomNavClientProps & { resolvedPath: string }) {
   const previewToken = useMerchPreviewToken();
   const previewAwareItems = items.map((item) => ({
     ...item,

@@ -22,13 +22,13 @@
     "featuredPromo": "Fikulanisheni abacushi no kulipila cash on delivery ku ma-order ayasuminishwa.",
     "featuredPromoCta": "Sakileni msika",
     "fallbackCategoryRoots": {
-      "groceries-staples": "Groceries & staples",
-      "personal-care-beauty": "Personal care & beauty",
-      "fashion": "Fashion & fabric",
-      "electronics": "Electronics & phones",
-      "home-living": "Home & living",
-      "office-stationery": "Office & stationery",
-      "light-hardware": "Light hardware & tools"
+      "groceries-staples": "Groceries no staples",
+      "personal-care-beauty": "Ukusangalasha no ukupapata",
+      "fashion": "Fashion na fabric",
+      "electronics": "Amafoni, laptops, na tech ya bushiku",
+      "home-living": "Kwenu no living",
+      "office-stationery": "Ofishi no fyalemba",
+      "light-hardware": "Hardware iyalingilila na tool"
     },
     "directory": "Malo a basellers",
     "services": "Imilimo",

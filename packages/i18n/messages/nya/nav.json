@@ -22,13 +22,13 @@
     "featuredPromo": "Fananani ogulitsa ndikulipira cash on delivery pa ma-order oyenera.",
     "featuredPromoCta": "Sakani msika",
     "fallbackCategoryRoots": {
-      "groceries-staples": "Groceries & staples",
-      "personal-care-beauty": "Personal care & beauty",
-      "fashion": "Fashion & fabric",
-      "electronics": "Electronics & phones",
-      "home-living": "Home & living",
-      "office-stationery": "Office & stationery",
-      "light-hardware": "Light hardware & tools"
+      "groceries-staples": "Groceries ndi staples",
+      "personal-care-beauty": "Kusangalatsa ndi ukongoletsedwa",
+      "fashion": "Fashion ndi nsalu",
+      "electronics": "Mafoni, laptops, ndi tech ya tsiku",
+      "home-living": "Kwathu ndi living",
+      "office-stationery": "Ofesi ndi zolemba",
+      "light-hardware": "Hardware yopepuka ndi zida"
     },
     "directory": "Malo a ogulitsa",
     "services": "Ntchito",

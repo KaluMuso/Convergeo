@@ -1,5 +1,4 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
-import { redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -11,7 +10,6 @@ import { GroupCheckoutLazy } from "./_components/group-checkout-lazy";
 import { LazyTicketCheckout } from "./_components/lazy-ticket-checkout";
 import { CheckoutShell } from "./_components/step-fulfilment";
 import { resolveGroupParam } from "./_lib/group-checkout";
-import { isProductCartEmpty, readProductCartSnapshot } from "./_lib/server-product-cart";
 
 import type { CheckoutExtrasLabels } from "./_components/checkout-extras";
 import type { GroupCheckoutLabels } from "./_components/group-checkout";
@@ -402,11 +400,6 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
       </div>
     );
   }
-  const snapshot = await readProductCartSnapshot();
-  if (snapshot && isProductCartEmpty(snapshot)) {
-    redirect(`/${locale}/cart`);
-  }
-
   const labels = buildCheckoutLabels(locale, messages);
 
   return (
