@@ -138,6 +138,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261117010300",
     # Plan limits on active listings, trials, paid extras (additive, reversible).
     "20261117020000",
+    # Web Push delivery queue + enqueue trigger (additive, reversible).
+    "20261123090000",
 }
 
 

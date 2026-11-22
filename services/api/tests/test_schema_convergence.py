@@ -151,6 +151,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261117010300",
     # Plan limits on active listings, trials, paid extras (additive, reversible).
     "20261117020000",
+    # Web Push delivery queue (additive, reversible).
+    "20261123090000",
 ]
 
 def _module() -> Any:
@@ -193,7 +195,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 189
+    assert len(sql_files) == len(migrations) == 190
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -242,7 +244,8 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     points_digest = ["20261117010100", "20261117010200"]
     never_silent = ["20261117010300"]
     plan_limits = ["20261117020000"]
-    assert actual_versions[-50:] == (
+    web_push = ["20261123090000"]
+    assert actual_versions[-51:] == (
         repairs
         + post_repair
         + queued_features
@@ -268,6 +271,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + points_digest
         + never_silent
         + plan_limits
+        + web_push
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 
