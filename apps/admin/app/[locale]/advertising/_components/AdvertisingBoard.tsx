@@ -5,8 +5,8 @@ import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
-import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
 import { classifyAdminRequestError } from "../../_components/admin-request";
+import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
 import { ConfirmModal } from "../../_components/ConfirmModal";
 import { CopyButton } from "../../_components/CopyButton";
 import { EmptyBlock, LoadingBlock } from "../../_components/StateBlocks";
