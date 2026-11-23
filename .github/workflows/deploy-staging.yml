@@ -601,7 +601,7 @@ jobs:
       - name: Read authenticated prior-attempt checkpoint
         id: prior_checkpoint
         if: ${{ github.run_attempt > 1 }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           PORTAL: ${{ matrix.portal }}
           CURRENT_ATTEMPT: ${{ github.run_attempt }}
@@ -1113,7 +1113,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Read exact run, jobs, artifact and current staging ref
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const path = require('path');

@@ -273,6 +273,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/vendor-digest/weekly": INTERNAL_CRON,
     "POST /internal/dispatch/tick": INTERNAL_CRON,
     "POST /internal/reconciliation/door-poll-tick": INTERNAL_CRON,
+    "POST /internal/dispatch/web-push-tick": INTERNAL_CRON,
     "POST /internal/embeddings/tick": INTERNAL_CRON,
     "POST /internal/event-release/tick": INTERNAL_CRON,
     "POST /internal/event-refund-jobs/tick": INTERNAL_CRON,
