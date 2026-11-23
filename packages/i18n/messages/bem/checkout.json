@@ -231,6 +231,7 @@
     "payment": {
       "card": "Debit nangu credit card",
       "cardExplainer": "Pantu mwaisa place order, mukompleta card payment pa Lenco secure hosted page. Convergeo tayamona ifya card yenu.",
+      "providerFeeNote": "Akalipilo akanono aka kampani ya mobile money nangu ya card kalalundwako ilyo mwasuminisha ukulipila.",
       "cod": "Cash ilyo yafika",
       "codIneligible": "Cash on delivery yaisa fye ku ama-order mpaka {cap}.",
       "codRejected": "Cash on delivery teyaisa ku total iyi ya order",

@@ -389,6 +389,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       countryCode: messages.payment.countryCode,
       nationalNumber: messages.payment.nationalNumber,
       cardExplainer: messages.payment.cardExplainer,
+      providerFeeNote: messages.payment.providerFeeNote,
       codIneligible: (cap) => fillTemplate(messages.payment.codIneligibleTemplate, { cap }),
       codUnavailableTitle: messages.payment.codUnavailableTitle,
       selected: messages.payment.selected,

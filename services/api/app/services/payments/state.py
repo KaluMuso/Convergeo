@@ -15,6 +15,11 @@ from app.services.payments.base import (
     QueryStatusRequest,
     QueryStatusResult,
 )
+from app.services.payments.bearer import (
+    net_collected_ngwee,
+    normalize_observation_amount,
+    resolve_collection_bearer,
+)
 from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.money import SUPPORTED_CURRENCY, major_str_to_ngwee
 from app.services.payments.webhook_verify import (
@@ -367,8 +372,15 @@ def validate_collection_observation(
     amount_major: object,
     currency: object,
     provider_reference: object,
+    fee: object = None,
+    bearer: object = None,
 ) -> None:
-    """Require a collection's identity and value to match before any transition."""
+    """Require a collection's identity and value to match before any transition.
+
+    With a customer-borne fee the payer is charged ``amount + fee`` but we are
+    owed exactly ``payment.amount_ngwee``; a payload reporting that gross is
+    accepted only when it equals ``expected + fee`` exactly.
+    """
     if payment.provider != "lenco" or reference != payment.lenco_reference:
         raise PaymentObservationMismatch(payment.id, "reference")
     if currency != "ZMW":
@@ -379,6 +391,12 @@ def validate_collection_observation(
         observed_ngwee = major_str_to_ngwee(amount_major, currency="ZMW")
     except (TypeError, ValueError) as exc:
         raise PaymentObservationMismatch(payment.id, "amount_missing_or_invalid") from exc
+    observed_ngwee = net_collected_ngwee(
+        observed_ngwee,
+        expected_ngwee=payment.amount_ngwee,
+        fee=fee,
+        bearer=resolve_collection_bearer(bearer, payment.raw),
+    )
     if observed_ngwee != payment.amount_ngwee:
         raise PaymentObservationMismatch(payment.id, "amount")
     expected_provider_reference = payment.raw.get("provider_reference")
@@ -454,6 +472,8 @@ def validate_collection_observation_or_hold(
     amount_major: object,
     currency: object,
     provider_reference: object,
+    fee: object = None,
+    bearer: object = None,
 ) -> None:
     """D1 validation that also records the C3 hold + audit before refusing.
 
@@ -468,6 +488,8 @@ def validate_collection_observation_or_hold(
             amount_major=amount_major,
             currency=currency,
             provider_reference=provider_reference,
+            fee=fee,
+            bearer=bearer,
         )
     except PaymentObservationMismatch as exc:
         reason = str(exc.details.get("reason", "observation_mismatch"))
@@ -502,6 +524,8 @@ def validate_query_collection_observation(
         amount_major=result.amount_major,
         currency=result.currency,
         provider_reference=result.provider_reference,
+        fee=fee_fields_from_provider_raw(result.raw)[0],
+        bearer=fee_fields_from_provider_raw(result.raw)[1],
     )
 
 
@@ -521,6 +545,8 @@ def validate_webhook_collection_observation(
         amount_major=data.get("amount"),
         currency=data.get("currency"),
         provider_reference=data.get("lencoReference", data.get("lenco_reference")),
+        fee=data.get("fee"),
+        bearer=data.get("bearer"),
     )
 
 
@@ -632,10 +658,20 @@ def apply_payment_status(
     """Apply a target status with precedence rules (webhooks / poller).
 
     SUCCESS is decided atomically in ``apply_prepaid_collection_success``
-    (per-order escrow holds). Once applied, the Lenco collection fee is booked
-    to ``fees`` (C6, idempotent per payment) so platform_cash tracks Lenco.
+    (per-order escrow holds). Once applied, a merchant-borne Lenco collection
+    fee is booked to ``fees`` (C6, idempotent per payment) so platform_cash
+    tracks Lenco. A customer-borne fee (Lenco-reported bearer, else the bearer
+    we requested for this attempt) is never booked: Lenco settles the full
+    amount, and the ledger records exactly ``payment.amount_ngwee`` collected.
     """
     snapshot = _load_payment(service_client, payment_id)
+    bearer = resolve_collection_bearer(provider_bearer, snapshot.raw)
+    observation = normalize_observation_amount(
+        observation,
+        expected_ngwee=snapshot.amount_ngwee,
+        fee=provider_fee,
+        bearer=bearer,
+    )
     if incoming_status == PaymentStatus.SUCCESS:
         if observation is None:
             raise AppError(
@@ -673,7 +709,7 @@ def apply_payment_status(
             return None
         from app.services.payments.fees import book_collection_fee
 
-        book_collection_fee(payment_id=payment_id, fee=provider_fee, bearer=provider_bearer)
+        book_collection_fee(payment_id=payment_id, fee=provider_fee, bearer=bearer)
         return TransitionOutcome(
             payment_id=payment_id,
             from_status=PaymentStatus(str(result["from_status"])),
@@ -871,6 +907,8 @@ async def sweep_stale_payments(
                 amount_major=query_result.amount_major,
                 currency=query_result.currency,
                 provider_reference=query_result.provider_reference,
+                fee=fee_fields_from_provider_raw(query_result.raw)[0],
+                bearer=fee_fields_from_provider_raw(query_result.raw)[1],
             )
         except PaymentObservationMismatch:
             # Held and audited; one mismatched collection never expires or
@@ -1040,6 +1078,8 @@ def process_webhook_event(
             amount_major=data.get("amount"),
             currency=data.get("currency"),
             provider_reference=data.get("lencoReference", data.get("lenco_reference")),
+            fee=data.get("fee"),
+            bearer=data.get("bearer"),
         )
         if payment.rail == "card" and incoming == PaymentStatus.SUCCESS:
             # Durable ingress remains undrained until canonical polling/return has

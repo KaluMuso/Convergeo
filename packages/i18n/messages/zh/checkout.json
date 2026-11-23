@@ -229,6 +229,7 @@
       "countryCode": "国家/地区代码",
       "nationalNumber": "手机号码",
       "cardExplainer": "下单后，您会在我们的支付伙伴 Lenco 的安全页面用卡付款。我们看不到您的卡号。",
+      "providerFeeNote": "您确认付款时，移动支付或银行卡服务商会另收一笔少量交易手续费。",
       "codIneligible": "货到付款只限 {cap} 以内的订单。",
       "continue": "继续",
       "loading": "请稍候…",

@@ -12,7 +12,8 @@ from app.schemas.base import (
     RefundReference,
     StrictModel,
 )
-from pydantic import model_validator
+from app.services.payments.bearer import CollectionFeeBearer, get_collection_fee_bearer
+from pydantic import Field, model_validator
 
 
 class CollectionStatus(StrEnum):
@@ -53,7 +54,9 @@ class InitiateCollectionRequest(StrictModel):
     phone: str
     operator: str
     country: str = "zm"
-    bearer: str = "merchant"
+    # Who bears Lenco's collection fee; defaults to LENCO_COLLECTION_FEE_BEARER
+    # (``customer``). Callers pass it explicitly so a bad config fails before claim.
+    bearer: CollectionFeeBearer = Field(default_factory=get_collection_fee_bearer)
 
 
 class InitiateCollectionResult(StrictModel):

@@ -184,6 +184,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       countryCode: t("checkout.payment.countryCode"),
       nationalNumber: t("checkout.payment.nationalNumber"),
       cardExplainer: t("checkout.payment.cardExplainer"),
+      providerFeeNote: t("checkout.payment.providerFeeNote"),
       codIneligibleTemplate: String(t.raw("checkout.payment.codIneligible")),
       codUnavailableTitle: t("checkout.payment.codUnavailableTitle"),
       selected: t("checkout.payment.selected"),

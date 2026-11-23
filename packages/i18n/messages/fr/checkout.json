@@ -229,6 +229,7 @@
       "countryCode": "Indicatif du pays",
       "nationalNumber": "Numéro de mobile",
       "cardExplainer": "Après la commande, vous payez sur une page de carte sécurisée de Lenco, notre partenaire de paiement. Nous ne voyons jamais votre numéro de carte.",
+      "providerFeeNote": "De petits frais de transaction de votre opérateur mobile money ou de votre carte s'ajoutent lorsque vous approuvez le paiement.",
       "codIneligible": "Le paiement à l'arrivée est limité aux commandes jusqu'à {cap}.",
       "continue": "Continuer",
       "loading": "Veuillez patienter…",

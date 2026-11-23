@@ -39,6 +39,8 @@ export type PaymentStepLabels = {
   countryCode: string;
   nationalNumber: string;
   cardExplainer: string;
+  /** Lenco collection fee is customer-borne: the provider adds it on approval. */
+  providerFeeNote?: string;
   codIneligible: (cap: string) => string;
   codUnavailableTitle: string;
   selected: string;
@@ -568,6 +570,17 @@ export function StepPayment({
             {labels.cardExplainer}
           </p>
         </div>
+      ) : null}
+
+      {labels.providerFeeNote &&
+      ((method === "momo" && offers("momo")) ||
+        (method === "card" && offers("card"))) ? (
+        <p
+          className="font-body text-xs text-text-2"
+          data-testid="checkout-provider-fee-note"
+        >
+          {labels.providerFeeNote}
+        </p>
       ) : null}
 
       {errorMessage && method !== "momo" ? (
