@@ -36,6 +36,7 @@ WhatsAppTemplateId = Literal[
     "payout_failed",
     "points_earned",
     "vendor_weekly_digest",
+    "vendor_order_unconfirmed_alert",
     "gift_recipient_notice",
     "gift_ready_pickup",
     "birthday_greeting",
@@ -384,6 +385,18 @@ def _map_vendor_weekly_digest(payload: Mapping[str, Any]) -> tuple[str, ...]:
     )
 
 
+def _map_vendor_order_unconfirmed_alert(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    minutes = payload.get("minutes_waiting")
+    if isinstance(minutes, bool) or not isinstance(minutes, int) or minutes < 0:
+        msg = "payload['minutes_waiting'] must be a non-negative integer"
+        raise TemplateRenderError(msg)
+    return (
+        _require_str(payload, "order_reference"),
+        _require_str(payload, "vendor_name"),
+        str(minutes),
+    )
+
+
 def _map_gift_recipient_notice(payload: Mapping[str, Any]) -> tuple[str, ...]:
     # One message to the gift recipient (ECT Act s.65: a single unsolicited
     # message, naming the sender). The Meta template carries the opt-out line.
@@ -555,6 +568,11 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         template_id="vendor_weekly_digest",
         meta_template_name="vendor_weekly_digest",
         map_variables=_map_vendor_weekly_digest,
+    ),
+    "vendor_order_unconfirmed_alert": WhatsAppTemplateDefinition(
+        template_id="vendor_order_unconfirmed_alert",
+        meta_template_name="vendor_order_unconfirmed_alert",
+        map_variables=_map_vendor_order_unconfirmed_alert,
     ),
     "gift_recipient_notice": WhatsAppTemplateDefinition(
         template_id="gift_recipient_notice",

@@ -38,6 +38,8 @@ class OrderEvent(StrEnum):
     CANCEL = "cancel"
     START_PROCESSING = "start_processing"
     READY_FOR_PICKUP = "ready_for_pickup"
+    #: Delivery orders: the vendor sealed the parcel and it waits for the rider.
+    READY_FOR_COLLECTION = "ready_for_collection"
     SHIP = "ship"
     VERIFY_PICKUP = "verify_pickup"
     MARK_DELIVERED = "mark_delivered"
@@ -57,6 +59,13 @@ Fulfilment = Literal["delivery", "pickup"]
 
 CANCELLATION_EVENTS = frozenset({OrderEvent.REJECT, OrderEvent.CANCEL})
 
+# Events a restricted operator with ``logistics.manage`` may drive as ADMIN
+# (courier pickup / delivery coupling, readiness on the vendor's behalf). A
+# logistics cancellation is only the explicit return-to-vendor restock path.
+LOGISTICS_ADMIN_EVENTS = frozenset(
+    {OrderEvent.SHIP, OrderEvent.MARK_DELIVERED, OrderEvent.READY_FOR_COLLECTION}
+)
+
 # Fulfilment-progress events require a successful prepaid payment (COD exempt).
 # Sellers must never pack/ship/confirm an unpaid prepaid order (PAY-01).
 PREPAID_PAYMENT_REQUIRED_EVENTS = frozenset(
@@ -64,6 +73,7 @@ PREPAID_PAYMENT_REQUIRED_EVENTS = frozenset(
         OrderEvent.CONFIRM,
         OrderEvent.START_PROCESSING,
         OrderEvent.READY_FOR_PICKUP,
+        OrderEvent.READY_FOR_COLLECTION,
         OrderEvent.SHIP,
         OrderEvent.VERIFY_PICKUP,
         OrderEvent.MARK_DELIVERED,
@@ -223,10 +233,27 @@ TRANSITION_TABLE: tuple[TransitionSpec, ...] = (
         frozenset({ActorRole.VENDOR, ActorRole.ADMIN}),
     ),
     TransitionSpec(
+        OrderStatus.PROCESSING,
+        OrderEvent.READY_FOR_COLLECTION,
+        OrderStatus.READY,
+        frozenset({ActorRole.VENDOR, ActorRole.ADMIN}),
+        fulfilment="delivery",
+    ),
+    TransitionSpec(
         OrderStatus.READY,
         OrderEvent.VERIFY_PICKUP,
         OrderStatus.DELIVERED,
         frozenset({ActorRole.VENDOR, ActorRole.ADMIN}),
+        # A delivery order in `ready` waits for the courier; only a pickup
+        # order may be handed over at the counter.
+        fulfilment="pickup",
+    ),
+    TransitionSpec(
+        OrderStatus.READY,
+        OrderEvent.SHIP,
+        OrderStatus.SHIPPED,
+        frozenset({ActorRole.VENDOR, ActorRole.ADMIN}),
+        fulfilment="delivery",
     ),
     TransitionSpec(
         OrderStatus.READY,
@@ -450,8 +477,12 @@ def _validate_snapshot_transition(
     return resolved.to_status
 
 
-def _order_authority_sql(actor_role: ActorRole, actor_sql: str) -> str:
-    """SQL predicate over order alias ``o``: does this actor hold authority on it."""
+def _order_authority_sql(actor_role: ActorRole, actor_sql: str, *, logistics: bool = False) -> str:
+    """SQL predicate over order alias ``o``: does this actor hold authority on it.
+
+    ``logistics`` (logistics phase 1): an ADMIN logistics event is also open to a
+    restricted admin whose rbac_* role grants ``logistics.manage``.
+    """
     return {
         ActorRole.CUSTOMER: f"o.customer_id = {actor_sql}",
         ActorRole.VENDOR: (
@@ -459,8 +490,12 @@ def _order_authority_sql(actor_role: ActorRole, actor_sql: str) -> str:
             f"WHERE v.id=o.vendor_id AND v.owner_user_id={actor_sql})"
         ),
         ActorRole.ADMIN: (
-            "EXISTS (SELECT 1 FROM public.user_roles ur "
-            f"WHERE ur.user_id={actor_sql} AND ur.role IN ('admin','superadmin'))"
+            f"public.has_admin_permission({actor_sql}, 'logistics.manage')"
+            if logistics
+            else (
+                "EXISTS (SELECT 1 FROM public.user_roles ur "
+                f"WHERE ur.user_id={actor_sql} AND ur.role IN ('admin','superadmin'))"
+            )
         ),
         ActorRole.SYSTEM: "true",  # identity checked by callers; internal trusted caller only
     }[actor_role]
@@ -492,8 +527,17 @@ def transition_order(
     actor_id: str,
     note: str,
     refund_path: bool = False,
+    return_restock: bool = False,
 ) -> TransitionOutcome:
-    """Execute a guarded order transition via service-role row-locked update."""
+    """Execute a guarded order transition via service-role row-locked update.
+
+    ``return_restock`` (logistics phase 1) is only meaningful for an ADMIN
+    ``cancel`` from ``shipped`` after the shop acknowledged the returned goods:
+    it primes ``app.order_return_restock`` so the stock-release trigger puts the
+    stock back in the same transaction.
+    """
+    if return_restock and not (event == OrderEvent.CANCEL and actor_role == ActorRole.ADMIN):
+        raise ValueError("return_restock applies only to an admin cancellation")
     _validate_actor_id(actor_role, actor_id)
     if not note.strip():
         raise AppError(
@@ -515,13 +559,19 @@ def transition_order(
     from_status = snapshot.status.value
     actor_sql = sql_uuid(actor_id, "actor_id")
     # Roles alone and a caller-supplied refund_path flag are not order authority.
-    authority_sql = _order_authority_sql(actor_role, actor_sql)
+    authority_sql = _order_authority_sql(
+        actor_role,
+        actor_sql,
+        logistics=event in LOGISTICS_ADMIN_EVENTS
+        or (return_restock and snapshot.status == OrderStatus.SHIPPED),
+    )
     cancellation = event in CANCELLATION_EVENTS
     refund_authority = refund_path and actor_role in {ActorRole.ADMIN, ActorRole.VENDOR}
     update_script = f"""
 BEGIN;
 SELECT set_config('app.order_actor', {sql_literal(actor_id)}, true);
 SELECT set_config('app.order_note', {sql_literal(note)}, true);
+SELECT set_config('app.order_return_restock', '{"on" if return_restock else "off"}', true);
 SELECT public.lock_payment_checkout_scope(
   (SELECT checkout_group_id FROM public.orders WHERE id={order_sql}));
 SELECT id, status FROM public.orders WHERE id={order_sql} FOR UPDATE;
@@ -568,7 +618,11 @@ UPDATE public.orders o
 SET status = '{to_status}'
 WHERE o.id = {order_sql} AND o.status = '{from_status}'
   AND (
-    '{event.value}' NOT IN ('confirm', 'start_processing', 'mark_ready', 'ship')
+    '{event.value}' NOT IN (
+      -- 'mark_ready' kept as before (ready_for_pickup is NOT SQL-enforced here
+      -- today; see report); the new delivery readiness event is enforced.
+      'confirm', 'start_processing', 'mark_ready', 'ready_for_collection', 'ship'
+    )
     OR o.cod
     OR EXISTS (SELECT 1 FROM public.payments p
                JOIN public.checkout_groups c ON c.id=p.checkout_group_id

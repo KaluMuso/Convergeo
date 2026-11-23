@@ -85,6 +85,7 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # Rate-limit scope re-sync: notification/checkout-group scopes (additive, reversible).
     # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000",
     # Listing fulfilment options + Class D may be sold new (additive, reversible).
@@ -138,6 +139,13 @@ PENDING_REPAIR_VERSIONS = {
     "20261117010300",
     # Plan limits on active listings, trials, paid extras (additive, reversible).
     "20261117020000",
+    # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
+    # intercity reference rate cards (additive).
+    "20261122100000",
+    "20261122100100",
+    # Area-pair delivery pricing schema + Lusaka area seed (additive).
+    "20261122100200",
+    "20261122100300",
     # Admin catalog control holds + typed ad targets (additive, documented down).
     "20261123100000",
 }

@@ -73,6 +73,7 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: W8 bundles & offers (additive, reversible).
         # + 1 reviewed: Unified cart slice 1 (additive, reversible).
         # + 1 reviewed: Rate-limit scope constraint re-sync (additive, hotfix-ported).
+        # + 2 reviewed: logistics phase 1 + intercity reference rate cards (additive).
         # + 2 reviewed: Coupons / gift orders / birthdays + collection coupon funding (additive).
         # + 1 reviewed: Listing fulfilment options + Class D may be sold new (additive, reversible).
         # + 2 reviewed: Events collaboration tables + rate-limit scopes (additive, reversible).
@@ -87,8 +88,11 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: plan limits, trials, paid extras (additive, reversible).
         # + 1 reviewed: In-app rows for never-silent lifecycle templates (additive, reversible).
         # + 2 reviewed: Convergeo Points ledger + weekly seller digest (additive, flag-gated).
-        self.assertEqual(len(runner.FORWARD), 63)
-        self.assertEqual(len(set(runner.FORWARD)), 63)
+        # + 2 reviewed: logistics phase 1 + intercity reference rate cards (additive).
+        # + 2 reviewed: area-pair delivery pricing schema + area seed (additive).
+        # + 1 reviewed: catalog moderation holds + ad targets (additive).
+        self.assertEqual(len(runner.FORWARD), 67)
+        self.assertEqual(len(set(runner.FORWARD)), 67)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

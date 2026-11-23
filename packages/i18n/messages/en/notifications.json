@@ -92,6 +92,9 @@
     },
     "service_quote_accepted": {
       "body": "Good news! Your quote was accepted. A deposit of {deposit} (job total {total}) is secured in Convergeo escrow. Open the app to start the job."
+    },
+    "vendor_order_unconfirmed_alert": {
+      "body": "Convergeo ops: order {order_reference} from {vendor_name} is still unconfirmed after {minutes_waiting} min. Call the shop."
     }
   },
   "sms": {
@@ -160,6 +163,9 @@
     },
     "payout_failed": {
       "body": "Convergeo: your payout of K{amount} could not be sent. Check your payout number in the vendor app."
+    },
+    "vendor_order_unconfirmed_alert": {
+      "body": "Convergeo ops: {order_reference} not confirmed by {vendor_name} after {minutes_waiting} min."
     }
   },
   "email": {

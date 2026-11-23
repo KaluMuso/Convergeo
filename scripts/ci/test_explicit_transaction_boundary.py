@@ -166,7 +166,7 @@ COMMIT;
                 capture_output=True,
             )
             files, first = source_inventory(workdir)
-            self.assertEqual((len(files), first), (190, 131))
+            self.assertEqual((len(files), first), (194, 131))
             with self.assertRaisesRegex(RuntimeError, "fault"):
                 with visible_prefix(files, first - 1, workdir):
                     self.assertEqual(
@@ -174,7 +174,7 @@ COMMIT;
                     )
                     raise RuntimeError("fault")
             self.assertEqual(
-                len(list((workdir / "supabase/migrations").glob("*.sql"))), 190
+                len(list((workdir / "supabase/migrations").glob("*.sql"))), 194
             )
             copied = workdir / "supabase/migrations" / next(iter(BOUND_FILES))
             copied.write_bytes(copied.read_bytes() + b"\n")
@@ -352,7 +352,7 @@ COMMIT;
     def test_failure_cleanup_requires_stack_ownership(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workdir = Path(directory)
-            files = [workdir / f"{index}.sql" for index in range(190)]
+            files = [workdir / f"{index}.sql" for index in range(194)]
             with (
                 patch(
                     "rehearse_explicit_transaction_profile.LOCK",
@@ -387,7 +387,7 @@ COMMIT;
                 ),
                 patch(
                     "rehearse_explicit_transaction_profile.ledger",
-                    return_value=[[]] * 190,
+                    return_value=[[]] * 194,
                 ),
                 patch("rehearse_explicit_transaction_profile.cli") as cli,
                 redirect_stdout(io.StringIO()),

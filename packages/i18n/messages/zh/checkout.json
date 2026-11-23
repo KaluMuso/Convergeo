@@ -178,12 +178,29 @@
         "tip2": "填写您的区域和街道，以及大门的标识，例如颜色。",
         "tip3": "请保持手机开机，骑手可能会拨打您的下单号码来找您。",
         "landmarkRequired": "请填写地标和区域，方便骑手找到您。",
-        "cutoffTitle": "什么时候发货？",
+        "cutoffTitle": "下午2点前下单，当天送达",
         "cutoffBefore": "卢萨卡时间 14:00 前下单，有货的商品通常在卖家确认后当天发出。",
         "cutoffAfter": "卢萨卡已过 14:00，有货的商品通常在卖家确认后明天发出。",
-        "cutoffMadeToOrder": "为您定做的商品做好后发出。每件商品都写了需要几天。"
+        "cutoffMadeToOrder": "为您定做的商品做好后发出。每件商品都写了需要几天。",
+        "promiseToday": "今天送达，{start}–{end}",
+        "promiseTomorrow": "明天送达，{start}–{end}",
+        "promiseLater": "{date}送达，{start}–{end}"
       },
-      "notOffered": "卖家不为您购物车中的某件商品提供该交付方式。"
+      "notOffered": "卖家不为您购物车中的某件商品提供该交付方式。",
+      "area": {
+        "label": "您所在的区域",
+        "help": "选择区域，以便按店铺到您的路程计算运费。可选。",
+        "searchPlaceholder": "搜索，例如 Kabulonga",
+        "noMatch": "没有匹配的区域。请在下方填写地标。",
+        "notListed": "找不到您的区域？可跳过，在下方填写地标。",
+        "change": "更改",
+        "selected": "区域：{area}",
+        "unavailable": "区域列表未能加载。填写下方地标即可。",
+        "typeLabel": "该地址是",
+        "home": "住宅",
+        "work": "单位",
+        "workHelp": "单位地址仅在工作日16:45前、办公时间内送达。"
+      }
     },
     "countdown": {
       "label": "商品为您保留",

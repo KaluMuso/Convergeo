@@ -1067,6 +1067,7 @@
       "submitReject": "Envoyer la raison",
       "submitShip": "Marquer comme envoyée (expédiée)",
       "cancel": "Annuler",
+      "ready_for_collection": "Prêt pour le livreur",
       "after": {
         "confirm": "Le client est informé que vous avez accepté. Ensuite, vous emballerez.",
         "reject": "La commande est annulée et le client en est informé. Convergeo gère l'éventuel remboursement.",

@@ -36,6 +36,24 @@ from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.coupons.rules import MIN_PAYABLE_NGWEE
 from app.services.events.gmv_reservation import release_gmv_reservation
 from app.services.listings.class_rules import listing_lead_time_days
+from app.services.logistics.area_pricing import (
+    Area,
+    AreaQuote,
+    DeliveryPromise,
+    PricingSwitches,
+    delivery_promise,
+    load_areas,
+    load_switches,
+    log_quote,
+    quote_checkout_delivery,
+    resolve_customer_area,
+)
+from app.services.logistics.delivery_pricing import (
+    GroupDeliveryPrice,
+    RawLine,
+    base_group_fee,
+    price_checkout_delivery,
+)
 from app.services.offers.apply import OfferPricing, price_unified
 from app.services.payments.state import expire_checkout_group_if_unpaid
 from app.services.rfq.listing_cart_authority import (
@@ -220,10 +238,16 @@ class GroupFulfilmentChoice(BaseModel):
     fulfilment: Literal["delivery", "pickup"]
 
 
+AREA_SLUG_PATTERN = r"^[a-z0-9_]{2,40}$"
+
+
 class FulfilmentAddress(BaseModel):
     landmark: str = Field(min_length=1, max_length=500)
     lat: float | None = None
     lng: float | None = None
+    #: Area picked from ``public.areas``; unset -> the landmark matcher prices it.
+    area_slug: str | None = Field(default=None, pattern=AREA_SLUG_PATTERN)
+    address_type: Literal["home", "work"] = "home"
 
 
 class FulfilmentStepRequest(BaseModel):
@@ -241,6 +265,28 @@ class GroupFulfilmentResult(BaseModel):
     delivery_fee_ngwee: int
     subtotal_ngwee: int
     pickup_location: PickupLocationOut | None = None
+    #: customer | vendor | vendor_self | platform (logistics phase 1).
+    delivery_funding: Literal["customer", "vendor", "vendor_self", "platform"] = "customer"
+    #: Zone fee the customer does NOT pay because the vendor or platform funds it.
+    delivery_waived_ngwee: int = 0
+
+
+class DeliveryPromiseOut(BaseModel):
+    """ "Order before 2 pm, get it today": the promised day and window (Lusaka clock)."""
+
+    day: Literal["today", "tomorrow", "later"]
+    date: str
+    window_start: str
+    window_end: str
+
+    @classmethod
+    def of(cls, promise: DeliveryPromise) -> DeliveryPromiseOut:
+        return cls(
+            day=promise.day,
+            date=promise.delivery_date.isoformat(),
+            window_start=promise.window_start.strftime("%H:%M"),
+            window_end=promise.window_end.strftime("%H:%M"),
+        )
 
 
 class FulfilmentStepResponse(BaseModel):
@@ -254,6 +300,11 @@ class FulfilmentStepResponse(BaseModel):
     platform_fee_ngwee: int = 0
     resolved_zone_key: str | None = None
     pickup_only: bool = False
+    delivery_promise: DeliveryPromiseOut | None = None
+    #: Display name of the delivery area (picked or recognised), if any.
+    delivery_area_name: str | None = None
+    #: True when the charged fee is the area-pair fee (``area_pricing_live``).
+    area_priced: bool = False
 
 
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -420,11 +471,18 @@ def compute_group_delivery_fee_ngwee(
     subtotal_ngwee: int,
     zone_key: str | None,
     zone_fees: dict[str, int],
-    free_delivery_threshold_ngwee: int,
+    free_delivery_threshold_ngwee: int | None = None,
 ) -> int:
+    """The zone fee for one delivered vendor group, before funding rules.
+
+    The per-vendor "free above K200" rule was retired on 2026-11-13 (logistics
+    phase 1): ``free_delivery_threshold_ngwee`` and ``subtotal_ngwee`` are
+    accepted for call compatibility and ignored. Who pays (customer, vendor
+    free delivery, automatic free delivery) is decided by
+    ``app.services.logistics.delivery_pricing.price_delivery_groups``.
+    """
+    del subtotal_ngwee, free_delivery_threshold_ngwee
     if zone_key is None:
-        return 0
-    if subtotal_ngwee >= free_delivery_threshold_ngwee:
         return 0
     return zone_fees.get(zone_key, 0)
 
@@ -549,6 +607,70 @@ def resolve_address_zone(
                 },
             )
     return zone
+
+
+def area_zone(
+    service: ServiceRoleClient, zones: dict[str, dict[str, Any]], area_slug: str | None
+) -> str | None:
+    """Zone of a picked area, when the area is active and its zone is active."""
+    if not area_slug:
+        return None
+    response = (
+        service.client.table("areas")
+        .select("zone_key")
+        .eq("slug", area_slug)
+        .eq("active", True)
+        .maybe_single()
+        .execute()
+    )
+    data = _extract_data(response)
+    zone = data.get("zone_key") if isinstance(data, dict) else None
+    return zone if isinstance(zone, str) and zone in zones else None
+
+
+def _load_areas_safely(service: ServiceRoleClient) -> dict[str, Area]:
+    """Areas for the picker / pricing; empty (landmark matcher only) if unreadable."""
+    try:
+        return load_areas(service.client)
+    except Exception:  # noqa: BLE001 - the landmark matcher still prices delivery
+        logger.warning("checkout.areas_unavailable", extra={"event": "areas_unavailable"})
+        return {}
+
+
+def area_quote_for_checkout(
+    service: ServiceRoleClient,
+    *,
+    areas: dict[str, Area],
+    customer_area: Area | None,
+    delivered_vendor_ids: list[str],
+    zone_fees: dict[str, int],
+    address_type: Literal["home", "work"],
+    now: datetime,
+) -> tuple[AreaQuote | None, bool, DeliveryPromise]:
+    """(quote or None, live?, promise). A failure here never blocks a checkout."""
+    try:
+        switches = load_switches(service.client)
+    except Exception:  # noqa: BLE001 - defaults: shadow on, live off, no rain
+        logger.warning("checkout.area_switches_failed", extra={"event": "area_switches_failed"})
+        switches = PricingSwitches()
+    promise = delivery_promise(now, address_type, rain=switches.rain)
+    if not (switches.shadow or switches.live) or not delivered_vendor_ids:
+        return None, False, promise
+    try:
+        quote = quote_checkout_delivery(
+            service.client,
+            areas=areas,
+            customer_area=customer_area,
+            delivered_vendor_ids=delivered_vendor_ids,
+            zone_fees=zone_fees,
+            switches=switches,
+            address_type=address_type,
+            now=now,
+        )
+    except Exception:  # noqa: BLE001 - the zone fee still prices the order
+        logger.warning("checkout.area_pricing_failed", extra={"event": "area_pricing_failed"})
+        return None, False, promise
+    return quote, switches.live and quote.priced, promise
 
 
 def load_zone_fees(zones: dict[str, dict[str, Any]]) -> dict[str, int]:
@@ -1097,10 +1219,8 @@ async def create_checkout_session(
     line_views, ticket_lines, offer_pricing = price_unified(
         line_views, ticket_lines, service.client, customer_id=current_user.id
     )
-    vendor_groups = group_by_vendor(
-        line_views,
-        free_delivery_threshold_ngwee=_load_free_delivery_threshold(service),
-    )
+    # Logistics phase 1: no per-vendor "free above K200"; delivery is priced below.
+    vendor_groups = group_by_vendor(line_views)
     product_subtotal = (
         sum(line.line_total_ngwee for line in line_views)
         if offer_pricing is not None
@@ -1399,8 +1519,7 @@ async def validate_fulfilment_step(
     line_views, ticket_lines, _offer_pricing = price_unified(
         line_views, ticket_lines, service.client, customer_id=current_user.id
     )
-    free_threshold = _load_free_delivery_threshold(service)
-    vendor_groups = group_by_vendor(line_views, free_delivery_threshold_ngwee=free_threshold)
+    vendor_groups = group_by_vendor(line_views)
     groups_by_vendor = {group.vendor_id: group for group in vendor_groups}
     choices_by_vendor = {choice.vendor_id: choice for choice in body.groups}
 
@@ -1424,14 +1543,23 @@ async def validate_fulfilment_step(
 
     resolved_zone: str | None = None
     pickup_only = False
+    areas: dict[str, Area] = {}
+    picked_area: Area | None = None
     if delivery_requested and body.address is not None:
-        resolved_zone = resolve_address_zone(
-            service,
-            zones,
-            lat=body.address.lat,
-            lng=body.address.lng,
-            landmark=body.address.landmark,
-        )
+        areas = _load_areas_safely(service)
+        picked_area = areas.get(body.address.area_slug or "")
+        if picked_area is not None and picked_area.zone_key in zones:
+            # A picked area is priced by its own band; the landmark is directions only.
+            resolved_zone = picked_area.zone_key
+        else:
+            picked_area = None
+            resolved_zone = resolve_address_zone(
+                service,
+                zones,
+                lat=body.address.lat,
+                lng=body.address.lng,
+                landmark=body.address.landmark,
+            )
         if resolved_zone is None:
             pickup_only = True
             for choice in body.groups:
@@ -1449,6 +1577,68 @@ async def validate_fulfilment_step(
     _enforce_listing_fulfilment_options(service, groups_by_vendor, choices_by_vendor)
 
     pickup_locations = _fetch_vendor_locations(service, list(groups_by_vendor))
+    delivery_zones = {
+        vendor_id: (
+            resolved_zone if choices_by_vendor[vendor_id].fulfilment == "delivery" else None
+        )
+        for vendor_id in groups_by_vendor
+    }
+
+    def price_groups(group_fees: dict[str, int] | None = None) -> dict[str, GroupDeliveryPrice]:
+        return price_checkout_delivery(
+            service.client,
+            raw_lines=[
+                RawLine(
+                    vendor_id=line.vendor_id,
+                    listing_id=line.listing_id,
+                    qty=line.qty,
+                    unit_price_ngwee=line.unit_price_ngwee,
+                    wholesale=line.wholesale,
+                )
+                for line in line_views
+            ],
+            delivery_zones=delivery_zones,
+            zone_fees=zone_fees,
+            group_fees=group_fees,
+        )
+
+    delivery_prices = price_groups()
+    quoted_at = datetime.now(UTC)
+    area_fees: dict[str, int] = {}
+    promise_out: DeliveryPromiseOut | None = None
+    customer_area: Area | None = None
+    if resolved_zone is not None and body.address is not None:
+        delivered = sorted(v for v, zone in delivery_zones.items() if zone is not None)
+        customer_area = picked_area or resolve_customer_area(
+            areas,
+            area_slug=None,
+            landmark=body.address.landmark,
+            lat=body.address.lat,
+            lng=body.address.lng,
+        )
+        quote, live, promise = area_quote_for_checkout(
+            service,
+            areas=areas,
+            customer_area=customer_area,
+            delivered_vendor_ids=delivered,
+            zone_fees=zone_fees,
+            address_type=body.address.address_type,
+            now=quoted_at,
+        )
+        promise_out = DeliveryPromiseOut.of(promise)
+        if quote is not None:
+            if live:
+                area_fees = dict(quote.fees_by_vendor)
+                delivery_prices = price_groups(area_fees)
+            log_quote(
+                service.client,
+                quote=quote,
+                charged_fee_ngwee=sum(
+                    p.customer_fee_ngwee for v, p in delivery_prices.items() if v in delivered
+                ),
+                checkout_group_id=body.session_id,
+                mode="live" if live else "shadow",
+            )
     results: list[GroupFulfilmentResult] = []
     total_delivery_fee = 0
     subtotal = 0
@@ -1458,6 +1648,7 @@ async def validate_fulfilment_step(
         group_subtotal = group.subtotal_ngwee
         subtotal += group_subtotal
 
+        price_ = delivery_prices.get(vendor_id)
         if choice.fulfilment == "pickup":
             fee = 0
             zone_key = None
@@ -1467,12 +1658,7 @@ async def validate_fulfilment_step(
             zone_label = (
                 str(zones[zone_key].get("label")) if zone_key and zone_key in zones else None
             )
-            fee = compute_group_delivery_fee_ngwee(
-                subtotal_ngwee=group_subtotal,
-                zone_key=zone_key,
-                zone_fees=zone_fees,
-                free_delivery_threshold_ngwee=free_threshold,
-            )
+            fee = price_.customer_fee_ngwee if price_ is not None else 0
 
         total_delivery_fee += fee
         results.append(
@@ -1484,6 +1670,16 @@ async def validate_fulfilment_step(
                 delivery_fee_ngwee=fee,
                 subtotal_ngwee=group_subtotal,
                 pickup_location=pickup_locations.get(vendor_id),
+                delivery_funding=(
+                    price_.funding
+                    if price_ is not None and choice.fulfilment == "delivery"
+                    else "customer"
+                ),
+                delivery_waived_ngwee=(
+                    base_group_fee(vendor_id, zone_key, zone_fees, area_fees or None)
+                    if price_ is not None and zone_key is not None and price_.funding != "customer"
+                    else 0
+                ),
             )
         )
 
@@ -1505,11 +1701,21 @@ async def validate_fulfilment_step(
             "total_ngwee": total,
             # POST /orders re-prices from these server-recorded choices; the
             # groups a client sends there are only checked against them.
+            # A live area-pair fee is fixed for quote_ttl_minutes (default 30):
+            # POST /orders charges exactly this stored share, never a re-quote.
             "fulfilment_choices": [
                 {
                     "vendor_id": result.vendor_id,
                     "fulfilment": result.fulfilment,
                     "delivery_zone": result.delivery_zone,
+                    **(
+                        {
+                            "area_fee_ngwee": area_fees[result.vendor_id],
+                            "area_quoted_at": quoted_at.isoformat(),
+                        }
+                        if result.fulfilment == "delivery" and result.vendor_id in area_fees
+                        else {}
+                    ),
                 }
                 for result in results
             ],
@@ -1526,4 +1732,7 @@ async def validate_fulfilment_step(
         pickup_only=pickup_only,
         ticket_subtotal_ngwee=ticket_subtotal,
         platform_fee_ngwee=platform_fee,
+        delivery_promise=promise_out,
+        delivery_area_name=customer_area.name if customer_area is not None else None,
+        area_priced=bool(area_fees),
     )

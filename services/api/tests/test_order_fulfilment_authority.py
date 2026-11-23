@@ -325,9 +325,6 @@ class TestCreateOrdersEndpointAuthority:
             "app.routers.orders_create._load_delivery_zones",
             lambda _s: {"lusaka_a": {"zone_key": "lusaka_a", "fee_ngwee": 3_000}},
         )
-        monkeypatch.setattr(
-            "app.routers.orders_create._load_free_delivery_threshold", lambda _s: FREE_THRESHOLD
-        )
 
         response = _post(
             _client_with_service(service),

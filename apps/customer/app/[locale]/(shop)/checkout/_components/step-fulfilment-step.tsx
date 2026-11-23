@@ -7,24 +7,55 @@ import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
 import { Radio } from "@vergeo/ui/src/radio";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import {
+  type AddressType,
+  type DeliveryPromise,
   LUSAKA_CUTOFF_HOUR,
+  deliveryPromise,
   lusakaHour,
 } from "../../../../../lib/delivery-estimate";
 
+import { AreaPicker, type DeliveryArea } from "./area-picker";
 import { ReservationCountdown } from "./reservation-countdown";
 
 import type {
   CheckoutSession,
   CountdownLabels,
   FulfilmentGroupResult,
+  FulfilmentGuideLabels,
   FulfilmentStepLabels,
   FulfilmentTotals,
   GroupChoice,
 } from "./step-fulfilment";
+
+type ApiPromise = {
+  day: DeliveryPromise["day"];
+  date: string;
+  window_start: string;
+  window_end: string;
+};
+
+/** "12:00–14:30 today" style copy; null when the labels predate the promise keys. */
+export function promiseCopy(
+  promise: DeliveryPromise,
+  guide: FulfilmentGuideLabels | undefined,
+  formatDate: (isoDate: string) => string,
+): string | null {
+  const template =
+    promise.day === "today"
+      ? guide?.promiseTodayTemplate
+      : promise.day === "tomorrow"
+        ? guide?.promiseTomorrowTemplate
+        : guide?.promiseLaterTemplate;
+  if (!template) return null;
+  return template
+    .replace("{start}", promise.windowStart)
+    .replace("{end}", promise.windowEnd)
+    .replace("{date}", formatDate(promise.date));
+}
 
 type StepFulfilmentProps = {
   locale: string;
@@ -74,6 +105,11 @@ export function StepFulfilment({
 }: StepFulfilmentProps) {
   const router = useRouter();
   const [landmark, setLandmark] = useState("");
+  const [areaSlug, setAreaSlug] = useState<string | null>(null);
+  const [addressType, setAddressType] = useState<AddressType>("home");
+  // undefined = not loaded yet; null = failed (the landmark still prices delivery).
+  const [areas, setAreas] = useState<DeliveryArea[] | null | undefined>(undefined);
+  const [serverPromise, setServerPromise] = useState<DeliveryPromise | null>(null);
   const [choices, setChoices] = useState<GroupChoice[]>(
     session.vendor_groups.map((group) => ({
       vendor_id: group.vendor_id,
@@ -105,6 +141,25 @@ export function StepFulfilment({
     setTotals(null);
   };
 
+  const deliveryWanted = choices.some((choice) => choice.fulfilment === "delivery");
+  const areaLabels = labels.area;
+  useEffect(() => {
+    if (!deliveryWanted || !areaLabels || areas !== undefined) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const client = createApiClient({ baseUrl: getApiBaseUrl() });
+        const response = await client.request<{ areas: DeliveryArea[] }>("/public/config/areas");
+        if (!cancelled) setAreas(Array.isArray(response.areas) ? response.areas : null);
+      } catch {
+        if (!cancelled) setAreas(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [areaLabels, areas, deliveryWanted]);
+
   const handleSubmit = async () => {
     setErrorMessage(null);
     const deliveryNeeded = choices.some(
@@ -125,16 +180,15 @@ export function StepFulfilment({
       // Delivery orders require a persisted address_id on POST /orders.
       let addressId: string | null = null;
       if (deliveryNeeded) {
-        const address = await client.request<{ id: string }>(
-          "/account/addresses",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              landmark: landmark.trim(),
-              label: labels.addressLabel,
-            }),
-          },
-        );
+        const address = await client.request<{ id: string }>("/account/addresses", {
+          method: "POST",
+          body: JSON.stringify({
+            landmark: landmark.trim(),
+            label: labels.addressLabel,
+            area_slug: areaSlug ?? undefined,
+            address_type: addressType,
+          }),
+        });
         addressId = address.id;
       }
 
@@ -143,14 +197,32 @@ export function StepFulfilment({
         delivery_fee_ngwee: number;
         total_ngwee: number;
         groups: FulfilmentGroupResult[];
+        delivery_promise?: ApiPromise | null;
       }>("/checkout/steps/fulfilment", {
         method: "POST",
         body: JSON.stringify({
           session_id: session.session_id,
-          address: deliveryNeeded ? { landmark: landmark.trim() } : undefined,
+          address: deliveryNeeded
+            ? {
+                landmark: landmark.trim(),
+                area_slug: areaSlug ?? undefined,
+                address_type: addressType,
+              }
+            : undefined,
           groups: choices,
         }),
       });
+      const apiPromise = response.delivery_promise;
+      setServerPromise(
+        apiPromise
+          ? {
+              day: apiPromise.day,
+              date: apiPromise.date,
+              windowStart: apiPromise.window_start,
+              windowEnd: apiPromise.window_end,
+            }
+          : null,
+      );
       const nextTotals: FulfilmentTotals = {
         subtotal_ngwee: response.subtotal_ngwee,
         delivery_fee_ngwee: response.delivery_fee_ngwee,
@@ -199,6 +271,17 @@ export function StepFulfilment({
       (group) => group.fulfilment === "delivery" && !group.delivery_zone,
     );
   const showDispatchCutoff = Boolean(guide) && deliverySelected && !outsideZone;
+  const promise = serverPromise ?? deliveryPromise(new Date(), addressType);
+  const promiseLine = deliverySelected
+    ? promiseCopy(promise, guide, (iso) =>
+        new Intl.DateTimeFormat(`${locale}-ZM`, {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          timeZone: "UTC",
+        }).format(new Date(`${iso}T00:00:00Z`)),
+      )
+    : null;
 
   return (
     <div className="space-y-5">
@@ -231,6 +314,11 @@ export function StepFulfilment({
           <p className="font-body text-sm text-text-2">
             {afterCutoff ? guide.cutoffAfter : guide.cutoffBefore}
           </p>
+          {promiseLine ? (
+            <p className="font-body text-sm font-semibold text-text" data-testid="checkout-promise">
+              {promiseLine}
+            </p>
+          ) : null}
           {hasMadeToOrder ? (
             <p className="font-body text-xs text-text-3">
               {guide.cutoffMadeToOrder}
@@ -241,6 +329,24 @@ export function StepFulfilment({
 
       {deliverySelected ? (
         <div className="space-y-3">
+          {areaLabels && areas !== undefined ? (
+            <AreaPicker
+              areas={areas}
+              value={areaSlug}
+              onChange={(slug) => {
+                setAreaSlug(slug);
+                setTotals(null);
+                setServerPromise(null);
+              }}
+              addressType={addressType}
+              onAddressTypeChange={(type) => {
+                setAddressType(type);
+                setTotals(null);
+                setServerPromise(null);
+              }}
+              labels={areaLabels}
+            />
+          ) : null}
           <FormField
             label={labels.landmarkLabel}
             helpText={labels.landmarkHelp}
