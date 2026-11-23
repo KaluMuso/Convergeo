@@ -3,7 +3,6 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import bem from "../../../../../../packages/i18n/messages/bem/catalog.json";
@@ -12,8 +11,10 @@ import fr from "../../../../../../packages/i18n/messages/fr/catalog.json";
 import nya from "../../../../../../packages/i18n/messages/nya/catalog.json";
 import zh from "../../../../../../packages/i18n/messages/zh/catalog.json";
 
-import type { AdCreative } from "./home-feed/feed-types";
 import { HomeHeroCarousel } from "./home-hero-carousel";
+
+import type { AdCreative } from "./home-feed/feed-types";
+import type { ReactNode } from "react";
 
 vi.mock("@vergeo/ui/src/media/cloudinary-image", () => ({
   CloudinaryImage: () => <span data-testid="img" />,
