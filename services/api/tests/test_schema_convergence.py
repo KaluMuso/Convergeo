@@ -159,6 +159,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     # Area-pair delivery pricing schema + Lusaka area seed (additive).
     "20261122100200",
     "20261122100300",
+    # Web Push delivery queue + enqueue trigger (additive, reversible).
+    "20261123090000",
 ]
 
 
