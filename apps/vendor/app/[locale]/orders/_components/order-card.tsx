@@ -58,7 +58,13 @@ export type VendorDashboard = {
 };
 
 const CACHE_KEY = "vergeo5.vendor.orders.queue.v1";
-const CARD_ACTIONS: VendorActionName[] = ["confirm", "pack", "ship", "ready_for_pickup"];
+const CARD_ACTIONS: VendorActionName[] = [
+  "confirm",
+  "pack",
+  "ready_for_collection",
+  "ship",
+  "ready_for_pickup",
+];
 
 type QueueCache = {
   saved_at: string;
@@ -95,6 +101,11 @@ export function createOrdersQueueClient(getToken: () => string | null | Promise<
     },
     readyForPickup(orderId: string): Promise<OrderActionResponse> {
       return client.request<OrderActionResponse>(`/vendor/orders/${orderId}/ready-for-pickup`, {
+        method: "POST",
+      });
+    },
+    readyForCollection(orderId: string): Promise<OrderActionResponse> {
+      return client.request<OrderActionResponse>(`/vendor/orders/${orderId}/ready-for-collection`, {
         method: "POST",
       });
     },
@@ -142,6 +153,7 @@ const ACTION_LABEL_KEYS: Record<VendorActionName, string> = {
   pack: "orders.actions.pack",
   ship: "orders.actions.ship",
   ready_for_pickup: "orders.actions.ready_for_pickup",
+  ready_for_collection: "orders.actions.ready_for_collection",
 };
 
 const ACTION_PENDING_KEYS: Record<VendorActionName, string> = {
@@ -150,6 +162,7 @@ const ACTION_PENDING_KEYS: Record<VendorActionName, string> = {
   pack: "orders.actions.packing",
   ship: "orders.actions.shipping",
   ready_for_pickup: "orders.actions.markingReady",
+  ready_for_collection: "orders.actions.markingReady",
 };
 
 type OrderCardProps = {
@@ -203,6 +216,9 @@ export function OrderCard({ locale, order, onUpdated, onError }: OrderCardProps)
           break;
         case "ready_for_pickup":
           response = await queueClient.readyForPickup(order.id);
+          break;
+        case "ready_for_collection":
+          response = await queueClient.readyForCollection(order.id);
           break;
         default:
           return;

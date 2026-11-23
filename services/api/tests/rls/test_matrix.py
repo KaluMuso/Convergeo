@@ -241,6 +241,15 @@ EXPECTATIONS: TableExpectations = {
     "analytics_daily_rollup": admin_read_noop_update(),
     "analytics_search_daily": admin_read_noop_update(),
     "analytics_rollup_runs": admin_read_noop_update(),
+    # Area-pair pricing (20261122100200). Public names for the area picker
+    # (`areas_public_select` USING active, plus admin select). Writes are
+    # service_role only. `updated_at` makes the update probe a privilege check.
+    "areas": {persona: select_only() for persona in Persona},
+    # Directed road-km pairs: authenticated SELECT + admin-only policy
+    # (non-admins see zero rows → permit). No client write grant. No generic
+    # update-probe column, so `UPDATE … SET id = id WHERE false` errors on the
+    # column rather than on privilege → permit.
+    "area_distances": admin_read_noop_update(),
     "ask_cache": client_invisible(),
     "ask_spend_monthly": {
         Persona.ANON: deny_all(),
@@ -871,6 +880,19 @@ EXPECTATIONS: TableExpectations = {
             "delete": "deny",
         },
     },
+    # Shadow fee log: service_role writes every row. Authenticated SELECT is
+    # admin-only (`delivery_price_shadow_log_admin_select`); non-admins see zero
+    # rows → permit. Anon has no grant. `created_at` makes update a privilege
+    # check → deny. This is admin-read / service-write, matching the migration;
+    # it is not a zero-grant client-invisible table.
+    "delivery_price_shadow_log": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "delivery_zones": {
         Persona.ANON: {
             "select": "permit",
@@ -1025,6 +1047,15 @@ EXPECTATIONS: TableExpectations = {
             "update": "deny",
             "delete": "deny",
         },
+    },
+    # Logistics phase 1: admin SELECT policy only; writes are service-role.
+    "courier_remittances": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "intercity_rate_cards": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
     },
     # Event collaboration: party and admin SELECT only (D1); writes go through the API.
     "event_collab_organiser_prefs": {

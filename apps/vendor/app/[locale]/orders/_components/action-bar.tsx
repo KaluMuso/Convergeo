@@ -19,7 +19,8 @@ import {
 } from "./courier-status";
 import { OrderNextStepCard, OrderPaymentExplainer, OrderStatusTimeline } from "./order-guidance";
 
-export type VendorActionName = "confirm" | "reject" | "pack" | "ship" | "ready_for_pickup";
+export type VendorActionName =
+  "confirm" | "reject" | "pack" | "ship" | "ready_for_pickup" | "ready_for_collection";
 
 export type OrderItemSummary = {
   id: string;
@@ -99,6 +100,11 @@ function createOrdersClient(getToken: () => string | null | Promise<string | nul
         method: "POST",
       });
     },
+    readyForCollection(orderId: string): Promise<OrderActionResponse> {
+      return client.request<OrderActionResponse>(`/vendor/orders/${orderId}/ready-for-collection`, {
+        method: "POST",
+      });
+    },
   };
 }
 
@@ -115,6 +121,7 @@ const ACTION_LABEL_KEYS: Record<VendorActionName, string> = {
   pack: "orders.actions.pack",
   ship: "orders.actions.ship",
   ready_for_pickup: "orders.actions.ready_for_pickup",
+  ready_for_collection: "orders.actions.ready_for_collection",
 };
 
 const ACTION_PENDING_KEYS: Record<VendorActionName, string> = {
@@ -123,6 +130,7 @@ const ACTION_PENDING_KEYS: Record<VendorActionName, string> = {
   pack: "orders.actions.packing",
   ship: "orders.actions.shipping",
   ready_for_pickup: "orders.actions.markingReady",
+  ready_for_collection: "orders.actions.markingReady",
 };
 
 export function OrderActionBar({
@@ -175,6 +183,9 @@ export function OrderActionBar({
           break;
         case "ready_for_pickup":
           response = await ordersClient.readyForPickup(orderId);
+          break;
+        case "ready_for_collection":
+          response = await ordersClient.readyForCollection(orderId);
           break;
       }
       setExpandedAction(null);

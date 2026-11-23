@@ -98,6 +98,7 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261113120500",
     # In-app notification center (additive, reversible).
     "20261113130000",
+    # Rate-limit scope re-sync: notification/checkout-group scopes (additive, reversible).
     # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000",
     # Listing fulfilment options + Class D may be sold new (additive, reversible).
@@ -151,7 +152,15 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261117010300",
     # Plan limits on active listings, trials, paid extras (additive, reversible).
     "20261117020000",
+    # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
+    # intercity reference rate cards (additive).
+    "20261122100000",
+    "20261122100100",
+    # Area-pair delivery pricing schema + Lusaka area seed (additive).
+    "20261122100200",
+    "20261122100300",
 ]
+
 
 def _module() -> Any:
     spec = importlib.util.spec_from_file_location("schema_convergence", MODULE_PATH)
@@ -193,7 +202,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 189
+    assert len(sql_files) == len(migrations) == 193
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -242,7 +251,9 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     points_digest = ["20261117010100", "20261117010200"]
     never_silent = ["20261117010300"]
     plan_limits = ["20261117020000"]
-    assert actual_versions[-50:] == (
+    logistics = ["20261122100000", "20261122100100"]
+    area_pricing = ["20261122100200", "20261122100300"]
+    assert actual_versions[-54:] == (
         repairs
         + post_repair
         + queued_features
@@ -268,6 +279,8 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + points_digest
         + never_silent
         + plan_limits
+        + logistics
+        + area_pricing
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 
@@ -815,9 +828,7 @@ def test_preflight_adapter_forbids_manifest_self_mutation() -> None:
 def test_deploy_staging_runs_preflight_before_db_push() -> None:
     workflow = DEPLOY_STAGING_WORKFLOW.read_text(encoding="utf-8")
     preflight = workflow.index("preflight-staging-schema-convergence.sh")
-    routing = workflow.index(
-        "unset PGHOST PGHOSTADDR PGPORT PGSERVICE PGSERVICEFILE PGOPTIONS"
-    )
+    routing = workflow.index("unset PGHOST PGHOSTADDR PGPORT PGSERVICE PGSERVICEFILE PGOPTIONS")
     adoption = workflow.index("python3 scripts/ci/guard_shared_service_adoption.py")
     push = workflow.index('supabase db push --db-url "${SUPABASE_DB_URL}" --include-all')
     reconcile = workflow.index("reconcile-staging-migrations.sh")

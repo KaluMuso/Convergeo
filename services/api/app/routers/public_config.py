@@ -8,6 +8,7 @@ Routes (auto-discovered via the module-level ``router``):
 * ``GET /public/config/storefront`` — read-only storefront display thresholds from
   ``platform_config`` (free-delivery threshold, low-stock threshold) so the web UI
   never re-hard-codes values the API enforces.
+* ``GET /public/config/areas`` — Lusaka delivery areas for the address picker.
 """
 
 from __future__ import annotations
@@ -17,7 +18,6 @@ from decimal import Decimal
 from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
-from app.routers.checkout import DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
 from app.schemas.base import StrictModel
 from app.services.coupons.store import (
     BIRTHDAY_FLAG,
@@ -25,6 +25,7 @@ from app.services.coupons.store import (
     GIFT_ORDERS_FLAG,
     flag_enabled,
 )
+from app.services.logistics.delivery_pricing import DEFAULT_AUTO_FREE_THRESHOLD_NGWEE
 from fastapi import APIRouter, Depends, Response
 from pydantic import Field
 
@@ -114,6 +115,7 @@ async def get_public_commission_rates(
 
 PUBLIC_STOREFRONT_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=60"
 FREE_DELIVERY_THRESHOLD_KEY = "free_delivery_threshold_ngwee"
+AUTO_FREE_DELIVERY_THRESHOLD_KEY = "auto_free_delivery_threshold_ngwee"
 LOW_STOCK_THRESHOLD_KEY = "low_stock_threshold"
 # Mirrors the default used by the low-stock n8n job (internal_n8n.py).
 DEFAULT_LOW_STOCK_THRESHOLD = 5
@@ -121,6 +123,8 @@ DEFAULT_LOW_STOCK_THRESHOLD = 5
 
 class PublicStorefrontConfigResponse(StrictModel):
     free_delivery_threshold_ngwee: int = Field(ge=0)
+    #: Retail basket at/above which delivery is free automatically (< 500 kg).
+    auto_free_delivery_threshold_ngwee: int = Field(ge=0)
     low_stock_threshold: int = Field(ge=0)
     #: Growth features (default OFF). The API enforces each flag again on every call.
     coupons_enabled: bool = False
@@ -153,8 +157,11 @@ async def get_public_storefront_config(
     client = service_client.client
     response.headers["Cache-Control"] = PUBLIC_STOREFRONT_CACHE_CONTROL
     return PublicStorefrontConfigResponse(
-        free_delivery_threshold_ngwee=_read_config_int(
-            client, FREE_DELIVERY_THRESHOLD_KEY, DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
+        # Per-vendor "free delivery above K200" is retired (logistics phase 1):
+        # 0 tells the cart to show no per-vendor free-delivery progress.
+        free_delivery_threshold_ngwee=0,
+        auto_free_delivery_threshold_ngwee=_read_config_int(
+            client, AUTO_FREE_DELIVERY_THRESHOLD_KEY, DEFAULT_AUTO_FREE_THRESHOLD_NGWEE
         ),
         low_stock_threshold=_read_config_int(
             client, LOW_STOCK_THRESHOLD_KEY, DEFAULT_LOW_STOCK_THRESHOLD
@@ -163,3 +170,42 @@ async def get_public_storefront_config(
         gift_orders_enabled=flag_enabled(service_client, GIFT_ORDERS_FLAG),
         birthday_greetings_enabled=flag_enabled(service_client, BIRTHDAY_FLAG),
     )
+
+
+PUBLIC_AREAS_CACHE_CONTROL = "public, s-maxage=3600, stale-while-revalidate=600"
+
+
+class PublicArea(StrictModel):
+    slug: str
+    name: str
+    aliases: list[str] = Field(default_factory=list)
+
+
+class PublicAreasResponse(StrictModel):
+    areas: list[PublicArea]
+
+
+@router.get("/areas", response_model=PublicAreasResponse)
+async def get_public_areas(
+    response: Response,
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> PublicAreasResponse:
+    """Lusaka delivery areas for the address-form picker (names only, no prices)."""
+    rows = (
+        service_client.client.table("areas")
+        .select("slug, name, aliases")
+        .eq("active", True)
+        .order("name")
+        .execute()
+    ).data
+    areas = [
+        PublicArea(
+            slug=str(row["slug"]),
+            name=str(row["name"]),
+            aliases=[a for a in row.get("aliases") or [] if isinstance(a, str)],
+        )
+        for row in (rows if isinstance(rows, list) else [])
+        if isinstance(row, dict) and isinstance(row.get("slug"), str) and row.get("name")
+    ]
+    response.headers["Cache-Control"] = PUBLIC_AREAS_CACHE_CONTROL
+    return PublicAreasResponse(areas=areas)

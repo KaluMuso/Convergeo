@@ -250,9 +250,22 @@ def test_available_actions_placed_includes_confirm_and_reject() -> None:
     assert "ship" not in actions
 
 
-def test_available_actions_processing_delivery_includes_ship_only() -> None:
+def test_available_actions_processing_delivery_includes_ship_and_ready_for_collection() -> None:
     actions = _available_vendor_actions(status="processing", fulfilment="delivery")
-    assert actions == ["ship"]
+    assert actions == ["ship", "ready_for_collection"]
+
+
+def test_ready_delivery_order_waits_for_courier_not_counter_handover() -> None:
+    # Logistics phase 1: a delivery order marked ready is collected by the rider;
+    # it can never be "picked up" at the counter, and courier dispatch hides ship.
+    assert _available_vendor_actions(status="ready", fulfilment="delivery") == ["ship"]
+    assert (
+        _available_vendor_actions(status="ready", fulfilment="delivery", courier_dispatch=True)
+        == []
+    )
+    assert _available_vendor_actions(status="processing", fulfilment="pickup") == [
+        "ready_for_pickup"
+    ]
 
 
 def test_available_actions_processing_pickup_includes_ready_for_pickup() -> None:
@@ -491,4 +504,5 @@ def test_action_event_map_covers_all_vendor_actions() -> None:
         "pack",
         "ship",
         "ready_for_pickup",
+        "ready_for_collection",
     }
