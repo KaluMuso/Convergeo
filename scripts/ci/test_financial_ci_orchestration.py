@@ -90,8 +90,9 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 2 reviewed: Convergeo Points ledger + weekly seller digest (additive, flag-gated).
         # + 2 reviewed: logistics phase 1 + intercity reference rate cards (additive).
         # + 2 reviewed: area-pair delivery pricing schema + area seed (additive).
-        self.assertEqual(len(runner.FORWARD), 66)
-        self.assertEqual(len(set(runner.FORWARD)), 66)
+        # + 1 reviewed: Web Push delivery queue + enqueue trigger (additive, reversible).
+        self.assertEqual(len(runner.FORWARD), 67)
+        self.assertEqual(len(set(runner.FORWARD)), 67)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

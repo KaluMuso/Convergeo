@@ -3375,6 +3375,8 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "checkout_ticket_holds": client_invisible(),
+    # Web Push delivery queue (20261123090000): service-role only (FORCE RLS, no client grants).
+    "web_push_deliveries": client_invisible(),
     # Free events / services (#813): SELECT-only grants with owner, organiser /
     # provider and admin read policies; writes go through the API (service role).
     "event_rsvps": {
