@@ -103,6 +103,7 @@ const STATIC_SECURITY_HEADERS = buildStaticSecurityHeaders({
 });
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   // analytics_v2 client switch (Convergeo Intelligence 1A-04). Always defined so it is
   // inlined as a build-time constant: when unset ("") the v2 tracking code is dead and
   // the minifier drops it from every route bundle.
@@ -129,9 +130,7 @@ const nextConfig: NextConfig = {
   },
   // "Directory" was renamed to "Vendors" (owner, Nov 2026); keep old links working.
   async redirects() {
-    return [
-      { source: "/:locale/directory", destination: "/:locale/vendors", permanent: true },
-    ];
+    return [{ source: "/:locale/directory", destination: "/:locale/vendors", permanent: true }];
   },
   async headers() {
     // Report-only CSP (with per-request nonce) is applied in middleware.ts only.
