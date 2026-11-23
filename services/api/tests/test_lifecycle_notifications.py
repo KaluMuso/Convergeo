@@ -217,7 +217,9 @@ def test_payment_failed_hook_never_changes_the_outcome(
     monkeypatch.setattr(
         state,
         "_load_payment",
-        lambda *_a, **_k: SimpleNamespace(status=state.PaymentStatus.USSD_PUSHED, raw={}, amount_ngwee=10000, rail="momo"),
+        lambda *_a, **_k: SimpleNamespace(
+            status=state.PaymentStatus.USSD_PUSHED, raw={}, amount_ngwee=10000, rail="momo"
+        ),
     )
     monkeypatch.setattr(state, "transition_payment", lambda *_a, **_k: sentinel)
     monkeypatch.setattr(lc, "notify_payment_failed", notify)
