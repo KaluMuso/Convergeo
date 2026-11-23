@@ -29,6 +29,8 @@ type CardSession = {
   widget_script_url: string;
   customer: WidgetCustomer;
   service_job_id?: string | null;
+  /** Who bears Lenco's collection fee (API config; "customer" by default). */
+  bearer?: "customer" | "merchant";
 };
 
 type VerifyResult = {
@@ -52,6 +54,7 @@ type LencoPayConfig = {
   amount: string;
   currency: string;
   label: string;
+  bearer?: "customer" | "merchant";
   channels: Array<"card" | "mobile-money">;
   customer: {
     firstName: string;
@@ -202,6 +205,8 @@ export default function CardCheckoutPage() {
         amount: cardSession.amount_major,
         currency: cardSession.currency,
         label: t("widgetLabel"),
+        // Older API responses omit it; the widget then uses its own default.
+        ...(cardSession.bearer ? { bearer: cardSession.bearer } : {}),
         channels: ["card"],
         customer: {
           firstName: cardSession.customer.first_name,

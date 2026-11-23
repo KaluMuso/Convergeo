@@ -231,6 +231,7 @@
     "payment": {
       "card": "Debit kapena credit card",
       "cardExplainer": "Mukatha kuyika order, mukamaliza card payment pa Lenco secure hosted page. Convergeo siimaona zinthu za card yanu.",
+      "providerFeeNote": "Ndalama zochepa za kampani ya mobile money kapena ya card zimawonjezeredwa mukavomereza kulipira.",
       "cod": "Cash ikafika",
       "codIneligible": "Cash on delivery ili yokha pa ma-order mpaka {cap}.",
       "codRejected": "Cash on delivery silipo pa total iyi ya order",

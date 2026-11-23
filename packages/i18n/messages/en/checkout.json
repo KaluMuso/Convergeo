@@ -232,6 +232,7 @@
       "countryCode": "Country code",
       "nationalNumber": "Mobile number",
       "cardExplainer": "After you order, you pay on a safe card page run by Lenco, our payment partner. We never see your card number.",
+      "providerFeeNote": "A small transaction fee from your mobile money or card provider is added when you approve the payment.",
       "codIneligible": "You can pay when it arrives only for orders up to {cap}.",
       "continue": "Continue",
       "loading": "Please wait…",

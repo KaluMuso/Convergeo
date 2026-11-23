@@ -65,7 +65,7 @@ class LencoCollectionRequest(StrictModel):
     phone: str
     operator: CollectionOperator
     country: str = "zm"
-    bearer: str = "merchant"
+    bearer: Literal["customer", "merchant"] = "customer"
 
 
 class LencoMobileMoneyDetails(StrictModel):
