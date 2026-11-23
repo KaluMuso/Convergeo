@@ -1,6 +1,15 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+
 import { SearchInput, type SearchInputLabels } from "./search/search-input";
+
+/** In-page search on `/{locale}/search` — hide header field to avoid duplicates. */
+function isLocaleSearchPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  const segments = pathname.split("/").filter(Boolean);
+  return segments.at(-1) === "search";
+}
 
 type DesktopHeaderSearchProps = {
   locale: string;
@@ -12,11 +21,12 @@ type DesktopHeaderSearchProps = {
  * Desktop sticky header search with live suggestions (audit §4.2 / F04).
  * Wraps the shared SearchInput in compact header chrome.
  */
-export function DesktopHeaderSearch({
-  locale,
-  labels,
-  askLabel,
-}: DesktopHeaderSearchProps) {
+export function DesktopHeaderSearch({ locale, labels, askLabel }: DesktopHeaderSearchProps) {
+  const pathname = usePathname();
+  if (isLocaleSearchPath(pathname)) {
+    return null;
+  }
+
   return (
     <SearchInput
       locale={locale}

@@ -294,7 +294,7 @@ describe("release handoff workflow contract", () => {
     assert.match(dispatch, /source_run_id:/);
     assert.match(dispatch, /source_run_attempt:/);
     assert.doesNotMatch(dispatch, /Override E2E_BASE_URL|expect_sha:|vendor_base_url:/);
-    assert.match(source, /actions\/github-script@v8/);
+    assert.match(source, /actions\/github-script@v9/);
     assert.match(source, /github_handoff_metadata\.cjs/);
     assert.match(adapter, /downloadArtifact/);
     assert.match(adapter, /\^sha256:\[0-9a-f\]\{64\}\$/);

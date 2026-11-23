@@ -63,6 +63,8 @@ from app.services.payments.base import (
     ProviderOutcome,
     QueryStatusRequest,
 )
+from app.services.payments.bearer import get_collection_fee_bearer, net_collected_ngwee
+from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.money import SUPPORTED_CURRENCY, major_str_to_ngwee
 from app.services.payments.references import make_order_reference
 
@@ -550,6 +552,8 @@ def apply_observation(
     provider_reference: object,
     source: Literal["webhook", "status_query", "initiation"],
     failure_reason: str | None = None,
+    fee: object = None,
+    bearer: object = None,
 ) -> ObservationOutcome | None:
     """Drive one attempt from a verified provider observation. Idempotent.
 
@@ -562,6 +566,12 @@ def apply_observation(
     provider_ref = provider_reference if isinstance(provider_reference, str) else None
 
     observed, currency_ok = _observed_ngwee(amount_major, currency)
+    if observed is not None:
+        # bearer=customer: a payload folding the payer's fee into ``amount`` still
+        # settles the attempt's exact amount (never the fee).
+        observed = net_collected_ngwee(
+            observed, expected_ngwee=attempt.amount_ngwee, fee=fee, bearer=bearer
+        )
     if incoming == "pushed" and attempt.status == "initiated":
         _transition_attempt(
             attempt, "pushed", actor_id=SYSTEM_ACTOR_ID, note=f"Lenco {source}: pending"
@@ -886,6 +896,8 @@ def apply_webhook(*, event_name: str, data: dict[str, Any]) -> ObservationOutcom
         provider_reference=data.get("lencoReference", data.get("lenco_reference")),
         source="webhook",
         failure_reason=str(reason)[:200] if reason else None,
+        fee=data.get("fee"),
+        bearer=data.get("bearer"),
     )
 
 
@@ -1046,6 +1058,8 @@ async def _query_and_apply(attempt: DoorAttempt, strategy: PaymentStrategy) -> N
         provider_reference=result.provider_reference,
         source="status_query",
         failure_reason=result.failure_reason,
+        fee=fee_fields_from_provider_raw(result.raw)[0],
+        bearer=fee_fields_from_provider_raw(result.raw)[1],
     )
 
 
@@ -1250,6 +1264,7 @@ COMMIT;
                 amount_ngwee=attempt.amount_ngwee,
                 phone=phone_e164,
                 operator=operator,
+                bearer=get_collection_fee_bearer(),
             )
         )
     except PaymentProviderError as exc:

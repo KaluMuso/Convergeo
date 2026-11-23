@@ -16,6 +16,8 @@ from app.services.payments.base import (
     ProviderOutcome,
     QueryStatusRequest,
 )
+from app.services.payments.bearer import RAW_BEARER_KEY, get_collection_fee_bearer
+from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.references import make_order_reference
 from app.services.payments.registry import LENCO_PROVIDER, get
 from app.services.payments.state import (
@@ -86,6 +88,8 @@ async def initiate_checkout_payment(
         raise AppError(
             code="unsupported_rail", message="Use the hosted card session", http_status=422
         )
+    # Resolve before claiming: an invalid bearer config must not leave a claimed row.
+    bearer = get_collection_fee_bearer()
     payment_id = str(uuid4())
     lenco_reference = make_order_reference(request.checkout_group_id, attempt=payment_id)
     claimed = claim_payment_attempt(
@@ -95,7 +99,7 @@ async def initiate_checkout_payment(
         payment_id=payment_id,
         rail=request.rail,
         reference=lenco_reference,
-        raw={"payer_phone": request.phone},
+        raw={"payer_phone": request.phone, RAW_BEARER_KEY: bearer},
     )
     amount_ngwee = int(claimed["amount_ngwee"])
 
@@ -107,6 +111,7 @@ async def initiate_checkout_payment(
                 amount_ngwee=amount_ngwee,
                 phone=request.phone,
                 operator=request.rail,
+                bearer=bearer,
             )
         )
     except PaymentProviderError:
@@ -115,6 +120,7 @@ async def initiate_checkout_payment(
 
     raw_patch: dict[str, Any] = {
         "payer_phone": request.phone,
+        RAW_BEARER_KEY: bearer,
         "collection": collection.model_dump(),
     }
     if collection.provider_reference:
@@ -142,6 +148,8 @@ async def initiate_checkout_payment(
                         observation=collection_observation_from_query(
                             result, source="initiation_query"
                         ),
+                        provider_fee=fee_fields_from_provider_raw(result.raw)[0],
+                        provider_bearer=fee_fields_from_provider_raw(result.raw)[1],
                     )
         except PaymentProviderError:
             pass

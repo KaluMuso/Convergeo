@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import base64
 import binascii
-import os
+import hmac
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Final, Literal, Protocol
@@ -29,6 +29,7 @@ from app.core.ratelimit_policies import POLICIES, RateLimitPolicy, route_id
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.notifications.web_push import VapidConfig, is_allowed_endpoint
 from fastapi import APIRouter, Depends, Query, Response
 from pydantic import Field
 
@@ -36,6 +37,7 @@ router = APIRouter(tags=["notifications"])
 
 TABLE: Final = "in_app_notifications"
 PUSH_TABLE: Final = "web_push_subscriptions"
+PUSH_DELIVERIES_TABLE: Final = "web_push_deliveries"
 WEB_PUSH_FLAG: Final = "web_push"
 #: Env var NAME only — the value is set by the founder (see the design doc).
 VAPID_PUBLIC_ENV: Final = "WEB_PUSH_VAPID_PUBLIC_KEY"
@@ -400,8 +402,9 @@ def web_push_enabled(service_client: ServiceRoleClient) -> bool:
 
 
 def _vapid_public_key() -> str | None:
-    value = os.environ.get(VAPID_PUBLIC_ENV, "").strip()
-    return value or None
+    """Public key only when the sender is fully configured (all three env vars)."""
+    config = VapidConfig.from_env()
+    return config.public_key if config is not None else None
 
 
 def _require_web_push(service_client: ServiceRoleClient) -> None:
@@ -429,21 +432,75 @@ async def subscribe_push(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> Response:
-    """Store the caller's subscription. Re-subscribing a device moves it to the caller."""
+    """Store the caller's subscription.
+
+    Never deletes another user's row. An endpoint already owned by someone else is
+    transferred to the caller only when the request presents that subscription's
+    exact browser-generated keys (``p256dh`` + ``auth``): the auth secret is known
+    only to the browser that created the subscription and to us, so a caller who
+    merely learned the endpoint URL cannot claim it. Pending alerts queued for the
+    previous owner are dropped on transfer (the sender also re-checks ownership).
+    """
     _require_web_push(service_client)
     _require_audience(current_user, body.audience)
     _limit(service_client, current_user.id, PUSH_POLICY)
-    table = service_client.client.table(PUSH_TABLE)
-    table.delete().eq("endpoint", body.endpoint).execute()
-    row: dict[str, str] = {
-        "user_id": current_user.id,
-        "audience": body.audience,
-        "endpoint": body.endpoint,
-        "p256dh": body.keys.p256dh,
-    }
-    row["auth_secret"] = body.keys.auth
-    service_client.client.table(PUSH_TABLE).insert(row).execute()
+    if not is_allowed_endpoint(body.endpoint):
+        raise AppError(
+            code="validation_error",
+            message="Unsupported push service",
+            http_status=422,
+            details={"message_key": "notifications.center.push.failed"},
+        )
+    table = service_client.client.table
+    existing = _rows(
+        table(PUSH_TABLE)
+        .select("id, user_id, p256dh, auth_secret")
+        .eq("endpoint", body.endpoint)
+        .limit(1)
+        .execute()
+    )
+    keys: dict[str, str] = {"audience": body.audience, "p256dh": body.keys.p256dh}
+    keys["auth_secret"] = body.keys.auth
+    if not existing:
+        try:
+            table(PUSH_TABLE).insert(
+                {"user_id": current_user.id, "endpoint": body.endpoint, **keys}
+            ).execute()
+        except Exception as exc:  # unique(endpoint) race with another request
+            raise _endpoint_conflict() from exc
+        return Response(status_code=204)
+    row = existing[0]
+    owner = str(row.get("user_id"))
+    if owner == current_user.id:
+        table(PUSH_TABLE).update(keys).eq("id", row["id"]).eq("user_id", owner).execute()
+        return Response(status_code=204)
+    same_keys = hmac.compare_digest(
+        str(row.get("p256dh") or "").encode(), body.keys.p256dh.encode()
+    ) and hmac.compare_digest(str(row.get("auth_secret") or "").encode(), body.keys.auth.encode())
+    if not same_keys:
+        raise _endpoint_conflict()
+    moved = _rows(
+        table(PUSH_TABLE)
+        .update({"user_id": current_user.id, "audience": body.audience})
+        .eq("id", row["id"])
+        .eq("user_id", owner)
+        .execute()
+    )
+    if not moved:
+        raise _endpoint_conflict()
+    table(PUSH_DELIVERIES_TABLE).delete().eq("subscription_id", row["id"]).in_(
+        "status", ["pending", "sending"]
+    ).execute()
     return Response(status_code=204)
+
+
+def _endpoint_conflict() -> AppError:
+    return AppError(
+        code="push_endpoint_conflict",
+        message="This push subscription belongs to another account",
+        http_status=409,
+        details={"message_key": "notifications.center.push.failed"},
+    )
 
 
 @router.post("/me/push-subscriptions/remove", status_code=204)

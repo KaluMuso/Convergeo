@@ -326,6 +326,9 @@ def refund_reversal(*, original_legs: tuple[PostingLeg, ...]) -> TemplateResult:
 def lenco_fee(*, fee_ngwee: int) -> TemplateResult:
     """Provider fee Lenco deducts from our merchant account (bearer=merchant).
 
+    Never used for a customer-borne collection fee (bearer=customer): Lenco then
+    settles the full amount and there is no platform expense to book.
+
     Debit fees (+fee) — platform expense.
     Credit platform_cash (−fee) — the Lenco balance is lower by the fee.
 

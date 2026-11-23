@@ -126,6 +126,8 @@ REVIEWED_SUFFIX = (
     # address area/type, settings; seed of 63 Lusaka areas (additive).
     "20261122100200_delivery_area_pricing.sql",
     "20261122100300_delivery_areas_seed.sql",
+    # Web Push delivery queue + flag-gated enqueue trigger (additive, reversible).
+    "20261123090000_web_push_deliveries.sql",
     # Admin catalog control holds + typed ad targets (additive, documented down).
     "20261123100000_catalog_moderation_holds_and_ad_targets.sql",
 )
@@ -681,9 +683,9 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 194 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 195 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 194 source migrations",
+            "disposable copy does not match 195 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
@@ -766,10 +768,10 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                         raise RehearsalError(
                             "failure cleanup did not restore full history"
                         )
-                    print("failure_cleanup|restored_194|PASS")
+                    print("failure_cleanup|restored_195|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 194 migrations",
+                        "error: disposable failure cleanup could not restore 195 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -1139,7 +1141,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 194 migrations"
+                    "normal full replay did not restore 195 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")

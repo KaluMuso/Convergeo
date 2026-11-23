@@ -18,6 +18,14 @@ from app.services.payments.base import (
     ProviderOutcome,
     QueryStatusRequest,
 )
+from app.services.payments.bearer import (
+    RAW_BEARER_KEY,
+    CollectionFeeBearer,
+    get_collection_fee_bearer,
+    normalize_bearer,
+    normalize_observation_amount,
+    resolve_collection_bearer,
+)
 from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.initiate import claim_payment_attempt, require_payments_enabled
 from app.services.payments.lenco.config import LencoEnvironment, get_lenco_environment
@@ -78,6 +86,8 @@ class CreateCardSessionResponse(StrictModel):
     widget_script_url: str
     customer: WidgetCustomerOut
     service_job_id: str | None = None
+    # Passed to LencoPay.getPaid({bearer}); "customer" = payer pays Lenco's fee.
+    bearer: CollectionFeeBearer
 
 
 class VerifyCardReturnRequest(StrictModel):
@@ -475,8 +485,15 @@ async def verify_card_payment_return(
                 .execute()
             )
             identity = (receipt or {}).get("receipt_identity", {})
-            verified_identity = collection_observation_from_query(
-                query_result, source="card_return"
+            fee_raw, bearer_raw = fee_fields_from_provider_raw(query_result.raw)
+            verified_identity = (
+                normalize_observation_amount(
+                    collection_observation_from_query(query_result, source="card_return"),
+                    expected_ngwee=int(settled["amount_ngwee"]),
+                    fee=fee_raw,
+                    bearer=resolve_collection_bearer(bearer_raw, settled.get("raw") or {}),
+                )
+                or {}
             )
             if (
                 identity.get("merchant_reference") != query_result.reference
@@ -578,6 +595,8 @@ async def create_card_widget_session(
     profile = _load_customer_profile(service_client, customer_id=customer_id)
     email = lookup_user_email(service_client, user_id=customer_id)
     customer = _widget_customer(profile, email=email)
+    # Resolve before claiming: an invalid bearer config must not leave a claimed row.
+    bearer = get_collection_fee_bearer()
 
     payment_id = str(uuid4())
     # Salt with this attempt's payment_id so a retried card session on the same
@@ -597,7 +616,8 @@ async def create_card_widget_session(
             "widget": {
                 "script_url": _widget_script_url(),
                 "created_at": datetime.now(UTC).isoformat(),
-            }
+            },
+            RAW_BEARER_KEY: bearer,
         },
     }
     claim_payment_attempt(
@@ -626,6 +646,7 @@ async def create_card_widget_session(
         amount_ngwee=total_raw,
         widget_script_url=_widget_script_url(),
         customer=customer,
+        bearer=bearer,
     )
 
 
@@ -682,6 +703,9 @@ async def get_card_session(
         widget_script_url=_widget_script_url(),
         service_job_id=str(obligation["job_id"]) if obligation else None,
         customer=customer,
+        # Resume with the bearer this attempt was created with (legacy rows: config).
+        bearer=normalize_bearer((payment.get("raw") or {}).get(RAW_BEARER_KEY))
+        or get_collection_fee_bearer(),
     )
 
 

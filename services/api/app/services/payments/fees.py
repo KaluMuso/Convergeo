@@ -2,8 +2,11 @@
 
 Lenco deducts its fee from our merchant account:
 
-* collections with ``bearer=merchant`` (the default): the customer pays ``amount``
-  and our balance rises by ``amount − fee``;
+* collections with ``bearer=merchant`` (rollback setting): the customer pays
+  ``amount`` and our balance rises by ``amount − fee``;
+* collections with ``bearer=customer`` (the default, ``LENCO_COLLECTION_FEE_BEARER``):
+  the customer pays ``amount + fee``, our balance rises by exactly ``amount`` and
+  nothing is booked here (see ``payments.bearer``);
 * transfers (vendor payouts and customer refund payouts): our balance falls by
   ``amount + fee``.
 

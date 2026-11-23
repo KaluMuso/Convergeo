@@ -411,6 +411,11 @@ export function TicketCheckout({
             ) : (
               <p>{labels.payment.cardExplainer}</p>
             )}
+            {labels.payment.providerFeeNote ? (
+              <p className="text-xs text-text-2">
+                {labels.payment.providerFeeNote}
+              </p>
+            ) : null}
           </fieldset>
           <Button
             type="button"
