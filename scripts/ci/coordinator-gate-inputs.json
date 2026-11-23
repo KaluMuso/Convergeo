@@ -601,7 +601,8 @@
     "20261117010100_loyalty_points.sql": "a622dc1b4497a6c7baa1b1e90c1bb99723572b8f4770c63752cd53532fdeee90",
     "20261117010200_vendor_weekly_digest.sql": "fe0837fb6d9dc42339684b8921f32ed7c2e1310cb21aaf300e362c490c6b1b5f",
     "20261117010300_in_app_never_silent_events.sql": "351190517f3bc88e297d623596ab2aa5e08d98db3d20a954bdbd3317021a644c",
-    "20261117020000_plan_limits_trials_extras.sql": "aaaed2737bb9b20b70eac86fa545b74e4a78af0984896dfd15078bccfdae8a13"
+    "20261117020000_plan_limits_trials_extras.sql": "aaaed2737bb9b20b70eac86fa545b74e4a78af0984896dfd15078bccfdae8a13",
+    "20261123100000_catalog_moderation_holds_and_ad_targets.sql": "730cf3da33122e93f3ea196eb904193c0b64e07a8f82fd4b550d97b7c3313e34"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
@@ -617,7 +618,7 @@
     "scripts/ci/critical-real-stack-nodes.txt": "19b1ce00d621f4fe39c521e799f31f23fdbd6d8a736e07525bee5b4444abb496",
     "scripts/ci/migration-replay.sh": "9556f94d0ab002c8eb3e2f7e200d52ccf72e56d7479489ecd7fecf2281dedaed",
     "scripts/ci/run-critical-real-stack.sh": "cd904fc1a974e33ccb6c043440ff99b5367d4e83bcde62572d5e4ecd908f73f5",
-    "scripts/ci/run_financial_real_stack.py": "41f9cefd7170cb8a02c768b88f5b1521a9f9d6f16ca63d39b72b16e9ea3c4211",
+    "scripts/ci/run_financial_real_stack.py": "4dbecf9358576605ebb366b9ab8b94beeee40db6b58b92e025e3c8862c5fcb99",
     "scripts/drills/f2_collection_manifest.py": "655cdeafbaf6017870dadb9677a3e7315bc7d25f245528440048220ecb8c782e",
     "scripts/drills/f2_real_stack_report.py": "ac274ad1292f6998e17514d268c3c9bc0692730122c2ca2e46c7c76891ca75c8",
     "scripts/drills/f2_upgrade_probe.py": "d1826a771138a39671e892ed7ab907dace76bac82897c882615c581917f43486",
@@ -633,7 +634,7 @@
     "services/api/tests/rls/test_force_rls_d32.py": "e048db6d6377bc08baadc7e7315972cf865399644b2b7381c7752ff6ea9be76a",
     "services/api/tests/rls/test_intake_force_rls.py": "5538c60345b6298dd4cd2dfc3822f1bfe0fec3782f7642dfbfd7ea5943d48dc3",
     "services/api/tests/rls/test_launch_table_access.py": "67904985726b87e0605b084f21cae223e448b81a34bab8dffef7bbd3dca1510f",
-    "services/api/tests/rls/test_matrix.py": "f4637b47cfc4a01fe46c72a9db971804df46c7368fe2ed66eb847576ee57ac6a",
+    "services/api/tests/rls/test_matrix.py": "af5b3a506d244194c3f54b9ab591b3d5c88bcce0102fbf12ba8cf0bbed8a00c9",
     "services/api/tests/rls/test_no_untested_tables.py": "0b98732ac77e83dbcb94db6b968d2cd7c30da6c8b91f882134f311d27d3abaa1",
     "services/api/tests/rls/test_privileged_function_grants.py": "edbe0a48370bd2c0d262cbe923ea34f4f842bd28ec4a2327a529f34e09d7643b",
     "services/api/tests/rls/test_review_reply_guard.py": "ce37dc42cb7b037a79cdf39afe6738c36ae3ed8f5b906d0a36104a5bb5503cad",

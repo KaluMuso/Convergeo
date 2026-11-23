@@ -21,6 +21,7 @@ from app.routers.catalog import (
     build_catalog_candidates,
     catalog_item_from_candidate,
 )
+from app.services.catalog_visibility import active_vendor_ids, visible_target_keys
 from app.services.home_feed.models import (
     AdCreativeOut,
     FeedSectionOut,
@@ -41,7 +42,7 @@ SECTION_COLUMNS = (
 PLACEMENT_COLUMNS = (
     "id, advertiser_kind, advertiser_vendor_id, advertiser_name, placement_type, "
     "image_public_id, headline, body, cta_label, cta_href, starts_at, ends_at, priority, "
-    "paid_amount_ngwee, payment_reference, status, enabled, updated_at"
+    "paid_amount_ngwee, payment_reference, status, enabled, updated_at, target_kind, target_id"
 )
 LIVE_STATUSES = frozenset({"scheduled", "active"})
 CURSOR_PREFIX = "v1."
@@ -166,8 +167,49 @@ def load_live_placements(client: Any, *, now: datetime) -> list[dict[str, Any]]:
         .execute()
     )
     live = [row for row in rows if placement_is_live(row, now=now)]
+    live = filter_placements_with_visible_targets(client, live)
     live.sort(key=_placement_order)
     return live
+
+
+def filter_placements_with_visible_targets(
+    client: Any, rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Drop placements whose target or advertiser vendor customers can no longer see.
+
+    A placement can stay ``active`` while the thing it promotes is hidden,
+    blocked, removed or its vendor suspended; it must vanish from every surface
+    in that case. Fails closed: if visibility cannot be read, targeted and
+    vendor-advertiser placements are dropped (house/external ads still serve).
+    """
+    if not rows:
+        return rows
+    refs = {
+        (str(row["target_kind"]), str(row["target_id"]))
+        for row in rows
+        if row.get("target_kind") and row.get("target_id")
+    }
+    vendor_ids = {
+        str(row["advertiser_vendor_id"])
+        for row in rows
+        if row.get("advertiser_kind") == "vendor" and row.get("advertiser_vendor_id")
+    }
+    try:
+        visible = visible_target_keys(client, refs) if refs else set()
+        vendors = active_vendor_ids(client, vendor_ids) if vendor_ids else set()
+    except Exception:
+        logger.warning("home_feed_target_visibility_failed", exc_info=True)
+        visible, vendors = set(), set()
+    kept: list[dict[str, Any]] = []
+    for row in rows:
+        if row.get("target_kind") and row.get("target_id"):
+            if (str(row["target_kind"]), str(row["target_id"])) not in visible:
+                continue
+        if row.get("advertiser_kind") == "vendor":
+            if str(row.get("advertiser_vendor_id")) not in vendors:
+                continue
+        kept.append(row)
+    return kept
 
 
 # ---------------------------------------------------------------------------

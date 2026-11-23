@@ -6,6 +6,7 @@ export type AdminNavItemKey =
   | "kyc"
   | "branches"
   | "moderation"
+  | "catalog"
   | "disputes"
   | "support"
   | "intake"
@@ -55,6 +56,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "kyc", href: "kyc" },
       { key: "branches", href: "branches" },
       { key: "moderation", href: "moderation" },
+      { key: "catalog", href: "catalog" },
       { key: "disputes", href: "disputes" },
       { key: "support", href: "support" },
       { key: "intake", href: "intake" },

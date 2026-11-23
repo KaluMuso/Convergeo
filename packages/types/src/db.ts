@@ -125,6 +125,8 @@ export type Database = {
           priority: number
           starts_at: string
           status: string
+          target_id: string | null
+          target_kind: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -148,6 +150,8 @@ export type Database = {
           priority?: number
           starts_at: string
           status?: string
+          target_id?: string | null
+          target_kind?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -171,6 +175,8 @@ export type Database = {
           priority?: number
           starts_at?: string
           status?: string
+          target_id?: string | null
+          target_kind?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -964,6 +970,51 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      catalog_moderation_holds: {
+        Row: {
+          action: string
+          actor: string | null
+          created_at: string
+          entity_id: string
+          entity_kind: string
+          from_status: string
+          id: string
+          reason: string
+          release_reason: string | null
+          released_at: string | null
+          released_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          created_at?: string
+          entity_id: string
+          entity_kind: string
+          from_status: string
+          id?: string
+          reason: string
+          release_reason?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_kind?: string
+          from_status?: string
+          id?: string
+          reason?: string
+          release_reason?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -9727,6 +9778,14 @@ export type Database = {
         Args: { p_id: string; p_scope: string }
         Returns: number
       }
+      catalog_entity_set_status: {
+        Args: { p_entity_id: string; p_kind: string; p_status: string }
+        Returns: undefined
+      }
+      catalog_entity_status_for_update: {
+        Args: { p_entity_id: string; p_kind: string }
+        Returns: string
+      }
       claim_embedding_jobs: {
         Args: { p_limit: number }
         Returns: {
@@ -9939,6 +9998,35 @@ export type Database = {
         Returns: Json
       }
       multi_branch_enabled: { Args: never; Returns: boolean }
+      moderate_catalog_entity: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_entity_id: string
+          p_kind: string
+          p_reason: string
+        }
+        Returns: {
+          action: string
+          actor: string | null
+          created_at: string
+          entity_id: string
+          entity_kind: string
+          from_status: string
+          id: string
+          reason: string
+          release_reason: string | null
+          released_at: string | null
+          released_by: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "catalog_moderation_holds"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
       normalize_zm_msisdn: { Args: { p_raw: string }; Returns: string }
       order_has_collected_money: { Args: { p_order: string }; Returns: boolean }
@@ -9997,6 +10085,34 @@ export type Database = {
       release_ask_reservation: {
         Args: { p_reservation_id: string }
         Returns: boolean
+      }
+      release_catalog_moderation: {
+        Args: {
+          p_actor: string
+          p_entity_id: string
+          p_kind: string
+          p_reason: string
+        }
+        Returns: {
+          action: string
+          actor: string | null
+          created_at: string
+          entity_id: string
+          entity_kind: string
+          from_status: string
+          id: string
+          reason: string
+          release_reason: string | null
+          released_at: string | null
+          released_by: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "catalog_moderation_holds"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       release_offer_gift_reservations: {
         Args: {
@@ -10152,6 +10268,8 @@ export type Database = {
           priority: number
           starts_at: string
           status: string
+          target_id: string | null
+          target_kind: string | null
           updated_at: string
           updated_by: string | null
         }

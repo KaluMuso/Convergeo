@@ -138,6 +138,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261117010300",
     # Plan limits on active listings, trials, paid extras (additive, reversible).
     "20261117020000",
+    # Admin catalog control holds + typed ad targets (additive, documented down).
+    "20261123100000",
 }
 
 

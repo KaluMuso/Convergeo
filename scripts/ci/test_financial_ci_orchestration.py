@@ -87,8 +87,8 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: plan limits, trials, paid extras (additive, reversible).
         # + 1 reviewed: In-app rows for never-silent lifecycle templates (additive, reversible).
         # + 2 reviewed: Convergeo Points ledger + weekly seller digest (additive, flag-gated).
-        self.assertEqual(len(runner.FORWARD), 62)
-        self.assertEqual(len(set(runner.FORWARD)), 62)
+        self.assertEqual(len(runner.FORWARD), 63)
+        self.assertEqual(len(set(runner.FORWARD)), 63)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)
