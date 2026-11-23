@@ -10345,7 +10345,6 @@ export type Database = {
         }
         Returns: Json
       }
-      multi_branch_enabled: { Args: never; Returns: boolean }
       moderate_catalog_entity: {
         Args: {
           p_action: string
@@ -10375,6 +10374,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      multi_branch_enabled: { Args: never; Returns: boolean }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
       normalize_zm_msisdn: { Args: { p_raw: string }; Returns: string }
       order_has_collected_money: { Args: { p_order: string }; Returns: boolean }
