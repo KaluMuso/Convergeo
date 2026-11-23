@@ -193,6 +193,8 @@ export type Database = {
       }
       addresses: {
         Row: {
+          address_type: string
+          area_slug: string | null
           created_at: string
           id: string
           label: string | null
@@ -204,6 +206,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          address_type?: string
+          area_slug?: string | null
           created_at?: string
           id?: string
           label?: string | null
@@ -215,6 +219,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          address_type?: string
+          area_slug?: string | null
           created_at?: string
           id?: string
           label?: string | null
@@ -225,7 +231,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "addresses_area_slug_fkey"
+            columns: ["area_slug"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       admin_roles: {
         Row: {
@@ -439,6 +453,98 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      area_distances: {
+        Row: {
+          computed_at: string
+          from_area: string
+          manual_override: boolean
+          minutes: number
+          road_km: number
+          source: string
+          to_area: string
+        }
+        Insert: {
+          computed_at?: string
+          from_area: string
+          manual_override?: boolean
+          minutes: number
+          road_km: number
+          source: string
+          to_area: string
+        }
+        Update: {
+          computed_at?: string
+          from_area?: string
+          manual_override?: boolean
+          minutes?: number
+          road_km?: number
+          source?: string
+          to_area?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "area_distances_from_area_fkey"
+            columns: ["from_area"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "area_distances_to_area_fkey"
+            columns: ["to_area"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      areas: {
+        Row: {
+          active: boolean
+          aliases: string[]
+          centroid_source: string
+          created_at: string
+          lat: number
+          lng: number
+          name: string
+          slug: string
+          updated_at: string
+          zone_key: string
+        }
+        Insert: {
+          active?: boolean
+          aliases?: string[]
+          centroid_source?: string
+          created_at?: string
+          lat: number
+          lng: number
+          name: string
+          slug: string
+          updated_at?: string
+          zone_key: string
+        }
+        Update: {
+          active?: boolean
+          aliases?: string[]
+          centroid_source?: string
+          created_at?: string
+          lat?: number
+          lng?: number
+          name?: string
+          slug?: string
+          updated_at?: string
+          zone_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "areas_zone_key_fkey"
+            columns: ["zone_key"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
+            referencedColumns: ["zone_key"]
+          },
+        ]
       }
       ask_cache: {
         Row: {
@@ -1756,6 +1862,106 @@ export type Database = {
         }
         Relationships: []
       }
+      courier_remittances: {
+        Row: {
+          amount_ngwee: number
+          courier_partner_id: string
+          created_at: string
+          id: string
+          method: string
+          note: string | null
+          received_at: string
+          recorded_by: string | null
+          reference: string
+        }
+        Insert: {
+          amount_ngwee: number
+          courier_partner_id: string
+          created_at?: string
+          id?: string
+          method: string
+          note?: string | null
+          received_at?: string
+          recorded_by?: string | null
+          reference: string
+        }
+        Update: {
+          amount_ngwee?: number
+          courier_partner_id?: string
+          created_at?: string
+          id?: string
+          method?: string
+          note?: string | null
+          received_at?: string
+          recorded_by?: string | null
+          reference?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_remittances_courier_partner_id_fkey"
+            columns: ["courier_partner_id"]
+            isOneToOne: false
+            referencedRelation: "courier_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_price_shadow_log: {
+        Row: {
+          area_fee_ngwee: number | null
+          charged_fee_ngwee: number
+          checkout_group_id: string | null
+          created_at: string
+          customer_area: string | null
+          id: string
+          mode: string
+          outcome: string
+          pickups: number
+          rain_mode: boolean
+          route_km: number | null
+          time_band: string | null
+          vendor_areas: string[]
+        }
+        Insert: {
+          area_fee_ngwee?: number | null
+          charged_fee_ngwee: number
+          checkout_group_id?: string | null
+          created_at?: string
+          customer_area?: string | null
+          id?: string
+          mode: string
+          outcome: string
+          pickups?: number
+          rain_mode?: boolean
+          route_km?: number | null
+          time_band?: string | null
+          vendor_areas?: string[]
+        }
+        Update: {
+          area_fee_ngwee?: number | null
+          charged_fee_ngwee?: number
+          checkout_group_id?: string | null
+          created_at?: string
+          customer_area?: string | null
+          id?: string
+          mode?: string
+          outcome?: string
+          pickups?: number
+          rain_mode?: boolean
+          route_km?: number | null
+          time_band?: string | null
+          vendor_areas?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_price_shadow_log_checkout_group_id_fkey"
+            columns: ["checkout_group_id"]
+            isOneToOne: false
+            referencedRelation: "checkout_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_zones: {
         Row: {
           active: boolean
@@ -1862,69 +2068,102 @@ export type Database = {
       dispatch_requests: {
         Row: {
           accepted_at: string | null
+          actual_cost_ngwee: number | null
+          attempt_no: number
           cancelled_at: string | null
           cod_amount_ngwee: number
+          cod_collected_at: string | null
+          cod_collected_method: string | null
+          cod_collected_ngwee: number | null
+          cost_recorded_at: string | null
+          cost_recorded_by: string | null
           courier_partner_id: string
           courier_reference: string | null
           created_at: string
           created_by: string | null
           delivered_at: string | null
           delivered_via: string | null
+          direction: string
           failed_at: string | null
+          failure_code: string | null
           failure_reason: string | null
           id: string
           last_notified_at: string | null
           notify_count: number
           order_id: string
           picked_up_at: string | null
+          pickup_location_id: string | null
           pod_photo_public_id: string | null
           quoted_price_ngwee: number | null
+          remittance_id: string | null
           requested_at: string
           status: string
           updated_at: string
         }
         Insert: {
           accepted_at?: string | null
+          actual_cost_ngwee?: number | null
+          attempt_no?: number
           cancelled_at?: string | null
           cod_amount_ngwee?: number
+          cod_collected_at?: string | null
+          cod_collected_method?: string | null
+          cod_collected_ngwee?: number | null
+          cost_recorded_at?: string | null
+          cost_recorded_by?: string | null
           courier_partner_id: string
           courier_reference?: string | null
           created_at?: string
           created_by?: string | null
           delivered_at?: string | null
           delivered_via?: string | null
+          direction?: string
           failed_at?: string | null
+          failure_code?: string | null
           failure_reason?: string | null
           id?: string
           last_notified_at?: string | null
           notify_count?: number
           order_id: string
           picked_up_at?: string | null
+          pickup_location_id?: string | null
           pod_photo_public_id?: string | null
           quoted_price_ngwee?: number | null
+          remittance_id?: string | null
           requested_at?: string
           status?: string
           updated_at?: string
         }
         Update: {
           accepted_at?: string | null
+          actual_cost_ngwee?: number | null
+          attempt_no?: number
           cancelled_at?: string | null
           cod_amount_ngwee?: number
+          cod_collected_at?: string | null
+          cod_collected_method?: string | null
+          cod_collected_ngwee?: number | null
+          cost_recorded_at?: string | null
+          cost_recorded_by?: string | null
           courier_partner_id?: string
           courier_reference?: string | null
           created_at?: string
           created_by?: string | null
           delivered_at?: string | null
           delivered_via?: string | null
+          direction?: string
           failed_at?: string | null
+          failure_code?: string | null
           failure_reason?: string | null
           id?: string
           last_notified_at?: string | null
           notify_count?: number
           order_id?: string
           picked_up_at?: string | null
+          pickup_location_id?: string | null
           pod_photo_public_id?: string | null
           quoted_price_ngwee?: number | null
+          remittance_id?: string | null
           requested_at?: string
           status?: string
           updated_at?: string
@@ -1942,6 +2181,20 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispatch_requests_pickup_location_id_fkey"
+            columns: ["pickup_location_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispatch_requests_remittance_id_fkey"
+            columns: ["remittance_id"]
+            isOneToOne: false
+            referencedRelation: "courier_remittances"
             referencedColumns: ["id"]
           },
         ]
@@ -4235,6 +4488,63 @@ export type Database = {
           },
         ]
       }
+      intercity_rate_cards: {
+        Row: {
+          active: boolean
+          carrier_name: string
+          confidence: string
+          created_at: string
+          destination_town: string
+          effective_from: string
+          id: string
+          large_is_minimum: boolean
+          large_parcel_ngwee: number | null
+          liability_note: string | null
+          medium_parcel_ngwee: number | null
+          origin_town: string
+          province: string
+          small_parcel_ngwee: number | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          carrier_name: string
+          confidence?: string
+          created_at?: string
+          destination_town: string
+          effective_from?: string
+          id?: string
+          large_is_minimum?: boolean
+          large_parcel_ngwee?: number | null
+          liability_note?: string | null
+          medium_parcel_ngwee?: number | null
+          origin_town?: string
+          province: string
+          small_parcel_ngwee?: number | null
+          source: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          carrier_name?: string
+          confidence?: string
+          created_at?: string
+          destination_town?: string
+          effective_from?: string
+          id?: string
+          large_is_minimum?: boolean
+          large_parcel_ngwee?: number | null
+          liability_note?: string | null
+          medium_parcel_ngwee?: number | null
+          origin_town?: string
+          province?: string
+          small_parcel_ngwee?: number | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invoice_counters: {
         Row: {
           next_no: number
@@ -5640,7 +5950,10 @@ export type Database = {
           coupon_redemption_id: string | null
           created_at: string
           customer_id: string
+          deliver_together: boolean
           delivery_fee_ngwee: number
+          delivery_funded_ngwee: number
+          delivery_funding: string
           delivery_zone: string | null
           fulfilment: string
           fx_snapshot: Json
@@ -5648,10 +5961,12 @@ export type Database = {
           is_gift: boolean
           order_lane: string
           pickup_collected_at: string | null
+          pickup_location_id: string | null
           pickup_pin_hash: string | null
           pickup_qr_secret: string | null
           pickup_token_version: number
           platform_fee_ngwee: number
+          ready_at: string | null
           status: string
           updated_at: string
           vendor_id: string
@@ -5666,7 +5981,10 @@ export type Database = {
           coupon_redemption_id?: string | null
           created_at?: string
           customer_id: string
+          deliver_together?: boolean
           delivery_fee_ngwee?: number
+          delivery_funded_ngwee?: number
+          delivery_funding?: string
           delivery_zone?: string | null
           fulfilment: string
           fx_snapshot?: Json
@@ -5674,10 +5992,12 @@ export type Database = {
           is_gift?: boolean
           order_lane?: string
           pickup_collected_at?: string | null
+          pickup_location_id?: string | null
           pickup_pin_hash?: string | null
           pickup_qr_secret?: string | null
           pickup_token_version?: number
           platform_fee_ngwee?: number
+          ready_at?: string | null
           status?: string
           updated_at?: string
           vendor_id: string
@@ -5692,7 +6012,10 @@ export type Database = {
           coupon_redemption_id?: string | null
           created_at?: string
           customer_id?: string
+          deliver_together?: boolean
           delivery_fee_ngwee?: number
+          delivery_funded_ngwee?: number
+          delivery_funding?: string
           delivery_zone?: string | null
           fulfilment?: string
           fx_snapshot?: Json
@@ -5700,10 +6023,12 @@ export type Database = {
           is_gift?: boolean
           order_lane?: string
           pickup_collected_at?: string | null
+          pickup_location_id?: string | null
           pickup_pin_hash?: string | null
           pickup_qr_secret?: string | null
           pickup_token_version?: number
           platform_fee_ngwee?: number
+          ready_at?: string | null
           status?: string
           updated_at?: string
           vendor_id?: string
@@ -5728,6 +6053,13 @@ export type Database = {
             columns: ["coupon_redemption_id"]
             isOneToOne: false
             referencedRelation: "coupon_redemptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_pickup_location_id_fkey"
+            columns: ["pickup_location_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_locations"
             referencedColumns: ["id"]
           },
           {
@@ -8643,6 +8975,7 @@ export type Database = {
           currency_code: string
           defect_notes: string | null
           description: string | null
+          free_delivery: boolean
           fulfilment_mode: string
           fulfilment_options: string[]
           id: string
@@ -8673,6 +9006,7 @@ export type Database = {
           vendor_capacity_per_week: number | null
           vendor_id: string
           vin: string | null
+          weight_grams: number | null
           wholesale: boolean
         }
         Insert: {
@@ -8685,6 +9019,7 @@ export type Database = {
           currency_code?: string
           defect_notes?: string | null
           description?: string | null
+          free_delivery?: boolean
           fulfilment_mode?: string
           fulfilment_options?: string[]
           id?: string
@@ -8715,6 +9050,7 @@ export type Database = {
           vendor_capacity_per_week?: number | null
           vendor_id: string
           vin?: string | null
+          weight_grams?: number | null
           wholesale?: boolean
         }
         Update: {
@@ -8727,6 +9063,7 @@ export type Database = {
           currency_code?: string
           defect_notes?: string | null
           description?: string | null
+          free_delivery?: boolean
           fulfilment_mode?: string
           fulfilment_options?: string[]
           id?: string
@@ -8757,6 +9094,7 @@ export type Database = {
           vendor_capacity_per_week?: number | null
           vendor_id?: string
           vin?: string | null
+          weight_grams?: number | null
           wholesale?: boolean
         }
         Relationships: [
@@ -9248,6 +9586,8 @@ export type Database = {
           created_at: string
           description: string | null
           display_name: string
+          free_delivery_all: boolean
+          free_delivery_method: string
           id: string
           is_primary_branch: boolean
           kyc_tier: number | null
@@ -9277,6 +9617,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_name: string
+          free_delivery_all?: boolean
+          free_delivery_method?: string
           id?: string
           is_primary_branch?: boolean
           kyc_tier?: number | null
@@ -9306,6 +9648,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_name?: string
+          free_delivery_all?: boolean
+          free_delivery_method?: string
           id?: string
           is_primary_branch?: boolean
           kyc_tier?: number | null
@@ -9947,6 +10291,10 @@ export type Database = {
       geo_distance_m: {
         Args: { p_lat1: number; p_lat2: number; p_lng1: number; p_lng2: number }
         Returns: number
+      }
+      has_admin_permission: {
+        Args: { p_permission: string; p_user: string }
+        Returns: boolean
       }
       has_delivery_partner_consent: {
         Args: { p_user: string }

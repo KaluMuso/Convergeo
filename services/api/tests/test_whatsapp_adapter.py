@@ -96,9 +96,7 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
         payload["deposit_ngwee"] = MONEY_NGEWEE
         payload["total_job_ngwee"] = MONEY_NGEWEE * 2
     elif template_id == "compliance_confirmation":
-        payload["confirmation_body"] = (
-            "You have been unsubscribed from Vergeo5 marketing messages."
-        )
+        payload["confirmation_body"] = "You have been unsubscribed from Vergeo5 marketing messages."
     elif template_id == "event_cancelled":
         payload["event_title"] = "Jazz Night"
         payload["event_date"] = "15 Aug 2026, 18:00 UTC"
@@ -132,6 +130,9 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
         payload["ticket_url"] = "https://vergeo5.com/en/account/tickets"
     elif template_id == "dispute_resolved":
         payload["resolution_summary"] = "We refunded you in full."
+    elif template_id == "vendor_order_unconfirmed_alert":
+        payload["vendor_name"] = "Kamwala Trading"
+        payload["minutes_waiting"] = 35
     elif template_id == "gift_recipient_notice":
         payload["recipient_name"] = "Mary"
         payload["sender_name"] = "Chanda"

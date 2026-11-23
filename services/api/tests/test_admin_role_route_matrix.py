@@ -88,11 +88,27 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "POST /admin/dispatch/requests/{dispatch_id}/notify",
             "POST /admin/dispatch/requests/{dispatch_id}/transition",
             "POST /admin/orders/{order_id}/dispatch",
+            # Logistics phase 1 + area-pair pricing (rain mode only; shadow/live stay admin).
+            "GET /admin/logistics/cash/custody",
+            "GET /admin/logistics/intercity-rates",
+            "GET /admin/logistics/margin-report",
+            "GET /admin/logistics/pricing-switches",
+            "PATCH /admin/dispatch/requests/{dispatch_id}/cost",
+            "PATCH /admin/logistics/rain-mode",
+            "POST /admin/dispatch/requests/{dispatch_id}/complete",
+            "POST /admin/dispatch/requests/{dispatch_id}/returned",
         }
     ),
     "audit.read": frozenset(
         {
             "GET /admin/audit-log",
+        }
+    ),
+    # Matching rider cash to the ledger is a finance power (logistics phase 1).
+    "cod.reconcile": frozenset(
+        {
+            "GET /admin/logistics/cash/cash-up",
+            "POST /admin/logistics/cash/remittances",
         }
     ),
     "products.manage": frozenset(
@@ -350,6 +366,14 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "POST /admin/flags/{flag_id}/unpublish",
         "POST /admin/flags/{flag_id}/warn-vendor",
         "PUT /admin/translations/overrides",
+        # Area-pair pricing: shadow/live switch, formula and distance table stay with
+        # full admins (operators only flip rain mode).
+        "GET /admin/logistics/area-distances",
+        "GET /admin/logistics/area-pricing/settings",
+        "GET /admin/logistics/areas",
+        "PATCH /admin/logistics/area-distances/{from_area}/{to_area}",
+        "PATCH /admin/logistics/area-pricing",
+        "PUT /admin/logistics/area-pricing/settings",
     }
 )
 

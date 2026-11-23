@@ -114,7 +114,9 @@ def _dispatch_stale_alert(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "a dispatch")
     courier = _text(p, "courier_name", "the courier")
     minutes = _text(p, "minutes_waiting", "45")
-    return f"Convergeo ops: {ref} with {courier} not accepted after {minutes} min."
+    status = _text(p, "status", "requested")
+    stage = {"accepted": "not collected", "picked_up": "not delivered"}.get(status, "not accepted")
+    return f"Convergeo ops: {ref} with {courier} {stage} after {minutes} min."
 
 
 def _order_cancelled(p: Mapping[str, Any]) -> str:
@@ -166,6 +168,13 @@ def _rfq_quoted(p: Mapping[str, Any]) -> str:
     return f"Convergeo: you received a quote of K{price}. Open the app to review it."
 
 
+def _vendor_order_unconfirmed_alert(p: Mapping[str, Any]) -> str:
+    ref = _text(p, "order_reference", "an order")
+    vendor = _text(p, "vendor_name", "the vendor")
+    minutes = _text(p, "minutes_waiting", "120")
+    return f"Convergeo ops: {ref} not confirmed by {vendor} after {minutes} min. Call the shop."
+
+
 def _gift_recipient_notice(p: Mapping[str, Any]) -> str:
     sender = _text(p, "sender_name", "A friend")
     shop = _text(p, "shop_name", "a shop")
@@ -213,6 +222,7 @@ SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {
     "dispute_resolved": _dispute_resolved,
     "payout_sent": _payout_sent,
     "payout_failed": _payout_failed,
+    "vendor_order_unconfirmed_alert": _vendor_order_unconfirmed_alert,
     "gift_recipient_notice": _gift_recipient_notice,
     "gift_ready_pickup": _gift_ready_pickup,
     "birthday_greeting": _birthday_greeting,

@@ -158,6 +158,7 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `waha-intake-digest.json`         | WhatsApp intake ops (D35)                   | no                      | DORMANT†                                                              |
 | `waha-otp-handoff.json`           | Staging Auth OTP transport                  | not audited             | DORMANT‡                                                              |
 | `dispatch-stale-alert.json`       | Courier dispatch ops                        | no                      | DORMANT§                                                              |
+| `logistics-sla-watch.json`        | Logistics SLA + customer msgs               | no                      | DORMANT (added 2026-11-13, logistics phase 1)                         |
 
 \*Live workflow is a manual/MCP-built sibling of the committed export, not a clean import of `notification-dispatch.json`.
 
