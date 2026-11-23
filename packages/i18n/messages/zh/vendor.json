@@ -1221,6 +1221,10 @@
           "title": "您的身份正在审核中",
           "body": "现在无需操作。我们的团队通常会在 1 个工作日内回复。"
         },
+        "payoutMethod": {
+          "title": "Add your MoMo number to get paid",
+          "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
+        },
         "ordersWaiting": {
           "title": "{count, plural, other {有 # 个订单等待您处理}}",
           "body": "请在 14:00 前接单并打包，配送订单即可随当天的骑手发出。"

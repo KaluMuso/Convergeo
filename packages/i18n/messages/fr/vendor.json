@@ -1221,6 +1221,10 @@
           "title": "Votre identité est en cours d’examen",
           "body": "Rien à faire pour l'instant. Notre équipe répond en général sous 1 jour ouvré."
         },
+        "payoutMethod": {
+          "title": "Add your MoMo number to get paid",
+          "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
+        },
         "ordersWaiting": {
           "title": "{count, plural, one {# commande vous attend} other {# commandes vous attendent}}",
           "body": "Acceptez et emballez avant 14 h pour que les livraisons partent avec les coursiers du jour."
