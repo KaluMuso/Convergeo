@@ -13,6 +13,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  * On dismiss it then restores focus to a detached node and the browser drops
  * focus to <body>, stranding keyboard users at the top of the document.
  */
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/en",
+}));
+
 vi.mock("./search/search-input", () => ({
   SearchInput: ({
     labels,
@@ -21,11 +25,7 @@ vi.mock("./search/search-input", () => ({
     labels: { placeholder: string };
     autoFocus?: boolean;
   }) => (
-    <input
-      aria-label={labels.placeholder}
-      data-testid="mock-search-input"
-      autoFocus={autoFocus}
-    />
+    <input aria-label={labels.placeholder} data-testid="mock-search-input" autoFocus={autoFocus} />
   ),
 }));
 
@@ -70,15 +70,11 @@ describe("MobileHeaderSearch focus handling", () => {
 
     const trigger = screen.getByTestId("mobile-header-search-trigger");
     await user.click(trigger);
-    expect(
-      screen.getByTestId("mobile-header-search-sheet"),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-header-search-sheet")).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
 
-    expect(
-      screen.queryByTestId("mobile-header-search-sheet"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("mobile-header-search-sheet")).not.toBeInTheDocument();
     expect(document.activeElement).toBe(trigger);
   });
 });

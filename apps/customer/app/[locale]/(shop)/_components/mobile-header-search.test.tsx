@@ -11,6 +11,12 @@ vi.mock("./search/search-input", () => ({
   ),
 }));
 
+const usePathname = vi.fn(() => "/en");
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => usePathname(),
+}));
+
 afterEach(cleanup);
 
 import { MobileHeaderSearch } from "./mobile-header-search";
@@ -25,7 +31,34 @@ const labels = {
 };
 
 describe("MobileHeaderSearch", () => {
+  it("renders nothing on the search results page", () => {
+    usePathname.mockReturnValue("/en/search");
+    const { container } = render(
+      <MobileHeaderSearch
+        locale="en"
+        labels={labels}
+        sheetTitle="Search"
+        triggerLabel="Open search"
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows the trigger on non-search shop routes", () => {
+    usePathname.mockReturnValue("/en");
+    render(
+      <MobileHeaderSearch
+        locale="en"
+        labels={labels}
+        sheetTitle="Search"
+        triggerLabel="Open search"
+      />,
+    );
+    expect(screen.getByTestId("mobile-header-search-trigger")).toBeInTheDocument();
+  });
+
   it("opens a bottom sheet with SearchInput when the trigger is tapped", async () => {
+    usePathname.mockReturnValue("/en");
     const user = userEvent.setup();
     render(
       <MobileHeaderSearch
@@ -37,9 +70,7 @@ describe("MobileHeaderSearch", () => {
     );
 
     await user.click(screen.getByTestId("mobile-header-search-trigger"));
-    expect(
-      screen.getByTestId("mobile-header-search-sheet"),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-header-search-sheet")).toBeInTheDocument();
     expect(screen.getByTestId("mock-search-input")).toBeInTheDocument();
   });
 });

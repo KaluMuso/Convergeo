@@ -2,9 +2,17 @@
 
 import { BottomSheet } from "@vergeo/ui/src/bottom-sheet";
 import { IconSearch } from "@vergeo/ui/src/icons";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { SearchInput, type SearchInputLabels } from "./search/search-input";
+
+/** In-page search on `/{locale}/search` — hide header affordance to avoid duplicates. */
+function isLocaleSearchPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  const segments = pathname.split("/").filter(Boolean);
+  return segments.at(-1) === "search";
+}
 
 type MobileHeaderSearchProps = {
   locale: string;
@@ -25,7 +33,12 @@ export function MobileHeaderSearch({
   triggerLabel,
   askLabel,
 }: MobileHeaderSearchProps) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  if (isLocaleSearchPath(pathname)) {
+    return null;
+  }
 
   return (
     <>
