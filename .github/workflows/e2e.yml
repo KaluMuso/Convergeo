@@ -233,7 +233,7 @@ jobs:
       - name: Read exact deployment attempt and artifact metadata
         id: source_handoff
         if: ${{ inputs.internal_operation_id == '' && github.event_name == 'workflow_dispatch' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           SOURCE_RUN_ID: ${{ inputs.source_run_id }}
           SOURCE_RUN_ATTEMPT: ${{ inputs.source_run_attempt }}
@@ -286,7 +286,7 @@ jobs:
       - name: Recheck staging ref immediately before protected mutation
         id: staging_ref_guard
         if: ${{ inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const expected = process.env.E2E_EXPECT_SHA || '';

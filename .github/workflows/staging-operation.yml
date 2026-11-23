@@ -201,7 +201,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Read exact operation attempt and source proof
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const path = require('path');

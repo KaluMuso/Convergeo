@@ -675,7 +675,7 @@
     "services/api/tests/test_merchant_review_boundaries_db.py": "dcffd64920805dca987f3cc3e8df9a327ac67e8fab5b9bbe5faa88f7ae1ac539",
     "scripts/ci/guard_shared_service_adoption.py": "c346d883bd6c77eea70d1ff69fe87cdc83d2dd2d20e26fef1329b6f03bbd54ae",
     "scripts/ci/test_guard_shared_service_adoption.py": "534d64e574c478eff65dc7a9e3186ca6aa1cd9ed92cc35a914c56e4b0a8cc7ac",
-    ".github/workflows/deploy-staging.yml": "5d17f49cf2a3040af0fd4e3c64e8f40f434c68cf06baeaa4e38f7cc92c86b85b"
+    ".github/workflows/deploy-staging.yml": "260c1a3ff35759da92cf8c898ad2e11ca820e46b086ecf26db3bee7023f7bd84"
   },
   "critical": [
     "tests/rls/test_cart_merge_atomic.py::test_service_role_works_through_real_postgrest_and_anon_is_denied",
