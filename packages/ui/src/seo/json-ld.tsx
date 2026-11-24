@@ -253,14 +253,41 @@ export function canBuildProductJsonLd(input: JsonLdProductInput): boolean {
   );
 }
 
+export function buildAggregateOffer(
+  offers: JsonLdOfferInput[],
+  productUrl: string,
+): Record<string, unknown> {
+  const integerPrices = offers.map((offer) => assertIntegerNgwee(offer.priceNgwee));
+  const lowNgwee = integerPrices.reduce(
+    (lowest, price) => Math.min(lowest, price),
+    integerPrices[0] ?? 0,
+  );
+  const highNgwee = integerPrices.reduce(
+    (highest, price) => Math.max(highest, price),
+    integerPrices[0] ?? 0,
+  );
+  const anyInStock = offers.some((offer) => offer.inStock);
+
+  return {
+    "@type": "AggregateOffer",
+    priceCurrency: "ZMW",
+    lowPrice: ngweeToZmwDecimal(lowNgwee),
+    highPrice: ngweeToZmwDecimal(highNgwee),
+    offerCount: offers.length,
+    availability: anyInStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+    url: productUrl,
+  };
+}
+
 export function buildProductJsonLd(input: JsonLdProductInput): Record<string, unknown> {
   const productUrl = buildAbsoluteUrl(buildLocaleCanonical(input.locale, "p", input.slug));
-  const offers = input.offers.map((offer) =>
-    buildOffer({
-      ...offer,
-      url: offer.url ?? productUrl,
-    }),
-  );
+  const offers =
+    input.offers.length === 1
+      ? buildOffer({
+          ...input.offers[0]!,
+          url: input.offers[0]?.url ?? productUrl,
+        })
+      : buildAggregateOffer(input.offers, productUrl);
 
   return {
     "@context": "https://schema.org",
@@ -274,7 +301,7 @@ export function buildProductJsonLd(input: JsonLdProductInput): Record<string, un
     ...(input.aggregateRating
       ? { aggregateRating: buildAggregateRating(input.aggregateRating) }
       : {}),
-    offers: offers.length === 1 ? offers[0] : offers,
+    offers,
   };
 }
 
