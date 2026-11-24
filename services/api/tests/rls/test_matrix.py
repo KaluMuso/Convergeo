@@ -3379,6 +3379,24 @@ EXPECTATIONS: TableExpectations = {
     "checkout_ticket_holds": client_invisible(),
     # Web Push delivery queue (20261123090000): service-role only (FORCE RLS, no client grants).
     "web_push_deliveries": client_invisible(),
+    # T8 social contacts (20261124120000): SELECT-only grants behind party / owner
+    # policies (non-parties read zero rows); no client INSERT/UPDATE/DELETE grant —
+    # every write goes through the social SECURITY DEFINER functions. Anon has no grant.
+    **{
+        table: {
+            Persona.ANON: deny_all(),
+            **{p: select_only() for p in Persona if p is not Persona.ANON},
+        }
+        for table in (
+            "user_handles",
+            "contact_requests",
+            "contacts",
+            "contact_blocks",
+            "chat_threads",
+            "chat_messages",
+            "phone_discovery",
+        )
+    },
     # Free events / services (#813): SELECT-only grants with owner, organiser /
     # provider and admin read policies; writes go through the API (service role).
     "event_rsvps": {
