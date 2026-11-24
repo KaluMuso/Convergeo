@@ -1,8 +1,13 @@
+// @vitest-environment jsdom
+import "@testing-library/jest-dom/vitest";
+
 import { cleanup, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import common from "../../../../../../packages/i18n/messages/en/common.json";
 import vendor from "../../../../../../packages/i18n/messages/en/vendor.json";
+import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 
 import { SettingsView } from "./settings-view";
 
@@ -20,10 +25,25 @@ vi.mock("next/navigation", () => ({
 
 afterEach(cleanup);
 
+beforeEach(() => {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+});
+
 it("renders account, notifications, payout method and language sections", () => {
   render(
-    <NextIntlClientProvider locale="en" messages={{ vendor }}>
-      <SettingsView locale="en" />
+    <NextIntlClientProvider locale="en" messages={{ vendor, common }}>
+      <ThemeProvider>
+        <SettingsView locale="en" />
+      </ThemeProvider>
     </NextIntlClientProvider>,
   );
   for (const id of ["account", "notifications", "payout", "language"]) {
