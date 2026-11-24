@@ -285,20 +285,22 @@ def test_ignored_request_stays_pending_to_sender(db: PgConn, social: dict[str, s
     _one(
         db, f"SELECT status FROM public.respond_contact_request('{request_id}', 'ignore', '{DAVE}')"
     )
-    direct = _as(db, CAROL, f"SELECT status FROM public.contact_requests WHERE id = '{request_id}'")
+    direct = _as(
+        db, CAROL, f"SELECT status FROM public.contact_requests WHERE id = '{request_id}';"
+    )
     assert direct.ok, direct.error
     assert direct.rows == []
     masked = _as(
         db,
         CAROL,
-        f"SELECT status, outgoing FROM public.my_contact_requests() WHERE id = '{request_id}'",
+        f"SELECT status, outgoing FROM public.my_contact_requests() WHERE id = '{request_id}';",
     )
     assert masked.ok, masked.error
     assert masked.rows == ["pending|t"]
     recipient = _as(
         db,
         DAVE,
-        f"SELECT status, outgoing FROM public.my_contact_requests() WHERE id = '{request_id}'",
+        f"SELECT status, outgoing FROM public.my_contact_requests() WHERE id = '{request_id}';",
     )
     assert recipient.ok, recipient.error
     assert recipient.rows == ["ignored|f"]
