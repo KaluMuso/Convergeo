@@ -14,10 +14,7 @@ import {
   type ReactNode,
 } from "react";
 
-import {
-  estimateDelivery,
-  formatDeliveryEstimate,
-} from "../../../../../lib/delivery-estimate";
+import { estimateDelivery, formatDeliveryEstimate } from "../../../../../lib/delivery-estimate";
 import { catalogDeliveryLabels } from "../plp/delivery-labels";
 import { catalogLogisticsLabels } from "../plp/logistics-pills";
 
@@ -37,6 +34,7 @@ import {
   type VariantOptionGroup,
   type VariantSelection,
 } from "./variant-selection";
+import { buildComparisonValueRow, mergeComparisonListings } from "./comparison-enrichment";
 import { VendorBlock } from "./vendor-block";
 
 import type { ComparisonLabels, ComparisonListing } from "./comparison";
@@ -50,14 +48,16 @@ import type { ReportListingLabels } from "./report-listing";
 import type { RequestQuoteLabels } from "./request-quote-button";
 
 // Server rendering retains the offer table; a single-seller PDP never loads its module.
-const Comparison = dynamic(() =>
-  import("./comparison").then((module) => module.Comparison),
+const Comparison = dynamic(() => import("./comparison").then((module) => module.Comparison));
+
+const PriceDropAlert = dynamic(
+  () => import("./price-drop-alert").then((mod) => mod.PriceDropAlert),
+  { ssr: false, loading: () => null },
 );
 
 /** Lazy — keeps first-load JS on /p/[slug] within the bundle regression budget. */
 const ContactVendorButton = dynamic(
-  () =>
-    import("./contact-vendor-button").then((mod) => mod.ContactVendorButton),
+  () => import("./contact-vendor-button").then((mod) => mod.ContactVendorButton),
   { ssr: false },
 );
 
@@ -66,12 +66,9 @@ const RequestQuoteButton = dynamic(
   { ssr: false },
 );
 
-const ReportListing = dynamic(
-  () => import("./report-listing").then((mod) => mod.ReportListing),
-  {
-    ssr: false,
-  },
-);
+const ReportListing = dynamic(() => import("./report-listing").then((mod) => mod.ReportListing), {
+  ssr: false,
+});
 
 const RelatedProductRails = lazy(() =>
   import("./related-product-rails").then((module) => ({
@@ -80,13 +77,10 @@ const RelatedProductRails = lazy(() =>
 );
 
 /** Lazy — variant picker only matters once a listing has options; reserve height to avoid CLS. */
-const VariantPicker = dynamic(
-  () => import("./variant-picker").then((mod) => mod.VariantPicker),
-  {
-    ssr: false,
-    loading: () => <div aria-hidden="true" className="min-h-24" />,
-  },
-);
+const VariantPicker = dynamic(() => import("./variant-picker").then((mod) => mod.VariantPicker), {
+  ssr: false,
+  loading: () => <div aria-hidden="true" className="min-h-24" />,
+});
 
 /** Lazy — measured-unit formatting + sticky chrome stay off the PDP first-load budget. */
 const StickyMobileAtc = dynamic(
@@ -110,6 +104,7 @@ export type ProductListing = {
   minSteps?: number;
   leadTimeDays: number | null;
   vendorCapacityPerWeek: number | null;
+  fulfilmentMode?: string;
   vendor: {
     slug: string;
     displayName: string;
@@ -117,6 +112,8 @@ export type ProductListing = {
     ratingAvg: number | null;
     ratingCount: number;
     landmark: string | null;
+    verified?: boolean;
+    memberSince?: string | null;
   };
   images: Array<{ publicId: string; alt: string }>;
   /** Colour/size axes; empty when the listing has no variants. */
@@ -148,7 +145,11 @@ export type PdpInteractiveBodyProps = {
     preferredBadge: string;
     noReviews: string;
     viewStore: string;
+    verified: string;
+    memberSince: string;
   };
+  comparisonCodCapNgwee: number;
+  comparisonCodChipsEnabled: boolean;
   trustLabels: {
     delivery: string;
     pickup: string;
@@ -201,6 +202,8 @@ export function PdpInteractiveBody({
   pickupLabels,
   comparisonLabels,
   vendorLabels,
+  comparisonCodCapNgwee,
+  comparisonCodChipsEnabled,
   trustLabels,
   wishlistLabels,
   contactVendorLabels,
@@ -225,30 +228,22 @@ export function PdpInteractiveBody({
   );
 
   const selectedComparison = useMemo(
-    () =>
-      comparisonListings.find(
-        (listing) => listing.id === selectedListing?.id,
-      ) ?? null,
+    () => comparisonListings.find((listing) => listing.id === selectedListing?.id) ?? null,
     [comparisonListings, selectedListing?.id],
   );
 
   const optionGroups = selectedListing?.optionGroups ?? NO_GROUPS;
   const listingVariants = selectedListing?.variants ?? NO_VARIANTS;
   const hasVariants = optionGroups.length > 0 && listingVariants.length > 0;
-  const [variantSelection, setVariantSelection] = useState<VariantSelection>(
-    () => (hasVariants ? initialSelection(optionGroups, listingVariants) : {}),
+  const [variantSelection, setVariantSelection] = useState<VariantSelection>(() =>
+    hasVariants ? initialSelection(optionGroups, listingVariants) : {},
   );
   useEffect(() => {
     // A different seller's listing has its own option ids.
-    setVariantSelection(
-      hasVariants ? initialSelection(optionGroups, listingVariants) : {},
-    );
+    setVariantSelection(hasVariants ? initialSelection(optionGroups, listingVariants) : {});
   }, [hasVariants, listingVariants, optionGroups]);
   const selectedVariant = useMemo(
-    () =>
-      hasVariants
-        ? resolveVariant(optionGroups, listingVariants, variantSelection)
-        : null,
+    () => (hasVariants ? resolveVariant(optionGroups, listingVariants, variantSelection) : null),
     [hasVariants, listingVariants, optionGroups, variantSelection],
   );
   const handleVariantSelect = useCallback(
@@ -272,10 +267,7 @@ export function PdpInteractiveBody({
   // Choosing a colour swaps the gallery to that variant's photo.
   const variantImageId = selectedVariant?.imagePublicId ?? null;
   const galleryImages = useMemo(() => {
-    if (
-      !variantImageId ||
-      baseGalleryImages.some((image) => image.publicId === variantImageId)
-    ) {
+    if (!variantImageId || baseGalleryImages.some((image) => image.publicId === variantImageId)) {
       return baseGalleryImages;
     }
     const alt = baseGalleryImages[0]?.alt ?? selectedListing?.title ?? "";
@@ -359,10 +351,7 @@ export function PdpInteractiveBody({
     if (!selectedListing) {
       return null;
     }
-    if (
-      selectedListing.vendor.ratingAvg !== null &&
-      selectedListing.vendor.ratingCount > 0
-    ) {
+    if (selectedListing.vendor.ratingAvg !== null && selectedListing.vendor.ratingCount > 0) {
       return t("pdp.vendor.rating", {
         rating: selectedListing.vendor.ratingAvg,
         count: selectedListing.vendor.ratingCount,
@@ -383,6 +372,59 @@ export function PdpInteractiveBody({
     ? `/${locale}/compare?product=${encodeURIComponent(productSlug)}`
     : null;
 
+  const productById = useMemo(
+    () => new Map(listings.map((listing) => [listing.id, listing])),
+    [listings],
+  );
+
+  const deliveryEstimateLabels = useMemo(() => catalogDeliveryLabels((key) => t.raw(key)), [t]);
+
+  const enrichedComparisonListings = useMemo(() => {
+    const valueById = new Map(
+      comparisonListings
+        .map((row) => {
+          const product = productById.get(row.id);
+          if (!product) {
+            return null;
+          }
+          return [
+            row.id,
+            buildComparisonValueRow(
+              product,
+              row,
+              {
+                buyBox: {
+                  ...buyBoxLabels,
+                  lowStockLabel: (count) => t("pdp.buyBox.lowStock", { count }),
+                },
+                delivery: deliveryEstimateLabels,
+                madeToOrderDays: (days) => t("pdp.value.madeToOrderDays", { days }),
+              },
+              {
+                codCapNgwee: comparisonCodCapNgwee,
+                codChipsEnabled: comparisonCodChipsEnabled,
+              },
+            ),
+          ] as const;
+        })
+        .filter(
+          (entry): entry is readonly [string, ReturnType<typeof buildComparisonValueRow>] =>
+            entry !== null,
+        ),
+    );
+    return mergeComparisonListings(comparisonListings, productById, valueById);
+  }, [
+    buyBoxLabels,
+    comparisonCodCapNgwee,
+    comparisonCodChipsEnabled,
+    comparisonListings,
+    deliveryEstimateLabels,
+    productById,
+    t,
+  ]);
+
+  const selectedDeliveryFeeNgwee = selectedComparison?.deliveryFeeNgwee ?? null;
+
   return (
     /* Mobile (<1024px): gallery → buy-box → compare cards → vendor.
        lg+: two-column grid — gallery left, sticky buy-box right; comparison table + vendor full width. */
@@ -402,9 +444,7 @@ export function PdpInteractiveBody({
           emptyLabel={galleryLabels.empty}
           previousLabel={galleryLabels.previous}
           nextLabel={galleryLabels.next}
-          indicatorLabel={(current, total) =>
-            t("pdp.gallery.indicator", { current, total })
-          }
+          indicatorLabel={(current, total) => t("pdp.gallery.indicator", { current, total })}
           activeIndex={galleryActiveIndex}
           lightboxLabels={lightboxLabels}
         />
@@ -432,6 +472,8 @@ export function PdpInteractiveBody({
             compareHref={compareHref}
             compareLabel={comparePageLabel}
             compareAtNgwee={selectedVariant?.compareAtNgwee ?? null}
+            deliveryFeeNgwee={selectedDeliveryFeeNgwee}
+            codCapNgwee={comparisonCodCapNgwee}
             variantSlot={
               hasVariants ? (
                 <VariantPicker
@@ -452,6 +494,11 @@ export function PdpInteractiveBody({
                 savedAnnounceLabel={wishlistLabels.saved}
               />
             }
+          />
+          <PriceDropAlert
+            listingId={selectedListing.id}
+            locale={locale}
+            currentPriceNgwee={buyBoxListing.priceNgwee}
           />
           {selectedListing.productClass === "E" ? (
             <RequestQuoteButton
@@ -477,12 +524,9 @@ export function PdpInteractiveBody({
             escrowLabel={trustLabels.escrow}
             deliveryEstimate={formatDeliveryEstimate(
               estimateDelivery({
-                deliveryAvailable:
-                  selectedComparison?.deliveryAvailable ?? false,
+                deliveryAvailable: selectedComparison?.deliveryAvailable ?? false,
                 pickupAvailable: selectedComparison?.pickupAvailable ?? false,
-                fulfilmentMode: selectedListing.leadTimeDays
-                  ? "made_to_order"
-                  : "stocked",
+                fulfilmentMode: selectedListing.leadTimeDays ? "made_to_order" : "stocked",
                 leadTimeDays: selectedListing.leadTimeDays,
                 inStock: selectedListing.inStock,
               }),
@@ -495,7 +539,7 @@ export function PdpInteractiveBody({
       {shouldShowComparison(comparisonListings.length) ? (
         <div className="min-w-0 md:col-span-2">
           <Comparison
-            listings={comparisonListings}
+            listings={enrichedComparisonListings}
             selectedListingId={selectedListingId}
             labels={comparisonLabels}
             logisticsPillLabels={logisticsPillLabels}
@@ -515,13 +559,16 @@ export function PdpInteractiveBody({
               ratingAvg: selectedListing.vendor.ratingAvg,
               ratingCount: selectedListing.vendor.ratingCount,
               landmark: selectedListing.vendor.landmark,
+              verified: selectedListing.vendor.verified,
+              memberSince: selectedListing.vendor.memberSince,
             }}
             heading={vendorLabels.heading}
+            verifiedLabel={vendorLabels.verified}
+            memberSinceLabel={vendorLabels.memberSince}
             preferredBadgeLabel={vendorLabels.preferredBadge}
             noReviewsLabel={vendorLabels.noReviews}
             ratingLabel={
-              selectedListing.vendor.ratingAvg !== null &&
-              selectedListing.vendor.ratingCount > 0
+              selectedListing.vendor.ratingAvg !== null && selectedListing.vendor.ratingCount > 0
                 ? t("pdp.vendor.rating", {
                     rating: selectedListing.vendor.ratingAvg,
                     count: selectedListing.vendor.ratingCount,
@@ -538,10 +585,7 @@ export function PdpInteractiveBody({
               labels={contactVendorLabels}
             />
           ) : null}
-          <ReportListing
-            listingId={selectedListing.id}
-            labels={reportListingLabels}
-          />
+          <ReportListing listingId={selectedListing.id} labels={reportListingLabels} />
         </div>
       ) : null}
 
