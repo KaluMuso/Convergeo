@@ -150,6 +150,9 @@ PENDING_REPAIR_VERSIONS = {
     "20261123090000",
     # Admin catalog control holds + typed ad targets (additive, documented down).
     "20261123100000",
+    # Clips pilot allowlist + service packages (feat/clips-pilot-service-packages).
+    "20261124090000",
+    "20261124090100",
 }
 
 

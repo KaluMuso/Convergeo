@@ -1453,6 +1453,42 @@ export type Database = {
           },
         ]
       }
+      clip_pilot_vendors: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          note: string | null
+          vendor_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          note?: string | null
+          vendor_id: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          note?: string | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clip_pilot_vendors_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "clip_pilot_vendors_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clip_products: {
         Row: {
           clip_id: string
@@ -7386,6 +7422,8 @@ export type Database = {
           id: string
           last_message_at: string | null
           listing_id: string | null
+          package_id: string | null
+          package_snapshot: Json | null
           quote_price_ngwee: number | null
           quote_valid_until: string | null
           quoted_at: string | null
@@ -7401,6 +7439,8 @@ export type Database = {
           id?: string
           last_message_at?: string | null
           listing_id?: string | null
+          package_id?: string | null
+          package_snapshot?: Json | null
           quote_price_ngwee?: number | null
           quote_valid_until?: string | null
           quoted_at?: string | null
@@ -7416,6 +7456,8 @@ export type Database = {
           id?: string
           last_message_at?: string | null
           listing_id?: string | null
+          package_id?: string | null
+          package_snapshot?: Json | null
           quote_price_ngwee?: number | null
           quote_valid_until?: string | null
           quoted_at?: string | null
@@ -7431,6 +7473,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_threads_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "service_packages"
             referencedColumns: ["id"]
           },
           {
@@ -7698,6 +7747,76 @@ export type Database = {
           },
           {
             foreignKeyName: "service_free_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_packages: {
+        Row: {
+          created_at: string
+          delivery_days: number
+          description: string | null
+          id: string
+          includes: string[]
+          name: string
+          price_ngwee: number | null
+          revisions: number | null
+          service_id: string
+          status: string
+          tier: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_days: number
+          description?: string | null
+          id?: string
+          includes?: string[]
+          name: string
+          price_ngwee?: number | null
+          revisions?: number | null
+          service_id: string
+          status?: string
+          tier: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_days?: number
+          description?: string | null
+          id?: string
+          includes?: string[]
+          name?: string
+          price_ngwee?: number | null
+          revisions?: number | null
+          service_id?: string
+          status?: string
+          tier?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_packages_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_packages_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "service_packages_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
@@ -10239,6 +10358,7 @@ export type Database = {
         }
         Returns: number
       }
+      clip_vendor_in_pilot: { Args: { p_vendor_id: string }; Returns: boolean }
       confirm_funded_service: {
         Args: { p_actor_id: string; p_job_id: string; p_system?: boolean }
         Returns: Json
