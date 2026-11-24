@@ -739,16 +739,12 @@ describe("repeat actions, retry and navigation", () => {
       expect(mock.sign).not.toHaveBeenCalled();
       expect(mock.upload).not.toHaveBeenCalled();
       if (ready) await settle(ready, undefined, true);
-      expect(
-        await screen.findByText("Could not access camera. Check permissions."),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("onboarding.kyc.cameraError")).toBeInTheDocument();
       expect(mock.stopCamera).toHaveBeenCalledTimes(stage === "playback" ? 1 : 0);
       expect(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" })).toBeEnabled();
       await capture();
       expect(mock.camera).toHaveBeenCalledTimes(2);
-      expect(
-        screen.queryByText("Could not access camera. Check permissions."),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("onboarding.kyc.cameraError")).not.toBeInTheDocument();
       await waitFor(() => expect(mock.upload).toHaveBeenCalledOnce());
       fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
       await waitFor(() => expect(mock.bootstrap).toHaveBeenCalledTimes(2));

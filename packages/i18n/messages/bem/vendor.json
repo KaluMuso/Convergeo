@@ -253,6 +253,11 @@
       "capture": "Take photo",
       "retake": "Retake",
       "usePhoto": "Use this photo",
+      "uploadInstead": "Upload a photo instead",
+      "cameraUnavailable": "Camera not available on this device.",
+      "cameraError": "We could not open your camera. Allow camera access in your browser, or upload a photo instead.",
+      "invalidFileType": "Choose a JPEG, PNG or WebP image.",
+      "fileTooLarge": "That image is too large. Choose a file under 10 MB.",
       "uploadFailed": "Upload failed. Loleni connection yenu and try again.",
       "uploaded": "Saved",
       "nrcDone": "NRC photo saved",
@@ -1274,6 +1279,10 @@
         "kycPending": {
           "title": "⚠ Your ID is being reviewed",
           "body": "Nothing to do now. Our team usually replies within 1 working day."
+        },
+        "payoutMethod": {
+          "title": "Add your MoMo number to get paid",
+          "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
         },
         "ordersWaiting": {
           "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",

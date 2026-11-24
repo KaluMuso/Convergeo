@@ -242,6 +242,11 @@
       "capture": "拍照",
       "retake": "重拍",
       "usePhoto": "使用此照片",
+      "uploadInstead": "改上传照片",
+      "cameraUnavailable": "此设备无法使用相机。",
+      "cameraError": "无法打开相机。请在浏览器中允许相机权限，或改上传照片。",
+      "invalidFileType": "请选择 JPEG、PNG 或 WebP 图片。",
+      "fileTooLarge": "图片太大，请选择小于 10 MB 的文件。",
       "uploadFailed": "照片没有发送成功。请检查网络后重试。",
       "uploaded": "已保存",
       "nrcDone": "NRC 照片已保存",
@@ -1220,6 +1225,10 @@
         "kycPending": {
           "title": "您的身份正在审核中",
           "body": "现在无需操作。我们的团队通常会在 1 个工作日内回复。"
+        },
+        "payoutMethod": {
+          "title": "Add your MoMo number to get paid",
+          "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
         },
         "ordersWaiting": {
           "title": "{count, plural, other {有 # 个订单等待您处理}}",
