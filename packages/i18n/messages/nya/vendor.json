@@ -326,6 +326,7 @@
       "loadFailed": "We couldn't open your sign-up. Check your internet and try again.",
       "saveFailed": "We couldn't save your shop details. Try again.",
       "submitFailed": "We couldn't send it. Check your internet and try again.",
+      "momoNotFound": "We couldn't find a mobile money account for this number. Check the number, and that it is an MTN or Airtel line registered in your name.",
       "authRequired": "Sign in to finish your seller sign-up.",
       "permissionDenied": "Mulibe access to this seller application. Use the account that received the invite, or contact Convergeo.",
       "draftLocked": "You are approved, so shop details can't be changed here. Contact us to change them.",
