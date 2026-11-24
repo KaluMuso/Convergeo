@@ -34,6 +34,6 @@ describe("comparisonTotalNgwee", () => {
       lng: 28.2833,
     });
     expect(sorted.map((row) => row.id)).toEqual(["mid", "best", "cheap"]);
-    expect(comparisonTotalNgwee(base("x", 1, null))).toBeNull();
+    expect(comparisonTotalNgwee({ ...base("x", 1, null), deliveryAvailable: true })).toBeNull();
   });
 });
