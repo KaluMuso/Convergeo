@@ -57,7 +57,7 @@ const REPORT_ONLY_CSP = [
   "default-src 'self'",
   `script-src 'self' 'strict-dynamic' ${NONCE} https: ${CSP_ORIGINS.ga4Script}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${CSP_ORIGINS.cloudinary} ${CSP_ORIGINS.ga4Img}`,
+  `img-src 'self' data: blob: https://tile.openstreetmap.org ${CSP_ORIGINS.cloudinary} ${CSP_ORIGINS.ga4Img}`,
   "font-src 'self' data:",
   `connect-src ${connectSrc}`,
   "frame-src 'self'",

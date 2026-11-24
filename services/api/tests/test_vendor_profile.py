@@ -228,6 +228,23 @@ def _auth_headers(token: str = TOKEN_A) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def test_patch_hours_with_saved_location_succeeds(profile_client: TestClient) -> None:
+    """Regression: hours save must work when a location row already exists (King, 24 Nov)."""
+    response = profile_client.patch(
+        "/vendor/profile",
+        headers=_auth_headers(),
+        json={
+            "hours": {
+                "mon": {"open": "09:00", "close": "17:00", "closed": False},
+            },
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["completeness"]["hours"] is True
+    assert payload["completeness"]["location"] is True
+
+
 def test_get_vendor_profile(profile_client: TestClient) -> None:
     response = profile_client.get("/vendor/profile", headers=_auth_headers())
     assert response.status_code == 200
