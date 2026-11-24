@@ -242,6 +242,11 @@
       "capture": "Prendre une photo",
       "retake": "Reprendre",
       "usePhoto": "Utiliser cette photo",
+      "uploadInstead": "Importer une photo à la place",
+      "cameraUnavailable": "Caméra indisponible sur cet appareil.",
+      "cameraError": "Impossible d'ouvrir la caméra. Autorisez l'accès dans votre navigateur, ou importez une photo.",
+      "invalidFileType": "Choisissez une image JPEG, PNG ou WebP.",
+      "fileTooLarge": "Image trop volumineuse. Choisissez un fichier de moins de 10 Mo.",
       "uploadFailed": "La photo n'est pas partie. Vérifiez votre connexion et réessayez.",
       "uploaded": "Enregistré",
       "nrcDone": "Photo NRC enregistrée",
@@ -1220,6 +1225,10 @@
         "kycPending": {
           "title": "Votre identité est en cours d’examen",
           "body": "Rien à faire pour l'instant. Notre équipe répond en général sous 1 jour ouvré."
+        },
+        "payoutMethod": {
+          "title": "Add your MoMo number to get paid",
+          "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
         },
         "ordersWaiting": {
           "title": "{count, plural, one {# commande vous attend} other {# commandes vous attendent}}",

@@ -280,6 +280,30 @@ def test_ignored_request_is_silent_duplicate(db: PgConn, social: dict[str, str])
     assert "social:duplicate" in (again.error or "")
 
 
+def test_ignored_request_stays_pending_to_sender(db: PgConn, social: dict[str, str]) -> None:
+    request_id = _request(db, CAROL, social[DAVE]).rows[0].split("|")[0]
+    _one(
+        db, f"SELECT status FROM public.respond_contact_request('{request_id}', 'ignore', '{DAVE}')"
+    )
+    direct = _as(db, CAROL, f"SELECT status FROM public.contact_requests WHERE id = '{request_id}'")
+    assert direct.ok, direct.error
+    assert direct.rows == []
+    masked = _as(
+        db,
+        CAROL,
+        f"SELECT status, outgoing FROM public.my_contact_requests() WHERE id = '{request_id}'",
+    )
+    assert masked.ok, masked.error
+    assert masked.rows == ["pending|t"]
+    recipient = _as(
+        db,
+        DAVE,
+        f"SELECT status, outgoing FROM public.my_contact_requests() WHERE id = '{request_id}'",
+    )
+    assert recipient.ok, recipient.error
+    assert recipient.rows == ["ignored|f"]
+
+
 def test_only_recipient_can_respond(db: PgConn, social: dict[str, str]) -> None:
     request_id = _request(db, ALICE, social[BOB]).rows[0].split("|")[0]
     for actor in (ALICE, CAROL):

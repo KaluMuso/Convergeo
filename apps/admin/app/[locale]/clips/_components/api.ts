@@ -88,7 +88,42 @@ export type ClipAnalytics = {
   };
 };
 
+export type ClipPilotVendor = {
+  vendor_id: string;
+  vendor_name: string | null;
+  vendor_status: string | null;
+  kyc_tier: number | null;
+  note: string | null;
+  added_by: string | null;
+  created_at: string | null;
+};
+
+export type ClipPilotState = {
+  clips_enabled: boolean;
+  comments_flag_enabled: boolean;
+  allowlist_enforced: boolean;
+  max_vendors: number;
+  vendors: ClipPilotVendor[];
+};
+
+export type ClipPilotChange = { vendor_id: string; allowlisted: boolean; changed: boolean };
+
 export const adminClipsApi = {
+  pilot(): Promise<ClipPilotState> {
+    return clipsApi.request<ClipPilotState>("/admin/clip-pilot");
+  },
+  addPilotVendor(vendorId: string, note?: string): Promise<ClipPilotChange> {
+    return clipsApi.request<ClipPilotChange>("/admin/clip-pilot/vendors", {
+      method: "POST",
+      body: JSON.stringify({ vendor_id: vendorId, note: note ? note : null }),
+    });
+  },
+  removePilotVendor(vendorId: string): Promise<ClipPilotChange> {
+    return clipsApi.request<ClipPilotChange>(
+      `/admin/clip-pilot/vendors/${encodeURIComponent(vendorId)}`,
+      { method: "DELETE" },
+    );
+  },
   analytics(): Promise<ClipAnalytics> {
     return clipsApi.request<ClipAnalytics>("/admin/clip-analytics");
   },

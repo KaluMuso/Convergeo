@@ -9,6 +9,7 @@ export type HomeTaskKey =
   | "kycFix"
   | "kycFinish"
   | "kycPending"
+  | "payoutMethod"
   | "ordersWaiting"
   | "ordersWaitingUrgent"
   | "ordersWaitingAfterCutoff"
@@ -35,6 +36,8 @@ export type HomeTaskInput = {
   hasDeliveryWaiting: boolean;
   cutoff: DispatchCutoffState;
   sellerKind: "products" | "services" | "events";
+  /** true = no payout number on file; false = set; null/omitted = unknown (hide task). */
+  payoutMissing?: boolean | null;
 };
 
 export const MAX_HOME_TASKS = 3;
@@ -46,6 +49,11 @@ export function buildHomeTasks(input: HomeTaskInput): HomeTask[] {
     tasks.push({ key: "kycFix", href: "/onboarding/status", tone: "danger" });
   } else if (input.kycOverall === "draft") {
     tasks.push({ key: "kycFinish", href: "/onboarding", tone: "warning" });
+  }
+
+  const payoutMissing = input.payoutMissing ?? null;
+  if (payoutMissing === true && input.kycOverall !== "needs_fix") {
+    tasks.push({ key: "payoutMethod", href: "/payouts/method", tone: "warning" });
   }
 
   if (input.needsActionCount > 0) {

@@ -22,6 +22,8 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **Courier dispatch v1 (2026-11-09):** `vendor.orders.courier.*` was added to bem/nya as **EN passthrough** for key parity (CCP-03f). Treat the subtree as untranslated until a native reviewer signs it off. The surface is behind the `courier_dispatch` flag (default off).
 
+**Vendor KYC photo upload fallback (2026-11-24):** `vendor.onboarding.kyc.{uploadInstead,cameraUnavailable,cameraError,invalidFileType,fileTooLarge}` were added to bem/nya as **EN passthrough** for key parity. Treat until a native reviewer signs them off. Onboarding is production-facing for new sellers.
+
 **Listing variants + PDP zoom (2026-11-07):** `catalog.pdp.variants` and `catalog.pdp.lightbox` are Phase-1 critical, so bem/nya carry **draft** translations (loanword style matching the existing PDP copy: cart, picture, screen) — they decide what a buyer picks and pays for, so a native reviewer must sign them off before bem/nya are indexed. `checkout.variant`, `orders.detail.variantOption|variantSeparator`, `vendor.listings.variants` and `vendor.orders.items.variantOption|variantSeparator|sku` are **EN passthrough** for key parity; treat those subtrees as untranslated until signed off.
 
 **W8 bundles & offers (2026-11-15):** `vendor.offers.*`, `vendor.shell.nav.offers`, `catalog.offers.*` and `checkout.cart.{offerSavings,offerSaving,offerGift,offerGiftWorth}` were added to bem/nya as **EN passthrough prefixed with `⚠ `** for key parity. Treat these subtrees as untranslated until a native reviewer signs them off. The surface is behind the `bundles` flag (default off).
@@ -203,7 +205,7 @@ Draft bem/nya for the `/account/privacy` Analytics switch. These govern a privac
 - `account.privacy.analytics.gpc` (shown when the browser sends Global Privacy Control; switch is off and disabled)
   - bem: "Browser yenu iletuma Global Privacy Control, ico analytics ilekwa. Tulesunga ico browser yenu ilanda."
   - nya: "Browser yanu ikutumiza Global Privacy Control, choncho analytics yazimitsidwa. Timalemekeza zomwe browser yanu yasankha."
-**Vendor listing + onboarding QA pass (2026-11-15, `fix/vendor-listing-onboarding`):** EN is authoritative; fr/zh are full translations. In bem/nya the following new `vendor.*` keys are **EN passthrough** (marked with the `⚠ ` prefix) pending native-speaker review, because they explain listing rules, fulfilment, identity verification or settings and a wrong vernacular guess costs a vendor more than English does:
+    **Vendor listing + onboarding QA pass (2026-11-15, `fix/vendor-listing-onboarding`):** EN is authoritative; fr/zh are full translations. In bem/nya the following new `vendor.*` keys are **EN passthrough** (marked with the `⚠ ` prefix) pending native-speaker review, because they explain listing rules, fulfilment, identity verification or settings and a wrong vernacular guess costs a vendor more than English does:
 
 - Field-level listing errors and hints: `vendor.listings.fieldErrors.*`, `vendor.listings.errors.{draftInvalid,publishBlocked}`, the new `vendor.listings.fields.*` hints (condition/Class D explanation, defect notes, fulfilment options: Lusaka delivery, pickup at shop or branch, nationwide pickup, made-to-order lead time).
 - Removed listing state: `vendor.listings.manage.removed.*`.
@@ -219,3 +221,15 @@ Draft bem/nya for the `/account/privacy` Analytics switch. These govern a privac
 **Plans follow-up (2026-11-15, `feat/branches-plans-followup`):** `vendor.{plans.picker,plans.usageActive,plans.publishLimitReached,plans.trialNoCharge,trial,extras,shell.nav.plan,shell.nav.extras,branches.shops,listings.import.errors.planLimit}`, `directory.profile.branch*` and `notifications.inApp.vendor.extras_*` are **"⚠ " + English** in bem/nya (prices, trials and quotes are money copy; pending native-speaker review). fr/zh are full translations; `admin.{extras,trials,plans.publishLimit,nav.extras,nav.trials,config.platform.planAnnualDiscount}` and `notifications.inApp.admin.extras_requested` are admin-facing.
 
 **Sponsored ad disclosure (2026-11-13, admin ads/merchandising pass):** `catalog.home.feed.sponsored` / `sponsoredBy` / `adCta` render on every admin-scheduled feed slot and hero carousel slide. bem/nya are deliberately **English passthrough** ("Sponsored", "Sponsored by {advertiser}") — this is an advertising disclosure, and a wrong vernacular guess could fail to read as paid placement. fr/zh are translated. Pending native-speaker wording for bem/nya; keep the disclosure unambiguous.
+
+**Service packages (2026-11-13, `feat/clips-pilot-service-packages`):** `services.packages.*` (customer package comparison) and `services.vendor.packages.*` (vendor package editor). `services` is outside the Phase-1 critical prefixes. **AI-authored provisional drafts — pending native-speaker review, low confidence:**
+
+| Key                              | bem (draft)                     | nya (draft)                        |
+| -------------------------------- | ------------------------------- | ---------------------------------- |
+| `services.packages.heading`      | Saleni ipakeji                  | Sankhani phukusi                   |
+| `services.packages.cta`          | Lombeni iyi pakeji              | Pemphani phukusi ili               |
+| `services.packages.priceQuote`   | Umutengo ukalandwapo pa kulomba | Mtengo pofunsa                     |
+| `services.packages.compareHint`  | Kushinta ukulinganya amapakeji  | Sunthani kuti muyerekeze maphukusi |
+| `services.vendor.packages.title` | Amapakeji                       | Maphukusi                          |
+
+Every other key in both subtrees (tier names, delivery/revision ICU plurals, prefill template, no-payment note, vendor guidance and errors) is **English passthrough** for key parity: the prefill text is sent to the vendor verbatim and the no-payment note is trust copy, so a wrong vernacular guess costs more than English. Also EN passthrough in bem/nya: `vendor.clips.errors.notInPilot` / `paused` (Clips pilot).

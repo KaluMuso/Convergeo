@@ -51,6 +51,7 @@
 --
 -- Additive only. Reversible (manual; safe while the flag has never been on,
 -- otherwise export the tables first: they hold users' chats):
+--   drop function if exists public.my_contact_requests();
 --   drop function if exists public.expire_contact_requests();
 --   drop function if exists public.set_phone_discovery(uuid, text, boolean);
 --   drop function if exists public.discover_by_phone_hashes(text[], uuid);
@@ -432,10 +433,13 @@ create policy user_handles_select_own on public.user_handles
   using (user_id = (select auth.uid()));
 
 drop policy if exists contact_requests_select_party on public.contact_requests;
+-- Ignoring is silent: the sender never reads an 'ignored' row directly. Their
+-- outgoing list comes from my_contact_requests(), which shows it as pending.
 create policy contact_requests_select_party on public.contact_requests
   for select to authenticated
   using (
-    (select auth.uid()) in (from_user, to_user)
+    ((select auth.uid()) = to_user
+      or ((select auth.uid()) = from_user and status <> 'ignored'))
     and not private.social_blocked(from_user, to_user)
   );
 
@@ -788,6 +792,38 @@ $$;
 
 comment on function public.unblock_user(uuid, uuid) is
   'T8: lift the caller''s own block. Does not restore the contact.';
+
+-- Both directions of the caller's requests. An ignored request reads as
+-- 'pending' to its sender (until it expires), so ignoring stays silent.
+create or replace function public.my_contact_requests()
+returns table (
+  id uuid,
+  from_user uuid,
+  to_user uuid,
+  note text,
+  status text,
+  created_at timestamptz,
+  outgoing boolean
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select r.id, r.from_user, r.to_user, r.note,
+         case when r.from_user = (select auth.uid()) and r.status = 'ignored'
+              then 'pending' else r.status end,
+         r.created_at,
+         r.from_user = (select auth.uid())
+    from public.contact_requests r
+   where (select auth.uid()) in (r.from_user, r.to_user)
+     and not private.social_blocked(r.from_user, r.to_user)
+   order by r.created_at desc
+   limit 200;
+$$;
+
+revoke all on function public.my_contact_requests() from public, anon;
+grant execute on function public.my_contact_requests() to authenticated;
 
 create or replace function public.send_chat_message(
   p_thread_id uuid,

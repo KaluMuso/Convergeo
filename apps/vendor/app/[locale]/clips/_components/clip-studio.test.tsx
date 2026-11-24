@@ -190,6 +190,21 @@ describe("the composer", () => {
     );
   });
 
+  it.each([
+    ["clip_pilot_not_allowlisted", "clips.errors.notInPilot"],
+    ["clip_cost_kill_switch", "clips.errors.paused"],
+  ])("explains the %s refusal from the server", async (code, key) => {
+    const user = userEvent.setup();
+    createDraftMock.mockRejectedValue(Object.assign(new Error("nope"), { code }));
+
+    render(<ClipComposer />);
+    await user.upload(screen.getByTestId("clips-file-input"), videoFile());
+    await waitFor(() => expect(screen.getByTestId("clips-selected")).toBeInTheDocument());
+    await user.click(screen.getByTestId("clips-submit"));
+
+    await waitFor(() => expect(screen.getByTestId("clips-error-message")).toHaveTextContent(key));
+  });
+
   it("explains that clips are for verified sellers", async () => {
     const user = userEvent.setup();
     createDraftMock.mockRejectedValue(Object.assign(new Error("nope"), { code: "forbidden" }));

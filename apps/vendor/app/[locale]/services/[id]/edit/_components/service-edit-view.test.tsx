@@ -26,6 +26,9 @@ vi.mock("../../../_lib/services-client", () => ({
 vi.mock("../../../_lib/ui", () => ({
   Spinner: ({ label }: { label: string }) => <p data-testid="loading">{label}</p>,
 }));
+vi.mock("../../../_components/service-packages-editor", () => ({
+  ServicePackagesEditor: () => null,
+}));
 vi.mock("../../../_components/service-form", () => ({
   ServiceForm: ({
     serviceId,
