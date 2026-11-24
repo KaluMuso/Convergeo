@@ -1,4 +1,7 @@
 {
+  "meta": {
+    "description": "Buyer storefront copy (EN source of truth)."
+  },
   "storefront": {
     "directions": "Directions"
   }

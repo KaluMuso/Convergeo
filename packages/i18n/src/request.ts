@@ -22,6 +22,7 @@ export const NAMESPACES = [
   "account",
   "ai",
   "marketing",
+  "customer",
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];
@@ -94,6 +95,7 @@ const namespaceLoaders: Record<Namespace, (locale: Locale) => Promise<Messages>>
   account: (locale) => import(`../messages/${locale}/account.json`).then((m) => m.default),
   ai: (locale) => import(`../messages/${locale}/ai.json`).then((m) => m.default),
   marketing: (locale) => import(`../messages/${locale}/marketing.json`).then((m) => m.default),
+  customer: (locale) => import(`../messages/${locale}/customer.json`).then((m) => m.default),
 };
 
 export async function loadNamespace(locale: Locale, namespace: Namespace): Promise<Messages> {
