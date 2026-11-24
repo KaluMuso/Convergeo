@@ -58,6 +58,7 @@ function collectSourceFiles(dir: string): string[] {
   return out;
 }
 
+/** POSIX-style paths for Set lookups and assertion output (Windows-safe). */
 function toRepoRelative(absolute: string): string {
   return relative(CUSTOMER_ROOT, absolute).split(sep).join("/");
 }
@@ -85,7 +86,12 @@ describe("no localhost in the production browser build", () => {
 
     // A non-empty list means a client-reachable module can freeze a loopback URL
     // into the shipped bundle. Route it through resolveApiBaseUrl/getVendorAppUrl.
-    expect(offenders).toEqual([]);
+    expect(
+      offenders,
+      offenders.length > 0
+        ? `loopback literals outside audited resolvers: ${offenders.join(", ")}`
+        : undefined,
+    ).toEqual([]);
   });
 
   it("the audited resolvers keep their loopback default NODE_ENV-guarded", () => {

@@ -35,8 +35,9 @@ vi.mock("../../account/_components/account-api", () => ({
 }));
 
 const push = vi.fn();
+const refresh = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push, refresh: vi.fn() }),
+  useRouter: () => ({ push, refresh }),
 }));
 
 import { AuthLoginShell } from "./login-shell";
@@ -92,8 +93,13 @@ async function completeGoogleCallback(): Promise<void> {
   window.history.pushState({}, "", "/en/login?code=oauth-code&next=%2Fen");
   render(<AuthLoginShell locale="en" variant="customer" labels={labels} defaultNextPath="/en" />);
   await vi.waitFor(() => expect(push).toHaveBeenCalled());
-  // let the lazy identify import settle
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  await vi.waitFor(() => expect(refresh).toHaveBeenCalled());
+}
+
+/** Let the login flow's dynamic import().then(identify) run (shared module promise; then microtasks). */
+async function waitForIdentifySideEffectsToSettle(): Promise<void> {
+  await import("@vergeo/analytics/identify");
+  await new Promise<void>((resolve) => setImmediate(resolve));
 }
 
 beforeEach(() => {
@@ -122,6 +128,7 @@ afterEach(() => {
 describe("Google OAuth callback links the analytics session", () => {
   it("calls identify once with the Google session token", async () => {
     await completeGoogleCallback();
+    await vi.waitFor(() => expect(identifyCalls()).toHaveLength(1));
     expect(exchangeCodeForSession).toHaveBeenCalledWith("oauth-code");
     const calls = identifyCalls();
     expect(calls).toHaveLength(1);
@@ -136,18 +143,21 @@ describe("Google OAuth callback links the analytics session", () => {
   it("sends nothing when the visitor opted out", async () => {
     document.cookie = "vg_analytics_consent=denied; path=/";
     await completeGoogleCallback();
+    await waitForIdentifySideEffectsToSettle();
     expect(identifyCalls()).toHaveLength(0);
   });
 
   it("sends nothing under Global Privacy Control", async () => {
     Object.defineProperty(navigator, "globalPrivacyControl", { configurable: true, value: true });
     await completeGoogleCallback();
+    await waitForIdentifySideEffectsToSettle();
     expect(identifyCalls()).toHaveLength(0);
   });
 
   it("does not re-send for a session that is already linked", async () => {
     window.localStorage.setItem("vg_ident2", SESSION);
     await completeGoogleCallback();
+    await waitForIdentifySideEffectsToSettle();
     expect(identifyCalls()).toHaveLength(0);
   });
 });
