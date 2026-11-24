@@ -1,5 +1,7 @@
 "use client";
 
+import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { Skeleton } from "@vergeo/ui/src/skeleton";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -14,6 +16,7 @@ type SupportInboxProps = {
 
 export function SupportInbox({ locale }: SupportInboxProps) {
   const t = useTranslations("admin.support");
+  const tEmpty = useTranslations("admin.boards.states.support");
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<ContextCard[]>([]);
   const [selected, setSelected] = useState<ContextCard | null>(null);
@@ -81,8 +84,22 @@ export function SupportInbox({ locale }: SupportInboxProps) {
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-      {searched && !loading && matches.length === 0 ? (
-        <p className="text-sm text-muted">{t("lookup.empty")}</p>
+      {loading ? (
+        <div className="space-y-3" data-testid="support-inbox-loading" aria-busy="true">
+          <p className="sr-only">{t("lookup.searching")}</p>
+          <Skeleton height="4rem" />
+          <Skeleton height="4rem" />
+          <Skeleton height="4rem" />
+          <Skeleton height="4rem" />
+        </div>
+      ) : null}
+
+      {searched && !loading && matches.length === 0 && !error ? (
+        <EmptyState
+          data-testid="support-inbox-empty"
+          title={tEmpty("emptyTitle")}
+          body={tEmpty("emptyBody")}
+        />
       ) : null}
 
       {matches.length > 1 ? (

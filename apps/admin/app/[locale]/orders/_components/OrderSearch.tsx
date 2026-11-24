@@ -1,11 +1,11 @@
 "use client";
 
+import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { Skeleton } from "@vergeo/ui/src/skeleton";
 import { orderStatusTone, StatusChip } from "@vergeo/ui/src/status-chip";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-import { EmptyBlock, LoadingBlock } from "../../_components/StateBlocks";
 
 import { type OrderSearchItem, ordersApi } from "./api";
 
@@ -26,6 +26,7 @@ type OrderSearchProps = {
 
 export function OrderSearch({ locale }: OrderSearchProps) {
   const t = useTranslations("admin.orders.search");
+  const tEmpty = useTranslations("admin.boards.states.orders");
   const router = useRouter();
   const [orderId, setOrderId] = useState("");
   const [phone, setPhone] = useState("");
@@ -157,10 +158,22 @@ export function OrderSearch({ locale }: OrderSearchProps) {
         </p>
       ) : null}
 
-      {loading ? <LoadingBlock label={t("searching")} rows={3} /> : null}
+      {loading ? (
+        <div className="space-y-3" data-testid="orders-search-loading" aria-busy="true">
+          <p className="sr-only">{t("searching")}</p>
+          <Skeleton height="4rem" />
+          <Skeleton height="4rem" />
+          <Skeleton height="4rem" />
+          <Skeleton height="4rem" />
+        </div>
+      ) : null}
 
       {searched && !loading && !error && results.length === 0 ? (
-        <EmptyBlock title={t("empty")} body={t("emptyHint")} />
+        <EmptyState
+          data-testid="orders-search-empty"
+          title={tEmpty("emptyTitle")}
+          body={tEmpty("emptyBody")}
+        />
       ) : null}
 
       {results.length > 0 ? (

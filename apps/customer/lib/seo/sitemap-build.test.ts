@@ -10,6 +10,10 @@ import {
 } from "./sitemap-build";
 
 vi.mock("./sitemap-sources", () => ({
+  fetchCategorySitemapEntries: vi.fn(async () => [
+    { path: "all" },
+    { path: "electronics", lastModified: new Date("2026-11-20T10:00:00.000Z") },
+  ]),
   fetchCategorySitemapSlugs: vi.fn(async () => ["all", "electronics"]),
   fetchProductSitemapSlugs: vi.fn(async () => ["itel-a70", "solar-lantern"]),
   fetchServiceSitemapSlugs: vi.fn(async () => ["plumbing-kitwe"]),
