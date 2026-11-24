@@ -314,7 +314,6 @@ SUPERADMIN_ONLY_ROUTES: frozenset[str] = frozenset(
     {
         "GET /admin/accounts",
         "POST /admin/accounts/{user_id}/deactivate",
-        "DELETE /admin/clip-pilot/vendors/{vendor_id}",
         "DELETE /admin/roles/{key}",
         "DELETE /admin/roles/{key}/users/{user_id}",
         "GET /admin/roles",
@@ -334,6 +333,7 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "PATCH /admin/catalog/services/{entity_id}",
         "POST /admin/catalog/services/{entity_id}/moderate",
         "POST /admin/catalog/services/{entity_id}/restore",
+        "DELETE /admin/clip-pilot/vendors/{vendor_id}",
         "DELETE /admin/translations/overrides",
         "GET /admin/clip-pilot",
         "GET /admin/clips",
