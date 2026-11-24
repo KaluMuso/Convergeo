@@ -2,12 +2,12 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
+import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import common from "../../../../../../packages/i18n/messages/en/common.json";
 import vendor from "../../../../../../packages/i18n/messages/en/vendor.json";
-import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 
 import { SettingsView } from "./settings-view";
 
