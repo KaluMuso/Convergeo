@@ -312,6 +312,7 @@
       "loadFailed": "Impossible d'ouvrir votre inscription. Vérifiez votre connexion et réessayez.",
       "saveFailed": "Impossible d'enregistrer la boutique. Réessayez.",
       "submitFailed": "Envoi impossible. Vérifiez votre connexion et réessayez.",
+      "momoNotFound": "We couldn't find a mobile money account for this number. Check the number, and that it is an MTN or Airtel line registered in your name.",
       "authRequired": "Connectez-vous pour terminer l'inscription vendeur.",
       "permissionDenied": "Cette inscription appartient à un autre compte. Connectez-vous avec le numéro invité ou contactez-nous.",
       "draftLocked": "Vous êtes approuvé : la boutique ne se modifie plus ici. Contactez-nous pour la changer.",

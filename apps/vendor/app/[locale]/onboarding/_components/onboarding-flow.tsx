@@ -438,11 +438,18 @@ function AccountOnboardingFlow({
       clearLocalDraft(userId);
       // Keep the submit lock until navigation/unmount, so repeats cannot resend.
       router.push(`/${locale}/onboarding/status`);
-    } catch {
+    } catch (err) {
       if (isCurrentOperation(sessionGeneration, navigation)) {
         pending.current.submit = false;
         setSubmitting(false);
-        setError(t("onboarding.errors.submitFailed"));
+        const code = (err as { code?: unknown } | null)?.code;
+        setError(
+          t(
+            code === "momo_account_not_found"
+              ? "onboarding.errors.momoNotFound"
+              : "onboarding.errors.submitFailed",
+          ),
+        );
       }
     } finally {
       if (activeSession.current.active && !isCurrentOperation(sessionGeneration, navigation)) {
