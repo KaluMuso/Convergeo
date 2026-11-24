@@ -65,9 +65,10 @@ def detect_momo_operator(phone: str) -> MomoOperator:
     else:
         prefix = digits[:2]
 
+    # ZICTA numbering: MTN 096/076, Airtel 097/077, Zamtel 095/075.
     if prefix in {"97", "77"}:
         return "airtel"
-    if prefix in {"95", "96"}:
+    if prefix in {"96", "76"}:
         return "mtn"
     return "zamtel"
 
@@ -96,6 +97,15 @@ async def resolve_momo_account_name(
         response.raise_for_status()
         body = response.json()
     except httpx.HTTPStatusError as exc:
+        if 400 <= exc.response.status_code < 500 and exc.response.status_code not in (401, 403):
+            # Lenco could not find a wallet for this number on this network: the
+            # vendor's input is wrong, not our upstream. Tell them, don't say 502.
+            raise AppError(
+                code="momo_account_not_found",
+                message="No mobile money account found for this number on this network",
+                http_status=422,
+                details={"operator": resolved_operator},
+            ) from exc
         raise AppError(
             code="lenco_resolve_failed",
             message="Failed to resolve mobile-money account",

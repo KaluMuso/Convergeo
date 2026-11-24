@@ -92,8 +92,9 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 2 reviewed: area-pair delivery pricing schema + area seed (additive).
         # + 1 reviewed: Web Push delivery queue + enqueue trigger (additive, reversible).
         # + 1 reviewed: catalog moderation holds + ad targets (additive).
-        self.assertEqual(len(runner.FORWARD), 70)
-        self.assertEqual(len(set(runner.FORWARD)), 70)
+        # + 1 reviewed: T8 social contacts, requests, blocks, 1:1 chat (additive).
+        self.assertEqual(len(runner.FORWARD), 71)
+        self.assertEqual(len(set(runner.FORWARD)), 71)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

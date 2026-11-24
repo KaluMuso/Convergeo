@@ -1218,6 +1218,68 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          body: string | null
+          card: Json | null
+          created_at: string
+          id: string
+          kind: string
+          sender: string
+          thread_id: string
+        }
+        Insert: {
+          body?: string | null
+          card?: Json | null
+          created_at?: string
+          id?: string
+          kind: string
+          sender: string
+          thread_id: string
+        }
+        Update: {
+          body?: string | null
+          card?: Json | null
+          created_at?: string
+          id?: string
+          kind?: string
+          sender?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: []
+      }
       checkout_groups: {
         Row: {
           coupon_code: string | null
@@ -1687,6 +1749,72 @@ export type Database = {
           id?: string
           row_key?: string
           table_name?: string
+        }
+        Relationships: []
+      }
+      contact_blocks: {
+        Row: {
+          blocked: string
+          blocker: string
+          created_at: string
+        }
+        Insert: {
+          blocked: string
+          blocker: string
+          created_at?: string
+        }
+        Update: {
+          blocked?: string
+          blocker?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      contact_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          from_user: string
+          id: string
+          note: string | null
+          status: string
+          to_user: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          from_user: string
+          id?: string
+          note?: string | null
+          status?: string
+          to_user: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          from_user?: string
+          id?: string
+          note?: string | null
+          status?: string
+          to_user?: string
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          created_at: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          user_a?: string
+          user_b?: string
         }
         Relationships: []
       }
@@ -6467,6 +6595,27 @@ export type Database = {
           },
         ]
       }
+      phone_discovery: {
+        Row: {
+          enabled: boolean
+          phone_hash: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          enabled?: boolean
+          phone_hash: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          enabled?: boolean
+          phone_hash?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_config: {
         Row: {
           created_at: string
@@ -7004,6 +7153,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          contact_requests_from: string
           created_at: string
           deleted_at: string | null
           display_name: string | null
@@ -7015,6 +7165,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          contact_requests_from?: string
           created_at?: string
           deleted_at?: string | null
           display_name?: string | null
@@ -7026,6 +7177,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          contact_requests_from?: string
           created_at?: string
           deleted_at?: string | null
           display_name?: string | null
@@ -8411,6 +8563,27 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           value?: string
+        }
+        Relationships: []
+      }
+      user_handles: {
+        Row: {
+          changed_at: string
+          created_at: string
+          handle: string
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          created_at?: string
+          handle: string
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          created_at?: string
+          handle?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -10267,6 +10440,10 @@ export type Database = {
         Returns: number
       }
       ask_resolve_tier: { Args: { p_user_id: string }; Returns: string }
+      block_user: {
+        Args: { p_actor?: string; p_other: string }
+        Returns: boolean
+      }
       branch_min_sibling_distance_m: { Args: never; Returns: number }
       bump_rate_counter: {
         Args: {
@@ -10400,6 +10577,14 @@ export type Database = {
         }
         Returns: Json
       }
+      discover_by_phone_hashes: {
+        Args: { p_actor: string; p_hashes: string[] }
+        Returns: {
+          display_name: string
+          handle: string
+          user_id: string
+        }[]
+      }
       embedding_enqueue_document: {
         Args: {
           p_entity_id: string
@@ -10454,6 +10639,7 @@ export type Database = {
         Args: { p_checkout_id: string; p_terminal_status: string }
         Returns: boolean
       }
+      expire_contact_requests: { Args: never; Returns: number }
       finalize_ask_answer: {
         Args: {
           p_model: string
@@ -10514,6 +10700,15 @@ export type Database = {
         Args: { p_checkout: string }
         Returns: undefined
       }
+      lookup_handle_card: {
+        Args: { p_actor?: string; p_handle: string }
+        Returns: {
+          display_name: string
+          handle: string
+          is_contact: boolean
+          user_id: string
+        }[]
+      }
       manage_admin_role: {
         Args: {
           p_action: string
@@ -10555,6 +10750,18 @@ export type Database = {
         }
       }
       multi_branch_enabled: { Args: never; Returns: boolean }
+      my_contact_requests: {
+        Args: { p_actor?: string }
+        Returns: {
+          created_at: string
+          from_user: string
+          id: string
+          note: string
+          outgoing: boolean
+          status: string
+          to_user: string
+        }[]
+      }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
       normalize_zm_msisdn: { Args: { p_raw: string }; Returns: string }
       order_has_collected_money: { Args: { p_order: string }; Returns: boolean }
@@ -10651,6 +10858,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      remove_contact: {
+        Args: { p_actor?: string; p_other: string }
+        Returns: boolean
+      }
       reserve_ask_quota: {
         Args: {
           p_client_ip: unknown
@@ -10697,6 +10908,14 @@ export type Database = {
       reset_clip_kill_switch: {
         Args: { p_month_key: string }
         Returns: boolean
+      }
+      respond_contact_request: {
+        Args: { p_action: string; p_actor?: string; p_request_id: string }
+        Returns: {
+          request_id: string
+          status: string
+          thread_id: string
+        }[]
       }
       review_bayes_value: {
         Args: { p_rating_count: number; p_rating_sum: number }
@@ -10761,12 +10980,40 @@ export type Database = {
         Args: { p_vendor_id: string }
         Returns: undefined
       }
+      send_chat_message: {
+        Args: {
+          p_actor?: string
+          p_body?: string
+          p_card?: Json
+          p_kind: string
+          p_thread_id: string
+        }
+        Returns: {
+          created_at: string
+          message_id: string
+        }[]
+      }
+      send_contact_request: {
+        Args: { p_actor?: string; p_note?: string; p_to_handle: string }
+        Returns: {
+          request_id: string
+          status: string
+        }[]
+      }
       service_buyer_acknowledged: {
         Args: { p_job_id: string }
         Returns: boolean
       }
       service_obligation_is_valid: {
         Args: { p_obligation: string }
+        Returns: boolean
+      }
+      set_my_handle: {
+        Args: { p_actor?: string; p_handle: string }
+        Returns: string
+      }
+      set_phone_discovery: {
+        Args: { p_enabled: boolean; p_phone_hash: string; p_user: string }
         Returns: boolean
       }
       transition_ad_placement: {
@@ -10840,6 +11087,10 @@ export type Database = {
           p_vendor_id: string
         }
         Returns: string
+      }
+      unblock_user: {
+        Args: { p_actor?: string; p_other: string }
+        Returns: boolean
       }
       vendor_branch_dedup_scan: {
         Args: { p_vendor_id: string }

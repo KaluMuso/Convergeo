@@ -312,6 +312,7 @@
       "loadFailed": "无法打开注册信息。请检查网络后重试。",
       "saveFailed": "店铺信息保存失败。请重试。",
       "submitFailed": "提交失败。请检查网络后重试。",
+      "momoNotFound": "We couldn't find a mobile money account for this number. Check the number, and that it is an MTN or Airtel line registered in your name.",
       "authRequired": "请登录以完成卖家注册。",
       "permissionDenied": "此注册属于另一个账户。请用收到邀请的号码登录，或联系我们。",
       "draftLocked": "您已获批，店铺信息不能在这里修改。如需修改请联系我们。",

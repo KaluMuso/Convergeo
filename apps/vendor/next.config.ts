@@ -25,17 +25,19 @@ const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
  * `Content-Security-Policy-Report-Only` while the framing/hardening directives are
  * enforced now. `{{CSP_NONCE}}` = per-request substitution point.
  * No Lenco widget allowance here (payouts use the API, not the hosted widget).
- * The QR ticket scanner needs the camera, so `camera=(self)` is scoped to the scan
- * routes only; every other route denies camera.
+ * The QR ticket scanner, KYC document capture (onboarding) and the clip studio need
+ * the camera, so `camera=(self)` is scoped to those routes only; every other route
+ * denies camera.
  * Report-only → enforce runbook: docs/ops/security-headers.md.
  */
 const NONCE = "'nonce-{{CSP_NONCE}}'";
 const CSP_REPORTING = "report-uri /api/csp-report; report-to csp-endpoint";
 const isDev = isDevelopmentEnv();
 
-function permissionsPolicy(cameraAllowed: boolean): string {
+function permissionsPolicy(cameraAllowed: boolean, geolocationAllowed = false): string {
   const camera = cameraAllowed ? "camera=(self)" : "camera=()";
-  return `${camera}, microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=()`;
+  const geolocation = geolocationAllowed ? "geolocation=(self)" : "geolocation=()";
+  return `${camera}, microphone=(), ${geolocation}, browsing-topics=(), payment=(), usb=()`;
 }
 
 const ENFORCED_CSP = [
@@ -88,6 +90,13 @@ const cameraAllowedHeaders = [
   { key: "Permissions-Policy", value: permissionsPolicy(true) },
 ];
 
+// Shop location ("Use my current location") on the profile and branch pages.
+const geolocationAllowedHeaders = [
+  ...BASE_HEADERS,
+  { key: "Content-Security-Policy-Report-Only", value: REPORT_ONLY_CSP },
+  { key: "Permissions-Policy", value: permissionsPolicy(false, true) },
+];
+
 const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: [
@@ -114,9 +123,16 @@ const nextConfig: NextConfig = {
       { source: "/:locale/scan", headers: cameraAllowedHeaders },
       // Per-event QR scanner — camera allowed.
       { source: "/:locale/events/:id/scan", headers: cameraAllowedHeaders },
-      // Everything else — camera denied (scan routes excluded via lookahead).
+      // KYC document capture (laptop webcam or phone camera) — camera allowed.
+      { source: "/:locale/onboarding/:path*", headers: cameraAllowedHeaders },
+      // Clip studio recording — camera allowed.
+      { source: "/:locale/clips/:path*", headers: cameraAllowedHeaders },
+      // Shop location pin — geolocation allowed, camera still denied.
+      { source: "/:locale/profile/:path*", headers: geolocationAllowedHeaders },
+      { source: "/:locale/businesses/:path*", headers: geolocationAllowedHeaders },
+      // Everything else — camera and geolocation denied (routes above excluded).
       {
-        source: "/((?!.*scan).*)",
+        source: "/((?!.*(?:scan|onboarding|clips|profile|businesses)).*)",
         headers: COMMON_HEADERS,
       },
     ];
