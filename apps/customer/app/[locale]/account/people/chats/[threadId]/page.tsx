@@ -1,11 +1,8 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
-import dynamic from "next/dynamic";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 
-const ChatPanel = dynamic(() => import("../../_components/chat-panel").then((m) => m.ChatPanel), {
-  ssr: false,
-});
+import { ChatPanel } from "../../_components/chat-panel";
 
 type PageProps = { params: Promise<{ locale: string; threadId: string }> };
 

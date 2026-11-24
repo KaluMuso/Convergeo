@@ -1,14 +1,9 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
-import dynamic from "next/dynamic";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 
+import { ContactsList } from "../_components/contacts-list";
 import { PeopleSubnav } from "../_components/people-subnav";
-
-const ContactsList = dynamic(
-  () => import("../_components/contacts-list").then((m) => m.ContactsList),
-  { ssr: false },
-);
 
 type PageProps = { params: Promise<{ locale: string }> };
 

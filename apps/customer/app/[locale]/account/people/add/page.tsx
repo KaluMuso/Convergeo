@@ -1,15 +1,10 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
-import dynamic from "next/dynamic";
 import { headers } from "next/headers";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 
+import { AddPeoplePanel } from "../_components/add-people-panel";
 import { PeopleSubnav } from "../_components/people-subnav";
-
-const AddPeoplePanel = dynamic(
-  () => import("../_components/add-people-panel").then((m) => m.AddPeoplePanel),
-  { ssr: false },
-);
 
 type PageProps = { params: Promise<{ locale: string }> };
 

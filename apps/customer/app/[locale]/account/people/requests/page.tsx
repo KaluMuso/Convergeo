@@ -1,14 +1,9 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
-import dynamic from "next/dynamic";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 
 import { PeopleSubnav } from "../_components/people-subnav";
-
-const RequestsPanel = dynamic(
-  () => import("../_components/requests-panel").then((m) => m.RequestsPanel),
-  { ssr: false },
-);
+import { RequestsPanel } from "../_components/requests-panel";
 
 type PageProps = { params: Promise<{ locale: string }> };
 

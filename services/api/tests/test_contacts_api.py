@@ -10,7 +10,11 @@ import pytest
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.main import create_app
-from app.services.social.phone import client_hash_to_storage_hash, e164_sha256_hex, normalize_to_e164
+from app.services.social.phone import (
+    client_hash_to_storage_hash,
+    e164_sha256_hex,
+    normalize_to_e164,
+)
 from fastapi.testclient import TestClient
 
 USER = "11111111-1111-1111-1111-111111111111"
@@ -19,7 +23,7 @@ REQ_ID = "33333333-3333-3333-3333-333333333333"
 
 
 class _Q:
-    def __init__(self, rows: list[dict[str, Any]] | Any, owner: "_Fake") -> None:
+    def __init__(self, rows: list[dict[str, Any]] | Any, owner: _Fake) -> None:
         self._rows = rows
         self._owner = owner
         self._pending: list[tuple[str, Any]] = []
@@ -162,7 +166,8 @@ def test_foreign_number_kept() -> None:
 
 def test_client_hash_hmac_stable() -> None:
     client_hash = e164_sha256_hex("+260977123456")
-    a = client_hash_to_storage_hash(client_hash, settings=MagicMock(social_phone_pepper="pep", env="development"))
-    b = client_hash_to_storage_hash(client_hash, settings=MagicMock(social_phone_pepper="pep", env="development"))
+    settings = MagicMock(social_phone_pepper="pep", env="development")
+    a = client_hash_to_storage_hash(client_hash, settings=settings)
+    b = client_hash_to_storage_hash(client_hash, settings=settings)
     assert a == b
     assert a != client_hash
