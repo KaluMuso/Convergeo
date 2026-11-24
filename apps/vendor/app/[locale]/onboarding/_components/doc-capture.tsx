@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { prepareKycImageFile, validateKycImageFile } from "../_lib/kyc-image";
 import { Button } from "../_lib/ui";
 
 type DocCaptureProps = {
@@ -10,11 +11,34 @@ type DocCaptureProps = {
   captureLabel: string;
   retakeLabel: string;
   usePhotoLabel: string;
+  uploadInsteadLabel: string;
+  cameraUnavailableLabel: string;
+  cameraErrorLabel: string;
+  invalidFileTypeLabel: string;
+  fileTooLargeLabel: string;
   onCapture: (file: File) => void;
   disabled?: boolean;
   facingMode?: "user" | "environment";
   existingPreviewUrl?: string | null;
 };
+
+function useFinePointer(): boolean {
+  const [fine, setFine] = useState(false);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      return;
+    }
+    const query = "(pointer: fine)";
+    const media = window.matchMedia(query);
+    const update = () => setFine(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  return fine;
+}
 
 export function DocCapture({
   label,
@@ -22,6 +46,11 @@ export function DocCapture({
   captureLabel,
   retakeLabel,
   usePhotoLabel,
+  uploadInsteadLabel,
+  cameraUnavailableLabel,
+  cameraErrorLabel,
+  invalidFileTypeLabel,
+  fileTooLargeLabel,
   onCapture,
   disabled = false,
   facingMode = "environment",
@@ -29,6 +58,7 @@ export function DocCapture({
 }: DocCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const attachedVideoRef = useRef<HTMLVideoElement | null>(null);
   const lifecycle = useRef({ mounted: false, generation: 0 });
@@ -37,6 +67,12 @@ export function DocCapture({
   const [previewUrl, setPreviewUrl] = useState<string | null>(existingPreviewUrl);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [preparingUpload, setPreparingUpload] = useState(false);
+  const isFinePointer = useFinePointer();
+
+  const captureFacing = facingMode === "user" ? "user" : "environment";
+  const showUploadOption =
+    !cameraActive && !previewUrl && !disabled && (isFinePointer || Boolean(error));
 
   const isCurrentCamera = useCallback(
     (generation: number) =>
@@ -88,7 +124,7 @@ export function DocCapture({
     pendingFileRef.current = null;
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError("Camera not available on this device.");
+      setError(cameraUnavailableLabel);
       return;
     }
 
@@ -121,9 +157,9 @@ export function DocCapture({
         return;
       }
       stopCamera();
-      setError("Could not access camera. Check permissions.");
+      setError(cameraErrorLabel);
     }
-  }, [disabled, facingMode, isCurrentCamera, stopCamera]);
+  }, [cameraErrorLabel, cameraUnavailableLabel, disabled, facingMode, isCurrentCamera, stopCamera]);
 
   const takePhoto = useCallback(() => {
     const video = videoRef.current;
@@ -157,6 +193,78 @@ export function DocCapture({
       0.85,
     );
   }, [disabled, isCurrentCamera, stopCamera]);
+
+  const validationMessage = useCallback(
+    (problem: ReturnType<typeof validateKycImageFile>) => {
+      if (problem === "invalid_type") {
+        return invalidFileTypeLabel;
+      }
+      if (problem === "too_large") {
+        return fileTooLargeLabel;
+      }
+      return null;
+    },
+    [fileTooLargeLabel, invalidFileTypeLabel],
+  );
+
+  const applyPreparedFile = useCallback(
+    (generation: number, file: File) => {
+      if (!isCurrentCamera(generation)) {
+        return;
+      }
+      pendingFileRef.current = file;
+      setPendingFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setError(null);
+      stopCamera();
+    },
+    [isCurrentCamera, stopCamera],
+  );
+
+  const handleFilePicked = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const input = event.target;
+      const raw = input.files?.[0];
+      input.value = "";
+      if (!raw || !lifecycle.current.mounted || disabled) {
+        return;
+      }
+
+      const generation = lifecycle.current.generation;
+      const upfront = validateKycImageFile(raw);
+      if (upfront) {
+        setError(validationMessage(upfront));
+        return;
+      }
+
+      setPreparingUpload(true);
+      try {
+        const file = await prepareKycImageFile(raw);
+        applyPreparedFile(generation, file);
+      } catch (err) {
+        if (!lifecycle.current.mounted) {
+          return;
+        }
+        const code = err instanceof Error ? err.message : "";
+        if (code === "too_large") {
+          setError(fileTooLargeLabel);
+        } else if (code === "invalid_type") {
+          setError(invalidFileTypeLabel);
+        }
+      } finally {
+        if (lifecycle.current.mounted) {
+          setPreparingUpload(false);
+        }
+      }
+    },
+    [applyPreparedFile, disabled, fileTooLargeLabel, invalidFileTypeLabel, validationMessage],
+  );
+
+  const openFilePicker = useCallback(() => {
+    if (!disabled && !preparingUpload) {
+      fileInputRef.current?.click();
+    }
+  }, [disabled, preparingUpload]);
 
   const confirmPhoto = useCallback(() => {
     const file = pendingFileRef.current;
@@ -200,20 +308,47 @@ export function DocCapture({
         <canvas ref={canvasRef} className="hidden" />
       </div>
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture={captureFacing}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+        disabled={disabled || preparingUpload}
+        onChange={(event) => void handleFilePicked(event)}
+      />
+
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       <div className="flex flex-col gap-2">
         {!cameraActive && !previewUrl ? (
-          <Button
-            type="button"
-            className="w-full"
-            disabled={disabled}
-            loading={false}
-            loadingLabel=""
-            onClick={() => void startCamera()}
-          >
-            {captureLabel}
-          </Button>
+          <div className={showUploadOption ? "flex gap-2" : undefined}>
+            <Button
+              type="button"
+              className={showUploadOption ? "min-w-0 flex-1" : "w-full"}
+              disabled={disabled}
+              loading={false}
+              loadingLabel=""
+              onClick={() => void startCamera()}
+            >
+              {captureLabel}
+            </Button>
+            {showUploadOption ? (
+              <Button
+                type="button"
+                variant="secondary"
+                className="min-w-0 flex-1"
+                disabled={disabled || preparingUpload}
+                loading={preparingUpload}
+                loadingLabel=""
+                onClick={openFilePicker}
+              >
+                {uploadInsteadLabel}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
 
         {cameraActive ? (

@@ -22,6 +22,8 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **Courier dispatch v1 (2026-11-09):** `vendor.orders.courier.*` was added to bem/nya as **EN passthrough** for key parity (CCP-03f). Treat the subtree as untranslated until a native reviewer signs it off. The surface is behind the `courier_dispatch` flag (default off).
 
+**Vendor KYC photo upload fallback (2026-11-24):** `vendor.onboarding.kyc.{uploadInstead,cameraUnavailable,cameraError,invalidFileType,fileTooLarge}` were added to bem/nya as **EN passthrough** for key parity. Treat until a native reviewer signs them off. Onboarding is production-facing for new sellers.
+
 **Listing variants + PDP zoom (2026-11-07):** `catalog.pdp.variants` and `catalog.pdp.lightbox` are Phase-1 critical, so bem/nya carry **draft** translations (loanword style matching the existing PDP copy: cart, picture, screen) — they decide what a buyer picks and pays for, so a native reviewer must sign them off before bem/nya are indexed. `checkout.variant`, `orders.detail.variantOption|variantSeparator`, `vendor.listings.variants` and `vendor.orders.items.variantOption|variantSeparator|sku` are **EN passthrough** for key parity; treat those subtrees as untranslated until signed off.
 
 **W8 bundles & offers (2026-11-15):** `vendor.offers.*`, `vendor.shell.nav.offers`, `catalog.offers.*` and `checkout.cart.{offerSavings,offerSaving,offerGift,offerGiftWorth}` were added to bem/nya as **EN passthrough prefixed with `⚠ `** for key parity. Treat these subtrees as untranslated until a native reviewer signs them off. The surface is behind the `bundles` flag (default off).
@@ -203,7 +205,7 @@ Draft bem/nya for the `/account/privacy` Analytics switch. These govern a privac
 - `account.privacy.analytics.gpc` (shown when the browser sends Global Privacy Control; switch is off and disabled)
   - bem: "Browser yenu iletuma Global Privacy Control, ico analytics ilekwa. Tulesunga ico browser yenu ilanda."
   - nya: "Browser yanu ikutumiza Global Privacy Control, choncho analytics yazimitsidwa. Timalemekeza zomwe browser yanu yasankha."
-**Vendor listing + onboarding QA pass (2026-11-15, `fix/vendor-listing-onboarding`):** EN is authoritative; fr/zh are full translations. In bem/nya the following new `vendor.*` keys are **EN passthrough** (marked with the `⚠ ` prefix) pending native-speaker review, because they explain listing rules, fulfilment, identity verification or settings and a wrong vernacular guess costs a vendor more than English does:
+    **Vendor listing + onboarding QA pass (2026-11-15, `fix/vendor-listing-onboarding`):** EN is authoritative; fr/zh are full translations. In bem/nya the following new `vendor.*` keys are **EN passthrough** (marked with the `⚠ ` prefix) pending native-speaker review, because they explain listing rules, fulfilment, identity verification or settings and a wrong vernacular guess costs a vendor more than English does:
 
 - Field-level listing errors and hints: `vendor.listings.fieldErrors.*`, `vendor.listings.errors.{draftInvalid,publishBlocked}`, the new `vendor.listings.fields.*` hints (condition/Class D explanation, defect notes, fulfilment options: Lusaka delivery, pickup at shop or branch, nationwide pickup, made-to-order lead time).
 - Removed listing state: `vendor.listings.manage.removed.*`.
