@@ -153,6 +153,8 @@ PENDING_REPAIR_VERSIONS = {
     # Clips pilot allowlist + service packages (feat/clips-pilot-service-packages).
     "20261124090000",
     "20261124090100",
+    # T8 social contacts, requests, blocks and 1:1 chat (additive, documented down).
+    "20261124120000",
 }
 
 
