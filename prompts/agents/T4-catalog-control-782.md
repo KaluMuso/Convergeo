@@ -15,10 +15,10 @@
 
 ## Problem
 
-#782 (admin catalogue control, typed ad targets, suspended-vendor purchase block; base master) is `dirty`. It touches apps/admin (12 files), services/api (10 app, 5 test files), packages/i18n, packages/types, apps/customer, 1 migration (`20261113091000`).
+#782 (admin catalogue control, typed ad targets, suspended-vendor purchase block; base master) is `dirty`. It touches apps/admin (12 files), services/api (10 app, 5 test files), packages/i18n, packages/types, apps/customer, 1 migration (`20261123100000`).
 Last CI failures:
 - `JavaScript / TypeScript`: `import/order` lint error, `../../_components/admin-request` must come before `AdminLoadFailure` (2 admin files).
-- `Python API`: `remote missing repository migrations: 20261113091000`.
+- `Python API`: `remote missing repository migrations: 20261123100000`.
 - Coordinator and migration checks: `Qualified 153-input source inventory differs`. That is Claude's migration and CI part.
 
 ## Steps
