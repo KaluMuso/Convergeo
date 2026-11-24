@@ -1,5 +1,7 @@
 "use client";
 
+import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { Skeleton } from "@vergeo/ui/src/skeleton";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -14,15 +16,18 @@ export type AdminAccount = {
 
 export function AccountsBoard({ locale }: { locale: string }) {
   const t = useTranslations("admin.accountsUi");
+  const tEmpty = useTranslations("admin.boards.states.accounts");
   const grants = useAdminPermissions();
   const canManage = grants?.can_manage_roles === true;
   const [accounts, setAccounts] = useState<AdminAccount[] | null>(null);
   const [error, setError] = useState<"" | "loadFailed" | "mutationFailed" | "lastSuperadmin">("");
+  const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState<Record<string, string>>({});
   const inFlight = useRef(false);
 
   const reload = useCallback(async () => {
+    setLoading(true);
     try {
       const result = await rolesApi.request<{ accounts: AdminAccount[] }>("/admin/accounts", {
         cache: "no-store",
@@ -33,6 +38,8 @@ export function AccountsBoard({ locale }: { locale: string }) {
     } catch {
       setAccounts(null);
       setError("loadFailed");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -84,16 +91,26 @@ export function AccountsBoard({ locale }: { locale: string }) {
           {t(error)}
         </p>
       ) : null}
-      {accounts === null ? (
+      {loading ? (
+        <div className="space-y-3" data-testid="accounts-board-loading" aria-busy="true">
+          <p className="sr-only">{t("loading")}</p>
+          <Skeleton height="4rem" />
+          <Skeleton height="4rem" />
+          <Skeleton height="4rem" />
+          <Skeleton height="4rem" />
+        </div>
+      ) : accounts === null ? (
         error ? (
           <button className="min-h-11 underline" onClick={() => void reload()}>
             {t("retry")}
           </button>
-        ) : (
-          <p role="status">{t("loading")}</p>
-        )
+        ) : null
       ) : accounts.length === 0 ? (
-        <p>{t("empty")}</p>
+        <EmptyState
+          data-testid="accounts-board-empty"
+          title={tEmpty("emptyTitle")}
+          body={tEmpty("emptyBody")}
+        />
       ) : (
         <ul className="space-y-3">
           {accounts.map((account) => (
