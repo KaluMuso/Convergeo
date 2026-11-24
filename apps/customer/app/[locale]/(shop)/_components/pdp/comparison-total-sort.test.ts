@@ -25,7 +25,7 @@ const base = (id: string, price: number, fee: number | null): ComparisonListing 
 describe("comparisonTotalNgwee", () => {
   it("sorts lowest total with null fees last", () => {
     const listings = [
-      base("cheap", 100_000, null),
+      { ...base("cheap", 100_000, null), deliveryAvailable: true },
       base("best", 120_000, 5_000),
       base("mid", 90_000, 20_000),
     ];
