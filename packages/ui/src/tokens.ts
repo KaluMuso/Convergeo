@@ -3,21 +3,17 @@
  *
  * DESIGN PLAN
  * ───────────
- * Subject: a Zambian marketplace whose promise is trust — your money is held
- * by Vergeo5 until the order arrives. The identity borrows from the two
- * materials Zambia is known for: malachite (deep, banded green — the trust
- * colour, used for actions and the escrow story) and copper (the accent —
- * price highlights, promos, "held by Vergeo5" seal, focus of attention).
+ * v2 default: neutral mono (zinc) light/dark, following the system theme. Users
+ * can opt into Green (legacy malachite/copper), Blue, or Gold accents via
+ * `data-accent` on `<html>`. Semantic colours are shared across accents.
  *
- * Colour (light)
- *   ground  #F7F6F2  stone paper (cooler than the old cream — less "template")
- *   surface #FFFFFF  cards / sheets
- *   ink     #15201B  malachite-black body ink (15.5:1 on ground)
- *   primary #0B5D45  malachite — buttons, links, active nav (7.9:1 white text)
- *   accent  #A4501C  copper — promos, sale price, seal, rating stars (5.2:1)
- *   panel   #0F2A21  malachite night — hero, footer, escrow panels
- * Dark mode mirrors this on a green-charcoal ground (#121614) with a lifted
- * malachite (#5FC49C) and copper (#E39255).
+ * Colour (light, mono default)
+ *   ground  #FAFAFA
+ *   surface #FFFFFF
+ *   ink     #18181B
+ *   primary #18181B — near-black CTAs, white label text
+ *   accent  #3F3F46 — secondary chrome
+ * Green accent restores malachite #0B5D45 + copper #A4501C (see accent-palette.ts).
  *
  * Type
  *   display Bricolage Grotesque (variable, latin subset) — a grotesk with ink
@@ -45,36 +41,38 @@
  *      font, CSS-only motion that collapses under reduced-motion.
  */
 
+import { GREEN_DARK, GREEN_LIGHT, MONO_DARK, MONO_LIGHT } from "./accent-palette";
+
 export const tokens = {
   colors: {
-    bg: "#F7F6F2",
-    bg2: "#EEEDE8",
+    bg: MONO_LIGHT.bg,
+    bg2: MONO_LIGHT.bg2,
     surface: "#FFFFFF",
     surfaceElevated: "#FFFFFF",
-    border: "#E3E1DA",
-    panel: "#0F2A21",
-    panel2: "#163A2E",
-    panelText: "#F3F0E8",
-    panelMuted: "#A9BFB4",
+    border: MONO_LIGHT.border,
+    panel: MONO_LIGHT.panel,
+    panel2: MONO_LIGHT.panel2,
+    panelText: MONO_LIGHT.panelText,
+    panelMuted: MONO_LIGHT.panelMuted,
     panelBorder: "rgba(255,255,255,0.12)",
-    text: "#15201B",
-    text2: "#4A5550",
-    // Meets AA for normal text on ground (5.3:1) and on bg-2 (4.9:1).
-    text3: "#5E6963",
-    displayInk: "#0F2A21",
-    primary: "#0B5D45",
-    primaryDeep: "#08473A",
-    primaryTint: "#E3F0EA",
-    accent: "#A4501C",
-    accentDeep: "#7E3C12",
-    accentTint: "#F6E8DD",
+    text: MONO_LIGHT.text,
+    text2: MONO_LIGHT.text2,
+    /** AA on bg and bg-2 (~4.6:1 on #F4F4F5). */
+    text3: "#5F6570",
+    displayInk: MONO_LIGHT.displayInk,
+    primary: MONO_LIGHT.primary,
+    primaryDeep: MONO_LIGHT.primaryDeep,
+    primaryTint: MONO_LIGHT.primaryTint,
+    accent: MONO_LIGHT.accent,
+    accentDeep: MONO_LIGHT.accentDeep,
+    accentTint: MONO_LIGHT.accentTint,
     success: "#1E7A4C",
     danger: "#B3261E",
     warning: "#B7791F",
     info: "#1D5E8C",
     /** On-color for solid danger buttons (AA in light and dark). */
     onDanger: "#FFFFFF",
-    price: "#15201B",
+    price: MONO_LIGHT.text,
     discount: "#B3261E",
     catBeauty: "#C9A88A",
     catHealth: "#7AAB8A",
@@ -83,27 +81,26 @@ export const tokens = {
     catHome: "#B5A07A",
     catAuto: "#8A8AB5",
   },
-  /** Concrete dark palette (warm charcoal). Mirrored in base.css [data-theme="dark"]. */
+  /** Concrete dark palette (mono). Mirrored in base.css [data-theme="dark"]. */
   darkColors: {
-    bg: "#121614",
-    bg2: "#181D1A",
-    surface: "#1B201D",
-    surfaceElevated: "#232925",
-    border: "rgba(255,255,255,0.10)",
-    text: "#E4E8E5",
-    text2: "#A8B1AC",
-    /** AA on dark surface (~5.5:1) and bg (~6.1:1). */
-    text3: "#8E9892",
-    displayInk: "#E4E8E5",
-    primary: "#5FC49C",
-    primaryDeep: "#4AAE88",
-    primaryTint: "#1D2C26",
-    accent: "#E39255",
-    price: "#E4E8E5",
+    bg: MONO_DARK.bg,
+    bg2: MONO_DARK.bg2,
+    surface: MONO_DARK.surface,
+    surfaceElevated: "#27272A",
+    border: MONO_DARK.border,
+    text: MONO_DARK.text,
+    text2: MONO_DARK.text2,
+    text3: MONO_DARK.text3,
+    displayInk: MONO_DARK.displayInk,
+    primary: MONO_DARK.primary,
+    primaryDeep: MONO_DARK.primaryDeep,
+    primaryTint: MONO_DARK.primaryTint,
+    accent: MONO_DARK.accent,
+    price: MONO_DARK.text,
     discount: "#EF8A80",
     onDanger: "#FFFFFF",
-    primaryBtnFg: "#121614",
-    primaryBtnHover: "#78D0AD",
+    primaryBtnFg: MONO_DARK.primaryBtnFg,
+    primaryBtnHover: MONO_DARK.primaryBtnHover,
   },
   fonts: {
     display: "'Bricolage Grotesque', 'DM Sans', system-ui, sans-serif",
@@ -161,9 +158,9 @@ export const tokens = {
     focusRing: "0 0 0 2px #FFFFFF, 0 0 0 4px rgba(11,93,69,0.55)",
   },
   transitionDuration: {
-    fast: "150ms",
-    DEFAULT: "250ms",
-    page: "300ms",
+    fast: "120ms",
+    DEFAULT: "200ms",
+    page: "320ms",
     slow: "400ms",
   },
   transitionTimingFunction: {
@@ -172,6 +169,9 @@ export const tokens = {
     spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
   },
 } as const;
+
+/** Legacy malachite palette — Green accent + backwards-compatible references. */
+export const greenBrandTokens = { light: GREEN_LIGHT, dark: GREEN_DARK };
 
 export type Tokens = typeof tokens;
 
@@ -227,7 +227,7 @@ export const contrastPairs = [
   },
   {
     name: "primary-button-text",
-    foreground: tokens.colors.surface,
+    foreground: "#FFFFFF",
     background: tokens.colors.primary,
   },
   {

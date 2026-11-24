@@ -1,4 +1,5 @@
 /* eslint-disable @vergeo/no-hardcoded-strings -- dev-only UI preview; gated off in production */
+import { DesignV2Section } from "./_sections/design-v2";
 import { CardsSection } from "./_sections/cards";
 import { FormsSection } from "./_sections/forms";
 import { MediaSection } from "./_sections/media";
@@ -7,6 +8,7 @@ import { OverlaysSection } from "./_sections/overlays";
 import { StatesSection } from "./_sections/states";
 
 const SECTIONS = [
+  { id: "design-v2", label: "Design v2" },
   { id: "forms", label: "Form controls" },
   { id: "cards", label: "Cards & prices" },
   { id: "overlays", label: "Overlays" },
@@ -41,6 +43,7 @@ export default function UiPreviewPage() {
         </nav>
       </header>
 
+      <DesignV2Section />
       <FormsSection />
       <CardsSection />
       <OverlaysSection />

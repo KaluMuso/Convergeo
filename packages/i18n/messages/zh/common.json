@@ -16,7 +16,12 @@
     "light": "浅色",
     "dark": "深色",
     "system": "系统",
-    "displayPreferences": "显示偏好"
+    "displayPreferences": "显示偏好",
+    "accentLabel": "强调色",
+    "accentMono": "单色",
+    "accentGreen": "绿色",
+    "accentBlue": "蓝色",
+    "accentGold": "金色"
   },
   "locale": {
     "switchAria": "选择语言",

@@ -22,7 +22,12 @@
     "light": "Clair",
     "dark": "Sombre",
     "system": "Système",
-    "displayPreferences": "Préférences d'affichage"
+    "displayPreferences": "Préférences d'affichage",
+    "accentLabel": "Couleur d'accent",
+    "accentMono": "Mono",
+    "accentGreen": "Vert",
+    "accentBlue": "Bleu",
+    "accentGold": "Or"
   },
   "locale": {
     "switchAria": "Choisir la langue",
