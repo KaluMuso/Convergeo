@@ -80,7 +80,12 @@
     "held": "在您收到订单前，我们替您保管这笔钱。",
     "released": "卖家已收款。",
     "refunded": "钱正在退回您的移动钱包。",
-    "cod": "收到订单时以现金付款。"
+    "cod": "收到订单时以现金付款。",
+    "strip": {
+      "paid": "You paid",
+      "held": "Held by Vergeo5",
+      "released": "Released"
+    }
   },
   "pickup": {
     "title": "取货信息",

@@ -119,6 +119,13 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       released: order.payment_mode === "cod" ? "" : t("escrow.released"),
       refunded: t("escrow.refunded"),
       cod: t("escrow.cod"),
+      strip: isCod
+        ? undefined
+        : {
+            paid: t("escrow.strip.paid"),
+            held: t("escrow.strip.held"),
+            released: t("escrow.strip.released"),
+          },
     },
     explain: {
       placed: t("timeline.explain.placed"),
@@ -203,7 +210,11 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       ) : null}
 
       <div className={colMain}>
-        <OrderTimeline timeline={order.timeline} labels={timelineLabels} />
+        <OrderTimeline
+          timeline={order.timeline}
+          labels={timelineLabels}
+          paymentMode={order.payment_mode}
+        />
       </div>
 
       <section
