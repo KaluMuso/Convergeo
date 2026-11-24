@@ -90,7 +90,7 @@ describe("buildCanonicalAlternates", () => {
 });
 
 describe("buildProductJsonLd", () => {
-  it("maps offers with exact ZMW decimal prices", () => {
+  it("maps multi-vendor AggregateOffer with exact ZMW decimal prices", () => {
     const input = {
       name: "Itel A70",
       slug: "itel-a70",
@@ -99,7 +99,7 @@ describe("buildProductJsonLd", () => {
       imageUrls: ["https://res.cloudinary.com/demo/image/upload/itel.jpg"],
       offers: [
         {
-          priceNgwee: 123456,
+          priceNgwee: 123450,
           inStock: true,
           sellerName: "Tech Hub Lusaka",
         },
@@ -115,12 +115,15 @@ describe("buildProductJsonLd", () => {
 
     expect(jsonLd["@type"]).toBe("Product");
     expect(jsonLd.name).toBe("Itel A70");
+    expect(jsonLd.brand).toEqual({ "@type": "Brand", name: "Itel" });
     expect(jsonLd.aggregateRating).toBeUndefined();
-    const offers = jsonLd.offers as Array<Record<string, unknown>>;
-    expect(offers).toHaveLength(2);
-    expect(offers[0]?.price).toBe("1234.56");
-    expect(offers[0]?.priceCurrency).toBe("ZMW");
-    expect(offers[1]?.price).toBe("1250.00");
+    const offers = jsonLd.offers as Record<string, unknown>;
+    expect(offers["@type"]).toBe("AggregateOffer");
+    expect(offers.lowPrice).toBe("1234.50");
+    expect(offers.highPrice).toBe("1250.00");
+    expect(offers.priceCurrency).toBe("ZMW");
+    expect(offers.offerCount).toBe(2);
+    expect(offers.availability).toBe("https://schema.org/InStock");
   });
 
   it("refuses Product JSON-LD without real image or seller offers", () => {
@@ -267,14 +270,15 @@ describe("buildEventJsonLd", () => {
 });
 
 describe("buildBreadcrumbListJsonLd", () => {
-  it("builds breadcrumb positions from category path", () => {
+  it("builds home → category → product breadcrumbs", () => {
     const jsonLd = buildBreadcrumbListJsonLd("en", [
       { name: "Home", path: "" },
       { name: "Electronics", path: "c/electronics" },
+      { name: "Itel A70", path: "p/itel-a70" },
     ]);
 
     const items = jsonLd.itemListElement as Array<Record<string, unknown>>;
-    expect(items).toHaveLength(2);
+    expect(items).toHaveLength(3);
     expect(items[0]).toMatchObject({
       position: 1,
       name: "Home",
@@ -284,6 +288,11 @@ describe("buildBreadcrumbListJsonLd", () => {
       position: 2,
       name: "Electronics",
       item: "https://vergeo5.com/en/c/electronics",
+    });
+    expect(items[2]).toMatchObject({
+      position: 3,
+      name: "Itel A70",
+      item: "https://vergeo5.com/en/p/itel-a70",
     });
   });
 });

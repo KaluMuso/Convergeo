@@ -1,5 +1,9 @@
 import { createBrowserClient } from "@vergeo/auth/browser-client";
 
+import {
+  categoryPathsEligibleForSitemap,
+  type CategorySitemapRow,
+} from "./category-listing-eligibility";
 import { isSitemapEligibleCategorySlug, isSitemapEligibleEntitySlug } from "./sitemap-eligibility";
 
 import { getApiBaseUrl } from "../api-base-url";
@@ -21,48 +25,78 @@ type ServicesListResponse = {
 };
 
 type CategoryRow = {
-  slug: string;
+  path: string;
   prohibited: boolean | null;
 };
 
+type ListingProjectionRow = {
+  category_path: string | null;
+  updated_at: string;
+};
+
 /**
- * Public category PLP slugs for the sitemap.
- * Includes `all` plus every non-prohibited category leaf/hub slug used by `/c/{slug}`.
+ * Public category PLP paths for the sitemap (`all` plus categories that have
+ * live listings on the category or any descendant).
  */
-export async function fetchCategorySitemapSlugs(): Promise<string[]> {
-  const slugs = new Set<string>(["all"]);
+export async function fetchCategorySitemapEntries(): Promise<CategorySitemapRow[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
+  const allEntry: CategorySitemapRow = { path: "all" };
   if (!url || !key) {
-    return [...slugs];
+    return [allEntry];
   }
 
   try {
-    // Anon public read (RLS categories_public_select). No cookie session needed.
+    // Anon public read (RLS categories_public_select + search_documents_public_select).
     const client = createBrowserClient();
-    const { data, error } = await client
-      .from("categories")
-      .select("slug, prohibited")
-      .eq("prohibited", false);
+    const [categoriesResult, listingsResult] = await Promise.all([
+      client.from("categories").select("path, prohibited"),
+      client
+        .from("search_documents")
+        .select("category_path, updated_at")
+        .eq("entity_kind", "product")
+        .eq("is_public", true)
+        .not("category_path", "is", null),
+    ]);
 
-    if (error || !Array.isArray(data)) {
-      return [...slugs];
+    if (categoriesResult.error || !Array.isArray(categoriesResult.data)) {
+      return [allEntry];
     }
 
-    for (const row of data as CategoryRow[]) {
-      if (row.prohibited) {
-        continue;
-      }
-      if (typeof row.slug === "string" && isSitemapEligibleCategorySlug(row.slug)) {
-        slugs.add(row.slug);
-      }
-    }
+    const categories = (categoriesResult.data as CategoryRow[])
+      .filter((row) => typeof row.path === "string" && row.path.trim().length > 0)
+      .map((row) => ({
+        path: row.path.trim(),
+        prohibited: row.prohibited === true,
+      }));
+
+    const listingStamps = (listingsResult.data as ListingProjectionRow[] | null)
+      ?.filter(
+        (row): row is { category_path: string; updated_at: string } =>
+          typeof row.category_path === "string" &&
+          row.category_path.trim().length > 0 &&
+          typeof row.updated_at === "string",
+      )
+      .map((row) => ({
+        category_path: row.category_path.trim(),
+        updated_at: row.updated_at,
+      }));
+
+    const eligible = categoryPathsEligibleForSitemap(categories, listingStamps ?? []).filter(
+      (row) => isSitemapEligibleCategorySlug(row.path),
+    );
+
+    return [allEntry, ...eligible];
   } catch {
-    return [...slugs];
+    return [allEntry];
   }
+}
 
-  return [...slugs].sort();
+/** Back-compat helper returning path strings only. */
+export async function fetchCategorySitemapSlugs(): Promise<string[]> {
+  const entries = await fetchCategorySitemapEntries();
+  return entries.map((entry) => entry.path);
 }
 
 export async function fetchProductSitemapSlugs(): Promise<string[]> {

@@ -58,6 +58,22 @@
     "extras": "Extras requests",
     "trials": "Free trials"
   },
+  "boards": {
+    "states": {
+      "accounts": {
+        "emptyTitle": "No admin accounts",
+        "emptyBody": "When someone is granted an admin role they appear here. Use Manage roles to add one."
+      },
+      "support": {
+        "emptyTitle": "No matches",
+        "emptyBody": "Try another phone number, order ID, or customer name."
+      },
+      "orders": {
+        "emptyTitle": "No orders match",
+        "emptyBody": "Clear or widen filters, then search again."
+      }
+    }
+  },
   "hubs": {
     "moderation": {
       "title": "Moderation",
