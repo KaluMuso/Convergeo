@@ -23,7 +23,7 @@ REQ_ID = "33333333-3333-3333-3333-333333333333"
 
 
 class _Q:
-    def __init__(self, rows: list[dict[str, Any]] | Any, owner: _Fake) -> None:
+    def __init__(self, rows: list[dict[str, Any]] | dict[str, Any] | Any, owner: _Fake) -> None:
         self._rows = rows
         self._owner = owner
         self._pending: list[tuple[str, Any]] = []
@@ -61,10 +61,10 @@ class _Fake:
     def table(self, name: str) -> _Q:
         self._last_rpc = None
         self.calls.append(("table", name))
-        rows = self.tables.get(name, [])
-        if name == "feature_flags" and rows:
-            rows = rows[0] if isinstance(rows, list) else rows
-        return _Q(rows, self)
+        raw = self.tables.get(name, [])
+        if name == "feature_flags" and isinstance(raw, list) and raw:
+            return _Q(raw[0], self)
+        return _Q(raw, self)
 
     def rpc(self, name: str, params: dict[str, Any]) -> _Q:
         self._last_rpc = name
