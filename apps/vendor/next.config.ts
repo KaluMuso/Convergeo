@@ -34,9 +34,10 @@ const NONCE = "'nonce-{{CSP_NONCE}}'";
 const CSP_REPORTING = "report-uri /api/csp-report; report-to csp-endpoint";
 const isDev = isDevelopmentEnv();
 
-function permissionsPolicy(cameraAllowed: boolean): string {
+function permissionsPolicy(cameraAllowed: boolean, geolocationAllowed = false): string {
   const camera = cameraAllowed ? "camera=(self)" : "camera=()";
-  return `${camera}, microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=()`;
+  const geolocation = geolocationAllowed ? "geolocation=(self)" : "geolocation=()";
+  return `${camera}, microphone=(), ${geolocation}, browsing-topics=(), payment=(), usb=()`;
 }
 
 const ENFORCED_CSP = [
@@ -89,6 +90,13 @@ const cameraAllowedHeaders = [
   { key: "Permissions-Policy", value: permissionsPolicy(true) },
 ];
 
+// Shop location ("Use my current location") on the profile and branch pages.
+const geolocationAllowedHeaders = [
+  ...BASE_HEADERS,
+  { key: "Content-Security-Policy-Report-Only", value: REPORT_ONLY_CSP },
+  { key: "Permissions-Policy", value: permissionsPolicy(false, true) },
+];
+
 const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: [
@@ -119,9 +127,12 @@ const nextConfig: NextConfig = {
       { source: "/:locale/onboarding/:path*", headers: cameraAllowedHeaders },
       // Clip studio recording — camera allowed.
       { source: "/:locale/clips/:path*", headers: cameraAllowedHeaders },
-      // Everything else — camera denied (camera routes excluded via lookahead).
+      // Shop location pin — geolocation allowed, camera still denied.
+      { source: "/:locale/profile/:path*", headers: geolocationAllowedHeaders },
+      { source: "/:locale/businesses/:path*", headers: geolocationAllowedHeaders },
+      // Everything else — camera and geolocation denied (routes above excluded).
       {
-        source: "/((?!.*(?:scan|onboarding|clips)).*)",
+        source: "/((?!.*(?:scan|onboarding|clips|profile|businesses)).*)",
         headers: COMMON_HEADERS,
       },
     ];
