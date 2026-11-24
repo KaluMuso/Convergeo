@@ -30,9 +30,9 @@
     "refunded": "Refund ikubwerera ku mobile money wallet yanu.",
     "released": "Ndalama zatsimikizidwa kwa vendor pambuyo pa fulfilment.",
     "strip": {
-      "paid": "You paid",
-      "held": "Held by Vergeo5",
-      "released": "Released"
+      "paid": "Walipira kale",
+      "held": "Ikusungidwa na Vergeo5",
+      "released": "Yatsimikizidwa"
     }
   },
   "list": {

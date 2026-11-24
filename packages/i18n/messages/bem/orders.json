@@ -30,9 +30,9 @@
     "refunded": "Refund ilebwelela ku mobile money wallet yenu.",
     "released": "Indalama shyasuminishwa ku vendor pantu fulfilment.",
     "strip": {
-      "paid": "You paid",
-      "held": "Held by Vergeo5",
-      "released": "Released"
+      "paid": "Mwalishe kale",
+      "held": "Yikwata na Vergeo5",
+      "released": "Yasuminishwa"
     }
   },
   "list": {
