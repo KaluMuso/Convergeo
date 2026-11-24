@@ -123,6 +123,8 @@ def _fetch_nominatim(q: str) -> list[dict[str, Any]]:
         lng = row.get("lon")
         if not isinstance(label, str) or not label.strip():
             continue
+        if lat is None or lng is None:
+            continue
         try:
             lat_f = float(lat)
             lng_f = float(lng)
