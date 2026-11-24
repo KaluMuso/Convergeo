@@ -3,7 +3,7 @@
 import { createApiClient } from "@vergeo/config";
 import { emitToastKey, notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import {
@@ -38,6 +38,7 @@ export function CoverUpload({
   onRemove,
 }: CoverUploadProps) {
   const t = useTranslations("vendor");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,6 +97,7 @@ export function CoverUpload({
       <div className="flex flex-wrap items-center gap-2">
         <label className="inline-flex cursor-pointer">
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             className="sr-only"
@@ -104,6 +106,7 @@ export function CoverUpload({
           />
           <Button
             type="button"
+            onClick={() => fileInputRef.current?.click()}
             variant="secondary"
             disabled={disabled || uploading}
             loading={uploading}
