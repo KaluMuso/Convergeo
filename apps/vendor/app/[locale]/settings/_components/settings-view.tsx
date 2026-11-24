@@ -2,6 +2,7 @@
 
 import { useSession } from "@vergeo/auth/use-session";
 import { LOCALES } from "@vergeo/i18n";
+import { ThemePreference } from "@vergeo/ui/src/theme-preference";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -13,8 +14,6 @@ import {
   createCollabClient,
   type CollabFlagStatus,
 } from "../../events/collaborate/_lib/collab-client";
-import { ThemePreference } from "@vergeo/ui/src/theme-preference";
-
 import { Button, FormField, Select, Switch } from "../../listings/new/_lib/ui";
 import { createPayoutsClient } from "../../payouts/_lib/payouts-client";
 

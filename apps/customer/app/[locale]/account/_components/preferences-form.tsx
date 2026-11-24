@@ -3,8 +3,8 @@
 import { Button } from "@vergeo/ui/src/button";
 import { Switch } from "@vergeo/ui/src/switch";
 import { ThemePreference } from "@vergeo/ui/src/theme-preference";
-import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { LocaleSwitcher, type LocaleSwitcherLabels } from "../../_components/locale-switcher";

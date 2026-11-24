@@ -1,6 +1,6 @@
 /* eslint-disable @vergeo/no-hardcoded-strings -- dev-only UI preview; gated off in production */
-import { DesignV2Section } from "./_sections/design-v2";
 import { CardsSection } from "./_sections/cards";
+import { DesignV2Section } from "./_sections/design-v2";
 import { FormsSection } from "./_sections/forms";
 import { MediaSection } from "./_sections/media";
 import { NavSection } from "./_sections/nav";
