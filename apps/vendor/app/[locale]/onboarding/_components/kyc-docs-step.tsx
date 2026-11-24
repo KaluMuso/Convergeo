@@ -41,6 +41,11 @@ type KycDocsStepProps = {
     capture: string;
     retake: string;
     usePhoto: string;
+    uploadInstead: string;
+    cameraUnavailable: string;
+    cameraError: string;
+    invalidFileType: string;
+    fileTooLarge: string;
     uploadFailed: string;
     uploaded: string;
     nrcDone: string;
@@ -139,6 +144,11 @@ export function KycDocsStep({
             captureLabel={labels.capture}
             retakeLabel={labels.retake}
             usePhotoLabel={labels.usePhoto}
+            uploadInsteadLabel={labels.uploadInstead}
+            cameraUnavailableLabel={labels.cameraUnavailable}
+            cameraErrorLabel={labels.cameraError}
+            invalidFileTypeLabel={labels.invalidFileType}
+            fileTooLargeLabel={labels.fileTooLarge}
             facingMode="environment"
             disabled={uploading !== null}
             onCapture={(file) => void handleUpload("nrc", file)}
@@ -164,6 +174,11 @@ export function KycDocsStep({
             captureLabel={labels.capture}
             retakeLabel={labels.retake}
             usePhotoLabel={labels.usePhoto}
+            uploadInsteadLabel={labels.uploadInstead}
+            cameraUnavailableLabel={labels.cameraUnavailable}
+            cameraErrorLabel={labels.cameraError}
+            invalidFileTypeLabel={labels.invalidFileType}
+            fileTooLargeLabel={labels.fileTooLarge}
             facingMode="user"
             disabled={uploading !== null}
             onCapture={(file) => void handleUpload("selfie", file)}
