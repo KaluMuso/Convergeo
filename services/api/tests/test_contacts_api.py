@@ -228,7 +228,9 @@ def test_client_hash_hmac_stable() -> None:
     assert a != client_hash
 
 
-def test_discover_rate_limited_after_five_per_day(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_discover_rate_limited_after_five_per_day(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     state = {"count": 0}
 
     def _bump(**_: object) -> tuple[bool, int]:
