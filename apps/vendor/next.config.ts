@@ -25,8 +25,9 @@ const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
  * `Content-Security-Policy-Report-Only` while the framing/hardening directives are
  * enforced now. `{{CSP_NONCE}}` = per-request substitution point.
  * No Lenco widget allowance here (payouts use the API, not the hosted widget).
- * The QR ticket scanner needs the camera, so `camera=(self)` is scoped to the scan
- * routes only; every other route denies camera.
+ * The QR ticket scanner, KYC document capture (onboarding) and the clip studio need
+ * the camera, so `camera=(self)` is scoped to those routes only; every other route
+ * denies camera.
  * Report-only → enforce runbook: docs/ops/security-headers.md.
  */
 const NONCE = "'nonce-{{CSP_NONCE}}'";
@@ -114,9 +115,13 @@ const nextConfig: NextConfig = {
       { source: "/:locale/scan", headers: cameraAllowedHeaders },
       // Per-event QR scanner — camera allowed.
       { source: "/:locale/events/:id/scan", headers: cameraAllowedHeaders },
-      // Everything else — camera denied (scan routes excluded via lookahead).
+      // KYC document capture (laptop webcam or phone camera) — camera allowed.
+      { source: "/:locale/onboarding/:path*", headers: cameraAllowedHeaders },
+      // Clip studio recording — camera allowed.
+      { source: "/:locale/clips/:path*", headers: cameraAllowedHeaders },
+      // Everything else — camera denied (camera routes excluded via lookahead).
       {
-        source: "/((?!.*scan).*)",
+        source: "/((?!.*(?:scan|onboarding|clips)).*)",
         headers: COMMON_HEADERS,
       },
     ];
