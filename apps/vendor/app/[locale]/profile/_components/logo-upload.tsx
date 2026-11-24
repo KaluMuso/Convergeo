@@ -3,7 +3,7 @@
 import { createApiClient } from "@vergeo/config";
 import { emitToastKey, notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import {
@@ -31,6 +31,7 @@ type LogoUploadProps = {
 
 export function LogoUpload({ logoUrl, disabled, getToken, onUploaded }: LogoUploadProps) {
   const t = useTranslations("vendor");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,6 +91,7 @@ export function LogoUpload({ logoUrl, disabled, getToken, onUploaded }: LogoUplo
         <div className="flex flex-col gap-2">
           <label className="inline-flex cursor-pointer">
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               className="sr-only"
@@ -98,6 +100,7 @@ export function LogoUpload({ logoUrl, disabled, getToken, onUploaded }: LogoUplo
             />
             <Button
               type="button"
+              onClick={() => fileInputRef.current?.click()}
               variant="secondary"
               disabled={disabled || uploading}
               loading={uploading}

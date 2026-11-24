@@ -12,7 +12,11 @@ from app.services.kyc.caps import (
     enforce_payout_velocity,
     load_vendor_quota,
 )
-from app.services.ledger.engine import account_balance_ngwee, resolve_account_id
+from app.services.ledger.engine import (
+    LedgerAccountNotFoundError,
+    account_balance_ngwee,
+    resolve_account_id,
+)
 from app.services.ledger.templates import AccountRef
 
 PENDING_RESERVE_STATUSES = frozenset({"pending", "processing"})
@@ -63,8 +67,16 @@ def _single_row(response: Any) -> dict[str, Any] | None:
 
 
 def vendor_payable_balance_ngwee(vendor_id: str) -> int:
-    """Signed ledger balance for vendor_payable (negative = credit / owed to vendor)."""
-    account_id = resolve_account_id(AccountRef("vendor_payable", vendor_id))
+    """Signed ledger balance for vendor_payable (negative = credit / owed to vendor).
+
+    A vendor still in KYC has no vendor_payable account yet. Nothing can have been
+    posted to an account that does not exist, so its balance is exactly 0 (nothing
+    owed, nothing payable) — not an error that breaks the payouts page.
+    """
+    try:
+        account_id = resolve_account_id(AccountRef("vendor_payable", vendor_id))
+    except LedgerAccountNotFoundError:
+        return 0
     return account_balance_ngwee(account_id)
 
 

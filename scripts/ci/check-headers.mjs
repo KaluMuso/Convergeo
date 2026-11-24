@@ -245,6 +245,11 @@ checkAppMiddleware("admin", { allowLenco: false });
     "scanner camera not scoped",
   );
   assert("vendor: scan route source present", src.includes("/scan"), "no scan route header rule");
+  assert(
+    "vendor: KYC onboarding camera route present",
+    src.includes("/:locale/onboarding/:path*"),
+    "KYC document capture needs camera=(self) on onboarding",
+  );
 }
 
 // ── Caddy edge origins ───────────────────────────────────────────────────────

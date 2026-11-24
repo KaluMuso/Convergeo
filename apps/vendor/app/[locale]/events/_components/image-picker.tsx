@@ -2,7 +2,7 @@
 
 import { createApiClient } from "@vergeo/config";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { CloudinaryImage } from "../../../../../../packages/ui/src/media/cloudinary-image";
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
@@ -40,6 +40,7 @@ export function EventImagePicker({
 }: EventImagePickerProps) {
   const t = useTranslations("vendor");
   const te = useTranslations("events");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,6 +137,7 @@ export function EventImagePicker({
       {images.length < MAX_EVENT_IMAGES ? (
         <label className="inline-flex">
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             multiple
@@ -145,6 +147,7 @@ export function EventImagePicker({
           />
           <Button
             type="button"
+            onClick={() => fileInputRef.current?.click()}
             variant="secondary"
             disabled={disabled || busy}
             loading={busy}
