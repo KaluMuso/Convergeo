@@ -11,7 +11,7 @@ import { buildAbsoluteUrl, buildLocaleCanonical, getSiteUrl } from "@vergeo/ui/s
 
 import { coerceSitemapId, sitemapLocales, SITEMAP_STATIC_SEGMENTS } from "./sitemap-eligibility";
 import {
-  fetchCategorySitemapSlugs,
+  fetchCategorySitemapEntries,
   fetchProductSitemapSlugs,
   fetchServiceSitemapSlugs,
   fetchVendorSitemapSlugs,
@@ -52,13 +52,21 @@ export function parseSitemapChunkSegment(raw: string): number | null {
   return coerceSitemapId(withoutExt);
 }
 
-function sitemapEntry(locale: string, ...segments: string[]): SitemapUrlEntry {
+function sitemapEntry(
+  locale: string,
+  options: {
+    lastModified?: Date;
+    changeFrequency?: SitemapUrlEntry["changeFrequency"];
+    priority?: number;
+  },
+  ...segments: string[]
+): SitemapUrlEntry {
   const path = buildLocaleCanonical(locale, ...segments);
   return {
     url: buildAbsoluteUrl(path),
-    lastModified: new Date(),
-    changeFrequency: segments.length === 0 ? "daily" : "weekly",
-    priority: segments.length === 0 ? 1 : segments[0] === "p" ? 0.8 : 0.6,
+    lastModified: options.lastModified ?? new Date(),
+    changeFrequency: options.changeFrequency ?? (segments.length === 0 ? "daily" : "weekly"),
+    priority: options.priority ?? (segments.length === 0 ? 1 : segments[0] === "p" ? 0.8 : 0.6),
   };
 }
 
@@ -118,8 +126,8 @@ export async function buildSitemapChunk(id: number): Promise<SitemapUrlEntry[] |
   const serviceChunkId = productChunks + 4;
 
   if (id === 0) {
-    const categorySlugs = await fetchCategorySitemapSlugs();
-    const hasPublicCategories = categorySlugs.some((slug) => slug !== "all");
+    const categoryEntries = await fetchCategorySitemapEntries();
+    const hasPublicCategories = categoryEntries.some((row) => row.path !== "all");
     const entries: SitemapUrlEntry[] = [];
     // Only SEO-published locales (not routable-but-unreviewed bem/nya).
     for (const locale of sitemapLocales()) {
@@ -128,7 +136,7 @@ export async function buildSitemapChunk(id: number): Promise<SitemapUrlEntry[] |
         if (segment === "categories" && !hasPublicCategories) {
           continue;
         }
-        entries.push(segment ? sitemapEntry(locale, segment) : sitemapEntry(locale));
+        entries.push(segment ? sitemapEntry(locale, {}, segment) : sitemapEntry(locale, {}));
       }
     }
     return entries;
@@ -142,7 +150,7 @@ export async function buildSitemapChunk(id: number): Promise<SitemapUrlEntry[] |
     const entries: SitemapUrlEntry[] = [];
     for (const locale of sitemapLocales()) {
       for (const slug of chunk) {
-        entries.push(sitemapEntry(locale, "p", slug));
+        entries.push(sitemapEntry(locale, {}, "p", slug));
       }
     }
     return entries;
@@ -153,7 +161,7 @@ export async function buildSitemapChunk(id: number): Promise<SitemapUrlEntry[] |
     const entries: SitemapUrlEntry[] = [];
     for (const locale of sitemapLocales()) {
       for (const slug of vendorSlugs) {
-        entries.push(sitemapEntry(locale, "v", slug));
+        entries.push(sitemapEntry(locale, {}, "v", slug));
       }
     }
     return entries;
@@ -164,18 +172,25 @@ export async function buildSitemapChunk(id: number): Promise<SitemapUrlEntry[] |
     const entries: SitemapUrlEntry[] = [];
     for (const locale of sitemapLocales()) {
       for (const slug of eventSlugs) {
-        entries.push(sitemapEntry(locale, "e", slug));
+        entries.push(sitemapEntry(locale, {}, "e", slug));
       }
     }
     return entries;
   }
 
   if (id === categoryChunkId) {
-    const categorySlugs = await fetchCategorySitemapSlugs();
+    const categoryEntries = await fetchCategorySitemapEntries();
     const entries: SitemapUrlEntry[] = [];
     for (const locale of sitemapLocales()) {
-      for (const category of categorySlugs) {
-        entries.push(sitemapEntry(locale, "c", category));
+      for (const category of categoryEntries) {
+        entries.push(
+          sitemapEntry(
+            locale,
+            category.lastModified ? { lastModified: category.lastModified } : {},
+            "c",
+            category.path,
+          ),
+        );
       }
     }
     return entries;
@@ -186,7 +201,7 @@ export async function buildSitemapChunk(id: number): Promise<SitemapUrlEntry[] |
     const entries: SitemapUrlEntry[] = [];
     for (const locale of sitemapLocales()) {
       for (const slug of serviceSlugs) {
-        entries.push(sitemapEntry(locale, "s", slug));
+        entries.push(sitemapEntry(locale, {}, "s", slug));
       }
     }
     return entries;

@@ -2,6 +2,7 @@ import { SEO_INDEXABLE_LOCALES } from "@vergeo/i18n";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../lib/seo/sitemap-sources", () => ({
+  fetchCategorySitemapEntries: vi.fn(async () => [{ path: "all" }, { path: "electronics" }]),
   fetchCategorySitemapSlugs: vi.fn(async () => ["all", "electronics"]),
   fetchProductSitemapSlugs: vi.fn(async () => ["itel-a70"]),
   fetchServiceSitemapSlugs: vi.fn(async () => []),
