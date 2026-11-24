@@ -1,0 +1,56 @@
+{
+  "title": "People",
+  "nav": {
+    "contacts": "Contacts",
+    "requests": "Requests",
+    "add": "Add people"
+  },
+  "contacts": {
+    "title": "Contacts",
+    "empty": "No contacts yet. Add people to start chatting.",
+    "message": "Message",
+    "gift": "Send a gift",
+    "remove": "Remove",
+    "block": "Block",
+    "report": "Report"
+  },
+  "requests": {
+    "title": "Requests",
+    "incoming": "Incoming",
+    "outgoing": "Outgoing",
+    "pending": "Pending",
+    "accept": "Accept",
+    "ignore": "Ignore",
+    "block": "Block",
+    "empty": "No requests right now."
+  },
+  "add": {
+    "title": "Add people",
+    "handleLabel": "Vergeo ID (@handle)",
+    "handlePlaceholder": "e.g. kalu_shop",
+    "sendRequest": "Send request",
+    "scanTitle": "Scan or show my code",
+    "myQrTitle": "My code",
+    "contactsTitle": "Find friends from my contacts",
+    "contactsExplainer": "We only check which of your contacts are on Convergeo. Numbers are scrambled on your phone and never stored.",
+    "pickContacts": "Choose from contacts",
+    "shareLink": "Share my Convergeo link",
+    "inviteWhatsApp": "Invite on WhatsApp",
+    "inviteContact": "Invite",
+    "addMatch": "Add",
+    "notOnApp": "Not on Convergeo yet",
+    "phoneDiscoveryLabel": "Let people find me by my phone number",
+    "phoneDiscoveryHelp": "Off by default. Only users who opt in can be matched."
+  },
+  "chat": {
+    "title": "Chat",
+    "placeholder": "Type a message",
+    "send": "Send",
+    "polling": "Checking for new messages…"
+  },
+  "errors": {
+    "disabled": "People is not available.",
+    "loadFailed": "Could not load. Try again.",
+    "generic": "Something went wrong."
+  }
+}
