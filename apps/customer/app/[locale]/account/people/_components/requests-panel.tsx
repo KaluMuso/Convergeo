@@ -41,6 +41,25 @@ export function RequestsPanel() {
   );
 }
 
+const REQUEST_STATUS_KEYS = ["pending", "accepted", "ignored", "cancelled"] as const;
+
+type RequestStatusKey = (typeof REQUEST_STATUS_KEYS)[number];
+
+function requestStatusLabel(
+  request: ContactRequest,
+  t: ReturnType<typeof useTranslations>,
+  incoming: boolean,
+): string {
+  if (request.outgoing && !incoming) {
+    return t("pending");
+  }
+  const status = request.status as RequestStatusKey;
+  if (REQUEST_STATUS_KEYS.includes(status)) {
+    return t(`status.${status}`);
+  }
+  return t("pending");
+}
+
 function RequestRows({
   items,
   onChange,
@@ -57,9 +76,7 @@ function RequestRows({
       {items.map((r) => (
         <li key={r.id} className="rounded border border-border p-3 text-sm">
           <p className="font-medium">{r.note ?? r.id}</p>
-          <p className="text-muted">
-            {r.outgoing ? t("pending") : r.status === "pending" ? t("pending") : r.status}
-          </p>
+          <p className="text-muted">{requestStatusLabel(r, t, incoming)}</p>
           {incoming ? (
             <div className="mt-2 flex flex-wrap gap-2">
               <button

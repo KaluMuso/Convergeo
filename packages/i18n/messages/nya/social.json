@@ -19,6 +19,12 @@
     "incoming": "Incoming",
     "outgoing": "Outgoing",
     "pending": "Pending",
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "ignored": "Ignored",
+      "cancelled": "Cancelled"
+    },
     "accept": "Accept",
     "ignore": "Ignore",
     "block": "Block",

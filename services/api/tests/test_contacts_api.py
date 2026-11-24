@@ -22,15 +22,34 @@ OTHER = "22222222-2222-2222-2222-222222222222"
 REQ_ID = "33333333-3333-3333-3333-333333333333"
 
 
+class _AuthAdmin:
+    def __init__(self, owner: _Fake) -> None:
+        self._owner = owner
+
+    def get_user_by_id(self, user_id: str) -> MagicMock:
+        confirmed = self._owner.phone_confirmed_at
+        return MagicMock(user=MagicMock(phone_confirmed_at=confirmed))
+
+
 class _Q:
-    def __init__(self, rows: list[dict[str, Any]] | dict[str, Any] | Any, owner: _Fake) -> None:
+    def __init__(
+        self,
+        rows: list[dict[str, Any]] | dict[str, Any] | Any,
+        owner: _Fake,
+        *,
+        table: str,
+    ) -> None:
         self._rows = rows
         self._owner = owner
+        self._table = table
         self._pending: list[tuple[str, Any]] = []
+        self._filters: dict[str, Any] = {}
 
     def __getattr__(self, name: str) -> Any:
         def chain(*args: Any, **kwargs: Any) -> _Q:
             self._pending.append((name, (args, kwargs)))
+            if name == "eq" and args:
+                self._filters[str(args[0])] = args[1]
             return self
 
         return chain
@@ -39,37 +58,73 @@ class _Q:
         name = self._owner._last_rpc
         if name:
             return MagicMock(data=self._owner._rpc_payload.get(name))
-        return MagicMock(data=self._rows)
+        inserted: dict[str, Any] | None = None
+        for op, (args, _kwargs) in self._pending:
+            if op == "insert" and args:
+                inserted = dict(args[0])
+                inserted.setdefault("id", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+                rows = self._owner.tables.setdefault(self._table, [])
+                rows.append(inserted)
+        if inserted is not None:
+            return MagicMock(data=[inserted])
+        rows = self._owner.tables.get(self._table, [])
+        if isinstance(self._rows, dict):
+            return MagicMock(data=self._rows)
+        filtered = list(rows)
+        if "id" in self._filters:
+            filtered = [row for row in filtered if str(row.get("id")) == str(self._filters["id"])]
+        if not filtered and self._pending and any(op == "maybe_single" for op, _ in self._pending):
+            return MagicMock(data=None)
+        if any(op == "maybe_single" for op, _ in self._pending) and filtered:
+            return MagicMock(data=filtered[0])
+        if self._filters:
+            return MagicMock(data=filtered)
+        return MagicMock(data=filtered if filtered else self._rows)
 
 
 class _Fake:
-    def __init__(self, *, flag: bool = True, pepper: str = "test-pepper") -> None:
+    def __init__(
+        self,
+        *,
+        flag: bool = True,
+        pepper: str = "test-pepper",
+        phone_confirmed: bool = True,
+    ) -> None:
         self.flag = flag
         self.pepper = pepper
+        self.phone_confirmed_at = "2026-01-01T00:00:00Z" if phone_confirmed else None
         self.calls: list[tuple[str, Any]] = []
         self._last_rpc: str | None = None
         self._rpc_payload: dict[str, Any] = {
             "my_contact_requests": [],
             "set_my_handle": "alice",
+            "discover_by_phone_hashes": [],
+            "set_phone_discovery": None,
         }
         self.tables: dict[str, list[dict[str, Any]]] = {
             "feature_flags": [{"flag": "social_contacts", "enabled": flag}],
             "phone_discovery": [],
-            "profiles": [{"id": USER, "phone": "+260977123456"}],
+            "profiles": [
+                {"id": USER, "phone": "+260977123456"},
+                {"id": OTHER, "phone": "+260966123456"},
+            ],
+            "flags": [],
         }
+        self.auth = MagicMock()
+        self.auth.admin = _AuthAdmin(self)
 
     def table(self, name: str) -> _Q:
         self._last_rpc = None
         self.calls.append(("table", name))
         raw = self.tables.get(name, [])
         if name == "feature_flags" and isinstance(raw, list) and raw:
-            return _Q(raw[0], self)
-        return _Q(raw, self)
+            return _Q(raw[0], self, table=name)
+        return _Q(raw, self, table=name)
 
     def rpc(self, name: str, params: dict[str, Any]) -> _Q:
         self._last_rpc = name
         self.calls.append(("rpc", (name, params)))
-        return _Q(self._rpc_payload.get(name), self)
+        return _Q(self._rpc_payload.get(name), self, table="__rpc__")
 
 
 @pytest.fixture
@@ -171,3 +226,96 @@ def test_client_hash_hmac_stable() -> None:
     b = client_hash_to_storage_hash(client_hash, settings=settings)
     assert a == b
     assert a != client_hash
+
+
+def test_discover_rate_limited_after_five_per_day(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    state = {"count": 0}
+
+    def _bump(**_: object) -> tuple[bool, int]:
+        state["count"] += 1
+        return (state["count"] <= 5, 60)
+
+    monkeypatch.setattr("app.routers.contacts.bump_rate_counter", _bump)
+    fake = _Fake(flag=True)
+    _login(client, fake)
+    payload = {"hashes": [e164_sha256_hex("+260977123456")]}
+    for _ in range(5):
+        assert client.post("/contacts/discover-phones", json=payload).status_code == 200
+    assert client.post("/contacts/discover-phones", json=payload).status_code == 429
+
+
+def test_write_rate_limited(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    def _bump(**kwargs: object) -> tuple[bool, int]:
+        scope = kwargs.get("scope")
+        if scope == "social_write":
+            return (False, 30)
+        return (True, 0)
+
+    monkeypatch.setattr("app.routers.contacts.bump_rate_counter", _bump)
+    fake = _Fake(flag=True)
+    _login(client, fake)
+    resp = client.put("/me/handle", json={"handle": "demo_shop"})
+    assert resp.status_code == 429
+
+
+def test_discover_returns_only_opted_in_matches(client: TestClient) -> None:
+    fake = _Fake(flag=True)
+    fake._rpc_payload["discover_by_phone_hashes"] = [
+        {"user_id": OTHER, "handle": "friend", "display_name": "Friend", "enabled": True},
+    ]
+    _login(client, fake)
+    resp = client.post(
+        "/contacts/discover-phones",
+        json={"hashes": [e164_sha256_hex("+260966123456")]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["items"]) == 1
+    assert body["items"][0]["user_id"] == OTHER
+
+
+def test_put_phone_discovery_requires_verified_phone(client: TestClient) -> None:
+    fake = _Fake(flag=True, phone_confirmed=False)
+    _login(client, fake)
+    resp = client.put("/me/phone-discovery", json={"enabled": True})
+    assert resp.status_code == 422
+
+
+def test_report_contact_unknown_user_404(client: TestClient) -> None:
+    fake = _Fake(flag=True)
+    fake.tables["profiles"] = [{"id": USER, "phone": "+260977123456"}]
+    _login(client, fake)
+    missing = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    resp = client.post(f"/contacts/{missing}/report", json={"reason": "spam"})
+    assert resp.status_code == 404
+
+
+def test_report_contact_inserts_flags_row(client: TestClient) -> None:
+    fake = _Fake(flag=True)
+    _login(client, fake)
+    resp = client.post(f"/contacts/{OTHER}/report", json={"reason": "spam", "detail": "bots"})
+    assert resp.status_code == 200
+    assert fake.tables["flags"]
+    row = fake.tables["flags"][0]
+    assert row["entity_type"] == "user"
+    assert row["entity_id"] == OTHER
+    assert row["reporter_user_id"] == USER
+    assert row["status"] == "open"
+
+
+def test_share_card_rejects_unknown_keys(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = _Fake(flag=True)
+    _login(client, fake)
+    thread = "44444444-4444-4444-4444-444444444444"
+    monkeypatch.setattr(
+        "app.routers.contacts._require_thread_party",
+        lambda *_a, **_k: {"id": thread, "user_a": USER, "user_b": OTHER},
+    )
+    resp = client.post(
+        f"/chats/{thread}/messages",
+        json={"kind": "share_card", "card": {"type": "listing", "extra": "nope"}},
+    )
+    assert resp.status_code == 422

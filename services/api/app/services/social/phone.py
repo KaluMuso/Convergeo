@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import os
 import re
 from typing import Final
 
@@ -28,7 +29,7 @@ def normalize_to_e164(raw: str) -> str | None:
     if len(digits_only) == 10 and digits_only.startswith("0"):
         local = digits_only[1:]
         return f"+260{local}"
-    if len(digits_only) == 9 and digits_only[0] in {"7", "9"}:
+    if len(digits_only) == 9 and re.fullmatch(r"[79][5-7]\d{7}", digits_only):
         return f"+260{digits_only}"
     if digits_only.startswith("260"):
         return f"+{digits_only}"
@@ -46,7 +47,8 @@ def require_phone_pepper(settings: Settings | None = None) -> str:
     pepper = (getattr(resolved, "social_phone_pepper", None) or "").strip()
     if pepper:
         return pepper
-    if resolved.env == "development":
+    env_raw = os.environ.get("ENV", "").strip().lower()
+    if env_raw in {"development", "test"}:
         return "dev-social-phone-pepper"
     raise AppError(
         code="service_unavailable",

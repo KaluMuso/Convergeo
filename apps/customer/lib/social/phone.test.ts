@@ -15,6 +15,12 @@ describe("normalizeToE164", () => {
     }
   });
 
+  it("normalises MTN 096/076 prefixes to the same hash input", () => {
+    for (const raw of ["0966123456", "966123456", "+260966123456", "260966123456"]) {
+      expect(normalizeToE164(raw)).toBe("+260966123456");
+    }
+  });
+
   it("keeps foreign numbers", () => {
     expect(normalizeToE164("+447700900123")).toBe("+447700900123");
   });
@@ -26,6 +32,13 @@ describe("hashContactPhone", () => {
     const b = await hashContactPhone("+260977123456");
     expect(a).toBeTruthy();
     expect(a).toBe(b);
+  });
+
+  it("hashes 0966 local formats identically", async () => {
+    const samples = ["0966123456", "966123456", "+260966123456", "260966123456"];
+    const hashes = await Promise.all(samples.map((raw) => hashContactPhone(raw)));
+    expect(new Set(hashes).size).toBe(1);
+    expect(hashes[0]).toBeTruthy();
   });
 });
 

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import re
 from datetime import timedelta
-from typing import Annotated, Any, Final, Literal, Protocol
+from typing import Annotated, Any, Final, Literal, Protocol, Self
 from uuid import UUID
 
 from app.core.auth import CurrentUser, get_current_user
@@ -24,7 +26,9 @@ from app.services.social.phone import (
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Query
 from postgrest.exceptions import APIError
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["contacts"])
 
@@ -36,6 +40,10 @@ _UUID_RE: Final = re.compile(
 _MAX_CLIENT_HASHES: Final = 500
 _DB_HASH_CHUNK: Final = 200
 _QR_PREFIX: Final = "vgo:add:"
+_ALLOWED_CARD_KEYS: Final = frozenset(
+    {"type", "listing_id", "slug", "title", "image_url", "price_ngwee"}
+)
+_MAX_CARD_JSON_BYTES: Final = 2048
 
 DISCOVER_POLICY: Final = RateLimitPolicy(
     scope="social_discover_phones", limit=5, window=timedelta(days=1)
@@ -225,6 +233,22 @@ class ChatMessageCreate(StrictModel):
     kind: Literal["text", "share_card"]
     body: str | None = Field(default=None, max_length=2000)
     card: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def _validate_card_payload(self) -> Self:
+        if self.kind == "text":
+            if self.card is not None:
+                raise ValueError("card must be omitted for text messages")
+            return self
+        if self.card is None:
+            raise ValueError("card required for share_card messages")
+        unknown = set(self.card.keys()) - _ALLOWED_CARD_KEYS
+        if unknown:
+            raise ValueError(f"unsupported card keys: {sorted(unknown)}")
+        encoded = json.dumps(self.card, separators=(",", ":"), ensure_ascii=True)
+        if len(encoded.encode("utf-8")) > _MAX_CARD_JSON_BYTES:
+            raise ValueError("card payload too large")
+        return self
 
 
 class ChatMessageSent(StrictModel):
@@ -557,6 +581,40 @@ def _profile_map(service_client: ServiceRoleClient, user_ids: list[str]) -> dict
     return {str(r["id"]): r.get("display_name") for r in rows}
 
 
+def _user_exists(service_client: ServiceRoleClient, user_id: str) -> bool:
+    rows = _rows(
+        service_client.client.table("profiles")
+        .select("id")
+        .eq("id", user_id)
+        .limit(1)
+        .execute()
+    )
+    return bool(rows)
+
+
+def _verified_profile_phone(service_client: ServiceRoleClient, user_id: str) -> str | None:
+    rows = _rows(
+        service_client.client.table("profiles")
+        .select("phone")
+        .eq("id", user_id)
+        .limit(1)
+        .execute()
+    )
+    phone = rows[0].get("phone") if rows else None
+    e164 = zm_e164_from_profile_phone(str(phone) if phone else None)
+    if not e164:
+        return None
+    try:
+        response = service_client.client.auth.admin.get_user_by_id(user_id)
+        user = getattr(response, "user", None)
+        if getattr(user, "phone_confirmed_at", None) is None:
+            return None
+    except Exception:
+        logger.warning("phone_discovery.auth_lookup_failed", exc_info=True)
+        return None
+    return e164
+
+
 def _handle_map(service_client: ServiceRoleClient, user_ids: list[str]) -> dict[str, str | None]:
     if not user_ids:
         return {}
@@ -579,19 +637,24 @@ def _thread_map(
     me: str,
     others: list[str],
 ) -> dict[str, str]:
-    out: dict[str, str] = {}
+    if not others:
+        return {}
+    clauses: list[str] = []
     for other in others:
         user_a, user_b = _ordered_pair(me, other)
-        rows = _rows(
-            service_client.client.table("chat_threads")
-            .select("id")
-            .eq("user_a", user_a)
-            .eq("user_b", user_b)
-            .limit(1)
-            .execute()
-        )
-        if rows:
-            out[other] = str(rows[0]["id"])
+        clauses.append(f"and(user_a.eq.{user_a},user_b.eq.{user_b})")
+    rows = _rows(
+        service_client.client.table("chat_threads")
+        .select("id, user_a, user_b")
+        .or_(",".join(clauses))
+        .execute()
+    )
+    out: dict[str, str] = {}
+    for row in rows:
+        user_a = str(row["user_a"])
+        user_b = str(row["user_b"])
+        other = user_b if user_a == me else user_a
+        out[other] = str(row["id"])
     return out
 
 
@@ -650,6 +713,13 @@ async def report_contact(
     _require_flag(service_client)
     _rate_limit(current_user.id, WRITE_POLICY, service_client)
     if not _UUID_RE.fullmatch(user_id):
+        raise AppError(
+            code="not_found",
+            message="User not found",
+            http_status=404,
+            details={"message_key": "social.errors.notFound"},
+        )
+    if not _user_exists(service_client, user_id):
         raise AppError(
             code="not_found",
             message="User not found",
@@ -723,15 +793,7 @@ async def put_phone_discovery(
         if existing and existing[0].get("phone_hash")
         else None
     )
-    profile = _rows(
-        service_client.client.table("profiles")
-        .select("phone")
-        .eq("id", current_user.id)
-        .maybe_single()
-        .execute()
-    )
-    phone = profile[0].get("phone") if profile else None
-    e164 = zm_e164_from_profile_phone(str(phone) if phone else None)
+    e164 = _verified_profile_phone(service_client, current_user.id)
     if body.enabled and not e164:
         raise AppError(
             code="validation_error",
