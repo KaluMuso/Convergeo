@@ -80,7 +80,12 @@
     "held": "We keep your money safe until you get your order.",
     "released": "The seller has been paid.",
     "refunded": "Your money is going back to your mobile money.",
-    "cod": "Pay in cash when you receive your order."
+    "cod": "Pay in cash when you receive your order.",
+    "strip": {
+      "paid": "You paid",
+      "held": "Held by Vergeo5",
+      "released": "Released"
+    }
   },
   "pickup": {
     "title": "Collecting your order",

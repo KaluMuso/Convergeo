@@ -28,7 +28,12 @@
     "cod": "Lipileni mu cash ilyo mwapokelela order yenu.",
     "held": "Payment yenu yikwata bwino na Convergeo mpaka mupoke order yenu.",
     "refunded": "Refund ilebwelela ku mobile money wallet yenu.",
-    "released": "Indalama shyasuminishwa ku vendor pantu fulfilment."
+    "released": "Indalama shyasuminishwa ku vendor pantu fulfilment.",
+    "strip": {
+      "paid": "Mwalishe kale",
+      "held": "Yikwata na Vergeo5",
+      "released": "Yasuminishwa"
+    }
   },
   "list": {
     "checkoutGroup": "Ukushita {date}",

@@ -308,6 +308,54 @@ describe("buildHomeTasks", () => {
     });
     expect(tasks[0]?.key).toBe("catalogueEvents");
   });
+
+  it("prompts for a payout number after KYC blockers and before waiting orders", () => {
+    const tasks = buildHomeTasks({
+      kycOverall: "approved",
+      payoutMissing: true,
+      needsActionCount: 2,
+      hasDeliveryWaiting: false,
+      cutoff: before,
+      sellerKind: "products",
+    });
+    expect(tasks.map((t) => t.key)).toEqual(["payoutMethod", "ordersWaiting", "catalogueProducts"]);
+    expect(tasks[0]).toMatchObject({ href: "/payouts/method", tone: "warning" });
+  });
+
+  it("hides the payout prompt when a number is set or payout state is unknown", () => {
+    expect(
+      buildHomeTasks({
+        kycOverall: "approved",
+        payoutMissing: false,
+        needsActionCount: 0,
+        hasDeliveryWaiting: false,
+        cutoff: before,
+        sellerKind: "products",
+      }).map((t) => t.key),
+    ).not.toContain("payoutMethod");
+    expect(
+      buildHomeTasks({
+        kycOverall: "approved",
+        payoutMissing: null,
+        needsActionCount: 0,
+        hasDeliveryWaiting: false,
+        cutoff: before,
+        sellerKind: "products",
+      }).map((t) => t.key),
+    ).not.toContain("payoutMethod");
+  });
+
+  it("does not show payout setup while ID verification needs a fix", () => {
+    const tasks = buildHomeTasks({
+      kycOverall: "needs_fix",
+      payoutMissing: true,
+      needsActionCount: 1,
+      hasDeliveryWaiting: false,
+      cutoff: before,
+      sellerKind: "products",
+    });
+    expect(tasks.map((t) => t.key)).toEqual(["kycFix", "ordersWaiting", "catalogueProducts"]);
+  });
 });
 
 describe("KYC review copy only promises what the system does", () => {

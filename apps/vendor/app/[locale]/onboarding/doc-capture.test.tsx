@@ -5,20 +5,53 @@ import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DocCapture } from "./_components/doc-capture";
+import * as kycImage from "./_lib/kyc-image";
 
 const acquire = vi.fn();
 const onCapture = vi.fn();
 const createPreview = vi.fn();
 const drawImage = vi.fn();
 let canvasCallbacks: BlobCallback[];
+const cameraUnavailableLabel = "Camera not available on this device.";
+const cameraErrorLabel =
+  "We could not open your camera. Allow camera access in your browser, or upload a photo instead.";
 const props = {
   label: "Document",
   helpText: "Synthetic fixture",
   captureLabel: "Capture",
   retakeLabel: "Retake",
   usePhotoLabel: "Confirm",
+  uploadInsteadLabel: "Upload instead",
+  cameraUnavailableLabel,
+  cameraErrorLabel,
+  invalidFileTypeLabel: "Choose a JPEG, PNG or WebP image.",
+  fileTooLargeLabel: "That image is too large. Choose a file under 10 MB.",
   onCapture,
 };
+
+function stubPointer(coarse: boolean) {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      matches: query === "(pointer: fine)" ? !coarse : false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  );
+}
+
+function fileInput() {
+  return document.querySelector('input[type="file"]') as HTMLInputElement;
+}
+
+async function pickFile(file: File) {
+  const input = fileInput();
+  Object.defineProperty(input, "files", { value: [file], configurable: true });
+  await act(async () => {
+    fireEvent.change(input);
+  });
+}
 
 function fakeStream() {
   const tracks = [0, 1].map(() => {
@@ -70,6 +103,7 @@ function video(view: ReturnType<typeof render>) {
 }
 
 beforeEach(() => {
+  stubPointer(true);
   acquire.mockReset();
   onCapture.mockReset();
   createPreview.mockReset().mockReturnValue("blob:synthetic");
@@ -161,12 +195,11 @@ describe("normal document capture and existing controls", () => {
     acquire.mockRejectedValueOnce(new Error("denied")).mockResolvedValueOnce(fake.stream);
     const view = render(<DocCapture {...props} />);
     await start();
-    expect(screen.getByText("Could not access camera. Check permissions.")).toBeInTheDocument();
+    expect(screen.getByText(cameraErrorLabel)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload instead" })).toBeInTheDocument();
     await start();
     expect(video(view).srcObject).toBe(fake.stream);
-    expect(
-      screen.queryByText("Could not access camera. Check permissions."),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(cameraErrorLabel)).not.toBeInTheDocument();
   });
 
   it("retakes a pending photo without confirming the old file", async () => {
@@ -267,9 +300,7 @@ describe("camera acquisition ownership", () => {
       expectStopped(newStream, 0);
       expect(video(view).srcObject).toBe(newStream.stream);
       expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
-      expect(
-        screen.queryByText("Could not access camera. Check permissions."),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(cameraErrorLabel)).not.toBeInTheDocument();
       view.unmount();
       expectStopped(newStream);
     },
@@ -289,7 +320,7 @@ describe("camera acquisition ownership", () => {
     expect(video(view).srcObject ?? null).toBeNull();
     expect(video(view)).toHaveAttribute("aria-hidden", "true");
     expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
-    expect(screen.getByText("Could not access camera. Check permissions.")).toBeInTheDocument();
+    expect(screen.getByText(cameraErrorLabel)).toBeInTheDocument();
     expect(onCapture).not.toHaveBeenCalled();
   });
 
@@ -303,9 +334,7 @@ describe("camera acquisition ownership", () => {
     await settle(old, current.stream, true);
     expectStopped(current, 0);
     expect(video(view).srcObject).toBe(current.stream);
-    expect(
-      screen.queryByText("Could not access camera. Check permissions."),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(cameraErrorLabel)).not.toBeInTheDocument();
   });
 });
 
@@ -319,7 +348,7 @@ describe("playback ownership", () => {
     await start();
     expectStopped(failed);
     expect(video(view).srcObject).toBeNull();
-    expect(screen.getByText("Could not access camera. Check permissions.")).toBeInTheDocument();
+    expect(screen.getByText(cameraErrorLabel)).toBeInTheDocument();
     await start();
     expectStopped(next, 0);
     expect(video(view).srcObject).toBe(next.stream);
@@ -358,13 +387,61 @@ describe("playback ownership", () => {
       expectStopped(current, 0);
       expect(video(view).srcObject).toBe(current.stream);
       expect(video(view)).toHaveAttribute("aria-hidden", "false");
-      expect(
-        screen.queryByText("Could not access camera. Check permissions."),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(cameraErrorLabel)).not.toBeInTheDocument();
       view.unmount();
       expectStopped(current);
     },
   );
+});
+
+describe("photo upload fallback", () => {
+  it("shows upload next to capture on fine pointer before any camera error", () => {
+    stubPointer(false);
+    render(<DocCapture {...props} />);
+    expect(screen.getByRole("button", { name: "Capture" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload instead" })).toBeInTheDocument();
+  });
+
+  it("hides upload on coarse pointer until the camera fails", async () => {
+    stubPointer(true);
+    acquire.mockRejectedValueOnce(new Error("denied"));
+    render(<DocCapture {...props} />);
+    expect(screen.queryByRole("button", { name: "Upload instead" })).not.toBeInTheDocument();
+    await start();
+    expect(screen.getByRole("button", { name: "Upload instead" })).toBeInTheDocument();
+  });
+
+  it("confirms a picked file through onCapture", async () => {
+    const prepared = new File(["jpeg"], "upload.jpg", { type: "image/jpeg" });
+    vi.spyOn(kycImage, "prepareKycImageFile").mockResolvedValue(prepared);
+    render(<DocCapture {...props} />);
+    await pickFile(new File(["raw"], "id.png", { type: "image/png" }));
+    expect(kycImage.prepareKycImageFile).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    });
+    expect(onCapture).toHaveBeenCalledWith(prepared);
+  });
+
+  it("rejects unsupported file types before prepare", async () => {
+    const prepare = vi.spyOn(kycImage, "prepareKycImageFile");
+    render(<DocCapture {...props} />);
+    await pickFile(new File(["pdf"], "doc.pdf", { type: "application/pdf" }));
+    expect(prepare).not.toHaveBeenCalled();
+    expect(screen.getByText(props.invalidFileTypeLabel)).toBeInTheDocument();
+    expect(onCapture).not.toHaveBeenCalled();
+  });
+
+  it("rejects files larger than the KYC limit", async () => {
+    const prepare = vi.spyOn(kycImage, "prepareKycImageFile");
+    const huge = new File(["x"], "big.jpg", { type: "image/jpeg" });
+    Object.defineProperty(huge, "size", { value: kycImage.MAX_KYC_DOC_BYTES + 1 });
+    render(<DocCapture {...props} />);
+    await pickFile(huge);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(screen.getByText(props.fileTooLargeLabel)).toBeInTheDocument();
+    expect(onCapture).not.toHaveBeenCalled();
+  });
 });
 
 describe("delayed canvas results", () => {

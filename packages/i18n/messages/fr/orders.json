@@ -80,7 +80,12 @@
     "held": "Nous gardons votre argent jusqu'à la réception de votre commande.",
     "released": "Le vendeur a été payé.",
     "refunded": "Votre argent retourne sur votre mobile money.",
-    "cod": "Payez en espèces à la réception de votre commande."
+    "cod": "Payez en espèces à la réception de votre commande.",
+    "strip": {
+      "paid": "You paid",
+      "held": "Held by Vergeo5",
+      "released": "Released"
+    }
   },
   "pickup": {
     "title": "Retirer votre commande",

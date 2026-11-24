@@ -175,6 +175,10 @@ def store() -> Store:
     for name in ("video_clips", "clip_products"):
         st.rows(name)
     st.rows("feature_flags").append({"flag": "clips", "enabled": True})
+    # Post-pilot behaviour: the allowlist gate is covered in test_clips_pilot.py.
+    st.rows("platform_config").append(
+        {"key": "clip_pilot_allowlist_enforced", "value": False}
+    )
     return st
 
 

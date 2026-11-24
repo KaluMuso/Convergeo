@@ -29,6 +29,7 @@ import {
 } from "../../listings/new/_lib/ui";
 import { buildKycChecklist } from "../../onboarding/_lib/kyc-checklist";
 import { createKycClient } from "../../onboarding/_lib/kyc-client";
+import { createPayoutsClient } from "../../payouts/_lib/payouts-client";
 import { isBoundByDispatchCutoff } from "../_lib/order-guidance";
 
 import { DispatchCutoffBanner, OrderNextStepHint, useDispatchCutoff } from "./order-guidance";
@@ -624,12 +625,14 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
   const [kycApp, setKycApp] = useState<KycApplication | null>(null);
+  const [payoutMissing, setPayoutMissing] = useState<boolean | null>(null);
   const cutoff = useDispatchCutoff();
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const queueClient = useMemo(() => createOrdersQueueClient(getToken), [getToken]);
   const kycClient = useMemo(() => createKycClient(getToken), [getToken]);
   const analyticsClient = useMemo(() => createAnalyticsClient(getToken), [getToken]);
+  const payoutsClient = useMemo(() => createPayoutsClient(getToken), [getToken]);
 
   const load = useCallback(async () => {
     if (!session) {
@@ -686,6 +689,31 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
     }
     void load();
   }, [load, session, sessionLoading]);
+
+  useEffect(() => {
+    if (!session) {
+      setPayoutMissing(null);
+      return;
+    }
+    let cancelled = false;
+    void payoutsClient
+      .getBalances()
+      .then((balances) => {
+        if (cancelled) {
+          return;
+        }
+        const msisdn = balances.payout_msisdn?.trim() ?? "";
+        setPayoutMissing(msisdn.length === 0);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPayoutMissing(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [payoutsClient, session]);
 
   if (sessionLoading || (loading && !dashboard)) {
     return <DashboardSkeleton label={t("home.loading")} />;
@@ -788,6 +816,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
     hasDeliveryWaiting,
     cutoff,
     sellerKind: isServicesVendor ? "services" : isEventOrganiser ? "events" : "products",
+    payoutMissing,
   });
 
   return (
