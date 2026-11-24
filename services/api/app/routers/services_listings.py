@@ -10,8 +10,8 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
-from app.services.branches.context import scope_owner_vendor_query
 from app.schemas.service_packages import PublicPackageOut, to_public
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.listings.demo import fetch_demo_service_ids, has_non_genuine_media
 from app.services.moderation.prohibited import screen_listing
