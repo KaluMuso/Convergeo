@@ -20,6 +20,7 @@ import { catalogLogisticsLabels } from "../plp/logistics-pills";
 
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
 import { BuyerTrustPanel } from "./buyer-trust-panel";
+import { buildComparisonValueRow, mergeComparisonListings } from "./comparison-enrichment";
 import { shouldShowComparison } from "./comparison-visibility";
 import { PdpGallery } from "./gallery";
 import { buildOfferPriceContext } from "./offer-price-context";
@@ -34,7 +35,6 @@ import {
   type VariantOptionGroup,
   type VariantSelection,
 } from "./variant-selection";
-import { buildComparisonValueRow, mergeComparisonListings } from "./comparison-enrichment";
 import { VendorBlock } from "./vendor-block";
 
 import type { ComparisonLabels, ComparisonListing } from "./comparison";

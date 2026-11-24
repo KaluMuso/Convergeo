@@ -6,7 +6,7 @@ import {
 
 import { getStockLabel, type BuyBoxListing } from "./buy-box";
 
-import type { ComparisonListing, ComparisonLabels } from "./comparison";
+import type { ComparisonListing } from "./comparison";
 import type { ProductListing } from "./pdp-interactive-body";
 
 export type ComparisonValueChip = "cod" | "escrow";

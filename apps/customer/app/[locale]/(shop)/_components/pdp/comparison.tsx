@@ -10,6 +10,7 @@ import { FulfillmentLogisticsPills, type LogisticsPillLabels } from "../plp/logi
 
 import { shouldShowComparison } from "./comparison-visibility";
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
+
 import type { ComparisonValueChip } from "./comparison-enrichment";
 
 export { shouldShowComparison } from "./comparison-visibility";

@@ -118,8 +118,12 @@ LUSAKA_BUYER_LNG = 28.2833
 def _map_delivery_funding(raw: str) -> DeliveryFundingKind | None:
     if raw == "vendor_self":
         return "vendor"
-    if raw in ("customer", "vendor", "platform"):
-        return raw
+    if raw == "customer":
+        return "customer"
+    if raw == "vendor":
+        return "vendor"
+    if raw == "platform":
+        return "platform"
     return None
 
 

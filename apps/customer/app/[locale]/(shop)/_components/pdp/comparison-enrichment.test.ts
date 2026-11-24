@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildComparisonValueRow } from "./comparison-enrichment";
+
 import type { ComparisonListing } from "./comparison";
 import type { ProductListing } from "./pdp-interactive-body";
 
