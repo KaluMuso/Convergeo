@@ -304,6 +304,11 @@ def test_ignored_request_stays_pending_to_sender(db: PgConn, social: dict[str, s
     )
     assert recipient.ok, recipient.error
     assert recipient.rows == ["ignored|f"]
+    via_api = _one(
+        db,
+        f"SELECT status FROM public.my_contact_requests('{CAROL}') WHERE id = '{request_id}'",
+    )
+    assert via_api == "pending"
 
 
 def test_only_recipient_can_respond(db: PgConn, social: dict[str, str]) -> None:

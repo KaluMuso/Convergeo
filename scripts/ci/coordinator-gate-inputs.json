@@ -610,7 +610,7 @@
     "20261123100000_catalog_moderation_holds_and_ad_targets.sql": "730cf3da33122e93f3ea196eb904193c0b64e07a8f82fd4b550d97b7c3313e34",
     "20261124090000_clip_pilot_allowlist.sql": "4c78506fea388711bd07a435c74763886e501523b060412f1c9fee3ed70ec818",
     "20261124090100_service_packages.sql": "403ac82fdb529979119e2bcb07e297841e4e737b317ed6d66a16579d92544f1f",
-    "20261124120000_social_contacts.sql": "7cccffb58803a302ee3b57911e7497dfe8f31840f1b23b572d9e3e0c2b44f0df"
+    "20261124120000_social_contacts.sql": "4b4605706cd4ca837b7354c3fce3891ef00cd46f4b76f0c45025fa531a9ec04e"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",

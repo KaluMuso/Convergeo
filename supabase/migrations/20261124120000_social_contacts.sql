@@ -51,7 +51,7 @@
 --
 -- Additive only. Reversible (manual; safe while the flag has never been on,
 -- otherwise export the tables first: they hold users' chats):
---   drop function if exists public.my_contact_requests();
+--   drop function if exists public.my_contact_requests(uuid);
 --   drop function if exists public.expire_contact_requests();
 --   drop function if exists public.set_phone_discovery(uuid, text, boolean);
 --   drop function if exists public.discover_by_phone_hashes(text[], uuid);
@@ -795,7 +795,7 @@ comment on function public.unblock_user(uuid, uuid) is
 
 -- Both directions of the caller's requests. An ignored request reads as
 -- 'pending' to its sender (until it expires), so ignoring stays silent.
-create or replace function public.my_contact_requests()
+create or replace function public.my_contact_requests(p_actor uuid default null)
 returns table (
   id uuid,
   from_user uuid,
@@ -810,20 +810,21 @@ stable
 security definer
 set search_path = ''
 as $$
+  with me as (select private.social_actor(p_actor) as uid)
   select r.id, r.from_user, r.to_user, r.note,
-         case when r.from_user = (select auth.uid()) and r.status = 'ignored'
+         case when r.from_user = me.uid and r.status = 'ignored'
               then 'pending' else r.status end,
          r.created_at,
-         r.from_user = (select auth.uid())
-    from public.contact_requests r
-   where (select auth.uid()) in (r.from_user, r.to_user)
+         r.from_user = me.uid
+    from public.contact_requests r, me
+   where me.uid in (r.from_user, r.to_user)
      and not private.social_blocked(r.from_user, r.to_user)
    order by r.created_at desc
    limit 200;
 $$;
 
-revoke all on function public.my_contact_requests() from public, anon;
-grant execute on function public.my_contact_requests() to authenticated;
+revoke all on function public.my_contact_requests(uuid) from public, anon;
+grant execute on function public.my_contact_requests(uuid) to authenticated, service_role;
 
 create or replace function public.send_chat_message(
   p_thread_id uuid,
