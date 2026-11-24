@@ -36,6 +36,7 @@ const PERMISSIONS = new Set([
   "inventory.read",
   "support.manage",
   "logistics.manage",
+  "cod.reconcile",
   "audit.read",
 ]);
 
