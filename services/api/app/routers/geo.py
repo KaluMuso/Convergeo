@@ -5,11 +5,13 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections import OrderedDict
 from datetime import timedelta
 from typing import Annotated, Any
 
 import httpx
 from app.core.auth import CurrentUser, require_role
+from app.core.inproc_ratelimit import InProcessRateLimiter
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -26,10 +28,18 @@ USER_AGENT = "Convergeo/1.0 (support@vergeo5.com)"
 RATE_SCOPE = "geo_search_vendor"
 RATE_LIMIT_PER_MINUTE = 10
 _CACHE_TTL_SECONDS = 86_400
+_CACHE_MAX_ENTRIES = 500
 
 _nominatim_lock = threading.Lock()
 _last_nominatim_at = 0.0
-_cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
+_cache: OrderedDict[str, tuple[float, list[dict[str, Any]]]] = OrderedDict()
+_rate_limit_fallback = InProcessRateLimiter(
+    global_rate_per_sec=1.0,
+    global_burst=1,
+    key_rate_per_sec=RATE_LIMIT_PER_MINUTE / 60.0,
+    key_burst=RATE_LIMIT_PER_MINUTE,
+    max_keys=2_000,
+)
 
 
 class GeoSearchResult(StrictModel):
@@ -54,6 +64,13 @@ def _rate_limit_vendor(request: Request, user_id: str, service_client: _ServiceR
         )
     except Exception:
         logger.warning("geo_search.rate_limit_unavailable", exc_info=True)
+        _throttle_nominatim()
+        if not _rate_limit_fallback.allow(user_id):
+            raise_rate_limited(
+                retry_after=60,
+                message_key="vendor.profile.location.searchRateLimited",
+                message="Too many place searches",
+            )
         return
     if not allowed:
         raise_rate_limited(
@@ -61,6 +78,17 @@ def _rate_limit_vendor(request: Request, user_id: str, service_client: _ServiceR
             message_key="vendor.profile.location.searchRateLimited",
             message="Too many place searches",
         )
+
+
+def _purge_expired_cache() -> None:
+    now = time.monotonic()
+    expired = [
+        key
+        for key, (cached_at, _) in _cache.items()
+        if now - cached_at > _CACHE_TTL_SECONDS
+    ]
+    for key in expired:
+        _cache.pop(key, None)
 
 
 def _cached_results(normalized_q: str) -> list[dict[str, Any]] | None:
@@ -71,11 +99,17 @@ def _cached_results(normalized_q: str) -> list[dict[str, Any]] | None:
     if time.monotonic() - cached_at > _CACHE_TTL_SECONDS:
         _cache.pop(normalized_q, None)
         return None
+    _cache.move_to_end(normalized_q)
     return rows
 
 
 def _store_cache(normalized_q: str, rows: list[dict[str, Any]]) -> None:
+    _purge_expired_cache()
+    if normalized_q in _cache:
+        _cache.move_to_end(normalized_q)
     _cache[normalized_q] = (time.monotonic(), rows)
+    while len(_cache) > _CACHE_MAX_ENTRIES:
+        _cache.popitem(last=False)
 
 
 def _throttle_nominatim() -> None:
