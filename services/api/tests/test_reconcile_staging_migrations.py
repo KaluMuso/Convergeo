@@ -148,6 +148,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261122100300",
     # Web Push delivery queue + enqueue trigger (additive, reversible).
     "20261123090000",
+    # Admin catalog control holds + typed ad targets (additive, documented down).
+    "20261123100000",
 }
 
 

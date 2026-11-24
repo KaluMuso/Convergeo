@@ -23,6 +23,7 @@ ProductClassCode = Literal["A", "B", "C", "D", "E"]
 PlacementType = Literal["feed_slot", "carousel_slide"]
 AdvertiserKind = Literal["vendor", "business", "external"]
 PlacementStatus = Literal["draft", "scheduled", "active", "paused", "ended"]
+TargetKind = Literal["listing", "product", "service", "event", "vendor"]
 EffectiveState = Literal["live", "upcoming", "expired", "disabled", "draft", "paused", "ended"]
 
 LOCALE_KEYS = frozenset({"en", "bem", "nya", "fr", "zh"})
@@ -293,6 +294,15 @@ class PlacementCreate(BaseModel):
     paid_amount_ngwee: int = Field(default=0, ge=0, le=10_000_000_000)
     payment_reference: str | None = None
     enabled: bool = True
+    target_kind: TargetKind | None = None
+    target_id: str | None = None
+
+    @field_validator("target_id")
+    @classmethod
+    def _target_id(cls, value: str | None) -> str | None:
+        if value is not None and not UUID_RE.match(value):
+            raise ValueError("target_id must be a UUID")
+        return value
 
     @field_validator("image_public_id")
     @classmethod
@@ -321,6 +331,8 @@ class PlacementCreate(BaseModel):
             raise ValueError("ends_at must be after starts_at")
         if self.advertiser_kind == "vendor" and not self.advertiser_vendor_id:
             raise ValueError("vendor advertisers need advertiser_vendor_id")
+        if (self.target_kind is None) != (self.target_id is None):
+            raise ValueError("target_kind and target_id must be set together")
         return self
 
 
@@ -339,6 +351,24 @@ class PlacementUpdate(BaseModel):
     paid_amount_ngwee: int | None = Field(default=None, ge=0, le=10_000_000_000)
     payment_reference: str | None = None
     enabled: bool | None = None
+    target_kind: TargetKind | None = None
+    target_id: str | None = None
+    clear_target: bool = False
+
+    @field_validator("target_id")
+    @classmethod
+    def _target_id(cls, value: str | None) -> str | None:
+        if value is not None and not UUID_RE.match(value):
+            raise ValueError("target_id must be a UUID")
+        return value
+
+    @model_validator(mode="after")
+    def _target_pair(self) -> PlacementUpdate:
+        if (self.target_kind is None) != (self.target_id is None):
+            raise ValueError("target_kind and target_id must be set together")
+        if self.clear_target and self.target_kind is not None:
+            raise ValueError("clear_target cannot be combined with a new target")
+        return self
 
     @field_validator("image_public_id")
     @classmethod
@@ -387,6 +417,11 @@ class PlacementOut(BaseModel):
     status: PlacementStatus
     enabled: bool
     effective_state: EffectiveState
+    target_kind: TargetKind | None = None
+    target_id: str | None = None
+    # False when a set target (or vendor advertiser) is hidden/blocked/removed:
+    # the placement is then suppressed on every customer surface.
+    target_visible: bool = True
     stats: PlacementStats = Field(default_factory=PlacementStats)
     updated_at: datetime | None = None
 

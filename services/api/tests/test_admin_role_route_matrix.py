@@ -113,6 +113,11 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     ),
     "products.manage": frozenset(
         {
+            # Admin catalog control (T4): listings.
+            "GET /admin/catalog/listings",
+            "PATCH /admin/catalog/listings/{entity_id}",
+            "POST /admin/catalog/listings/{entity_id}/moderate",
+            "POST /admin/catalog/listings/{entity_id}/restore",
             # Shared canonical photos (#798).
             "DELETE /admin/products/{product_id}/images/{image_id}",
             "GET /admin/products/{product_id}/images",
@@ -129,6 +134,11 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     ),
     "vendors.manage": frozenset(
         {
+            # Admin catalog control (T4): vendor suspension holds.
+            "GET /admin/catalog/vendors",
+            "PATCH /admin/catalog/vendors/{entity_id}",
+            "POST /admin/catalog/vendors/{entity_id}/moderate",
+            "POST /admin/catalog/vendors/{entity_id}/restore",
             # Multi-branch review (#807): mapped to vendors.manage in auth.py.
             "GET /admin/branches",
             "GET /admin/branches/flags",
@@ -192,6 +202,8 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     ),
     "services.read": frozenset(
         {
+            # Admin catalog control (T4): services are read-only here.
+            "GET /admin/catalog/services",
             "GET /admin/services",
         }
     ),
@@ -206,6 +218,11 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     ),
     "events.manage": frozenset(
         {
+            # Admin catalog control (T4): events.
+            "GET /admin/catalog/events",
+            "PATCH /admin/catalog/events/{entity_id}",
+            "POST /admin/catalog/events/{entity_id}/moderate",
+            "POST /admin/catalog/events/{entity_id}/restore",
             "GET /admin/events",
             "GET /admin/events/high-value-queue",
             "GET /admin/events/organisers",
@@ -216,6 +233,8 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     ),
     "ads.manage": frozenset(
         {
+            # Typed ad target picker (T4).
+            "GET /admin/ads/targets",
             "DELETE /admin/home-feed/sections/{section_id}",
             "DELETE /admin/merch/slots/{slot_id}",
             "GET /admin/ads/placements",
@@ -253,6 +272,15 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
 # The fixed `moderator` role: product and vendor review queues, no decisions on KYC.
 MODERATOR_ROUTES: frozenset[str] = frozenset(
     {
+        # Admin catalog control (T4): moderators hold products.manage and vendors.manage.
+        "GET /admin/catalog/listings",
+        "GET /admin/catalog/vendors",
+        "PATCH /admin/catalog/listings/{entity_id}",
+        "PATCH /admin/catalog/vendors/{entity_id}",
+        "POST /admin/catalog/listings/{entity_id}/moderate",
+        "POST /admin/catalog/listings/{entity_id}/restore",
+        "POST /admin/catalog/vendors/{entity_id}/moderate",
+        "POST /admin/catalog/vendors/{entity_id}/restore",
         "GET /admin/intake",
         "GET /admin/intake/{session_id}",
         "GET /admin/kyc",
@@ -301,6 +329,10 @@ SUPERADMIN_ONLY_ROUTES: frozenset[str] = frozenset(
 # support tools to `support.manage`, dispatch to `logistics.manage` (2026-11-13).
 UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
     {
+        # Admin catalog control (T4): service mutations have no rbac permission.
+        "PATCH /admin/catalog/services/{entity_id}",
+        "POST /admin/catalog/services/{entity_id}/moderate",
+        "POST /admin/catalog/services/{entity_id}/restore",
         "DELETE /admin/translations/overrides",
         "GET /admin/clips",
         "GET /admin/clips/reports",

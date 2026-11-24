@@ -28,7 +28,12 @@
     "cod": "Lipirani mu cash mukalandira order yanu.",
     "held": "Payment yanu ikusungidwa ndi Convergeo mpaka mulandire order yanu.",
     "refunded": "Refund ikubwerera ku mobile money wallet yanu.",
-    "released": "Ndalama zatsimikizidwa kwa vendor pambuyo pa fulfilment."
+    "released": "Ndalama zatsimikizidwa kwa vendor pambuyo pa fulfilment.",
+    "strip": {
+      "paid": "Walipira kale",
+      "held": "Ikusungidwa na Vergeo5",
+      "released": "Yatsimikizidwa"
+    }
   },
   "list": {
     "checkoutGroup": "Kugula {date}",

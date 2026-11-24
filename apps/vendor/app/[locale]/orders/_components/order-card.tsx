@@ -844,34 +844,32 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="mb-2 text-lg font-semibold text-text">
-              {t("home.needsAction.heading")}
-            </h2>
-            {needsCount > 0 ? (
-              <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
-                {needsCount}
-              </span>
-            ) : null}
-          </div>
+            <h2 className="mb-2 text-lg font-semibold text-text">{t("home.needsAction.heading")}</h2>
+          {needsCount > 0 ? (
+            <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
+              {needsCount}
+            </span>
+          ) : null}
+        </div>
 
-          {!dashboard || dashboard.needs_action.length === 0 ? (
-            <VendorEmptyState
-              title={t("home.needsAction.emptyTitle")}
-              body={t("home.needsAction.empty")}
-            />
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {dashboard.needs_action.map((order) => (
-                <OrderCard
-                  key={order.id}
-                  locale={locale}
-                  order={order}
-                  onError={setError}
-                  onUpdated={() => void load()}
-                />
-              ))}
-            </ul>
-          )}
+        {!dashboard || dashboard.needs_action.length === 0 ? (
+          <VendorEmptyState
+            title={t("home.needsAction.emptyTitle")}
+            body={t("home.needsAction.empty")}
+          />
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {dashboard.needs_action.map((order) => (
+              <OrderCard
+                key={order.id}
+                locale={locale}
+                order={order}
+                onError={setError}
+                onUpdated={() => void load()}
+              />
+            ))}
+          </ul>
+        )}
         </section>
       </VendorGrid>
 
