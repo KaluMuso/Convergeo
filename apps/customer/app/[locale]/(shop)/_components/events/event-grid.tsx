@@ -1,7 +1,7 @@
 "use client";
 
-import { browseCardGridClass } from "@vergeo/ui/src/browse-grid";
 import { Badge } from "@vergeo/ui/src/badge";
+import { browseCardGridClass } from "@vergeo/ui/src/browse-grid";
 import { EventCard } from "@vergeo/ui/src/event-card";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import Link from "next/link";

@@ -1,9 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
 import { Button } from "@vergeo/ui/src/button";
 import { CategorySelection, type CategoryNode } from "@vergeo/ui/src/category-selection";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 

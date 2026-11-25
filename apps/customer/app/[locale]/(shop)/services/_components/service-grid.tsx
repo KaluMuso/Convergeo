@@ -1,6 +1,6 @@
 import { formatK } from "@vergeo/i18n";
-import { browseCardGridClass } from "@vergeo/ui/src/browse-grid";
 import { Badge } from "@vergeo/ui/src/badge";
+import { browseCardGridClass } from "@vergeo/ui/src/browse-grid";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import Link from "next/link";
 

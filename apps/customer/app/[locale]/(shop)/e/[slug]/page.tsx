@@ -1,4 +1,4 @@
-import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { formatK, loadNamespace, type Locale } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import {
@@ -14,8 +14,8 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
-import { ExternalUrlImage } from "../../../../../lib/media/external-url-image";
 import { eventAccessCookieName } from "../../../../../lib/event-access";
+import { ExternalUrlImage } from "../../../../../lib/media/external-url-image";
 import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 
 import { EventCalendarLinks } from "./_components/event-calendar-links";

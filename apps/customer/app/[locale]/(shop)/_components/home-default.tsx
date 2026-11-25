@@ -6,11 +6,10 @@ import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
-import { ExternalUrlImage } from "../../../../lib/media/external-url-image";
 import { fetchJson } from "../../../../lib/fetch-json";
+import { ExternalUrlImage } from "../../../../lib/media/external-url-image";
 
 import { categoryDisplayName } from "./category-display-name";
-
 import { dealToListing, fetchDeals } from "./deals-data";
 import {
   vendorCommercialTier,
