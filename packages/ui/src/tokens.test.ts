@@ -39,20 +39,20 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 describe("tokens", () => {
-  it("matches the Copperbelt identity", () => {
+  it("defaults to the mono v2 identity", () => {
     expect(tokens.colors).toMatchObject({
-      bg: "#F7F6F2",
-      panel: "#0F2A21",
-      text: "#15201B",
-      primary: "#0B5D45",
-      primaryDeep: "#08473A",
-      primaryTint: "#E3F0EA",
-      accent: "#A4501C",
+      bg: "#FAFAFA",
+      panel: "#18181B",
+      text: "#18181B",
+      primary: "#18181B",
+      primaryDeep: "#09090B",
+      primaryTint: "#F4F4F5",
+      accent: "#3F3F46",
     });
     expect(tokens.fonts.display).toContain("Bricolage Grotesque");
     expect(tokens.fontSize.hero).toBe("clamp(2.125rem, 1.4rem + 3.2vw, 3.75rem)");
     expect(tokens.fontSize.h2).toBe("clamp(1.375rem, 1.15rem + 1vw, 1.875rem)");
-    expect(tokens.transitionDuration.page).toBe("300ms");
+    expect(tokens.transitionDuration.page).toBe("320ms");
   });
 
   it("tagTint applies alpha suffix recipe", () => {

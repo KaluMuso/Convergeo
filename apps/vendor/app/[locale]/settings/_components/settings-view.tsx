@@ -2,6 +2,7 @@
 
 import { useSession } from "@vergeo/auth/use-session";
 import { LOCALES } from "@vergeo/i18n";
+import { ThemePreference } from "@vergeo/ui/src/theme-preference";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -9,7 +10,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { maskMsisdn, swapLocaleInPath } from "../../../../lib/locale-path";
 import { isVendorPayoutsEnabled } from "../../../../lib/payouts-availability";
-import { createCollabClient, type CollabFlagStatus } from "../../events/collaborate/_lib/collab-client";
+import {
+  createCollabClient,
+  type CollabFlagStatus,
+} from "../../events/collaborate/_lib/collab-client";
 import { Button, FormField, Select, Switch } from "../../listings/new/_lib/ui";
 import { createPayoutsClient } from "../../payouts/_lib/payouts-client";
 
@@ -49,6 +53,7 @@ function Section({
  */
 export function SettingsView({ locale }: Props) {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const pathname = usePathname();
   const router = useRouter();
   const { session, user } = useSession();
@@ -262,6 +267,20 @@ export function SettingsView({ locale }: Props) {
           ) : null}
         </Section>
       ) : null}
+
+      <Section id="display" title={tCommon("theme.displayPreferences")}>
+        <ThemePreference
+          label={tCommon("theme.label")}
+          lightLabel={tCommon("theme.light")}
+          darkLabel={tCommon("theme.dark")}
+          systemLabel={tCommon("theme.system")}
+          accentLabel={tCommon("theme.accentLabel")}
+          accentMonoLabel={tCommon("theme.accentMono")}
+          accentGreenLabel={tCommon("theme.accentGreen")}
+          accentBlueLabel={tCommon("theme.accentBlue")}
+          accentGoldLabel={tCommon("theme.accentGold")}
+        />
+      </Section>
 
       <Section id="language" title={t("settings.language.heading")}>
         <FormField label={t("settings.language.label")}>

@@ -6,7 +6,14 @@
  * value written to `document.documentElement.dataset.theme`. Both the inline
  * pre-paint `<script>` (below) and the runtime `ThemeProvider` use this logic so
  * they never disagree (which would cause a flash on hydration).
+ *
+ * `ACCENT_STORAGE_KEY` / `data-accent` follow the same pattern for per-user brand
+ * accent (mono default; green, blue, gold optional).
  */
+
+import { ACCENT_STORAGE_KEY, resolveAccentChoice, type AccentChoice } from "./accent-palette";
+
+export { ACCENT_STORAGE_KEY, resolveAccentChoice, type AccentChoice };
 
 export const THEME_STORAGE_KEY = "vg-theme";
 
@@ -32,7 +39,7 @@ export function resolveInitialTheme(stored: string | null, prefersDark: boolean)
  * so it executes and is only reported; vendor/admin set no script CSP. When a
  * live per-request nonce lands, pass it through `nonce` on <ThemeScript/>.
  */
-export const THEME_SCRIPT = `(function(){try{var k="${THEME_STORAGE_KEY}";var s=localStorage.getItem(k);var d=window.matchMedia("(prefers-color-scheme: dark)").matches;var t=(s==="light"||s==="dark")?s:(d?"dark":"light");document.documentElement.dataset.theme=t;}catch(e){}})();`;
+export const THEME_SCRIPT = `(function(){try{var tk="${THEME_STORAGE_KEY}";var ak="${ACCENT_STORAGE_KEY}";var ts=localStorage.getItem(tk);var d=window.matchMedia("(prefers-color-scheme: dark)").matches;var t=(ts==="light"||ts==="dark")?ts:(d?"dark":"light");document.documentElement.dataset.theme=t;var a=localStorage.getItem(ak);var ac=(a==="mono"||a==="green"||a==="blue"||a==="gold")?a:"mono";document.documentElement.dataset.accent=ac;}catch(e){document.documentElement.dataset.accent="mono";}})();`;
 
 /** Renders the pre-paint bootstrap script. Place first in the app shell. */
 export function ThemeScript({ nonce }: { nonce?: string }) {
