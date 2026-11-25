@@ -2,11 +2,7 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 
-import type {
-  CartResponse,
-  ChangeNotice,
-  MiniCartLabels,
-} from "./mini-cart-drawer";
+import type { CartResponse, ChangeNotice, MiniCartLabels } from "./mini-cart-drawer";
 
 type CartStoreState = {
   cart: CartResponse | null;
@@ -23,9 +19,9 @@ type CartStoreListener = () => void;
 let storeState: CartStoreState = {
   cart: null,
   notices: [],
-  // Start loading so the cart page does not flash an empty state before the
-  // first refresh completes (empty vs load-error must stay distinct).
-  loading: true,
+  // Default idle: callers set loading while a refresh is in flight. Starting
+  // false lets an empty local cart render immediately instead of a long spinner.
+  loading: false,
   loadError: false,
   drawerOpen: false,
   lastAddedMessage: null,
@@ -78,11 +74,7 @@ export function setLastAddedMessage(message: string | null) {
 }
 
 export function useCartStore() {
-  const state = useSyncExternalStore(
-    subscribeStore,
-    getStoreSnapshot,
-    getStoreSnapshot,
-  );
+  const state = useSyncExternalStore(subscribeStore, getStoreSnapshot, getStoreSnapshot);
   return state;
 }
 
@@ -94,12 +86,7 @@ export type CartNavTriggerProps = {
   label?: ReactNode;
 };
 
-export function CartNavTrigger({
-  labels,
-  cartIcon,
-  className,
-  label,
-}: CartNavTriggerProps) {
+export function CartNavTrigger({ labels, cartIcon, className, label }: CartNavTriggerProps) {
   const { cart } = useCartStore();
   const count = getCartItemCount(cart);
   const badge =
