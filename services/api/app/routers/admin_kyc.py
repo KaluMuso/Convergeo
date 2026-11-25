@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, Literal
 from uuid import UUID
@@ -25,6 +27,7 @@ from app.services.kyc.state_machine import (
 )
 from app.services.notifications.dedupe import enqueue_outbox_row
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, model_validator
 
 # Queue shows records awaiting a decision (legacy `pending` mapped in state machine).
@@ -257,6 +260,91 @@ def _build_reviewer_notes(
     return " | ".join(parts)
 
 
+def _kyc_doc_priority(path: str) -> tuple[int, str]:
+    doc_type = classify_doc_type(path)
+    if doc_type == "nrc":
+        return (0, path)
+    if doc_type == "selfie":
+        return (1, path)
+    return (2, path)
+
+
+def _signed_url_from_result(
+    result: dict[str, Any],
+    *,
+    reference: datetime,
+    path: str,
+) -> SignedDocUrl:
+    signed_url = (
+        result.get("signedURL") or result.get("signedUrl") or result.get("signed_url")
+    )
+    expires_in = result.get("expires_in") or result.get("expiresIn")
+    if isinstance(expires_in, int | float):
+        expires_at = reference + timedelta(seconds=int(expires_in))
+    else:
+        expires_at = reference + timedelta(seconds=SIGNED_URL_TTL_SECONDS)
+    return SignedDocUrl(
+        path=path,
+        doc_type=classify_doc_type(path),
+        signed_url=str(signed_url) if signed_url else None,
+        expires_at=expires_at,
+        ttl_seconds=SIGNED_URL_TTL_SECONDS,
+    )
+
+
+def _sign_single_kyc_path(bucket: Any, path: str, reference: datetime) -> tuple[SignedDocUrl, bool]:
+    try:
+        result = bucket.create_signed_url(path, SIGNED_URL_TTL_SECONDS)
+        if isinstance(result, dict):
+            return _signed_url_from_result(result, reference=reference, path=path), True
+    except Exception:
+        pass
+    return (
+        SignedDocUrl(
+            path=path,
+            doc_type=classify_doc_type(path),
+            signed_url=None,
+            expires_at=None,
+            ttl_seconds=SIGNED_URL_TTL_SECONDS,
+        ),
+        False,
+    )
+
+
+def _parse_batch_signed_urls(
+    payload: Any,
+    *,
+    ordered_paths: list[str],
+    reference: datetime,
+) -> list[SignedDocUrl] | None:
+    if not isinstance(payload, (dict, list)):
+        return None
+    rows: list[dict[str, Any]]
+    if isinstance(payload, dict):
+        data = payload.get("data") or payload.get("signedUrls") or payload.get("signed_urls")
+        if not isinstance(data, list):
+            return None
+        rows = [row for row in data if isinstance(row, dict)]
+    else:
+        rows = [row for row in payload if isinstance(row, dict)]
+    if not rows:
+        return None
+
+    by_path: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        row_path = row.get("path")
+        if isinstance(row_path, str):
+            by_path[row_path] = row
+
+    documents: list[SignedDocUrl] = []
+    for path in ordered_paths:
+        row = by_path.get(path)
+        if row is None:
+            return None
+        documents.append(_signed_url_from_result(row, reference=reference, path=path))
+    return documents
+
+
 def sign_kyc_documents(
     service_client: ServiceRoleClient,
     paths: list[str],
@@ -264,55 +352,59 @@ def sign_kyc_documents(
     now: datetime | None = None,
 ) -> tuple[list[SignedDocUrl], bool]:
     reference = now or datetime.now(UTC)
-    documents: list[SignedDocUrl] = []
-    docs_available = bool(paths)
+    ordered_paths = sorted(paths, key=_kyc_doc_priority)
+    if not ordered_paths:
+        return [], False
 
     storage = getattr(service_client.client, "storage", None)
     if storage is None:
-        docs_available = False
-        for path in paths:
-            documents.append(
-                SignedDocUrl(
-                    path=path,
-                    doc_type=classify_doc_type(path),
-                    signed_url=None,
-                    expires_at=None,
-                    ttl_seconds=SIGNED_URL_TTL_SECONDS,
-                )
-            )
-        return documents, docs_available
-
-    bucket = storage.from_(KYC_DOCS_BUCKET)
-    for path in paths:
-        signed_url: str | None = None
-        expires_at: datetime | None = None
-        try:
-            result = bucket.create_signed_url(path, SIGNED_URL_TTL_SECONDS)
-            if isinstance(result, dict):
-                signed_url = (
-                    result.get("signedURL") or result.get("signedUrl") or result.get("signed_url")
-                )
-                expires_in = result.get("expires_in") or result.get("expiresIn")
-                if isinstance(expires_in, int | float):
-                    expires_at = reference + timedelta(seconds=int(expires_in))
-                else:
-                    expires_at = reference + timedelta(seconds=SIGNED_URL_TTL_SECONDS)
-        except Exception:
-            docs_available = False
-            signed_url = None
-            expires_at = None
-
-        documents.append(
+        return [
             SignedDocUrl(
                 path=path,
                 doc_type=classify_doc_type(path),
-                signed_url=str(signed_url) if signed_url else None,
-                expires_at=expires_at,
+                signed_url=None,
+                expires_at=None,
                 ttl_seconds=SIGNED_URL_TTL_SECONDS,
             )
-        )
+            for path in ordered_paths
+        ], False
 
+    bucket = storage.from_(KYC_DOCS_BUCKET)
+    batch_sign = getattr(bucket, "create_signed_urls", None)
+    if callable(batch_sign):
+        try:
+            batch_result = batch_sign(ordered_paths, SIGNED_URL_TTL_SECONDS)
+            batched = _parse_batch_signed_urls(
+                batch_result,
+                ordered_paths=ordered_paths,
+                reference=reference,
+            )
+            if batched is not None:
+                docs_available = all(doc.signed_url for doc in batched)
+                return batched, docs_available
+        except Exception:
+            pass
+
+    max_workers = min(8, len(ordered_paths))
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        signed = list(
+            pool.map(
+                lambda path: _sign_single_kyc_path(bucket, path, reference),
+                ordered_paths,
+            )
+        )
+    documents = [doc for doc, _ in signed]
+    docs_available = all(available for _, available in signed)
     return documents, docs_available
+
+
+async def sign_kyc_documents_async(
+    service_client: ServiceRoleClient,
+    paths: list[str],
+    *,
+    now: datetime | None = None,
+) -> tuple[list[SignedDocUrl], bool]:
+    return await asyncio.to_thread(sign_kyc_documents, service_client, paths, now=now)
 
 
 def _serialize_momo_match(payload: dict[str, Any] | None) -> MomoNameMatchOut | None:
@@ -612,11 +704,11 @@ async def list_kyc_queue(
     return items
 
 
-@kyc_router.get("/{kyc_record_id}", response_model=KycDetailOut)
+@kyc_router.get("/{kyc_record_id}")
 async def get_kyc_detail(
     kyc_record_id: UUID,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
-) -> KycDetailOut:
+) -> JSONResponse:
     row = _load_kyc_record_row(service_client, str(kyc_record_id))
     vendor = _load_vendor_row(service_client, str(row["vendor_id"]))
     paths_raw = row.get("doc_storage_paths")
@@ -637,7 +729,7 @@ async def get_kyc_detail(
     reviewed_at_raw = row.get("reviewed_at")
     decision_reason = row.get("decision_reason")
     lifecycle_reason = row.get("lifecycle_reason")
-    return KycDetailOut(
+    payload = KycDetailOut(
         id=UUID(str(row["id"])),
         vendor_id=UUID(str(row["vendor_id"])),
         vendor_display_name=str(vendor["display_name"]),
@@ -657,6 +749,10 @@ async def get_kyc_detail(
         sla_badge=sla_badge,
         age_hours=round(age_hours, 2),
         docs_available=docs_available,
+    )
+    return JSONResponse(
+        content=payload.model_dump(mode="json"),
+        headers={"Cache-Control": "private, max-age=240"},
     )
 
 
