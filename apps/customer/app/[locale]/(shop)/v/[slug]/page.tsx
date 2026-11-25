@@ -213,18 +213,43 @@ async function fetchVendorProfile(
   }
 }
 
+const ZAMBIA_LOCALITIES = [
+  "lusaka",
+  "ndola",
+  "kitwe",
+  "livingstone",
+  "chipata",
+  "kabwe",
+  "chingola",
+  "mufulira",
+] as const;
+
+function inferAddressLocality(landmark: string | null | undefined): string {
+  if (!landmark) {
+    return "Lusaka";
+  }
+  const lower = landmark.toLowerCase();
+  for (const city of ZAMBIA_LOCALITIES) {
+    if (lower.includes(city)) {
+      return city.charAt(0).toUpperCase() + city.slice(1);
+    }
+  }
+  return "Lusaka";
+}
+
 function buildVendorJsonLd(
   vendor: VendorProfileApiResponse["vendor"],
   reviews: VendorProfileApiResponse["reviews_summary"],
   locale: string,
 ): Record<string, unknown> {
-  return buildLocalBusinessJsonLd({
+  const landmark = vendor.location?.landmark ?? null;
+  const jsonLd = buildLocalBusinessJsonLd({
     name: vendor.display_name,
     slug: vendor.slug,
     locale,
     description: vendor.description,
     logoUrl: vendor.logo_url,
-    landmark: vendor.location?.landmark ?? null,
+    landmark,
     lat: vendor.location?.lat ?? null,
     lng: vendor.location?.lng ?? null,
     aggregateRating:
@@ -232,6 +257,19 @@ function buildVendorJsonLd(
         ? { ratingValue: reviews.rating_avg, reviewCount: reviews.rating_count }
         : null,
   });
+  const address = jsonLd.address;
+  if (address && typeof address === "object" && landmark) {
+    return {
+      ...jsonLd,
+      address: {
+        ...address,
+        streetAddress: landmark,
+        addressLocality: inferAddressLocality(landmark),
+        addressCountry: "ZM",
+      },
+    };
+  }
+  return jsonLd;
 }
 
 export async function generateMetadata({
