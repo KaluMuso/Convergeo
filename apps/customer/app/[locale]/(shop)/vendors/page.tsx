@@ -8,6 +8,9 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
+import { ApiUnavailablePanel } from "../_components/api-unavailable";
+import { BROWSE_PAGE_SIZE, BrowsePager, parseBrowsePage } from "../_components/browse-pager";
+import { resolveFacetCategoryLabel } from "../_components/category-display-name";
 import { BackToTop } from "../_components/back-to-top";
 import { FilterBar } from "../_components/directory/filter-bar";
 import { VendorCardGrid } from "../_components/directory/vendor-card-grid";
@@ -79,7 +82,9 @@ async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslat
   }) as unknown as DirectoryTranslator;
 }
 
-async function fetchDirectory(query: Record<string, string>): Promise<DirectoryApiResponse | null> {
+type DirectoryFetchResult = { kind: "ok"; data: DirectoryApiResponse } | { kind: "unavailable" };
+
+async function fetchDirectory(query: Record<string, string>): Promise<DirectoryFetchResult> {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (value) {
@@ -90,17 +95,17 @@ async function fetchDirectory(query: Record<string, string>): Promise<DirectoryA
   try {
     const url = absoluteApiUrl(`/directory?${searchParams.toString()}`);
     if (!url) {
-      return null;
+      return { kind: "unavailable" };
     }
     const response = await fetch(url, {
       next: { revalidate, tags: ["directory"] },
     });
     if (!response.ok) {
-      return null;
+      return { kind: "unavailable" };
     }
-    return (await response.json()) as DirectoryApiResponse;
+    return { kind: "ok", data: (await response.json()) as DirectoryApiResponse };
   } catch {
-    return null;
+    return { kind: "unavailable" };
   }
 }
 
@@ -147,15 +152,40 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
   const category = readParam(resolvedSearchParams, "category");
   const location = readParam(resolvedSearchParams, "location");
   const badges = readParam(resolvedSearchParams, "badges");
+  const page = parseBrowsePage(resolvedSearchParams.page);
 
-  const directory = await fetchDirectory({ q, category, location, badges });
-  const vendors = directory?.items ?? [];
-  const facets = directory?.facets ?? {
+  const directoryResult = await fetchDirectory({
+    q,
+    category,
+    location,
+    badges,
+    page: String(page),
+    page_size: String(BROWSE_PAGE_SIZE),
+  });
+
+  if (directoryResult.kind === "unavailable") {
+    return (
+      <CustomerRouteShell className="flex flex-col gap-4">
+        <ApiUnavailablePanel
+          retryHref={`/${locale}/vendors`}
+          labels={{
+            title: t("indexUnavailable.title"),
+            body: t("indexUnavailable.body"),
+            retry: t("indexUnavailable.retry"),
+          }}
+        />
+      </CustomerRouteShell>
+    );
+  }
+
+  const directory = directoryResult.data;
+  const vendors = directory.items;
+  const facets = directory.facets ?? {
     categories: [],
     locations: [],
     badges: [],
   };
-  const total = directory?.total ?? 0;
+  const total = directory.total;
 
   const categoryLabels = {
     electronics: t("filters.categories.electronics"),
@@ -170,10 +200,7 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
 
   const categoryOptions = facets.categories.map((facet) => ({
     value: facet.value,
-    label: formatFacetLabel(
-      categoryLabels[facet.value as keyof typeof categoryLabels] ?? facet.value.replace(/-/g, " "),
-      facet.count,
-    ),
+    label: formatFacetLabel(resolveFacetCategoryLabel(facet.value, categoryLabels), facet.count),
   }));
 
   const locationOptions = facets.locations.map((facet) => ({
@@ -256,6 +283,18 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
               viewProfile: t("index.viewProfile"),
               categoryLabels,
               defaultLocation: t("card.defaultLocation"),
+            }}
+          />
+          <BrowsePager
+            locale={locale}
+            pathname="/vendors"
+            searchParams={{ q, category, location, badges }}
+            page={page}
+            total={total}
+            labels={{
+              previous: t("pagination.previous"),
+              next: t("pagination.next"),
+              page: t("pagination.page"),
             }}
           />
           <BackToTop label={tCatalog("plp.backToTop")} />

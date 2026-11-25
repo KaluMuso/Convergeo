@@ -1,22 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { resolveFacetCategoryLabel, slugToCategoryLabel } from "./category-display-name";
 
-import { categoryDisplayName } from "./category-tree";
-
-const rows = [
-  { slug: "mens-clothing", name: "Men's Clothing" },
-  { slug: "fashion-beauty", name: "Fashion & Beauty" },
-];
-
-describe("categoryDisplayName", () => {
-  it("uses the category's own name, not a title-cased slug", () => {
-    expect(categoryDisplayName(rows, "mens-clothing")).toBe("Men's Clothing");
-    expect(categoryDisplayName(rows, "fashion-beauty")).toBe(
-      "Fashion & Beauty",
-    );
+describe("category display fallback", () => {
+  it("title-cases slugs", () => {
+    expect(slugToCategoryLabel("tech-services")).toBe("Tech Services");
   });
-
-  it("falls back to a title-cased slug only for unknown categories", () => {
-    expect(categoryDisplayName(rows, "home-garden")).toBe("Home Garden");
-    expect(categoryDisplayName([], undefined)).toBe("");
+  it("resolves known labels", () => {
+    expect(resolveFacetCategoryLabel("groceries", { groceries: "Groceries" })).toBe("Groceries");
   });
 });

@@ -14,7 +14,8 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import { ApiUnavailablePanel } from "../../_components/api-unavailable";
+import { fetchVendorProfile } from "../../_components/detail-fetch/fetch-vendor";
 import { ShareLinkButton } from "../../../_components/share-link-button";
 import { buildStorefrontCompare } from "../../_components/directory/business-home/compare-other-shops";
 import {
@@ -180,30 +181,6 @@ async function getCatalogTranslator(locale: string): Promise<DirectoryTranslator
   }) as unknown as DirectoryTranslator;
 }
 
-async function fetchVendorProfile(slug: string): Promise<VendorProfileApiResponse | null> {
-  try {
-    const url = absoluteApiUrl(`/directory/${encodeURIComponent(slug)}`);
-    if (!url) {
-      return null;
-    }
-    const response = await fetch(url, {
-      next: {
-        revalidate,
-        tags: [`vendor:${slug}`, "directory"],
-      },
-    });
-    if (response.status === 404) {
-      return null;
-    }
-    if (!response.ok) {
-      return null;
-    }
-    return (await response.json()) as VendorProfileApiResponse;
-  } catch {
-    return null;
-  }
-}
-
 const ZAMBIA_LOCALITIES = [
   "lusaka",
   "ndola",
@@ -265,13 +242,14 @@ function buildVendorJsonLd(
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
-  const profile = await fetchVendorProfile(slug);
-  if (!profile) {
+  const profileResult = await fetchVendorProfile(slug);
+  if (profileResult.kind !== "vendor") {
     return {
       title: "Vendor not found",
       robots: { index: false, follow: false },
     };
   }
+  const profile = profileResult.data as VendorProfileApiResponse;
 
   const t = await getDirectoryTranslator(locale);
   const description = t("profile.metaDescription", {
@@ -396,7 +374,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
   }
 
   setRequestLocale(locale);
-  const [t, tCatalog, profile, baseMessages] = await Promise.all([
+  const [t, tCatalog, profileResult, baseMessages] = await Promise.all([
     getDirectoryTranslator(locale),
     getCatalogTranslator(locale),
     fetchVendorProfile(slug),
@@ -408,9 +386,23 @@ export default async function VendorProfilePage({ params }: PageProps) {
     namespace: "common",
   })("share.label");
 
-  if (!profile) {
+  if (profileResult.kind === "not_found") {
     notFound();
   }
+  if (profileResult.kind === "unavailable") {
+    return (
+      <ApiUnavailablePanel
+        retryHref={`/${locale}/v/${encodeURIComponent(slug)}`}
+        labels={{
+          title: tCatalog("pdp.unavailableTitle"),
+          body: tCatalog("pdp.unavailableBody"),
+          retry: tCatalog("pdp.unavailableRetry"),
+        }}
+        testId="vendor-unavailable"
+      />
+    );
+  }
+  const profile = profileResult.data as VendorProfileApiResponse;
 
   const { vendor, listings, services, events, reviews_summary: reviews } = profile;
   const clips = profile.clips ?? [];
@@ -448,8 +440,8 @@ export default async function VendorProfilePage({ params }: PageProps) {
     condition: listing.condition,
     inStock: listing.in_stock,
     imagePublicId: listing.image_public_id,
-    rating: reviews.rating_avg ?? 0,
-    reviewCount: reviews.rating_count,
+    rating: 0,
+    reviewCount: 0,
     distanceM: null,
     belowMedian: false,
     deliveryAvailable: listing.delivery_available ?? false,

@@ -158,5 +158,15 @@
     "kindProduct": "Product",
     "kindService": "Service",
     "kindEvent": "Event"
+  },
+  "indexUnavailable": {
+    "title": "We couldn't load businesses",
+    "body": "Check your connection and try again.",
+    "retry": "Try again"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {total}"
   }
 }

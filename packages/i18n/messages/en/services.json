@@ -16,7 +16,15 @@
     "preferredBadge": "Preferred",
     "verticalLabel": "Category",
     "providerCta": "List your service",
-    "providerPitch": "Reach customers looking for what you offer."
+    "providerPitch": "Reach customers looking for what you offer.",
+    "unavailableTitle": "We couldn't load services",
+    "unavailableBody": "Check your connection and try again.",
+    "unavailableRetry": "Try again",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {total}"
+    }
   },
   "categories": {
     "all": "All",
