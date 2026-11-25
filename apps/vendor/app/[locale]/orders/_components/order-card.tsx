@@ -20,6 +20,7 @@ import { HomeTaskList } from "../../_components/home-tasks";
 import { VendorGrid } from "../../_components/vendor-page";
 import { VendorQuickActionGrid } from "../../_components/vendor-quick-action-grid";
 import { VendorRouteHeader } from "../../_components/vendor-route-header";
+import { VendorShopStatusCard } from "../../_components/vendor-shop-status";
 import { DashboardSkeleton, ListSkeleton } from "../../_components/vendor-skeletons";
 import { buildHomeTasks } from "../../_lib/home-tasks";
 import { isAuditableApproved } from "../../_lib/kyc-integrity";
@@ -28,6 +29,7 @@ import {
   createAnalyticsClient,
   type VendorAnalyticsSummary,
 } from "../../analytics/_lib/analytics-client";
+import { createManageClient } from "../../listings/[id]/edit/_lib/manage-client";
 import {
   Button,
   FormField,
@@ -634,6 +636,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
   const [offline, setOffline] = useState(false);
   const [kycApp, setKycApp] = useState<KycApplication | null>(null);
   const [payoutMissing, setPayoutMissing] = useState<boolean | null>(null);
+  const [productsInReviewCount, setProductsInReviewCount] = useState(0);
   const cutoff = useDispatchCutoff();
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
@@ -641,6 +644,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
   const kycClient = useMemo(() => createKycClient(getToken), [getToken]);
   const analyticsClient = useMemo(() => createAnalyticsClient(getToken), [getToken]);
   const payoutsClient = useMemo(() => createPayoutsClient(getToken), [getToken]);
+  const manageClient = useMemo(() => createManageClient(getToken), [getToken]);
 
   const load = useCallback(async () => {
     if (!session) {
@@ -722,6 +726,34 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
       cancelled = true;
     };
   }, [payoutsClient, session]);
+
+  useEffect(() => {
+    if (!session) {
+      setProductsInReviewCount(0);
+      return;
+    }
+    let cancelled = false;
+    void manageClient
+      .listListings()
+      .then((rows) => {
+        if (cancelled) {
+          return;
+        }
+        setProductsInReviewCount(
+          rows.filter(
+            (row) => row.status === "active" && row.product_status === "pending_moderation",
+          ).length,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setProductsInReviewCount(0);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [manageClient, session]);
 
   if (sessionLoading || (loading && !dashboard)) {
     return <DashboardSkeleton label={t("home.loading")} />;
@@ -825,13 +857,22 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
     cutoff,
     sellerKind: isServicesVendor ? "services" : isEventOrganiser ? "events" : "products",
     payoutMissing,
+    productsInReviewCount,
   });
+
+  const shopLive = kycApproved;
 
   return (
     <div className="flex flex-col gap-4 pb-4">
       <VendorRouteHeader title={t("home.title")} subtitle={t("home.eyebrow")} />
 
       <VendorQuickActionGrid locale={locale} />
+
+      <VendorShopStatusCard
+        shopLive={shopLive}
+        idVerified={kycApproved}
+        payoutSet={payoutMissing === null ? null : !payoutMissing}
+      />
 
       <VendorGrid cols="stats">
         <StatCard

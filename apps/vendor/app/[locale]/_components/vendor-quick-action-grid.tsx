@@ -17,6 +17,12 @@ export function VendorQuickActionGrid({ locale }: VendorQuickActionGridProps) {
       ...VendorQuickActionIcons.product,
     },
     {
+      key: "sellWholesale",
+      href: `/${locale}/listings/new#wholesale`,
+      label: t("home.quickActions.sellWholesale"),
+      ...VendorQuickActionIcons.product,
+    },
+    {
       key: "scan",
       href: `/${locale}/scan`,
       label: t("home.quickActions.scan"),
@@ -37,7 +43,7 @@ export function VendorQuickActionGrid({ locale }: VendorQuickActionGridProps) {
   ] as const;
   return (
     <section aria-label={t("home.quickActions.ariaLabel")} data-testid="vendor-home-quick-actions">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {actions.map((action) => {
           const { Icon, hue } = action;
           return (

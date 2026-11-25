@@ -386,6 +386,11 @@
     }
   },
   "listings": {
+    "formAside": {
+      "previewHeading": "Buyer preview",
+      "previewPhotoAlt": "Main listing photo",
+      "noPhoto": "No photo"
+    },
     "images": {
       "heading": "Photos",
       "intro": "{count} of {max} photos. The first photo is the main one.",
@@ -403,6 +408,8 @@
       "upload": "Add photos",
       "uploading": "Uploading…",
       "upload_failed": "Photo didn't send. Try again.",
+      "upload_error_with_name": "Could not upload \"{name}\": {detail}",
+      "retry_one": "Retry this photo",
       "minimum_required": "⚠ At least {count} evidence photo must remain attached while this listing is live.",
       "retry": "Yesaninso",
       "duplicate": "This photo is already on the listing.",
@@ -520,6 +527,8 @@
       "stockTracked": "I will count them",
       "stockAlways": "I always have it",
       "stockQtyLabel": "How many you have now",
+      "wholesaleSectionHeading": "Wholesale / bulk prices",
+      "wholesaleBuyersHint": "Wholesale listings appear to verified buyers on Supplies.",
       "wholesaleLabel": "⚠ Wholesale tiers",
       "wholesaleHelp": "Only for T2-verified businesses (business papers checked)",
       "wholesaleMeasureUnavailable": "⚠ Wholesale tiers for per-measure listings are not available yet.",
@@ -728,6 +737,10 @@
       },
       "emptyTitle": "No listings yet",
       "statusLabel": "Status",
+      "productStatus": {
+        "inReview": "Live, in review: buyers see it once Convergeo approves it",
+        "rejected": "Product rejected"
+      },
       "stock": {
         "heading": "Adjust available stock",
         "help": "Enter a change in sale steps, not a physical counted total. Reserved units are already excluded. Units and stock mode cannot be changed here. Branch provisioning requires the stock owner.",
@@ -1317,6 +1330,10 @@
           "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",
           "body": "Today's 14:00 cut-off has passed. Get them ready now so they leave first on the next run."
         },
+        "productsInReview": {
+          "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
+          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
+        },
         "catalogueProducts": {
           "title": "Check your products",
           "body": "Keep stock and prices right so buyers never order something you don't have."
@@ -1338,9 +1355,18 @@
       "progressComplete": "You're all caught up on setup.",
       "progressAria": "Setup progress"
     },
+    "shopStatus": {
+      "heading": "Your shop",
+      "shopLive": "Shop live",
+      "idVerified": "ID verified",
+      "payoutSet": "Payout number set",
+      "yes": "Yes",
+      "notYet": "Not yet"
+    },
     "quickActions": {
       "ariaLabel": "Quick actions",
       "addProduct": "Add product",
+      "sellWholesale": "Sell wholesale",
       "scan": "Scan",
       "orders": "Orders",
       "payouts": "Payouts"
