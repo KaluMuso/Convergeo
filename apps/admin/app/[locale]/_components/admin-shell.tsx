@@ -341,17 +341,15 @@ export function AdminShell({ locale, children }: AdminShellProps) {
     </div>
   );
 
+  // Keep provider wrappers mounted across permission reloads so the sidebar DOM
+  // (ref + scroll) survives route changes while grants are null.
   return (
     <AdminDensityProvider>
-      {grants ? (
-        <AdminPermissionsContext.Provider value={grants}>
-          <AdminPermissionRefreshContext.Provider value={refresh}>
-            {chrome}
-          </AdminPermissionRefreshContext.Provider>
-        </AdminPermissionsContext.Provider>
-      ) : (
-        chrome
-      )}
+      <AdminPermissionsContext.Provider value={grants}>
+        <AdminPermissionRefreshContext.Provider value={refresh}>
+          {chrome}
+        </AdminPermissionRefreshContext.Provider>
+      </AdminPermissionsContext.Provider>
     </AdminDensityProvider>
   );
 }
