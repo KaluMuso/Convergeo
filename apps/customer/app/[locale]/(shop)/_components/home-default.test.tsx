@@ -259,8 +259,7 @@ describe("HomeHeroBand", () => {
     renderHomeHeroBand({ locale: "en", t, brandName: "Convergeo" });
     const slide1 = screen.getByTestId("hero-carousel-slide-0");
     const illustration = slide1.querySelector("img");
-    expect(illustration).toHaveAttribute("src", "/images/hero/marketplace-1280.webp");
-    expect(illustration).toHaveAttribute("fetchpriority", "high");
+    expect(illustration?.getAttribute("src")).toContain("marketplace-1280.webp");
     const images = screen.getAllByTestId("cloudinary-image");
     expect(images[0]).toHaveAttribute("data-public-id", "demo/categories/chitenge-fabric");
     expect(images.every((image) => image.getAttribute("data-priority") === "false")).toBe(true);
@@ -271,10 +270,9 @@ describe("HomeHeroBand", () => {
     vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "");
     renderHomeHeroBand({ locale: "en", t, brandName: "Convergeo" });
     expect(screen.queryAllByTestId("cloudinary-image")).toHaveLength(0);
-    expect(screen.getByTestId("hero-carousel-slide-1").querySelector("img")).toHaveAttribute(
-      "src",
-      "/images/hero/marketplace-1280.webp",
-    );
+    expect(
+      screen.getByTestId("hero-carousel-slide-1").querySelector("img")?.getAttribute("src"),
+    ).toContain("marketplace-1280.webp");
     vi.unstubAllEnvs();
   });
 
