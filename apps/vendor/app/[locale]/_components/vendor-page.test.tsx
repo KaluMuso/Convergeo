@@ -16,14 +16,15 @@ describe("VendorPage", () => {
     expect(main?.className).not.toContain("mx-auto");
   });
 
-  it("applies form width without centering", () => {
+  it("applies the wide form shell without centering", () => {
     const { container } = render(
       <VendorPage width="form">
         <p>form</p>
       </VendorPage>,
     );
     const main = container.querySelector("main");
-    expect(main?.className).toContain("max-w-2xl");
+    expect(main?.className).toContain("max-w-[1400px]");
+    expect(main?.className).not.toContain("mx-auto");
   });
 
   it("renders optional title", () => {
