@@ -71,13 +71,24 @@ export function OversightList({ kind }: { kind: Kind }) {
       ) : (
         <ul className="space-y-2">
           {current.items.map((item) => (
-            <li key={String(item.id)} className="rounded border p-3 text-sm">
-              <strong>{String(item.title ?? item.title_override ?? item.id)}</strong>
+            <li key={String(item.id)} className="rounded border border-border p-3 text-sm">
+              <strong>
+                {String(item.display_title ?? item.title ?? item.title_override ?? item.id)}
+              </strong>
               <span className="block text-muted">
                 {t("vendor", {
-                  vendorId: String(item.vendor_id),
+                  vendorName:
+                    typeof item.vendor_display_name === "string"
+                      ? item.vendor_display_name
+                      : t("unknownVendor"),
                   status: String(item.status),
                 })}
+                {kind === "inventory" && typeof item.price_ngwee === "number"
+                  ? ` · ${t("price", { price: formatK(item.price_ngwee) })}`
+                  : null}
+                {kind === "inventory" && typeof item.product_name === "string"
+                  ? ` · ${t("product", { name: item.product_name })}`
+                  : null}
                 {kind === "inventory"
                   ? ` · ${t("stock", { quantity: String(item.stock_qty ?? t("unknownStock")) })}`
                   : ""}

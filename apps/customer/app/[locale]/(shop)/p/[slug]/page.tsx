@@ -38,6 +38,7 @@ import {
   PdpInteractiveBody,
   type ProductListing,
 } from "../../_components/pdp/pdp-interactive-body";
+import { PdpRatingChip } from "../../_components/pdp/pdp-rating-chip";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
@@ -86,6 +87,8 @@ type ComparisonApiListing = {
   };
   delivery_available: boolean;
   pickup_available: boolean;
+  delivery_fee_ngwee?: number | null;
+  delivery_funding?: "customer" | "vendor" | "platform" | null;
 };
 
 type ComparisonApiResponse = {
@@ -93,6 +96,8 @@ type ComparisonApiResponse = {
   product_slug: string;
   listing_count: number;
   listings: ComparisonApiListing[];
+  cod_cap_ngwee?: number;
+  cod_chips_enabled?: boolean;
 };
 
 async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
@@ -272,10 +277,26 @@ function galleryImages(
   }));
 }
 
+function formatMemberSince(isoDate: string | null | undefined, locale: string): string | null {
+  if (!isoDate) {
+    return null;
+  }
+  const parsed = new Date(`${isoDate}T12:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+    timeZone: "Africa/Lusaka",
+  }).format(parsed);
+}
+
 function toProductListings(
   product: ProductDetail,
   alt: string,
   lowStockThreshold: number | null,
+  locale: string,
 ): ProductListing[] {
   return product.listings.map((listing) => ({
     id: listing.id,
@@ -293,6 +314,7 @@ function toProductListings(
     minSteps: listing.min_steps ?? 1,
     leadTimeDays: listing.lead_time_days ?? null,
     vendorCapacityPerWeek: listing.vendor_capacity_per_week ?? null,
+    fulfilmentMode: listing.fulfilment_mode ?? "stocked",
     vendor: {
       slug: listing.vendor.slug,
       displayName: listing.vendor.display_name,
@@ -300,6 +322,8 @@ function toProductListings(
       ratingAvg: listing.vendor.rating_avg,
       ratingCount: listing.vendor.rating_count,
       landmark: listing.vendor.location?.landmark ?? null,
+      verified: listing.vendor.verified ?? false,
+      memberSince: formatMemberSince(listing.vendor.member_since, locale),
     },
     images: listing.images.map((image) => ({
       publicId: image.public_id,
@@ -350,6 +374,8 @@ function toComparisonListings(
       },
       deliveryAvailable: listing.delivery_available,
       pickupAvailable: listing.pickup_available,
+      deliveryFeeNgwee: listing.delivery_fee_ngwee ?? null,
+      deliveryFunding: listing.delivery_funding ?? null,
     }));
   }
 
@@ -556,8 +582,12 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     product,
     product.name,
     storefrontConfig.lowStockThreshold,
+    locale,
   );
   const comparisonListings = toComparisonListings(comparison, product);
+  const comparisonCodCapNgwee = comparison?.cod_cap_ngwee ?? 50_000;
+  const comparisonCodChipsEnabled = comparison?.cod_chips_enabled !== false;
+  const photoReviewCount = reviewsForSeo?.items.filter((row) => row.photos.length > 0).length ?? 0;
   const overviewParagraphs = descriptionParagraphs(product.description);
 
   const reviewsPanel = (
@@ -635,6 +665,25 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       <h1 className="m-0 font-display text-2xl font-bold leading-tight text-text lg:text-[1.75rem]">
         {product.name}
       </h1>
+      {reviewAggregate ? (
+        <PdpRatingChip
+          locale={locale}
+          productSlug={product.slug}
+          ratingAvg={reviewAggregate.ratingValue}
+          ratingCount={reviewAggregate.reviewCount}
+          photoReviewCount={photoReviewCount}
+          starsAriaLabel={t("pdp.value.rating.starsAria", {
+            rating: reviewAggregate.ratingValue,
+          })}
+          ratingSummary={t("pdp.value.rating.summary", {
+            rating: reviewAggregate.ratingValue,
+            count: reviewAggregate.reviewCount,
+          })}
+          photoReviewsLink={t("pdp.value.rating.photoReviews", {
+            count: photoReviewCount,
+          })}
+        />
+      ) : null}
       {product.listing_count > 0 ? (
         <p className="text-sm text-text-2" data-testid="pdp-seller-count">
           {t("pdp.sellerCount", { count: product.listing_count })}
@@ -755,12 +804,22 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             conditionUsed: t("comparison.conditionUsed"),
             usingFallbackLocation: t("comparison.usingFallbackLocation"),
             lowestPriceBadge: t("comparison.lowestPriceBadge"),
+            sortTotal: t("comparison.sortTotal"),
+            deliveryFeeFree: t("comparison.deliveryFeeFree"),
+            deliveryFeePlus: t.raw("comparison.deliveryFeePlus"),
+            chipCod: t("comparison.chipCod"),
+            chipEscrow: t("comparison.chipEscrow"),
+            readyIn: t("comparison.readyIn"),
           }}
+          comparisonCodCapNgwee={comparisonCodCapNgwee}
+          comparisonCodChipsEnabled={comparisonCodChipsEnabled}
           vendorLabels={{
             heading: t("pdp.vendor.heading"),
             preferredBadge: t("pdp.vendor.preferredBadge"),
             noReviews: t("pdp.vendor.noReviews"),
             viewStore: t("pdp.vendor.viewStore"),
+            verified: t("pdp.value.vendor.verified"),
+            memberSince: t.raw("pdp.value.vendor.memberSince"),
           }}
           trustLabels={{
             delivery: t("pdp.trust.delivery"),

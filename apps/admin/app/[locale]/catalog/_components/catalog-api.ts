@@ -29,6 +29,10 @@ export type CatalogEntity = {
   label: string;
   status: string;
   vendor_id: string | null;
+  vendor_label?: string | null;
+  product_label?: string | null;
+  price_ngwee?: number | null;
+  thumbnail_url?: string | null;
   visible: boolean;
   href: string;
   hold: CatalogHold | null;

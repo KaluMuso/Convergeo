@@ -11,6 +11,7 @@ import {
   type AdminRoleAssignment,
 } from "../../../lib/roles-api";
 import { AdminPageClient } from "../_components/admin-page-client";
+import { adminPrimaryButtonClass } from "../_components/admin-primary-button";
 
 const PERMISSIONS = [
   "finance.read",
@@ -232,7 +233,7 @@ export function RolesBoard() {
         </fieldset>
         <button
           disabled={busy || selected.length === 0}
-          className="min-h-11 rounded bg-primary px-4 text-white disabled:opacity-50"
+          className={`${adminPrimaryButtonClass} disabled:opacity-50`}
         >
           {editingKey ? t("save") : t("create")}
         </button>
@@ -339,7 +340,7 @@ export function RolesBoard() {
           </label>
           <button
             disabled={busy || !target || !assignedRole}
-            className="min-h-11 rounded bg-primary px-4 text-white disabled:opacity-50"
+            className={`${adminPrimaryButtonClass} disabled:opacity-50`}
           >
             {t("assign")}
           </button>

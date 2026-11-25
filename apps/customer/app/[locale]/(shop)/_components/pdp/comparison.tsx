@@ -6,13 +6,16 @@ import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import {
-  FulfillmentLogisticsPills,
-  type LogisticsPillLabels,
-} from "../plp/logistics-pills";
+import { catalogDeliveryLabels } from "../plp/delivery-labels";
+import { FulfillmentLogisticsPills, type LogisticsPillLabels } from "../plp/logistics-pills";
 
+import { type BuyBoxLabels } from "./buy-box";
+import { buildComparisonValueRow, mergeComparisonListings } from "./comparison-enrichment";
 import { shouldShowComparison } from "./comparison-visibility";
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
+
+import type { ComparisonValueChip } from "./comparison-enrichment";
+import type { ProductListing } from "./pdp-interactive-body";
 
 export { shouldShowComparison } from "./comparison-visibility";
 
@@ -36,6 +39,11 @@ export type ComparisonListing = {
   };
   deliveryAvailable: boolean;
   pickupAvailable: boolean;
+  deliveryFeeNgwee?: number | null;
+  deliveryFunding?: "customer" | "vendor" | "platform" | null;
+  valueStockLabel?: string;
+  valueEtaLabel?: string | null;
+  valueChips?: ComparisonValueChip[];
 };
 
 export type ComparisonLabels = {
@@ -43,6 +51,7 @@ export type ComparisonLabels = {
   vendorCount: string;
   sortLabel: string;
   sortPrice: string;
+  sortTotal: string;
   sortDistance: string;
   price: string;
   condition: string;
@@ -62,9 +71,21 @@ export type ComparisonLabels = {
   usingFallbackLocation: string;
   /** Shown on the cheapest offer card/row when multi-seller. */
   lowestPriceBadge: string;
+  deliveryFeeFree: string;
+  deliveryFeePlus: string;
+  chipCod: string;
+  chipEscrow: string;
+  readyIn: string;
 };
 
-type ComparisonSort = "price" | "distance";
+type ComparisonSort = "price" | "distance" | "total";
+
+export function comparisonTotalNgwee(listing: ComparisonListing): number | null {
+  if (listing.deliveryFeeNgwee == null) {
+    return listing.deliveryAvailable ? null : listing.priceNgwee;
+  }
+  return listing.priceNgwee + listing.deliveryFeeNgwee;
+}
 
 type GeoCoords = {
   lat: number;
@@ -73,10 +94,7 @@ type GeoCoords = {
 
 function conditionLabel(
   condition: ListingCondition,
-  labels: Pick<
-    ComparisonLabels,
-    "conditionNew" | "conditionRefurbished" | "conditionUsed"
-  >,
+  labels: Pick<ComparisonLabels, "conditionNew" | "conditionRefurbished" | "conditionUsed">,
 ): string {
   if (condition === "new") {
     return labels.conditionNew;
@@ -87,20 +105,13 @@ function conditionLabel(
   return labels.conditionRefurbished;
 }
 
-export function haversineMeters(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
+export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const earthRadiusM = 6_371_000;
   const phi1 = (lat1 * Math.PI) / 180;
   const phi2 = (lat2 * Math.PI) / 180;
   const dPhi = ((lat2 - lat1) * Math.PI) / 180;
   const dLambda = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dPhi / 2) ** 2 +
-    Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLambda / 2) ** 2;
+  const a = Math.sin(dPhi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLambda / 2) ** 2;
   return earthRadiusM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -123,14 +134,60 @@ export function formatDistanceMeters(
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-export function resolveUserCoords(
-  geo: GeoCoords | null,
-  permissionDenied: boolean,
-): GeoCoords {
+export function resolveUserCoords(geo: GeoCoords | null, permissionDenied: boolean): GeoCoords {
   if (geo && !permissionDenied) {
     return geo;
   }
   return { lat: LUSAKA_CBD_LAT, lng: LUSAKA_CBD_LNG };
+}
+
+function formatDeliveryFeeLabel(
+  listing: ComparisonListing,
+  labels: Pick<ComparisonLabels, "deliveryFeeFree" | "deliveryFeePlus">,
+): string | null {
+  if (!listing.deliveryAvailable) {
+    return null;
+  }
+  if (listing.deliveryFeeNgwee == null) {
+    return null;
+  }
+  if (listing.deliveryFeeNgwee === 0) {
+    return labels.deliveryFeeFree;
+  }
+  return labels.deliveryFeePlus.replace("{fee}", formatK(listing.deliveryFeeNgwee));
+}
+
+function ComparisonValueExtras({
+  listing,
+  labels,
+}: {
+  listing: ComparisonListing;
+  labels: ComparisonLabels;
+}) {
+  const deliveryFee = formatDeliveryFeeLabel(listing, labels);
+  const chipLabel = (chip: ComparisonValueChip) =>
+    chip === "cod" ? labels.chipCod : labels.chipEscrow;
+  return (
+    <div className="mt-2 flex flex-col gap-1.5 text-xs text-text-2">
+      {listing.valueStockLabel ? (
+        <p className="m-0 font-medium text-text">{listing.valueStockLabel}</p>
+      ) : null}
+      {listing.valueEtaLabel ? <p className="m-0">{listing.valueEtaLabel}</p> : null}
+      {deliveryFee ? <p className="m-0">{deliveryFee}</p> : null}
+      {listing.valueChips && listing.valueChips.length > 0 ? (
+        <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+          {listing.valueChips.map((chip) => (
+            <li
+              key={chip}
+              className="rounded-full border border-border bg-bg px-2 py-0.5 text-[11px] font-medium text-text"
+            >
+              {chipLabel(chip)}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
 }
 
 export function sortComparisonListings(
@@ -156,6 +213,20 @@ export function sortComparisonListings(
       return left.index - right.index;
     }
 
+    if (sort === "total") {
+      const leftTotal = comparisonTotalNgwee(left.listing);
+      const rightTotal = comparisonTotalNgwee(right.listing);
+      const leftKey = leftTotal ?? Number.POSITIVE_INFINITY;
+      const rightKey = rightTotal ?? Number.POSITIVE_INFINITY;
+      if (leftKey !== rightKey) {
+        return leftKey - rightKey;
+      }
+      if (left.listing.priceNgwee !== right.listing.priceNgwee) {
+        return left.listing.priceNgwee - right.listing.priceNgwee;
+      }
+      return left.index - right.index;
+    }
+
     if (left.distanceM !== right.distanceM) {
       return left.distanceM - right.distanceM;
     }
@@ -168,12 +239,20 @@ export function sortComparisonListings(
   return sorted.map((entry) => entry.listing);
 }
 
+type ComparisonEnrichment = {
+  products: ProductListing[];
+  codCapNgwee: number;
+  codChipsEnabled: boolean;
+  buyBoxLabels: BuyBoxLabels;
+};
+
 type ComparisonProps = {
   listings: ComparisonListing[];
   selectedListingId: string | null;
   labels: ComparisonLabels;
   logisticsPillLabels: Pick<LogisticsPillLabels, "delivery" | "pickup">;
   onSelect: (listingId: string) => void;
+  enrichment?: ComparisonEnrichment;
 };
 
 export function Comparison({
@@ -182,6 +261,7 @@ export function Comparison({
   labels,
   logisticsPillLabels,
   onSelect,
+  enrichment,
 }: ComparisonProps) {
   const t = useTranslations("catalog");
   const [sort, setSort] = useState<ComparisonSort>("price");
@@ -214,9 +294,50 @@ export function Comparison({
   );
   const usingFallbackLocation = geo === null || permissionDenied;
 
+  const resolvedListings = useMemo(() => {
+    if (!enrichment) {
+      return listings;
+    }
+    const productById = new Map(enrichment.products.map((product) => [product.id, product]));
+    const deliveryEstimateLabels = catalogDeliveryLabels((key) => t.raw(key));
+    const valueById = new Map(
+      listings
+        .map((row) => {
+          const product = productById.get(row.id);
+          if (!product) {
+            return null;
+          }
+          return [
+            row.id,
+            buildComparisonValueRow(
+              product,
+              row,
+              {
+                buyBox: {
+                  ...enrichment.buyBoxLabels,
+                  lowStockLabel: (count) => t("pdp.buyBox.lowStock", { count }),
+                },
+                delivery: deliveryEstimateLabels,
+                madeToOrderDays: (days) => t("pdp.value.madeToOrderDays", { days }),
+              },
+              {
+                codCapNgwee: enrichment.codCapNgwee,
+                codChipsEnabled: enrichment.codChipsEnabled,
+              },
+            ),
+          ] as const;
+        })
+        .filter(
+          (entry): entry is readonly [string, ReturnType<typeof buildComparisonValueRow>] =>
+            entry !== null,
+        ),
+    );
+    return mergeComparisonListings(listings, productById, valueById);
+  }, [enrichment, listings, t]);
+
   const sortedListings = useMemo(
-    () => sortComparisonListings(listings, sort, userCoords),
-    [listings, sort, userCoords],
+    () => sortComparisonListings(resolvedListings, sort, userCoords),
+    [resolvedListings, sort, userCoords],
   );
 
   const lowestPriceNgwee = useMemo(() => {
@@ -237,10 +358,7 @@ export function Comparison({
       if (lat === null || lng === null) {
         continue;
       }
-      distances.set(
-        listing.id,
-        haversineMeters(userCoords.lat, userCoords.lng, lat, lng),
-      );
+      distances.set(listing.id, haversineMeters(userCoords.lat, userCoords.lng, lat, lng));
     }
     return distances;
   }, [listings, userCoords]);
@@ -267,16 +385,12 @@ export function Comparison({
     >
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3">
         <div className="flex flex-col gap-1">
-          <h2 className="font-display text-lg font-semibold text-text">
-            {labels.heading}
-          </h2>
+          <h2 className="font-display text-lg font-semibold text-text">{labels.heading}</h2>
           <p className="text-sm text-text-2">
             {labels.vendorCount.replace("{count}", String(listings.length))}
           </p>
           {usingFallbackLocation ? (
-            <p className="text-xs text-text-2">
-              {labels.usingFallbackLocation}
-            </p>
+            <p className="text-xs text-text-2">{labels.usingFallbackLocation}</p>
           ) : null}
         </div>
 
@@ -293,24 +407,19 @@ export function Comparison({
             style={{ borderRadius: "var(--r)" }}
           >
             <option value="price">{labels.sortPrice}</option>
+            <option value="total">{labels.sortTotal}</option>
             <option value="distance">{labels.sortDistance}</option>
           </select>
         </div>
       </div>
 
       {/* Mobile: stacked seller cards (audit E10) */}
-      <ul
-        className="flex list-none flex-col gap-3 p-4 lg:hidden"
-        data-testid="pdp-compare-cards"
-      >
+      <ul className="flex list-none flex-col gap-3 p-4 lg:hidden" data-testid="pdp-compare-cards">
         {sortedListings.map((listing) => {
           const distanceM = distanceByListingId.get(listing.id);
           const distanceLabel =
             distanceM !== undefined
-              ? labels.distance.replace(
-                  "{distance}",
-                  formatLocalizedDistance(distanceM),
-                )
+              ? labels.distance.replace("{distance}", formatLocalizedDistance(distanceM))
               : null;
           const isSelected = listing.id === selectedListingId;
           const ratingLabel =
@@ -326,9 +435,7 @@ export function Comparison({
                 type="button"
                 data-testid={`comparison-card-${listing.id}`}
                 aria-pressed={isSelected}
-                aria-label={
-                  isSelected ? labels.selectedListing : labels.selectListing
-                }
+                aria-label={isSelected ? labels.selectedListing : labels.selectListing}
                 onClick={() => onSelect(listing.id)}
                 className={[
                   "w-full rounded border p-4 text-left transition-colors",
@@ -341,22 +448,13 @@ export function Comparison({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-text">
-                        {listing.vendor.displayName}
-                      </span>
+                      <span className="font-medium text-text">{listing.vendor.displayName}</span>
                       {listing.vendor.preferredBadge ? (
-                        <CornerRibbon
-                          trust="preferred"
-                          trustLabel={labels.preferredBadge}
-                        />
+                        <CornerRibbon trust="preferred" trustLabel={labels.preferredBadge} />
                       ) : null}
-                      {lowestPriceNgwee !== null &&
-                      listing.priceNgwee === lowestPriceNgwee ? (
+                      {lowestPriceNgwee !== null && listing.priceNgwee === lowestPriceNgwee ? (
                         <span data-testid={`comparison-lowest-${listing.id}`}>
-                          <Badge
-                            variant="public"
-                            label={labels.lowestPriceBadge}
-                          />
+                          <Badge variant="public" label={labels.lowestPriceBadge} />
                         </span>
                       ) : null}
                     </div>
@@ -383,6 +481,7 @@ export function Comparison({
                     labels={logisticsPillLabels}
                   />
                 </div>
+                <ComparisonValueExtras listing={listing} labels={labels} />
               </button>
             </li>
           );
@@ -407,15 +506,11 @@ export function Comparison({
               const distanceM = distanceByListingId.get(listing.id);
               const distanceLabel =
                 distanceM !== undefined
-                  ? labels.distance.replace(
-                      "{distance}",
-                      formatLocalizedDistance(distanceM),
-                    )
+                  ? labels.distance.replace("{distance}", formatLocalizedDistance(distanceM))
                   : "—";
               const isSelected = listing.id === selectedListingId;
               const ratingLabel =
-                listing.vendor.ratingAvg !== null &&
-                listing.vendor.ratingCount > 0
+                listing.vendor.ratingAvg !== null && listing.vendor.ratingCount > 0
                   ? labels.rating
                       .replace("{rating}", String(listing.vendor.ratingAvg))
                       .replace("{count}", String(listing.vendor.ratingCount))
@@ -425,21 +520,14 @@ export function Comparison({
                 <tr
                   key={listing.id}
                   data-testid={`comparison-row-${listing.id}`}
-                  className={
-                    isSelected ? "bg-primary/5" : "border-t border-border"
-                  }
+                  className={isSelected ? "bg-primary/5" : "border-t border-border"}
                 >
                   <td className="px-4 py-3 align-top">
                     <div className="flex flex-col gap-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-text">
-                          {listing.vendor.displayName}
-                        </span>
+                        <span className="font-medium text-text">{listing.vendor.displayName}</span>
                         {listing.vendor.preferredBadge ? (
-                          <CornerRibbon
-                            trust="preferred"
-                            trustLabel={labels.preferredBadge}
-                          />
+                          <CornerRibbon trust="preferred" trustLabel={labels.preferredBadge} />
                         ) : null}
                       </div>
                       <span className="text-xs text-text-2">{ratingLabel}</span>
@@ -448,12 +536,8 @@ export function Comparison({
                   <td className="px-4 py-3 align-top font-medium text-[var(--price)]">
                     <div className="flex flex-col gap-1">
                       <span>{formatK(listing.priceNgwee)}</span>
-                      {lowestPriceNgwee !== null &&
-                      listing.priceNgwee === lowestPriceNgwee ? (
-                        <Badge
-                          variant="public"
-                          label={labels.lowestPriceBadge}
-                        />
+                      {lowestPriceNgwee !== null && listing.priceNgwee === lowestPriceNgwee ? (
+                        <Badge variant="public" label={labels.lowestPriceBadge} />
                       ) : null}
                     </div>
                   </td>
@@ -463,33 +547,28 @@ export function Comparison({
                       label={conditionLabel(listing.condition, labels)}
                     />
                   </td>
-                  <td className="px-4 py-3 align-top text-text-2">
-                    {distanceLabel}
-                  </td>
+                  <td className="px-4 py-3 align-top text-text-2">{distanceLabel}</td>
                   <td className="px-4 py-3 align-top">
-                    <FulfillmentLogisticsPills
-                      deliveryAvailable={listing.deliveryAvailable}
-                      pickupAvailable={listing.pickupAvailable}
-                      labels={logisticsPillLabels}
-                    />
+                    <div className="flex flex-col gap-2">
+                      <FulfillmentLogisticsPills
+                        deliveryAvailable={listing.deliveryAvailable}
+                        pickupAvailable={listing.pickupAvailable}
+                        labels={logisticsPillLabels}
+                      />
+                      <ComparisonValueExtras listing={listing} labels={labels} />
+                    </div>
                   </td>
                   <td className="px-4 py-3 align-top">
                     <button
                       type="button"
                       data-testid={`comparison-select-${listing.id}`}
                       aria-pressed={isSelected}
-                      aria-label={
-                        isSelected
-                          ? labels.selectedListing
-                          : labels.selectListing
-                      }
+                      aria-label={isSelected ? labels.selectedListing : labels.selectListing}
                       onClick={() => onSelect(listing.id)}
                       className="min-h-11 rounded border border-border px-3 text-sm font-medium text-primary hover:bg-primary/5"
                       style={{ borderRadius: "var(--r)" }}
                     >
-                      {isSelected
-                        ? labels.selectedListing
-                        : labels.selectListing}
+                      {isSelected ? labels.selectedListing : labels.selectListing}
                     </button>
                   </td>
                 </tr>

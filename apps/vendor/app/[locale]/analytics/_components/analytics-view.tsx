@@ -2,12 +2,14 @@
 
 import { useSession } from "@vergeo/auth/use-session";
 import { formatK } from "@vergeo/i18n";
+import { StatCard } from "@vergeo/ui/src/stat-card";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Spinner } from "../../../../../../packages/ui/src/spinner";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { VendorGrid } from "../../_components/vendor-page";
+import { VendorRouteHeader } from "../../_components/vendor-route-header";
+import { AnalyticsSkeleton } from "../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { createAnalyticsClient, type AnalyticsWindow } from "../_lib/analytics-client";
 
@@ -16,23 +18,6 @@ import { Sparkline } from "./sparkline";
 import type { VendorAnalytics } from "../_lib/analytics-client";
 
 const WINDOWS: AnalyticsWindow[] = [7, 30];
-
-type StatCardProps = {
-  label: string;
-  value: string;
-  sparklineLabel: string;
-  series: number[];
-};
-
-function StatCard({ label, value, sparklineLabel, series }: StatCardProps) {
-  return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 lg:p-5">
-      <span className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>
-      <span className="font-mono text-lg font-semibold">{value}</span>
-      <Sparkline label={sparklineLabel} values={series} />
-    </div>
-  );
-}
 
 export function AnalyticsView() {
   const t = useTranslations("vendor");
@@ -97,11 +82,7 @@ export function AnalyticsView() {
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="mb-2 flex flex-col gap-1">
-        <p className="text-sm text-muted">{t("analytics.eyebrow")}</p>
-        <h1 className="text-lg font-semibold text-text">{t("analytics.title")}</h1>
-        <p className="text-sm text-muted">{t("analytics.intro")}</p>
-      </header>
+      <VendorRouteHeader title={t("analytics.title")} subtitle={t("analytics.intro")} />
 
       <div
         aria-label={t("analytics.window.label")}
@@ -142,14 +123,14 @@ export function AnalyticsView() {
         />
       ) : null}
 
-      {loading ? (
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <Spinner label={t("analytics.loading")} />
-        </div>
-      ) : null}
+      {loading ? <AnalyticsSkeleton label={t("analytics.loading")} /> : null}
 
       {!loading && !errorKey && data && isEmpty ? (
-        <VendorEmptyState title={t("analytics.empty.title")} body={t("analytics.empty.body")} />
+        <VendorEmptyState
+          illustration="no-results"
+          title={t("analytics.empty.title")}
+          body={t("analytics.empty.body")}
+        />
       ) : null}
 
       {!loading && !errorKey && data && !isEmpty ? (
@@ -157,21 +138,30 @@ export function AnalyticsView() {
           <VendorGrid cols="stats">
             <StatCard
               label={t("analytics.cards.sales")}
-              series={data.sales_ngwee_by_day}
-              sparklineLabel={t("analytics.sparkline.sales")}
               value={formatK(totals.sales)}
+              sparkline={
+                <Sparkline
+                  label={t("analytics.sparkline.sales")}
+                  values={data.sales_ngwee_by_day}
+                />
+              }
             />
             <StatCard
               label={t("analytics.cards.orders")}
-              series={data.orders_by_day}
-              sparklineLabel={t("analytics.sparkline.orders")}
               value={String(totals.orders)}
+              sparkline={
+                <Sparkline label={t("analytics.sparkline.orders")} values={data.orders_by_day} />
+              }
             />
             <StatCard
               label={t("analytics.cards.views")}
-              series={data.cart_activity_events_by_day}
-              sparklineLabel={t("analytics.sparkline.views")}
               value={String(totals.views)}
+              sparkline={
+                <Sparkline
+                  label={t("analytics.sparkline.views")}
+                  values={data.cart_activity_events_by_day}
+                />
+              }
             />
           </VendorGrid>
 

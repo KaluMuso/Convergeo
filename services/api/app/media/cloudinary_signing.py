@@ -52,10 +52,13 @@ def build_signed_params(
     max_bytes: int,
 ) -> dict[str, str | int]:
     """Build signed Cloudinary upload parameters without exposing api_secret."""
+    # Cloudinary does not include ``max_file_size`` in its upload signature
+    # (it is not an Upload API parameter), so signing it makes every upload fail
+    # with 401 "Invalid Signature". It is still returned for the client-side
+    # size check; Cloudinary ignores it.
     params_to_sign: dict[str, Any] = {
         "allowed_formats": allowed_formats,
         "folder": folder,
-        "max_file_size": max_bytes,
         "timestamp": timestamp,
     }
     if public_id:
@@ -131,7 +134,7 @@ def build_signed_clip_params(
         # Async so no request — and no vendor — waits on transcoding.
         "eager_async": "true",
         "folder": folder,
-        "max_file_size": max_bytes,
+        # Not signed: see build_signed_params.
         "timestamp": timestamp,
     }
     if max_duration_s:
@@ -147,5 +150,6 @@ def build_signed_clip_params(
     signed: dict[str, str | int] = {
         key: value for key, value in params_to_sign.items() if value is not None
     }
+    signed["max_file_size"] = max_bytes
     signed["signature"] = signature
     return signed

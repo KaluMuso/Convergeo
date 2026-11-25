@@ -59,3 +59,20 @@ def test_missing_vendor_payable_account_is_zero_balance(monkeypatch: pytest.Monk
     monkeypatch.setattr(eligibility, "resolve_account_id", _missing)
     assert eligibility.vendor_payable_balance_ngwee("v-1") == 0
     assert eligibility.released_balance_ngwee("v-1") == 0
+
+
+@pytest.mark.parametrize(
+    ("momo", "legal", "matched"),
+    [
+        ("Kaluba Musonda", "Kaluba Prosper Musonda", True),
+        ("MUSONDA KALUBA", "Kaluba Prosper Musonda", True),
+        ("Kaluba Prosper Musonda", "Kaluba Musonda", True),
+        ("Musonda", "Kaluba Prosper Musonda", False),
+        ("John Banda", "Jane Phiri", False),
+        ("Kaluba Mwale", "Kaluba Prosper Musonda", False),
+    ],
+)
+def test_name_match_accepts_missing_middle_name(momo: str, legal: str, matched: bool) -> None:
+    from app.services.kyc.name_match import score_name_match
+
+    assert score_name_match(momo, legal)[1] is matched

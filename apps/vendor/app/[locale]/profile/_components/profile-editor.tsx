@@ -9,6 +9,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getVendorStorefrontUrl } from "../../../../lib/customer-app";
 import { VendorErrorState } from "../../_components/async-state";
+import { buildLocationPayload } from "../../_components/location-picker/build-location-payload";
+import { LocationPicker } from "../../_components/location-picker/location-picker";
+import { VendorFormLayout } from "../../_components/vendor-page";
 import { shouldShowPreferredBadge } from "../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { Button, FormField, Input, Spinner, Switch, Textarea } from "../../listings/new/_lib/ui";
@@ -125,14 +128,9 @@ export function ProfileEditor() {
       payload.slug = slug.trim();
     }
 
-    const parsedLat = Number.parseFloat(lat);
-    const parsedLng = Number.parseFloat(lng);
-    if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng) && landmark.trim()) {
-      payload.location = {
-        lat: parsedLat,
-        lng: parsedLng,
-        landmark: landmark.trim(),
-      };
+    const locationPayload = buildLocationPayload(profile, { lat, lng, landmark });
+    if (locationPayload) {
+      payload.location = locationPayload;
     }
 
     try {
@@ -221,159 +219,145 @@ export function ProfileEditor() {
         )}
       </header>
 
-      <div>
-        <CompletenessMeter score={profile.completeness_score} breakdown={completeness} />
-      </div>
-
-      <form
-        className="space-y-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleSave();
-        }}
-      >
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-text">{t("profile.sections.basics")}</h2>
-          <FormField label={t("profile.fields.displayNameLabel")}>
-            <Input
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              disabled={saving}
-              required
-            />
-          </FormField>
-          <SlugField
-            slug={slug}
-            slugLocked={profile.slug_locked}
-            previousSlug={profile.previous_slug ?? null}
-            disabled={saving}
-            onChange={setSlug}
-          />
-          <FormField label={t("profile.fields.descriptionLabel")}>
-            <Textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              disabled={saving}
-              rows={4}
-              size="sm"
-              placeholder={t("profile.fields.descriptionPlaceholder")}
-            />
-          </FormField>
-          <p className="text-xs text-text-3">{t("profile.fields.descriptionHelp")}</p>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-text">{t("profile.sections.contact")}</h2>
-          <FormField label={t("profile.fields.whatsappLabel")}>
-            <Input
-              type="tel"
-              inputMode="tel"
-              value={whatsapp}
-              onChange={(event) => setWhatsapp(event.target.value)}
-              disabled={saving}
-              placeholder={t("profile.fields.whatsappPlaceholder")}
-            />
-          </FormField>
-          <p className="text-xs text-text-3">{t("profile.fields.whatsappHelp")}</p>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-text">{t("profile.sections.cover")}</h2>
-          <CoverUpload
-            coverUrl={coverUrl}
-            disabled={saving}
-            getToken={getToken}
-            onUploaded={setCoverUrl}
-            onRemove={() => setCoverUrl(null)}
-          />
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-text">{t("profile.sections.logo")}</h2>
-          <LogoUpload
-            logoUrl={logoUrl}
-            disabled={saving}
-            getToken={getToken}
-            onUploaded={setLogoUrl}
-          />
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-text">{t("profile.brand.title")}</h2>
-          <BrandThemeEditor
-            value={brandTheme}
-            onChange={setBrandTheme}
-            logoUrl={logoUrl}
-            disabled={saving}
-          />
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-text">{t("profile.sections.location")}</h2>
-          <FormField label={t("profile.fields.landmarkLabel")}>
-            <Input
-              value={landmark}
-              onChange={(event) => setLandmark(event.target.value)}
-              disabled={saving}
-              placeholder={t("profile.fields.landmarkPlaceholder")}
-            />
-          </FormField>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label={t("profile.fields.latLabel")}>
-              <Input
-                inputMode="decimal"
-                value={lat}
-                onChange={(event) => setLat(event.target.value)}
-                disabled={saving}
-                placeholder={t("profile.fields.latPlaceholder")}
-              />
-            </FormField>
-            <FormField label={t("profile.fields.lngLabel")}>
-              <Input
-                inputMode="decimal"
-                value={lng}
-                onChange={(event) => setLng(event.target.value)}
-                disabled={saving}
-                placeholder={t("profile.fields.lngPlaceholder")}
-              />
-            </FormField>
+      <VendorFormLayout
+        aside={
+          <div className="rounded-xl border border-border bg-surface p-4 shadow-1">
+            <CompletenessMeter score={profile.completeness_score} breakdown={completeness} />
           </div>
-          <p className="text-xs text-text-3">{t("profile.fields.locationHelp")}</p>
-        </section>
+        }
+        main={
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSave();
+            }}
+          >
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-text">{t("profile.sections.basics")}</h2>
+              <FormField label={t("profile.fields.displayNameLabel")}>
+                <Input
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  disabled={saving}
+                  required
+                />
+              </FormField>
+              <SlugField
+                slug={slug}
+                slugLocked={profile.slug_locked}
+                previousSlug={profile.previous_slug ?? null}
+                disabled={saving}
+                onChange={setSlug}
+              />
+              <FormField label={t("profile.fields.descriptionLabel")}>
+                <Textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  disabled={saving}
+                  rows={4}
+                  size="sm"
+                  placeholder={t("profile.fields.descriptionPlaceholder")}
+                />
+              </FormField>
+              <p className="text-xs text-text-3">{t("profile.fields.descriptionHelp")}</p>
+            </section>
 
-        <section>
-          <HoursEditor hours={hours} disabled={saving} onChange={setHours} />
-        </section>
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-text">{t("profile.sections.contact")}</h2>
+              <FormField label={t("profile.fields.whatsappLabel")}>
+                <Input
+                  type="tel"
+                  inputMode="tel"
+                  value={whatsapp}
+                  onChange={(event) => setWhatsapp(event.target.value)}
+                  disabled={saving}
+                  placeholder={t("profile.fields.whatsappPlaceholder")}
+                />
+              </FormField>
+              <p className="text-xs text-text-3">{t("profile.fields.whatsappHelp")}</p>
+            </section>
 
-        {showPreferred ? (
-          <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
-            <Switch checked disabled label={t("profile.badge.preferred")} />
-          </div>
-        ) : (
-          <p className="text-sm text-text-2">{t("profile.badge.hint")}</p>
-        )}
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-text">{t("profile.sections.cover")}</h2>
+              <CoverUpload
+                coverUrl={coverUrl}
+                disabled={saving}
+                getToken={getToken}
+                onUploaded={setCoverUrl}
+                onRemove={() => setCoverUrl(null)}
+              />
+            </section>
 
-        {error ? (
-          <p className="text-sm text-danger" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {success ? (
-          <p className="text-sm text-success" role="status">
-            {success}
-          </p>
-        ) : null}
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-text">{t("profile.sections.logo")}</h2>
+              <LogoUpload
+                logoUrl={logoUrl}
+                disabled={saving}
+                getToken={getToken}
+                onUploaded={setLogoUrl}
+              />
+            </section>
 
-        <Button
-          type="submit"
-          disabled={saving}
-          loading={saving}
-          loadingLabel={t("profile.actions.saving")}
-          className="min-h-11 w-full"
-        >
-          {t("profile.actions.save")}
-        </Button>
-      </form>
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-text">{t("profile.brand.title")}</h2>
+              <BrandThemeEditor
+                value={brandTheme}
+                onChange={setBrandTheme}
+                logoUrl={logoUrl}
+                disabled={saving}
+              />
+            </section>
+
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-text">{t("profile.sections.location")}</h2>
+              <LocationPicker
+                value={{ lat, lng, landmark }}
+                onChange={(next) => {
+                  setLat(next.lat);
+                  setLng(next.lng);
+                  setLandmark(next.landmark);
+                }}
+                getToken={getToken}
+                disabled={saving}
+              />
+            </section>
+
+            <section>
+              <HoursEditor hours={hours} disabled={saving} onChange={setHours} />
+            </section>
+
+            {showPreferred ? (
+              <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
+                <Switch checked disabled label={t("profile.badge.preferred")} />
+              </div>
+            ) : (
+              <p className="text-sm text-text-2">{t("profile.badge.hint")}</p>
+            )}
+
+            {error ? (
+              <p className="text-sm text-danger" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {success ? (
+              <p className="text-sm text-success" role="status">
+                {success}
+              </p>
+            ) : null}
+
+            <Button
+              type="submit"
+              disabled={saving}
+              loading={saving}
+              loadingLabel={t("profile.actions.saving")}
+              className="min-h-11 w-full"
+            >
+              {t("profile.actions.save")}
+            </Button>
+          </form>
+        }
+      />
     </div>
   );
 }

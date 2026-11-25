@@ -386,6 +386,11 @@
     }
   },
   "listings": {
+    "formAside": {
+      "previewHeading": "Buyer preview",
+      "previewPhotoAlt": "Main listing photo",
+      "noPhoto": "No photo"
+    },
     "images": {
       "heading": "Photos",
       "intro": "{count} of {max} photos. The first photo is the main one.",
@@ -403,6 +408,8 @@
       "upload": "Add photos",
       "uploading": "Uploading…",
       "upload_failed": "Photo didn't send. Try again.",
+      "upload_error_with_name": "Could not upload \"{name}\": {detail}",
+      "retry_one": "Retry this photo",
       "minimum_required": "Keep at least {count} real photo while this product is for sale.",
       "retry": "Retry",
       "duplicate": "This photo is already on the listing.",
@@ -520,6 +527,8 @@
       "stockTracked": "I will count them",
       "stockAlways": "I always have it",
       "stockQtyLabel": "How many you have now",
+      "wholesaleSectionHeading": "Wholesale / bulk prices",
+      "wholesaleBuyersHint": "Wholesale listings appear to verified buyers on Supplies.",
       "wholesaleLabel": "Wholesale tiers (bulk prices)",
       "wholesaleHelp": "Only for T2-verified businesses (business papers checked)",
       "wholesaleMeasureUnavailable": "Bulk prices are not ready yet for items sold by metre, kg or litre.",
@@ -728,6 +737,10 @@
       },
       "emptyTitle": "No listings yet",
       "statusLabel": "Status",
+      "productStatus": {
+        "inReview": "Live, in review: buyers see it once Convergeo approves it",
+        "rejected": "Product rejected"
+      },
       "stock": {
         "heading": "Adjust available stock",
         "help": "Enter a change in sale steps, not a physical counted total. Reserved units are already excluded. Units and stock mode cannot be changed here. Branch provisioning requires the stock owner.",
@@ -911,6 +924,25 @@
       "cover": "Cover image",
       "logo": "Logo",
       "location": "Location"
+    },
+    "location": {
+      "useMyLocation": "Use my current location",
+      "locating": "Finding your location…",
+      "accuracy": "Accuracy about {metres} m",
+      "geoUnsupported": "This browser cannot use GPS here. Search for a place or drag the pin on the map.",
+      "geoDenied": "Location access was denied. Search for a place or drag the pin on the map instead.",
+      "geoFailed": "Could not read GPS. Try again, or search for a place instead.",
+      "searchLabel": "Search a place or area",
+      "searchPlaceholder": "e.g. Arcades, Lusaka",
+      "searchAction": "Search",
+      "searching": "Searching…",
+      "searchTooShort": "Type at least 3 characters to search.",
+      "searchEmpty": "No matches in Zambia. Try a nearby landmark or drag the pin.",
+      "searchUnavailable": "Place search is unavailable. Drag the pin on the map to set your shop.",
+      "searchFailed": "Search failed. Try again or drag the pin on the map.",
+      "searchRateLimited": "Too many searches. Wait a minute and try again.",
+      "mapAttribution": "© OpenStreetMap contributors",
+      "advanced": "Advanced (coordinates)"
     },
     "fields": {
       "displayNameLabel": "Display name",
@@ -1209,7 +1241,8 @@
     "needsAction": {
       "heading": "Do this now",
       "empty": "Nothing to do — no orders are waiting for you.",
-      "emptyTitle": "All done"
+      "emptyTitle": "All done",
+      "count": "{count, plural, one {# order needs you} other {# orders need you}}"
     },
     "actions": {
       "openQueue": "See orders",
@@ -1297,6 +1330,10 @@
           "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",
           "body": "Today's 14:00 cut-off has passed. Get them ready now so they leave first on the next run."
         },
+        "productsInReview": {
+          "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
+          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
+        },
         "catalogueProducts": {
           "title": "Check your products",
           "body": "Keep stock and prices right so buyers never order something you don't have."
@@ -1313,7 +1350,32 @@
           "title": "Complete your shop profile",
           "body": "A logo, opening hours and a short description help buyers trust you."
         }
-      }
+      },
+      "progress": "{count, plural, one {# step left} other {# steps left}}",
+      "progressComplete": "You're all caught up on setup.",
+      "progressAria": "Setup progress"
+    },
+    "shopStatus": {
+      "heading": "Your shop",
+      "shopLive": "Shop live",
+      "idVerified": "ID verified",
+      "payoutSet": "Payout number set",
+      "yes": "Yes",
+      "notYet": "Not yet"
+    },
+    "quickActions": {
+      "ariaLabel": "Quick actions",
+      "addProduct": "Add product",
+      "sellWholesale": "Sell wholesale",
+      "scan": "Scan",
+      "orders": "Orders",
+      "payouts": "Payouts"
+    },
+    "stats": {
+      "live": "Live today",
+      "quiet": "Quiet day",
+      "actionNeeded": "Needs you",
+      "caughtUp": "Caught up"
     }
   },
   "queue": {

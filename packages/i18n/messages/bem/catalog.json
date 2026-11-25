@@ -380,6 +380,39 @@
       "close": "Isalenipo ukumona amapictures",
       "zoomIn": "Kusheni picture",
       "zoomOut": "Cefyeni picture"
+    },
+    "value": {
+      "madeToOrderDays": "Yapangwa muntu, yaba ready mu masiku {days}",
+      "vendor": {
+        "verified": "Ushitisha uwashininkishiwe",
+        "memberSince": "Ashitisha ukufuma {date}"
+      },
+      "rating": {
+        "starsAria": "⭐ {rating} kwa 5",
+        "summary": "{rating} · {count, plural, one {# review} other {# ama-reviews}}",
+        "photoReviews": "{count, plural, one {# review ne picture} other {# ama-reviews ne amapictures}}"
+      },
+      "totalPay": {
+        "item": "Icintu × {qty}",
+        "delivery": "Delivery ku Lusaka (estimate)",
+        "deliveryUnknown": "Ukubalwa pa checkout",
+        "deliveryFree": "Delivery ya bure",
+        "total": "Umuyanda wanu wonse",
+        "totalUnknown": "Takwaisa",
+        "momo": "Lipileni na MTN nangu Airtel MoMo",
+        "codSuffix": "nangu cash pa delivery"
+      },
+      "priceDrop": {
+        "heading": "⚠ Tell me if the price drops",
+        "presetLegend": "⚠ Alert me when the price is",
+        "presets": {
+          "any": "⚠ Any drop",
+          "pct10": "⚠ 10% lower",
+          "pct20": "⚠ 20% lower"
+        },
+        "cta": "⚠ Set price alert",
+        "subscribed": "⚠ We'll notify you when the price drops"
+      }
     }
   },
   "plp": {

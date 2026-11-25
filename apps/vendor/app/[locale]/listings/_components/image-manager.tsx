@@ -221,6 +221,20 @@ export function imageErrorNotice(error: unknown, t: Translate): string | null {
   return t("listings.images.limit_reached");
 }
 
+function uploadErrorDetail(caught: unknown, fileName: string, t: Translate): string {
+  const limitNotice = imageErrorNotice(caught, t);
+  if (limitNotice) {
+    return limitNotice;
+  }
+  if (caught instanceof ApiError) {
+    return t("listings.images.upload_error_with_name", {
+      name: fileName,
+      detail: caught.message,
+    });
+  }
+  return t("listings.images.upload_failed");
+}
+
 function sortByPosition(images: ListingImageRecord[]): ListingImageRecord[] {
   return [...images].sort((left, right) => left.position - right.position);
 }
@@ -378,14 +392,13 @@ export function ImageManager({
             if (attached.length > 0) syncImages([...localImages, ...attached]);
             return;
           }
+          const message = uploadErrorDetail(caught, sourceFile.name, t);
           setPendingUploads((current) =>
             current.map((item, itemIndex) =>
-              itemIndex === index
-                ? { ...item, error: t("listings.images.upload_failed"), progress: 0 }
-                : item,
+              itemIndex === index ? { ...item, error: message, progress: 0 } : item,
             ),
           );
-          return;
+          continue;
         }
       }
 
@@ -458,15 +471,6 @@ export function ImageManager({
     },
     [apiClient, listingId, localImages, minimumImages, syncImages, t],
   );
-
-  const retryFailedUpload = useCallback(() => {
-    const failed = pendingUploads.filter((upload) => upload.error !== null);
-    if (failed.length === 0) {
-      return;
-    }
-    setPendingFiles(failed.map((upload) => upload.file));
-    setPendingUploads([]);
-  }, [pendingUploads]);
 
   return (
     <section data-testid="listing-image-manager" style={{ display: "grid", gap: "var(--sp-4)" }}>
@@ -600,14 +604,41 @@ export function ImageManager({
       ) : null}
 
       {pendingUploads.some((upload) => upload.error) ? (
-        <button
-          type="button"
-          data-testid="retry-upload-button"
-          onClick={retryFailedUpload}
-          style={{ minHeight: "44px" }}
+        <ul
+          data-testid="upload-error-list"
+          style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "var(--sp-2)" }}
         >
-          {t("listings.images.retry")}
-        </button>
+          {pendingUploads.map((upload, index) =>
+            upload.error ? (
+              <li
+                key={upload.key}
+                style={{
+                  border: "1px solid var(--danger)",
+                  borderRadius: "var(--r)",
+                  padding: "var(--sp-3)",
+                  display: "grid",
+                  gap: "var(--sp-2)",
+                }}
+              >
+                <p role="alert" className="text-sm text-danger">
+                  {upload.error}
+                </p>
+                <button
+                  type="button"
+                  data-testid={`retry-upload-${index}`}
+                  disabled={busy}
+                  onClick={() => {
+                    setPendingFiles([upload.file]);
+                    setPendingUploads([]);
+                  }}
+                  style={{ minHeight: "44px", width: "fit-content" }}
+                >
+                  {t("listings.images.retry_one")}
+                </button>
+              </li>
+            ) : null,
+          )}
+        </ul>
       ) : null}
     </section>
   );

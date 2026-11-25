@@ -33,6 +33,10 @@ export type CatalogListing = {
   leadTimeDays?: number | null;
   /** W8 offers: live offer this listing takes part in (flag `bundles`). */
   offerBadge?: OfferBadge;
+  /** Product-level seller count when the catalogue API exposes it (optional). */
+  productSellerCount?: number;
+  /** Lowest listing price for the product in ngwee (optional, with seller count). */
+  productLowestPriceNgwee?: number;
 };
 
 type ListingGridLabels = ListingCardLabels;

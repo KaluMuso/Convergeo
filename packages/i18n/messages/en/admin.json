@@ -50,6 +50,7 @@
     "kyc": "KYC queue",
     "business": "Business",
     "moderation": "Moderation",
+    "moderationPendingBadge": "{count, plural, one {# product waiting} other {# products waiting}}",
     "catalog": "Catalog control",
     "disputes": "Disputes",
     "orders": "Orders",
@@ -594,8 +595,12 @@
       "retry": "Retry",
       "product": "Product",
       "vendor": "Vendor",
+      "price": "Price",
       "submitted": "Submitted",
       "review": "Review",
+      "approve": "Approve",
+      "reject": "Reject",
+      "rejectReasonShort": "Reason (min 3 characters)",
       "dialog": {
         "title": "Review canonical product",
         "images": "Listing images",
@@ -783,9 +788,23 @@
       "variantLabel": "Variant",
       "titleKey": "Title message key",
       "subtitleKey": "Subtitle message key",
+      "titleText": "Title",
+      "subtitleText": "Subtitle",
+      "image": "Hero image",
+      "previewEyebrow": "Preview",
+      "previewTitle": "Shop Zambia",
+      "previewSubtitle": "Compare prices nationwide",
+      "previewCta": "Shop now",
       "imagePublicId": "Hero image (Cloudinary public ID)",
       "primaryCtaHref": "Primary CTA href",
       "secondaryCtaHref": "Secondary CTA href"
+    },
+    "imagePicker": {
+      "upload": "Upload image",
+      "replace": "Replace image",
+      "remove": "Remove",
+      "uploading": "Uploading…",
+      "failure": "Upload failed. Try again."
     },
     "banner": {
       "title": "Banner row",
@@ -1619,7 +1638,10 @@
     "inventory": "Inventory",
     "subtitle": "Read only oversight · latest 100 records",
     "empty": "No records found.",
-    "vendor": "Vendor {vendorId} · {status}",
+    "vendor": "Vendor {vendorName} · {status}",
+    "unknownVendor": "Unknown vendor",
+    "product": "Product {name}",
+    "price": "Price {price}",
     "stock": "Stock {quantity}",
     "loading": "Loading records…",
     "loadFailed": "Could not load records.",
@@ -2140,6 +2162,10 @@
       "title": "Disputes and refund requests",
       "hint": "Open disputes waiting for a decision."
     },
+    "products": {
+      "title": "Products waiting for review",
+      "hint": "New vendor listings need canonical approval."
+    },
     "notifications": {
       "title": "Failed notifications",
       "hint": "No failed-notification count is available in this console yet. Check the support log for message history."
@@ -2149,6 +2175,10 @@
     "title": "Audit log",
     "subtitle": "Every recorded admin action, newest first. Read-only: entries cannot be edited or deleted.",
     "permissionDenied": "You need the audit.read permission to read the audit log.",
+    "loadingGrants": "Checking your permissions…",
+    "emptyTitle": "No audit entries",
+    "loadFailedTitle": "Could not load audit log",
+    "loadFailedBody": "Try again or clear filters.",
     "filters": "Audit log filters",
     "actor": "Actor account ID",
     "action": "Action (end with a dot for a family, e.g. admin.orders.)",
@@ -2959,6 +2989,9 @@
     "vendorSuspendedNote": "Vendor not active — hidden everywhere until the vendor is restored.",
     "open": "Open on site",
     "copyId": "Copy ID",
+    "productLine": "Product: {name}",
+    "vendorLine": "Vendor: {name}",
+    "priceLine": "Price {price}",
     "actions": {
       "hide": "Hide",
       "block": "Block",

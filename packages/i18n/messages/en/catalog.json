@@ -490,6 +490,39 @@
       "close": "Close image viewer",
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out"
+    },
+    "value": {
+      "madeToOrderDays": "Made to order, ready in {days} days",
+      "vendor": {
+        "verified": "Verified seller",
+        "memberSince": "Selling since {date}"
+      },
+      "rating": {
+        "starsAria": "Average rating {rating} out of 5",
+        "summary": "{rating} · {count, plural, one {# review} other {# reviews}}",
+        "photoReviews": "{count, plural, one {# review with photos} other {# reviews with photos}}"
+      },
+      "totalPay": {
+        "item": "Item × {qty}",
+        "delivery": "Delivery to Lusaka (estimate)",
+        "deliveryUnknown": "Calculated at checkout",
+        "deliveryFree": "Free delivery",
+        "total": "Total you pay",
+        "totalUnknown": "—",
+        "momo": "Pay with MTN or Airtel MoMo",
+        "codSuffix": "or cash on delivery"
+      },
+      "priceDrop": {
+        "heading": "Tell me if the price drops",
+        "presetLegend": "Alert me when the price is",
+        "presets": {
+          "any": "Any drop",
+          "pct10": "10% lower",
+          "pct20": "20% lower"
+        },
+        "cta": "Set price alert",
+        "subscribed": "We'll notify you when the price drops"
+      }
     }
   },
   "returnableBadge": {
@@ -541,7 +574,13 @@
     "conditionRefurbished": "Refurbished",
     "conditionUsed": "Used",
     "usingFallbackLocation": "Distances shown from Lusaka CBD until you share your location.",
-    "lowestPriceBadge": "Lowest price"
+    "lowestPriceBadge": "Lowest price",
+    "sortTotal": "Lowest total",
+    "deliveryFeeFree": "Free delivery",
+    "deliveryFeePlus": "+ {fee} delivery",
+    "chipCod": "Pay on delivery",
+    "chipEscrow": "Escrow protected",
+    "readyIn": "Ready in"
   },
   "reviews": {
     "heading": "Customer reviews",

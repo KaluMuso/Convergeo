@@ -82,6 +82,7 @@ export type CanonicalQueueItem = {
   vendor_display_name: string | null;
   listing_id: string | null;
   image_urls: string[];
+  price_ngwee: number | null;
   updated_at: string;
 };
 

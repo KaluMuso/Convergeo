@@ -9,7 +9,7 @@ import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
 import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
 import { EmptyBlock, LoadingBlock } from "../../_components/StateBlocks";
 
-import { type VendorQueueItem, kycApi } from "./api";
+import { type VendorQueueItem, kycApi, prefetchVendorKycDetail } from "./api";
 import { KycReviewDialog } from "./KycReviewDialog";
 import { SlaBadge } from "./SlaBadge";
 
@@ -45,6 +45,14 @@ export function KycQueue({ locale }: KycQueueProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    for (const item of items.slice(0, 3)) {
+      if (item.kyc_record_id) {
+        prefetchVendorKycDetail(item.vendor_id);
+      }
+    }
+  }, [items]);
 
   if (loading) {
     return <LoadingBlock label={t("loading")} />;
@@ -120,7 +128,20 @@ export function KycQueue({ locale }: KycQueueProps) {
               </thead>
               <tbody>
                 {items.map((item) => (
-                  <tr key={item.vendor_id} className="border-b border-border hover:bg-bg-2">
+                  <tr
+                    key={item.vendor_id}
+                    className="border-b border-border hover:bg-bg-2"
+                    onMouseEnter={() => {
+                      if (item.kyc_record_id) {
+                        prefetchVendorKycDetail(item.vendor_id);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (item.kyc_record_id) {
+                        prefetchVendorKycDetail(item.vendor_id);
+                      }
+                    }}
+                  >
                     <td className="px-2 py-3">
                       <div className="flex min-w-0 items-center gap-2">
                         <IconTile hue="teal" size={40} aria-hidden>

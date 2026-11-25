@@ -30,6 +30,7 @@ import {
 } from "./admin-nav-config";
 import { AdminNavIcon } from "./admin-nav-icon";
 import { AdminNotificationBell } from "./admin-notification-bell";
+import { usePendingProductModerationCount } from "./use-pending-product-count";
 
 type AdminShellProps = {
   locale: string;
@@ -125,12 +126,16 @@ export function AdminShell({ locale, children }: AdminShellProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [menuOpen, isBareAuthRoute]);
 
+  const navSource = isBareAuthRoute
+    ? null
+    : (grants ??
+      (navGrants && !grantError && navGrants.route !== pathname ? navGrants.grants : null));
+  const pendingProducts = usePendingProductModerationCount(navSource);
+
   if (isBareAuthRoute) {
     return <>{children}</>;
   }
 
-  const navSource =
-    grants ?? (navGrants && !grantError && navGrants.route !== pathname ? navGrants.grants : null);
   const roleKind = resolveAdminRoleKind(navSource);
   const capabilities = resolveAdminNavCapabilities(
     navSource?.permissions ?? [],
@@ -218,7 +223,21 @@ export function AdminShell({ locale, children }: AdminShellProps) {
                           className={navLinkClass(active)}
                         >
                           <AdminNavIcon itemKey={item.key} size={32} />
-                          <span className="truncate">{t(`nav.${item.key}` as "nav.home")}</span>
+                          <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                            <span className="truncate">{t(`nav.${item.key}` as "nav.home")}</span>
+                            {item.key === "moderation" &&
+                            typeof pendingProducts === "number" &&
+                            pendingProducts > 0 ? (
+                              <span
+                                className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-[var(--primary-btn-fg)]"
+                                aria-label={t("nav.moderationPendingBadge", {
+                                  count: pendingProducts,
+                                })}
+                              >
+                                {pendingProducts}
+                              </span>
+                            ) : null}
+                          </span>
                         </Link>
                       </li>
                     );

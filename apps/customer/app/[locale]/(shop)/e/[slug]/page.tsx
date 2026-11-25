@@ -17,11 +17,10 @@ import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 import { eventAccessCookieName } from "../../../../../lib/event-access";
 import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 
-import {
-  EventJsonLd,
-  isEventIndexable,
-  type EventJsonLdInput,
-} from "./_components/event-jsonld";
+import { EventCalendarLinks } from "./_components/event-calendar-links";
+import { EventCountdown } from "./_components/event-countdown";
+import { EventJsonLd, isEventIndexable, type EventJsonLdInput } from "./_components/event-jsonld";
+import { EventRefundPolicy } from "./_components/event-refund-policy";
 import { PrivateEventAccess } from "./_components/private-event-access";
 import { isPastEventInstance } from "./_lib/instance-time";
 
@@ -85,6 +84,8 @@ type EventDetail = {
   platform_fee_payer?: "organiser" | "buyer";
   platform_fee_bps?: number;
   visibility?: "public" | "unlisted" | "private";
+  age_restriction?: number | null;
+  refund_policy_key?: string | null;
   organiser: {
     id: string;
     slug: string;
@@ -124,10 +125,7 @@ async function eventAccessProofFor(slug: string): Promise<string | null> {
   return cookieStore.get(eventAccessCookieName(slug))?.value ?? null;
 }
 
-async function fetchEvent(
-  slug: string,
-  accessProof?: string | null,
-): Promise<EventDetail | null> {
+async function fetchEvent(slug: string, accessProof?: string | null): Promise<EventDetail | null> {
   const url = absoluteApiUrl(`/events/${encodeURIComponent(slug)}`);
   if (!url) {
     return null;
@@ -166,8 +164,8 @@ function formatInstanceDate(iso: string, locale: string): string {
   }).format(new Date(iso));
 }
 
-function mapsUrl(lat: number, lng: number): string {
-  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+function directionsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }
 
 function organiserLogo(logoUrl: string) {
@@ -199,10 +197,7 @@ function eventImageUrls(images: string[]): string[] {
   return resolveCloudinaryImageUrls(images);
 }
 
-function toEventJsonLdInput(
-  event: EventDetail,
-  locale: string,
-): EventJsonLdInput {
+function toEventJsonLdInput(event: EventDetail, locale: string): EventJsonLdInput {
   return {
     name: event.title,
     slug: event.slug,
@@ -228,9 +223,7 @@ function toEventJsonLdInput(
   };
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const event = await fetchEvent(slug, await eventAccessProofFor(slug));
   const t = await getEventsTranslator(locale);
@@ -335,19 +328,32 @@ export default async function EventDetailPage({ params }: PageProps) {
         <div className="absolute inset-0 flex items-end bg-gradient-to-t from-panel via-panel/60 to-transparent p-6 md:p-10 lg:p-12">
           <div className="max-w-4xl space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              {event.is_sold_out ? (
-                <Badge variant="sold_out" label={t("detail.soldOut")} />
-              ) : null}
-              {event.is_free ? (
-                <Badge variant="free" label={t("detail.free")} />
+              {event.is_sold_out ? <Badge variant="sold_out" label={t("detail.soldOut")} /> : null}
+              {event.is_free ? <Badge variant="free" label={t("detail.free")} /> : null}
+              {event.age_restriction ? (
+                <Badge
+                  variant="public"
+                  label={t("detail.ageLimit", { age: event.age_restriction })}
+                />
               ) : null}
             </div>
-            <h1 className="font-display text-hero text-panel-text">
-              {event.title}
-            </h1>
+            <h1 className="font-display text-hero text-panel-text">{event.title}</h1>
             <div className="flex flex-col gap-1 text-sm text-panel-muted sm:flex-row sm:flex-wrap sm:gap-x-5">
               {featuredInstance ? (
-                <p>{formatInstanceDate(featuredInstance.starts_at, locale)}</p>
+                <>
+                  <p>{formatInstanceDate(featuredInstance.starts_at, locale)}</p>
+                  <EventCountdown
+                    startsAt={featuredInstance.starts_at}
+                    endsAt={featuredInstance.ends_at}
+                    locale={locale}
+                    labels={{
+                      ended: t("detail.countdown.ended"),
+                      today: t("detail.countdown.today"),
+                      tomorrow: t("detail.countdown.tomorrow"),
+                      days: t("detail.countdown.days"),
+                    }}
+                  />
+                </>
               ) : null}
               {event.venue ? (
                 <p>
@@ -365,30 +371,16 @@ export default async function EventDetailPage({ params }: PageProps) {
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:gap-12">
         <div className="flex min-w-0 flex-col gap-8">
           {event.description ? (
-            <section
-              className="flex flex-col gap-3"
-              aria-labelledby="event-about-heading"
-            >
-              <h2
-                id="event-about-heading"
-                className="font-display text-h2 text-display-ink"
-              >
+            <section className="flex flex-col gap-3" aria-labelledby="event-about-heading">
+              <h2 id="event-about-heading" className="font-display text-h2 text-display-ink">
                 {t("detail.about")}
               </h2>
-              <p className="max-w-3xl text-body leading-relaxed text-text-2">
-                {event.description}
-              </p>
+              <p className="max-w-3xl text-body leading-relaxed text-text-2">{event.description}</p>
             </section>
           ) : null}
 
-          <section
-            className="flex flex-col gap-4"
-            aria-labelledby="event-dates-heading"
-          >
-            <h2
-              id="event-dates-heading"
-              className="font-display text-h2 text-display-ink"
-            >
+          <section className="flex flex-col gap-4" aria-labelledby="event-dates-heading">
+            <h2 id="event-dates-heading" className="font-display text-h2 text-display-ink">
               {t("detail.dates")}
             </h2>
             <ol className="flex list-none flex-col gap-3 p-0">
@@ -399,10 +391,7 @@ export default async function EventDetailPage({ params }: PageProps) {
                     key={instance.id}
                     className="grid gap-3 rounded-lg border border-border bg-surface p-4 shadow-1 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:items-center"
                   >
-                    <span
-                      className="font-display text-h2 text-primary"
-                      aria-hidden="true"
-                    >
+                    <span className="font-display text-h2 text-primary" aria-hidden="true">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <div>
@@ -416,27 +405,30 @@ export default async function EventDetailPage({ params }: PageProps) {
                         })}
                       </p>
                     </div>
-                    {past ? (
-                      <Badge
-                        variant="public"
-                        label={t("detail.pastInstance")}
-                      />
-                    ) : null}
+                    {past ? <Badge variant="public" label={t("detail.pastInstance")} /> : null}
                   </li>
                 );
               })}
             </ol>
           </section>
 
+          <EventCalendarLinks
+            slug={event.slug}
+            instances={event.instances}
+            locale={locale}
+            labels={{
+              heading: t("detail.calendar.heading"),
+              addSingle: t("detail.calendar.addSingle"),
+              addForDate: t("detail.calendar.addForDate"),
+            }}
+          />
+
           {event.venue || (event.lat !== null && event.lng !== null) ? (
             <section
               className="rounded-lg border border-border bg-bg-2 p-5"
               aria-labelledby="event-venue-heading"
             >
-              <h2
-                id="event-venue-heading"
-                className="font-display text-h3 text-display-ink"
-              >
+              <h2 id="event-venue-heading" className="font-display text-h3 text-display-ink">
                 {t("detail.venue")}
               </h2>
               {event.venue ? (
@@ -449,12 +441,13 @@ export default async function EventDetailPage({ params }: PageProps) {
               ) : null}
               {event.lat !== null && event.lng !== null ? (
                 <Link
-                  href={mapsUrl(event.lat, event.lng)}
+                  href={directionsUrl(event.lat, event.lng)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+                  data-testid="event-directions"
                 >
-                  {t("detail.mapHint")}
+                  {t("detail.directions")}
                 </Link>
               ) : null}
             </section>
@@ -462,15 +455,23 @@ export default async function EventDetailPage({ params }: PageProps) {
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-24 lg:h-fit">
+          <EventRefundPolicy
+            refundPolicyKey={event.refund_policy_key}
+            labels={{
+              heading: t("detail.refund.heading"),
+              platform_standard: t("detail.refund.platform_standard"),
+              no_refunds: t("detail.refund.no_refunds"),
+              flexible: t("detail.refund.flexible"),
+              unknown: t("detail.refund.unknown"),
+            }}
+          />
           <TicketPicker
             eventSlug={event.slug}
             instances={event.instances}
             ticketTypes={event.ticket_types}
             isSoldOut={event.is_sold_out}
             eventAccessProof={eventAccessProof}
-            platformFeePayer={
-              event.platform_fee_payer === "buyer" ? "buyer" : "organiser"
-            }
+            platformFeePayer={event.platform_fee_payer === "buyer" ? "buyer" : "organiser"}
             platformFeeBps={event.platform_fee_bps ?? null}
           />
 
@@ -486,17 +487,13 @@ export default async function EventDetailPage({ params }: PageProps) {
               ) : null}
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-text">
-                    {event.organiser.display_name}
-                  </p>
+                  <p className="font-semibold text-text">{event.organiser.display_name}</p>
                   {event.organiser.preferred_badge ? (
                     <Badge variant="public" label={t("browse.verified")} />
                   ) : null}
                 </div>
                 {event.organiser.description ? (
-                  <p className="mt-1 text-sm text-text-2">
-                    {event.organiser.description}
-                  </p>
+                  <p className="mt-1 text-sm text-text-2">{event.organiser.description}</p>
                 ) : null}
                 {event.organiser.slug ? (
                   <Link

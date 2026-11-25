@@ -380,6 +380,39 @@
       "close": "Tsekani owonera zithunzi",
       "zoomIn": "Kulitsani",
       "zoomOut": "Chepetsani"
+    },
+    "value": {
+      "madeToOrderDays": "Zapangidwa, zizikhala ready masiku {days}",
+      "vendor": {
+        "verified": "Wogulitsa wotsimikizika",
+        "memberSince": "Kugulitsa kuyambira {date}"
+      },
+      "rating": {
+        "starsAria": "⭐ {rating} mwa 5",
+        "summary": "{rating} · {count, plural, one {# review} other {# ma reviews}}",
+        "photoReviews": "{count, plural, one {# review ndi chithunzi} other {# ma reviews ndi zithunzi}}"
+      },
+      "totalPay": {
+        "item": "Chinthu × {qty}",
+        "delivery": "Kutumiza ku Lusaka (estimate)",
+        "deliveryUnknown": "Kuwerenga pa checkout",
+        "deliveryFree": "Kutumiza kwaulere",
+        "total": "Ndalama zonse zomwe mulipira",
+        "totalUnknown": "Sikudziwika",
+        "momo": "Lipirani ndi MTN kapena Airtel MoMo",
+        "codSuffix": "kapena ndalama pa delivery"
+      },
+      "priceDrop": {
+        "heading": "⚠ Tell me if the price drops",
+        "presetLegend": "⚠ Alert me when the price is",
+        "presets": {
+          "any": "⚠ Any drop",
+          "pct10": "⚠ 10% lower",
+          "pct20": "⚠ 20% lower"
+        },
+        "cta": "⚠ Set price alert",
+        "subscribed": "⚠ We'll notify you when the price drops"
+      }
     }
   },
   "plp": {

@@ -1,10 +1,12 @@
 /**
  * Curated fallback hero imagery for the default (no-campaign) home carousel.
- * Uses seeded Cloudinary demo category assets — honest merch, not stock scenes.
+ * Slide 1 is the brand illustration; the rest use seeded Cloudinary demo
+ * category assets — honest merch, not stock scenes.
  */
 export type HomeHeroSlideDef = {
   key: string;
-  publicId: string;
+  /** Cloudinary public id; omitted for the brand illustration slide. */
+  publicId?: string;
   titleKey: string;
   subtitleKey?: string;
   /** Slide 1 carries brand wordmark + primary CTAs. */
@@ -14,14 +16,13 @@ export type HomeHeroSlideDef = {
 export const HOME_HERO_FALLBACK_SLIDES: HomeHeroSlideDef[] = [
   {
     key: "marketplace",
-    publicId: "demo/categories/mobile-phones",
     titleKey: "home.hero.fallbackTitle",
     subtitleKey: "home.hero.fallbackSubtitle",
     primary: true,
   },
   {
     key: "fashion",
-    publicId: "demo/categories/traditional-wear",
+    publicId: "demo/categories/chitenge-fabric",
     titleKey: "home.hero.slides.fashion.title",
     subtitleKey: "home.hero.slides.fashion.subtitle",
   },
