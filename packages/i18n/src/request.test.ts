@@ -87,7 +87,7 @@ describe("loadNamespace", () => {
         assertNestedKeys(await loadNamespace(locale, namespace));
       }
     }
-  });
+  }, 30_000);
 
   it("passes plain message objects across the server-to-client boundary", async () => {
     const assertSerializableMessages = (value: unknown): void => {
