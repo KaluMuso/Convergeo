@@ -3,6 +3,13 @@
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
+import {
+  LcClipboardList,
+  LcLayoutGrid,
+  LcShoppingBag,
+  LcTrendingUp,
+} from "@vergeo/ui/src/lucide-icons";
+import { StatCard } from "@vergeo/ui/src/stat-card";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -11,6 +18,8 @@ import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { HomeTaskList } from "../../_components/home-tasks";
 import { VendorGrid } from "../../_components/vendor-page";
+import { VendorQuickActionGrid } from "../../_components/vendor-quick-action-grid";
+import { VendorRouteHeader } from "../../_components/vendor-route-header";
 import { DashboardSkeleton, ListSkeleton } from "../../_components/vendor-skeletons";
 import { buildHomeTasks } from "../../_lib/home-tasks";
 import { isAuditableApproved } from "../../_lib/kyc-integrity";
@@ -270,9 +279,9 @@ export function OrderCard({ locale, order, onUpdated, onError }: OrderCardProps)
             {t("queue.card.items", { count: order.item_count })}
           </p>
           <OrderNextStepHint order={order} />
-          <p className="mt-1 text-sm font-medium text-text">
+          <div className="mt-1 text-sm font-medium text-text">
             <PriceBlock ngwee={order.total_ngwee} />
-          </p>
+          </div>
         </Link>
 
         {action ? (
@@ -518,11 +527,8 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
       label={t("queue.pullToRefresh")}
       onRefresh={() => load({ background: true })}
     >
-      <div className="flex flex-col gap-4 pb-4">
-        <header className="space-y-1">
-          <h1 className="text-xl font-semibold text-text">{t("queue.title")}</h1>
-          <p className="text-sm text-text-2">{t("queue.intro")}</p>
-        </header>
+      <div className="flex flex-col gap-5 pb-4">
+        <VendorRouteHeader title={t("queue.title")} subtitle={t("queue.intro")} />
 
         {hasCutoffBoundOrder ? <DispatchCutoffBanner cutoff={cutoff} /> : null}
 
@@ -564,6 +570,7 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
         {orders.length === 0 ? (
           statusFilter === "needs_action" ? (
             <VendorEmptyState
+              illustration="no-orders"
               title={t("queue.emptyNeedsAction.title")}
               body={t("queue.emptyNeedsAction.body")}
               action={
@@ -578,6 +585,7 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
             />
           ) : (
             <VendorEmptyState
+              illustration="no-orders"
               title={t("queue.emptyFiltered.title")}
               body={t("queue.emptyFiltered.body")}
               action={
@@ -593,7 +601,7 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
             />
           )
         ) : (
-          <VendorGrid cols="cards">
+          <VendorGrid cols="cards" as="ul">
             {orders.map((order) => (
               <OrderCard
                 key={order.id}
@@ -821,12 +829,66 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
   return (
     <div className="flex flex-col gap-4 pb-4">
-      <header className="mb-2 space-y-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-text-3">
-          {t("home.eyebrow")}
-        </p>
-        <h1 className="text-lg font-semibold text-text">{t("home.title")}</h1>
-      </header>
+      <VendorRouteHeader title={t("home.title")} subtitle={t("home.eyebrow")} />
+
+      <VendorQuickActionGrid locale={locale} />
+
+      <VendorGrid cols="stats">
+        <StatCard
+          label={t("home.takings.label")}
+          value={formatK(takings)}
+          icon={<LcTrendingUp className="size-5" duotone aria-hidden />}
+          iconHue="teal"
+          delta={
+            takings > 0
+              ? { text: t("home.stats.live"), trend: "up" }
+              : { text: t("home.stats.quiet"), trend: "neutral" }
+          }
+          data-testid="vendor-home-stat-takings"
+        />
+        <StatCard
+          label={t("home.needsAction.heading")}
+          value={String(needsCount)}
+          icon={<LcClipboardList className="size-5" duotone aria-hidden />}
+          iconHue="orange"
+          delta={
+            needsCount > 0
+              ? { text: t("home.stats.actionNeeded"), trend: "down" }
+              : { text: t("home.stats.caughtUp"), trend: "up" }
+          }
+        />
+        {analyticsSummary ? (
+          <>
+            <StatCard
+              label={t("home.analytics.views")}
+              value={analyticsSummary.total_views.toLocaleString()}
+              icon={<LcLayoutGrid className="size-5" duotone aria-hidden />}
+              iconHue="blue"
+            />
+            <StatCard
+              label={t("home.analytics.gmv")}
+              value={formatK(analyticsSummary.gmv_ngwee)}
+              icon={<LcShoppingBag className="size-5" duotone aria-hidden />}
+              iconHue="green"
+            />
+          </>
+        ) : (
+          <>
+            <StatCard
+              label={t("home.analytics.orders")}
+              value="—"
+              icon={<LcShoppingBag className="size-5" duotone aria-hidden />}
+              iconHue="slate"
+            />
+            <StatCard
+              label={t("home.analytics.gmv")}
+              value="—"
+              icon={<LcTrendingUp className="size-5" duotone aria-hidden />}
+              iconHue="slate"
+            />
+          </>
+        )}
+      </VendorGrid>
 
       {offline ? (
         <p className="rounded-md bg-warning/10 px-3 py-2 text-sm text-text" role="status">
@@ -844,77 +906,36 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="mb-2 text-lg font-semibold text-text">{t("home.needsAction.heading")}</h2>
-          {needsCount > 0 ? (
-            <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
-              {needsCount}
-            </span>
-          ) : null}
-        </div>
+            <h2 className="mb-2 text-lg font-semibold text-text">
+              {t("home.needsAction.heading")}
+            </h2>
+            {needsCount > 0 ? (
+              <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
+                {needsCount}
+              </span>
+            ) : null}
+          </div>
 
-        {!dashboard || dashboard.needs_action.length === 0 ? (
-          <VendorEmptyState
-            title={t("home.needsAction.emptyTitle")}
-            body={t("home.needsAction.empty")}
-          />
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {dashboard.needs_action.map((order) => (
-              <OrderCard
-                key={order.id}
-                locale={locale}
-                order={order}
-                onError={setError}
-                onUpdated={() => void load()}
-              />
-            ))}
-          </ul>
-        )}
+          {!dashboard || dashboard.needs_action.length === 0 ? (
+            <VendorEmptyState
+              title={t("home.needsAction.emptyTitle")}
+              body={t("home.needsAction.empty")}
+            />
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {dashboard.needs_action.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  locale={locale}
+                  order={order}
+                  onError={setError}
+                  onUpdated={() => void load()}
+                />
+              ))}
+            </ul>
+          )}
         </section>
       </VendorGrid>
-
-      <section className="rounded-2xl bg-panel p-4 text-panel-text lg:p-5">
-        <p className="text-sm text-panel-muted">{t("home.takings.label")}</p>
-        <p className="mt-1 font-mono text-3xl font-semibold tracking-tight">{formatK(takings)}</p>
-        <p className="mt-1 text-xs text-panel-muted">
-          {takings === 0
-            ? t("home.takings.emptyCaption")
-            : t("home.takings.caption", {
-                date: dashboard?.takings_date ?? "—",
-              })}
-        </p>
-      </section>
-
-      {analyticsSummary ? (
-        <section
-          className="rounded-2xl border border-border bg-surface p-4 lg:p-5"
-          aria-label={t("home.analytics.ariaLabel")}
-        >
-          <VendorGrid cols="stats">
-            <div className="space-y-1 px-1">
-              <p className="text-xs text-muted">{t("home.analytics.views")}</p>
-              <p className="font-mono text-lg font-semibold text-text">
-                {analyticsSummary.total_views.toLocaleString()}
-              </p>
-              <p className="text-[10px] text-muted">{t("home.analytics.viewsCaption")}</p>
-            </div>
-            <div className="space-y-1 px-1">
-              <p className="text-xs text-muted">{t("home.analytics.orders")}</p>
-              <p className="font-mono text-lg font-semibold text-text">
-                {analyticsSummary.total_orders.toLocaleString()}
-              </p>
-              <p className="text-[10px] text-muted">{t("home.analytics.ordersCaption")}</p>
-            </div>
-            <div className="space-y-1 px-1">
-              <p className="text-xs text-muted">{t("home.analytics.gmv")}</p>
-              <p className="font-mono text-lg font-semibold text-text">
-                {formatK(analyticsSummary.gmv_ngwee)}
-              </p>
-              <p className="text-[10px] text-muted">{t("home.analytics.gmvCaption")}</p>
-            </div>
-          </VendorGrid>
-        </section>
-      ) : null}
 
       {businessType ? (
         <section className="rounded-2xl border border-border bg-surface p-4">
@@ -964,30 +985,15 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         </section>
       ) : null}
 
-      <section className="grid grid-cols-2 gap-2 px-1" aria-label={t("home.shortcuts.ariaLabel")}>
+      <section className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px)+0.5rem)] z-10 grid grid-cols-1 gap-2 border-t border-border bg-bg/90 px-1 py-3 backdrop-blur-sm lg:static lg:border-0 lg:bg-transparent lg:py-0 lg:backdrop-blur-none">
         <Link
-          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border px-3 text-sm font-medium text-text"
-          href={`/${locale}/listings`}
-        >
-          {t("home.shortcuts.listings")}
-        </Link>
-        <Link
-          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border px-3 text-sm font-medium text-text"
-          href={`/${locale}/profile`}
-        >
-          {t("home.shortcuts.profile")}
-        </Link>
-      </section>
-
-      <section className="grid grid-cols-1 gap-3">
-        <Link
-          className="inline-flex min-h-14 items-center justify-center rounded-xl bg-primary px-4 text-base font-semibold text-[var(--primary-btn-fg)]"
+          className="press-scale inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-4 text-base font-semibold text-[var(--primary-btn-fg)] shadow-1"
           href={`/${locale}/orders`}
         >
           {t("home.actions.openQueue")}
         </Link>
         <Link
-          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-text"
+          className="press-scale inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-surface px-4 text-sm font-medium text-text"
           href={`/${locale}/orders?status=placed`}
         >
           {t("home.actions.confirmOrders")}

@@ -52,18 +52,19 @@ export function StatCard({
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <p className="text-sm font-medium text-text-2">{label}</p>
-          <p className="font-display text-2xl font-semibold tabular-nums tracking-tight text-display-ink">
-            {value}
-          </p>
+      <div className="flex flex-col gap-1">
+        {/* Full-width value row: long ZMW amounts must not run under the icon. */}
+        <div className="flex items-start justify-between gap-3">
+          <p className="min-w-0 text-sm font-medium text-text-2">{label}</p>
+          {icon ? (
+            <IconTile hue={iconHue} size={40}>
+              {icon}
+            </IconTile>
+          ) : null}
         </div>
-        {icon ? (
-          <IconTile hue={iconHue} size={40}>
-            {icon}
-          </IconTile>
-        ) : null}
+        <p className="font-display text-xl font-semibold tabular-nums tracking-tight text-display-ink sm:text-2xl">
+          {value}
+        </p>
       </div>
       {(delta || sparkline) && (
         <div className="flex items-end justify-between gap-2">
