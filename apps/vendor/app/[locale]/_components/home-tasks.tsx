@@ -64,7 +64,7 @@ export function HomeTaskList({ locale, tasks }: HomeTaskListProps) {
           <li key={task.key}>
             <Link
               href={`/${locale}${task.href}`}
-              className={`flex min-h-14 items-start gap-3 card-lift press-scale flex min-h-14 items-start gap-3 rounded-xl border p-3 focus-visible:outline-none focus-visible:shadow-focusRing ${TONE_CLASSES[task.tone]}`}
+              className={`card-lift press-scale flex min-h-14 items-start gap-3 rounded-xl border p-3 focus-visible:outline-none focus-visible:shadow-focusRing ${TONE_CLASSES[task.tone]}`}
               data-testid="vendor-home-task"
               data-task={task.key}
             >
