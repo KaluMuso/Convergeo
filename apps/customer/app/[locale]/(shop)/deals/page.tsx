@@ -1,7 +1,8 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { LinkButton } from "@vergeo/ui/src/link-button";
-import { buildCanonicalAlternates } from "@vergeo/ui/src/seo/json-ld";
+import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import { buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -13,10 +14,7 @@ import {
   catalogDeliveryLabels,
   catalogMadeToOrderLabels,
 } from "../_components/plp/delivery-labels";
-import {
-  ListingGrid,
-  type CatalogListing,
-} from "../_components/plp/listing-grid";
+import { ListingGrid, type CatalogListing } from "../_components/plp/listing-grid";
 
 import { DealCountdown } from "./_components/deal-countdown";
 
@@ -36,15 +34,22 @@ async function getTranslator(locale: string) {
   });
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslator(locale);
+  const title = t("deals.metaTitle");
+  const description = t("deals.subtitle");
+  const canonicalPath = buildLocaleCanonical(locale, "deals");
   return {
-    title: t("deals.metaTitle"),
-    description: t("deals.subtitle"),
+    title,
+    description,
     alternates: buildCanonicalAlternates(locale, "deals"),
+    ...buildSocialMetadata({
+      title,
+      description,
+      locale,
+      url: canonicalPath,
+    }),
   };
 }
 
@@ -63,9 +68,7 @@ export default async function DealsPage({ params }: PageProps) {
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 pb-8">
       <div>
-        <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
-          {t("deals.title")}
-        </h1>
+        <h1 className="m-0 font-display text-h1 font-bold text-display-ink">{t("deals.title")}</h1>
         <p className="m-0 mt-1 text-sm text-text-2">{t("deals.subtitle")}</p>
       </div>
 
@@ -76,11 +79,7 @@ export default async function DealsPage({ params }: PageProps) {
           title={t("deals.emptyTitle")}
           body={t("deals.emptyBody")}
           action={
-            <LinkButton
-              href={`/${locale}/c/all`}
-              variant="primary"
-              LinkComponent={Link}
-            >
+            <LinkButton href={`/${locale}/c/all`} variant="primary" LinkComponent={Link}>
               {t("deals.browse")}
             </LinkButton>
           }
