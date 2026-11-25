@@ -1184,7 +1184,8 @@
     "needsAction": {
       "heading": "待处理",
       "empty": "没有待办 — 没有订单在等您。",
-      "emptyTitle": "全部完成"
+      "emptyTitle": "全部完成",
+      "count": "{count, plural, one {# order needs you} other {# orders need you}}"
     },
     "actions": {
       "openQueue": "查看订单",
@@ -1278,7 +1279,23 @@
           "title": "完善店铺资料",
           "body": "店铺标志、营业时间和简短介绍能让买家更信任您。"
         }
-      }
+      },
+      "progress": "{count, plural, one {# step left} other {# steps left}}",
+      "progressComplete": "You're all caught up on setup.",
+      "progressAria": "Setup progress"
+    },
+    "quickActions": {
+      "ariaLabel": "Quick actions",
+      "addProduct": "Add product",
+      "scan": "Scan",
+      "orders": "Orders",
+      "payouts": "Payouts"
+    },
+    "stats": {
+      "live": "Live today",
+      "quiet": "Quiet day",
+      "actionNeeded": "Needs you",
+      "caughtUp": "Caught up"
     }
   },
   "queue": {
