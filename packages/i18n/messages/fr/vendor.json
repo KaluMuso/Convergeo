@@ -894,6 +894,25 @@
       "logo": "Logo",
       "location": "Emplacement"
     },
+    "location": {
+      "useMyLocation": "Use my current location",
+      "locating": "Finding your location…",
+      "accuracy": "Accuracy about {metres} m",
+      "geoUnsupported": "This browser cannot use GPS here. Search for a place or drag the pin on the map.",
+      "geoDenied": "Location access was denied. Search for a place or drag the pin on the map instead.",
+      "geoFailed": "Could not read GPS. Try again, or search for a place instead.",
+      "searchLabel": "Search a place or area",
+      "searchPlaceholder": "e.g. Arcades, Lusaka",
+      "searchAction": "Search",
+      "searching": "Searching…",
+      "searchTooShort": "Type at least 3 characters to search.",
+      "searchEmpty": "No matches in Zambia. Try a nearby landmark or drag the pin.",
+      "searchUnavailable": "Place search is unavailable. Drag the pin on the map to set your shop.",
+      "searchFailed": "Search failed. Try again or drag the pin on the map.",
+      "searchRateLimited": "Too many searches. Wait a minute and try again.",
+      "mapAttribution": "© OpenStreetMap contributors",
+      "advanced": "Advanced (coordinates)"
+    },
     "fields": {
       "displayNameLabel": "Nom affiché",
       "descriptionLabel": "Votre histoire",
@@ -1165,7 +1184,8 @@
     "needsAction": {
       "heading": "À faire",
       "empty": "Rien à faire — aucune commande ne vous attend.",
-      "emptyTitle": "Tout est fait"
+      "emptyTitle": "Tout est fait",
+      "count": "{count, plural, one {# order needs you} other {# orders need you}}"
     },
     "actions": {
       "openQueue": "Voir les commandes",
@@ -1259,7 +1279,23 @@
           "title": "Complétez le profil de votre boutique",
           "body": "Un logo, des horaires et une courte description aident les acheteurs à vous faire confiance."
         }
-      }
+      },
+      "progress": "{count, plural, one {# step left} other {# steps left}}",
+      "progressComplete": "You're all caught up on setup.",
+      "progressAria": "Setup progress"
+    },
+    "quickActions": {
+      "ariaLabel": "Quick actions",
+      "addProduct": "Add product",
+      "scan": "Scan",
+      "orders": "Orders",
+      "payouts": "Payouts"
+    },
+    "stats": {
+      "live": "Live today",
+      "quiet": "Quiet day",
+      "actionNeeded": "Needs you",
+      "caughtUp": "Caught up"
     }
   },
   "queue": {

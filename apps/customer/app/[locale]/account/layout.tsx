@@ -6,6 +6,7 @@ import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } f
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BottomNavClient } from "../(shop)/_components/bottom-nav-client";
+import { socialContactsEnabled } from "../../../lib/social/flag-server";
 import { TopUtilityBarSlot } from "../_components/top-utility-bar-slot";
 
 import { AccountAppHeader } from "./_components/account-app-header";
@@ -36,6 +37,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
 
   setRequestLocale(locale);
   await requireAuthenticatedAccount(locale);
+  const showPeople = await socialContactsEnabled();
 
   const baseMessages = await getMessages();
   const [accountMessages, commonMessages, navMessages, ordersMessages] = await Promise.all([
@@ -140,6 +142,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
           />
           <AccountNav
             locale={locale}
+            showPeople={showPeople}
             labels={{
               ariaLabel: t("title"),
               overview: t("nav.overview"),
@@ -150,6 +153,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
               quotes: t("nav.quotes"),
               saved: t("nav.saved"),
               following: t("nav.following"),
+              people: showPeople ? t("nav.people") : undefined,
               addresses: t("nav.addresses"),
               preferences: t("nav.preferences"),
               profile: t("nav.profile"),

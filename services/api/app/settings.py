@@ -79,6 +79,8 @@ class Settings(BaseSettings):
     # Upstash Redis REST — OTP per-number rate limiting (3 requests / 15 min).
     upstash_redis_rest_url: str = Field(alias="UPSTASH_REDIS_REST_URL", default="")
     upstash_redis_rest_token: str = Field(alias="UPSTASH_REDIS_REST_TOKEN", default="")
+    # T8 — pepper for phone discovery hashes (HMAC of client SHA-256). No default in prod.
+    social_phone_pepper: str = Field(alias="SOCIAL_PHONE_PEPPER", default="")
 
     @model_validator(mode="after")
     def validate_cors_origins(self) -> Self:

@@ -912,6 +912,25 @@
       "logo": "Logo",
       "location": "Location"
     },
+    "location": {
+      "useMyLocation": "Use my current location",
+      "locating": "Finding your location…",
+      "accuracy": "Accuracy about {metres} m",
+      "geoUnsupported": "This browser cannot use GPS here. Search for a place or drag the pin on the map.",
+      "geoDenied": "Location access was denied. Search for a place or drag the pin on the map instead.",
+      "geoFailed": "Could not read GPS. Try again, or search for a place instead.",
+      "searchLabel": "Search a place or area",
+      "searchPlaceholder": "e.g. Arcades, Lusaka",
+      "searchAction": "Search",
+      "searching": "Searching…",
+      "searchTooShort": "Type at least 3 characters to search.",
+      "searchEmpty": "No matches in Zambia. Try a nearby landmark or drag the pin.",
+      "searchUnavailable": "Place search is unavailable. Drag the pin on the map to set your shop.",
+      "searchFailed": "Search failed. Try again or drag the pin on the map.",
+      "searchRateLimited": "Too many searches. Wait a minute and try again.",
+      "mapAttribution": "© OpenStreetMap contributors",
+      "advanced": "Advanced (coordinates)"
+    },
     "fields": {
       "displayNameLabel": "Display name",
       "descriptionLabel": "Your story",
@@ -1209,7 +1228,8 @@
     "needsAction": {
       "heading": "Do this now",
       "empty": "Nothing to do — no orders are waiting for you.",
-      "emptyTitle": "All done"
+      "emptyTitle": "All done",
+      "count": "{count, plural, one {# order needs you} other {# orders need you}}"
     },
     "actions": {
       "openQueue": "Funguleni order queue",
@@ -1313,7 +1333,23 @@
           "title": "Complete your shop profile",
           "body": "A logo, opening hours and a short description help buyers trust you."
         }
-      }
+      },
+      "progress": "{count, plural, one {# step left} other {# steps left}}",
+      "progressComplete": "You're all caught up on setup.",
+      "progressAria": "Setup progress"
+    },
+    "quickActions": {
+      "ariaLabel": "Quick actions",
+      "addProduct": "Add product",
+      "scan": "Scan",
+      "orders": "Orders",
+      "payouts": "Payouts"
+    },
+    "stats": {
+      "live": "Live today",
+      "quiet": "Quiet day",
+      "actionNeeded": "Needs you",
+      "caughtUp": "Caught up"
     }
   },
   "queue": {

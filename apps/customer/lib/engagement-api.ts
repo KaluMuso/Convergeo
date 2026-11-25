@@ -4,11 +4,7 @@
  */
 
 import { getApiBaseUrl } from "./api-base-url";
-import {
-  listWishlistEntries,
-  replaceWishlistLocal,
-  type WishlistEntry,
-} from "./wishlist-local";
+import { listWishlistEntries, replaceWishlistLocal, type WishlistEntry } from "./wishlist-local";
 
 export async function getAccessToken(): Promise<string | null> {
   try {
@@ -27,18 +23,15 @@ async function apiRequest<T>(
 ): Promise<T | null> {
   const { token, ...rest } = init;
   try {
-    const response = await fetch(
-      `${getApiBaseUrl().replace(/\/$/, "")}${path}`,
-      {
-        ...rest,
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          ...(rest.headers ?? {}),
-        },
+    const response = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}${path}`, {
+      ...rest,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(rest.headers ?? {}),
       },
-    );
+    });
     if (!response.ok) {
       return null;
     }
@@ -114,9 +107,7 @@ export async function syncWishlistWithServer(): Promise<void> {
   );
 }
 
-export async function pushWishlistProductIds(
-  productIds: string[],
-): Promise<void> {
+export async function pushWishlistProductIds(productIds: string[]): Promise<void> {
   const token = await getAccessToken();
   if (!token) {
     return;
@@ -128,9 +119,7 @@ export async function pushWishlistProductIds(
   });
 }
 
-export async function recordRecentlyViewedOnServer(
-  productId: string,
-): Promise<void> {
+export async function recordRecentlyViewedOnServer(productId: string): Promise<void> {
   const token = await getAccessToken();
   if (!token || !productId) {
     return;
@@ -150,9 +139,7 @@ export async function hasCustomerSession(): Promise<boolean> {
 type FollowListResponse = { items: Array<{ vendor_id: string }> };
 
 /** Whether the signed-in customer follows `vendorId`; null when signed out or on error. */
-export async function isFollowingVendor(
-  vendorId: string,
-): Promise<boolean | null> {
+export async function isFollowingVendor(vendorId: string): Promise<boolean | null> {
   const token = await getAccessToken();
   if (!token) {
     return null;
@@ -168,10 +155,7 @@ export async function isFollowingVendor(
 }
 
 /** PUT/DELETE /vendors/{id}/follow (204). Returns false on any failure. */
-export async function setVendorFollow(
-  vendorId: string,
-  follow: boolean,
-): Promise<boolean> {
+export async function setVendorFollow(vendorId: string, follow: boolean): Promise<boolean> {
   const token = await getAccessToken();
   if (!token) {
     return false;
@@ -195,6 +179,36 @@ export async function setVendorFollow(
  * (retention API, 201). Returns "signed_out" when there is no session so the
  * caller can route to login.
  */
+export async function subscribePriceDrop(
+  listingId: string,
+  targetPriceNgwee?: number,
+): Promise<"ok" | "signed_out" | "error"> {
+  const token = await getAccessToken();
+  if (!token) {
+    return "signed_out";
+  }
+  const body: { listing_id: string; kind: "price_drop"; target_price_ngwee?: number } = {
+    listing_id: listingId,
+    kind: "price_drop",
+  };
+  if (typeof targetPriceNgwee === "number") {
+    body.target_price_ngwee = targetPriceNgwee;
+  }
+  try {
+    const response = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}/me/listing-alerts`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    return response.ok ? "ok" : "error";
+  } catch {
+    return "error";
+  }
+}
+
 export async function subscribeBackInStock(
   listingId: string,
 ): Promise<"ok" | "signed_out" | "error"> {
@@ -203,17 +217,14 @@ export async function subscribeBackInStock(
     return "signed_out";
   }
   try {
-    const response = await fetch(
-      `${getApiBaseUrl().replace(/\/$/, "")}/me/listing-alerts`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ listing_id: listingId, kind: "back_in_stock" }),
+    const response = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}/me/listing-alerts`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({ listing_id: listingId, kind: "back_in_stock" }),
+    });
     return response.ok ? "ok" : "error";
   } catch {
     return "error";
@@ -233,9 +244,7 @@ export type ProductQuestion = {
 };
 
 /** Public Q&A list: GET /products/{slug}/questions. null on failure. */
-export async function fetchProductQuestions(
-  slug: string,
-): Promise<ProductQuestion[] | null> {
+export async function fetchProductQuestions(slug: string): Promise<ProductQuestion[] | null> {
   try {
     const response = await fetch(
       `${getApiBaseUrl().replace(/\/$/, "")}/products/${encodeURIComponent(slug)}/questions?limit=10`,
@@ -259,14 +268,11 @@ export async function askProductQuestion(
   if (!token) {
     return "signed_out";
   }
-  const result = await apiRequest<unknown>(
-    `/products/${encodeURIComponent(slug)}/questions`,
-    {
-      method: "POST",
-      token,
-      body: JSON.stringify({ body }),
-    },
-  );
+  const result = await apiRequest<unknown>(`/products/${encodeURIComponent(slug)}/questions`, {
+    method: "POST",
+    token,
+    body: JSON.stringify({ body }),
+  });
   return result === null ? "error" : "ok";
 }
 
@@ -310,9 +316,7 @@ export type FollowFeedItem = {
 /** New listings from followed stores. "signed_out" when there is no session. */
 export async function fetchFollowFeed(
   offset = 0,
-): Promise<
-  { items: FollowFeedItem[]; next_offset: number | null } | "signed_out" | null
-> {
+): Promise<{ items: FollowFeedItem[]; next_offset: number | null } | "signed_out" | null> {
   const token = await getAccessToken();
   if (!token) {
     return "signed_out";

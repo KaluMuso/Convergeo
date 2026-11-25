@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { VendorGrid } from "../../_components/vendor-page";
+import { VendorRouteHeader } from "../../_components/vendor-route-header";
 import { ListSkeleton } from "../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { createManageClient, type ListingSummary } from "../[id]/edit/_lib/manage-client";
@@ -105,10 +106,18 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="mb-2 space-y-1">
-        <h1 className="text-lg font-semibold text-text">{t("listings.manage.title")}</h1>
-        <p className="text-sm text-text-2">{t("listings.manage.intro")}</p>
-      </header>
+      <VendorRouteHeader
+        title={t("listings.manage.title")}
+        subtitle={t("listings.manage.intro")}
+        actions={
+          <Link
+            className="press-scale inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-[var(--primary-btn-fg)]"
+            href={`/${locale}/listings/new`}
+          >
+            {t("listings.manage.createCta")}
+          </Link>
+        }
+      />
 
       <div className="px-1">
         <PlanUsageCard refreshKey={listings.length} />
@@ -126,6 +135,7 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
       {listings.length === 0 ? (
         <div className="flex flex-col gap-3 px-1">
           <VendorEmptyState
+            illustration="no-products"
             title={t("listings.manage.emptyTitle")}
             body={t("listings.manage.empty")}
           />
@@ -138,7 +148,10 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
           </div>
           <VendorGrid cols="cards" className="px-1">
             {listings.map((listing) => (
-              <div key={listing.id} className="rounded-lg border border-border p-4 shadow-sm lg:p-5">
+              <div
+                key={listing.id}
+                className="rounded-lg border border-border p-4 shadow-sm lg:p-5"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
                     <p className="truncate text-sm font-medium text-text">{listing.title}</p>

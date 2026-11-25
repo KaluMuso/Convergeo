@@ -6,23 +6,18 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next-intl", () => ({
-  useTranslations:
-    () => (key: string, values?: Record<string, number | string>) => {
-      if (key === "comparison.distanceMeters") {
-        return `${values?.value ?? 0} m`;
-      }
-      if (key === "comparison.distanceKilometers") {
-        return `${values?.value ?? 0} km`;
-      }
-      return key;
-    },
+  useTranslations: () => (key: string, values?: Record<string, number | string>) => {
+    if (key === "comparison.distanceMeters") {
+      return `${values?.value ?? 0} m`;
+    }
+    if (key === "comparison.distanceKilometers") {
+      return `${values?.value ?? 0} km`;
+    }
+    return key;
+  },
 }));
 
-import {
-  Comparison,
-  type ComparisonLabels,
-  type ComparisonListing,
-} from "./comparison";
+import { Comparison, type ComparisonLabels, type ComparisonListing } from "./comparison";
 
 afterEach(() => {
   cleanup();
@@ -33,6 +28,7 @@ const labels: ComparisonLabels = {
   vendorCount: "{count} sellers",
   sortLabel: "Sort by",
   sortPrice: "Lowest price",
+  sortTotal: "Lowest total",
   sortDistance: "Nearest",
   price: "Price",
   condition: "Condition",
@@ -51,6 +47,11 @@ const labels: ComparisonLabels = {
   conditionUsed: "Used",
   usingFallbackLocation: "Distances from Lusaka CBD.",
   lowestPriceBadge: "Lowest price",
+  deliveryFeeFree: "Free delivery",
+  deliveryFeePlus: "+{fee} delivery",
+  chipCod: "Pay on delivery",
+  chipEscrow: "Held by Vergeo5",
+  readyIn: "Ready in {days} days",
 };
 
 const logisticsPillLabels = {
@@ -113,14 +114,8 @@ describe("Comparison mobile cards", () => {
     );
 
     expect(screen.getByTestId("pdp-compare-cards")).toBeInTheDocument();
-    expect(screen.getByTestId("comparison-card-a")).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByTestId("comparison-card-b")).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    expect(screen.getByTestId("comparison-card-a")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("comparison-card-b")).toHaveAttribute("aria-pressed", "false");
 
     await user.click(screen.getByTestId("comparison-card-b"));
     expect(onSelect).toHaveBeenCalledWith("b");
@@ -189,13 +184,9 @@ describe("Comparison mobile cards", () => {
     );
 
     // Listing "a" has coordinates: distance is interpolated.
-    expect(screen.getByTestId("comparison-card-a")).toHaveTextContent(
-      /\d.* away/,
-    );
+    expect(screen.getByTestId("comparison-card-a")).toHaveTextContent(/\d.* away/);
     // Listing "b" has no coordinates: no distance line at all.
-    expect(screen.getByTestId("comparison-card-b")).not.toHaveTextContent(
-      "away",
-    );
+    expect(screen.getByTestId("comparison-card-b")).not.toHaveTextContent("away");
     expect(document.body).not.toHaveTextContent("{distance}");
   });
 });
