@@ -12,16 +12,11 @@ import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import {
-  getApiBaseUrl,
-  resolveApiBaseUrl,
-} from "../../../../../lib/api-base-url";
+import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../../lib/api-base-url";
 import { fetchJson } from "../../../../../lib/fetch-json";
+import { categoryPlpRobots } from "../../../../../lib/seo/category-listing-eligibility";
 import { BackToTop } from "../../_components/back-to-top";
-import {
-  buildCategoryTree,
-  categoryDisplayName,
-} from "../../_components/category-tree";
+import { buildCategoryTree, categoryDisplayName } from "../../_components/category-tree";
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { attachOfferBadges } from "../../_components/offers/attach-offer-badges";
 import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
@@ -30,10 +25,7 @@ import {
   catalogDeliveryLabels,
   catalogMadeToOrderLabels,
 } from "../../_components/plp/delivery-labels";
-import {
-  FacetPanel,
-  type FacetCounts,
-} from "../../_components/plp/facet-panel";
+import { FacetPanel, type FacetCounts } from "../../_components/plp/facet-panel";
 import { type CatalogListing } from "../../_components/plp/listing-grid";
 import { PlpBrowseClient } from "../../_components/plp/load-more";
 import { MobileFilterDrawer } from "../../_components/plp/mobile-filter-drawer";
@@ -85,9 +77,7 @@ type CatalogTranslator = {
   raw: (key: string) => string;
 };
 
-async function getCatalogTranslator(
-  locale: string,
-): Promise<CatalogTranslator> {
+async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
   const messages = {
@@ -150,21 +140,16 @@ function buildCatalogQuery(
   return params.toString();
 }
 
-async function fetchCatalog(
-  queryString: string,
-): Promise<CatalogApiResponse | null> {
+async function fetchCatalog(queryString: string): Promise<CatalogApiResponse | null> {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
     return null;
   }
   const suffix = queryString ? `?${queryString}` : "";
   try {
-    return await fetchJson<CatalogApiResponse>(
-      `${baseUrl}/catalog/listings${suffix}`,
-      {
-        next: { revalidate: 60 },
-      },
-    );
+    return await fetchJson<CatalogApiResponse>(`${baseUrl}/catalog/listings${suffix}`, {
+      next: { revalidate: 60 },
+    });
   } catch {
     return null;
   }
@@ -201,10 +186,7 @@ export function generateStaticParams() {
   ]);
 }
 
-export async function generateMetadata({
-  params,
-  searchParams,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const resolvedSearch = await searchParams;
   const t = await getCatalogTranslator(locale);
@@ -217,9 +199,10 @@ export async function generateMetadata({
     ) || t("plp.defaultCategory");
 
   const canonicalPath = buildLocaleCanonical(locale, "c", ...slug);
-  const hasFilters = Object.keys(resolvedSearch).some(
-    (key) => !["lat", "lng"].includes(key),
-  );
+  const hasFilters = Object.keys(resolvedSearch).some((key) => !["lat", "lng"].includes(key));
+  const catalogQuery = buildCatalogQuery(categoryPath, resolvedSearch);
+  const catalogForMeta = await fetchCatalog(catalogQuery);
+  const listingTotal = catalogForMeta?.total ?? 0;
   const title = t("plp.title", { category: categoryName });
   const description = t("plp.meta.description", { category: categoryName });
 
@@ -233,17 +216,11 @@ export async function generateMetadata({
       locale,
       url: canonicalPath,
     }),
-    robots: {
-      index: !hasFilters,
-      follow: true,
-    },
+    robots: categoryPlpRobots(hasFilters, listingTotal),
   };
 }
 
-export default async function CategoryPlpPage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function CategoryPlpPage({ params, searchParams }: PageProps) {
   const { locale, slug } = await params;
   const resolvedSearch = await searchParams;
   setRequestLocale(locale);
@@ -266,9 +243,7 @@ export default async function CategoryPlpPage({
   const hasLocation = Boolean(filterState.lat && filterState.lng);
 
   // W8: offer pills ("Buy 2 get 1 free") — one cached read; no-op when `bundles` is off.
-  const listings = await attachOfferBadges(
-    (catalog?.items ?? []).map(mapListing),
-  );
+  const listings = await attachOfferBadges((catalog?.items ?? []).map(mapListing));
   const facets: FacetCounts = catalog?.facets ?? {
     condition: [],
     availability: [],
@@ -374,14 +349,8 @@ export default async function CategoryPlpPage({
         <h1 className="font-display text-h1 text-display-ink">
           {t("plp.title", { category: categoryName })}
         </h1>
-        <p
-          className="text-sm text-text-2"
-          data-testid="plp-results-count"
-          aria-live="polite"
-        >
-          {catalogUnavailable
-            ? t("plp.resultsUnknown")
-            : t("plp.results", { count: total })}
+        <p className="text-sm text-text-2" data-testid="plp-results-count" aria-live="polite">
+          {catalogUnavailable ? t("plp.resultsUnknown") : t("plp.results", { count: total })}
         </p>
       </header>
 
@@ -394,11 +363,7 @@ export default async function CategoryPlpPage({
 
       <div className="grid gap-3 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[15rem_minmax(0,1fr)]">
         <div className="hidden lg:block">
-          <FacetPanel
-            labels={facetLabels}
-            facets={facets}
-            initialState={filterState}
-          />
+          <FacetPanel labels={facetLabels} facets={facets} initialState={filterState} />
         </div>
 
         <section className="flex min-w-0 flex-col gap-4">
@@ -492,9 +457,7 @@ export default async function CategoryPlpPage({
           )}
         </section>
       </div>
-      {!catalogUnavailable && listings.length > 0 ? (
-        <BackToTop label={t("plp.backToTop")} />
-      ) : null}
+      {!catalogUnavailable && listings.length > 0 ? <BackToTop label={t("plp.backToTop")} /> : null}
     </div>
   );
 }

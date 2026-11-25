@@ -12,10 +12,7 @@ import {
   JsonLdScript,
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
-import {
-  buildOgImageUrl,
-  buildSocialMetadata,
-} from "@vergeo/ui/src/seo/metadata";
+import { buildOgImageUrl, buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -26,6 +23,7 @@ import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { contactVendorCapabilityAvailable } from "../../../../../lib/enquiries-capability";
 import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
 import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
+import { fetchCategoriesResult } from "../../_components/merch-data";
 import { PdpOfferBox } from "../../_components/offers/pdp-offer-box";
 import {
   fetchProduct,
@@ -42,10 +40,7 @@ import {
 } from "../../_components/pdp/pdp-interactive-body";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
-import {
-  specRowsFromJson,
-  SpecsTable,
-} from "../../_components/pdp/specs-table";
+import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
 
 import {
   productAggregateRatingForJsonLd,
@@ -100,9 +95,7 @@ type ComparisonApiResponse = {
   listings: ComparisonApiListing[];
 };
 
-async function getCatalogTranslator(
-  locale: string,
-): Promise<CatalogTranslator> {
+async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
   const messages = {
@@ -132,13 +125,9 @@ async function getNavTranslator(locale: string): Promise<CatalogTranslator> {
   }) as unknown as CatalogTranslator;
 }
 
-async function fetchComparison(
-  slug: string,
-): Promise<ComparisonApiResponse | null> {
+async function fetchComparison(slug: string): Promise<ComparisonApiResponse | null> {
   try {
-    const url = absoluteApiUrl(
-      `/products/${encodeURIComponent(slug)}/comparison`,
-    );
+    const url = absoluteApiUrl(`/products/${encodeURIComponent(slug)}/comparison`);
     if (!url) {
       return null;
     }
@@ -177,9 +166,7 @@ async function fetchProductReviews(productId: string): Promise<{
   aggregate: ProductReviewAggregate;
 } | null> {
   try {
-    const url = absoluteApiUrl(
-      `/reviews?product_id=${encodeURIComponent(productId)}`,
-    );
+    const url = absoluteApiUrl(`/reviews?product_id=${encodeURIComponent(productId)}`);
     if (!url) {
       return null;
     }
@@ -194,8 +181,7 @@ async function fetchProductReviews(productId: string): Promise<{
       return null;
     }
 
-    const payload = (await response.json()) as
-      ProductReviewsApiResponse | ReviewRow[];
+    const payload = (await response.json()) as ProductReviewsApiResponse | ReviewRow[];
     // Prefer wrapped ProductReviewsResponse (rating_avg / rating_count).
     // Tolerate a legacy bare array during rollout — never invent aggregates.
     if (Array.isArray(payload)) {
@@ -208,8 +194,7 @@ async function fetchProductReviews(productId: string): Promise<{
       items: payload.items ?? [],
       aggregate: {
         rating_avg: payload.rating_avg ?? null,
-        rating_count:
-          typeof payload.rating_count === "number" ? payload.rating_count : 0,
+        rating_count: typeof payload.rating_count === "number" ? payload.rating_count : 0,
       },
     };
   } catch {
@@ -250,10 +235,7 @@ async function ReviewsPanel({
   );
 }
 
-function selectListing(
-  listings: Listing[],
-  listingId?: string,
-): Listing | null {
+function selectListing(listings: Listing[], listingId?: string): Listing | null {
   if (listings.length === 0) {
     return null;
   }
@@ -282,9 +264,7 @@ function galleryImages(
   alt: string,
 ): Array<{ publicId: string; alt: string }> {
   const source =
-    selectedListing && selectedListing.images.length > 0
-      ? selectedListing.images
-      : product.images;
+    selectedListing && selectedListing.images.length > 0 ? selectedListing.images : product.images;
 
   return source.map((image) => ({
     publicId: image.public_id,
@@ -328,8 +308,7 @@ function toProductListings(
     optionGroups: (listing.option_groups ?? []).map((group) => ({
       id: group.id,
       name: group.name,
-      display:
-        group.display === "swatch" ? ("swatch" as const) : ("pill" as const),
+      display: group.display === "swatch" ? ("swatch" as const) : ("pill" as const),
       values: group.values.map((value) => ({
         id: value.id,
         label: value.label,
@@ -395,9 +374,7 @@ function toComparisonListings(
 }
 
 function productImageUrls(product: ProductDetail): string[] {
-  return resolveCloudinaryImageUrls(
-    product.images.map((image) => image.public_id),
-  );
+  return resolveCloudinaryImageUrls(product.images.map((image) => image.public_id));
 }
 
 function lowestListingPriceNgwee(listings: Listing[]): number | null {
@@ -419,9 +396,7 @@ export function generateStaticParams() {
   return LOCALES.flatMap((locale) => [{ locale, slug: "itel-a70" }]);
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const t = await getCatalogTranslator(locale);
   const result = await fetchProduct(slug);
@@ -429,9 +404,7 @@ export async function generateMetadata({
   if (result.kind !== "product") {
     return {
       title:
-        result.kind === "unavailable"
-          ? t("pdp.unavailableTitle")
-          : t("pdp.meta.notFoundTitle"),
+        result.kind === "unavailable" ? t("pdp.unavailableTitle") : t("pdp.meta.notFoundTitle"),
       robots: { index: false, follow: false },
     };
   }
@@ -493,10 +466,11 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   setRequestLocale(locale);
   const t = await getCatalogTranslator(locale);
   const tNav = await getNavTranslator(locale);
-  const [result, contactVendorEnabled, storefrontConfig] = await Promise.all([
+  const [result, contactVendorEnabled, storefrontConfig, categoriesResult] = await Promise.all([
     fetchProduct(slug),
     contactVendorCapabilityAvailable(),
     fetchStorefrontConfig(),
+    fetchCategoriesResult(),
   ]);
 
   if (result.kind === "redirect") {
@@ -543,9 +517,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const images = galleryImages(product, selectedListing, product.name);
   // Authoritative product aggregate from GET /reviews (rating_avg / rating_count),
   // not a limited UI sample — same pattern as vendor LocalBusiness JSON-LD.
-  const reviewAggregate = productAggregateRatingForJsonLd(
-    reviewsForSeo?.aggregate,
-  );
+  const reviewAggregate = productAggregateRatingForJsonLd(reviewsForSeo?.aggregate);
   const productJsonLdInput = {
     name: product.name,
     slug: product.slug,
@@ -563,10 +535,23 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const productJsonLd = canBuildProductJsonLd(productJsonLdInput)
     ? buildProductJsonLd(productJsonLdInput)
     : null;
-  const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [
+  const productCategory =
+    categoriesResult.ok && categoriesResult.categories.length > 0
+      ? categoriesResult.categories.find((category) => category.id === product.category_id)
+      : undefined;
+  const breadcrumbItems = [
     { name: tNav("shop.home"), path: "" },
+    ...(productCategory
+      ? [
+          {
+            name: productCategory.name,
+            path: `c/${productCategory.path}`,
+          },
+        ]
+      : []),
     { name: product.name, path: `p/${product.slug}` },
-  ]);
+  ];
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, breadcrumbItems);
   const productListings = toProductListings(
     product,
     product.name,
@@ -690,16 +675,10 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             >
               {tNav("shop.home")}
             </Link>
-            <span
-              className="shrink-0 text-text-3 before:content-['/']"
-              aria-hidden
-            />
+            <span className="shrink-0 text-text-3 before:content-['/']" aria-hidden />
           </li>
           <li className="flex min-w-0 items-center gap-1">
-            <span
-              className="truncate font-medium text-text"
-              aria-current="page"
-            >
+            <span className="truncate font-medium text-text" aria-current="page">
               {product.name}
             </span>
           </li>

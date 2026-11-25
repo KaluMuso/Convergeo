@@ -38,6 +38,22 @@
     "extras": "增值服务申请",
     "trials": "免费试用"
   },
+  "boards": {
+    "states": {
+      "accounts": {
+        "emptyTitle": "No admin accounts",
+        "emptyBody": "When someone is granted an admin role they appear here. Use Manage roles to add one."
+      },
+      "support": {
+        "emptyTitle": "No matches",
+        "emptyBody": "Try another phone number, order ID, or customer name."
+      },
+      "orders": {
+        "emptyTitle": "No orders match",
+        "emptyBody": "Widen your filters or clear them, then search again."
+      }
+    }
+  },
   "hubs": {
     "moderation": {
       "title": "内容审核",
