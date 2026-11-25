@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Protocol
 
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, verify_supabase_jwt
+from app.core.ratelimit import bump_rate_counter, raise_rate_limited
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -30,6 +31,8 @@ EXPORT_PATH_PREFIX = "data-exports"
 SIGNED_URL_TTL_SECONDS = 900
 DELETE_CONFIRMATION_PHRASE = "DELETE MY ACCOUNT"
 ANONYMOUS_DISPLAY_NAME = "Deleted User"
+REAUTH_VERIFY_LIMIT_PER_USER = 10
+REAUTH_VERIFY_WINDOW_SECONDS = 900
 
 EXPORT_BUNDLE_KEYS = (
     "profile",
@@ -264,20 +267,59 @@ def upload_export_bundle(
     return export_id, download_url
 
 
-def verify_reauth_otp(*, phone: str | None, otp: str, settings: Settings) -> None:
-    if not phone:
+def _email_from_jwt(token: str, settings: Settings) -> str | None:
+    try:
+        claims = verify_supabase_jwt(token, settings)
+    except Exception:
+        return None
+    email = claims.get("email")
+    if isinstance(email, str) and email.strip():
+        return email.strip()
+    return None
+
+
+def verify_reauth_otp(
+    *,
+    user_id: str,
+    token: str,
+    phone: str | None,
+    otp: str,
+    settings: Settings,
+    service: ServiceRoleClient,
+) -> None:
+    allowed, retry_after = bump_rate_counter(
+        scope="reauth_otp_verify",
+        key=user_id,
+        window=timedelta(seconds=REAUTH_VERIFY_WINDOW_SECONDS),
+        limit=REAUTH_VERIFY_LIMIT_PER_USER,
+        client=service.client,
+    )
+    if not allowed:
+        raise_rate_limited(
+            retry_after=retry_after,
+            message_key="auth.errors.rateLimited",
+            message="Too many verification attempts",
+        )
+
+    email = _email_from_jwt(token, settings)
+    if phone:
+        verify_payload: dict[str, str] = {
+            "phone": _normalize_phone(phone),
+            "token": otp,
+            "type": "sms",
+        }
+    elif email:
+        verify_payload = {"email": email, "token": otp, "type": "email"}
+    else:
         raise AppError(
             code="reauth_required",
-            message="Account deletion requires a verified phone number",
+            message="Step-up verification requires a verified phone or email on your account",
             http_status=403,
         )
 
-    normalized_phone = _normalize_phone(phone)
     auth_client = create_client(settings.supabase_url, settings.supabase_anon_key)
     try:
-        response = auth_client.auth.verify_otp(
-            {"phone": normalized_phone, "token": otp, "type": "sms"},
-        )
+        response = auth_client.auth.verify_otp(verify_payload)
     except Exception as exc:
         raise AppError(
             code="reauth_failed",
@@ -459,7 +501,14 @@ async def delete_account(
     if not isinstance(phone, str):
         phone = None
 
-    verify_reauth_otp(phone=phone, otp=body.otp, settings=settings)
+    verify_reauth_otp(
+        user_id=current_user.id,
+        token=current_user.token,
+        phone=phone,
+        otp=body.otp,
+        settings=settings,
+        service=service,
+    )
     anonymize_and_delete_account(service, user_id=current_user.id)
 
     return DeleteAccountResponse(status="deleted", user_id=current_user.id)

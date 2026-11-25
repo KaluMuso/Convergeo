@@ -540,7 +540,14 @@ async def change_payout_method(
         )
 
     phone = _owner_phone(service_client, owner_user_id)
-    verify_reauth_otp(phone=phone, otp=body.otp, settings=settings)
+    verify_reauth_otp(
+        user_id=current_user.id,
+        token=current_user.token,
+        phone=phone,
+        otp=body.otp,
+        settings=settings,
+        service=service_client,
+    )
 
     legal_name = _load_kyc_legal_name(service_client, vendor_id)
     resolve_result = await resolve_and_score_momo_name(
