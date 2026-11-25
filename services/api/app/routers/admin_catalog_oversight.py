@@ -19,13 +19,30 @@ def list_services(
 ) -> dict[str, Any]:
     response = (
         service.client.table("services")
-        .select("id,vendor_id,title,category,status,created_at")
+        .select(
+            "id,vendor_id,title,category,status,created_at,from_price_ngwee,vendors(display_name)"
+        )
         .order("created_at", desc=True)
         .limit(100)
         .execute()
     )
-    items = [row for row in package_state.rows(response)]
+    items = [_service_oversight_row(row) for row in package_state.rows(response)]
     return {"items": _with_packages(service, items)}
+
+
+def _vendor_display_name(row: dict[str, Any]) -> str | None:
+    vendors = row.get("vendors")
+    if isinstance(vendors, dict):
+        name = vendors.get("display_name")
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+    return None
+
+
+def _service_oversight_row(row: dict[str, Any]) -> dict[str, Any]:
+    cleaned = {key: value for key, value in row.items() if key != "vendors"}
+    cleaned["vendor_display_name"] = _vendor_display_name(row)
+    return cleaned
 
 
 def _with_packages(
@@ -70,10 +87,31 @@ def list_inventory(
 ) -> dict[str, Any]:
     response = (
         service.client.table("vendor_listings")
-        .select("id,vendor_id,product_id,title_override,stock_mode,stock_qty,status")
+        .select(
+            "id,vendor_id,product_id,title_override,price_ngwee,stock_mode,stock_qty,status,"
+            "vendors(display_name),products(name)"
+        )
         .eq("stock_mode", "tracked")
         .order("stock_qty")
         .limit(100)
         .execute()
     )
-    return {"items": response.data if isinstance(response.data, list) else []}
+    raw = response.data if isinstance(response.data, list) else []
+    items = [_inventory_oversight_row(row) for row in raw if isinstance(row, dict)]
+    return {"items": items}
+
+
+def _inventory_oversight_row(row: dict[str, Any]) -> dict[str, Any]:
+    products = row.get("products")
+    product_name = None
+    if isinstance(products, dict):
+        name = products.get("name")
+        if isinstance(name, str) and name.strip():
+            product_name = name.strip()
+    title = row.get("title_override")
+    listing_title = title.strip() if isinstance(title, str) and title.strip() else None
+    cleaned = {key: value for key, value in row.items() if key not in {"vendors", "products"}}
+    cleaned["vendor_display_name"] = _vendor_display_name(row)
+    cleaned["product_name"] = product_name
+    cleaned["display_title"] = listing_title or product_name or cleaned["id"]
+    return cleaned

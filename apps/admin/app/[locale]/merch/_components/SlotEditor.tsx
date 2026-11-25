@@ -3,6 +3,9 @@
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
+import { adminPrimaryButtonClass } from "../../_components/admin-primary-button";
+
+import { AdminImagePicker } from "./AdminImagePicker";
 import { type HeroVariant, type MerchSlot, merchApi } from "./api";
 import { type BannerItemDraft, BannerEditor } from "./BannerEditor";
 import { type CollectionDraft, CollectionBuilder } from "./CollectionBuilder";
@@ -145,11 +148,19 @@ export function SlotEditor({ slot, variants, onSaved, onClose }: SlotEditorProps
   }, [slot]);
 
   const [variantKey, setVariantKey] = useState(merged.variant_key);
-  const [titleKey, setTitleKey] = useState(
-    typeof merged.payload.title_key === "string" ? merged.payload.title_key : "",
+  const [titleText, setTitleText] = useState(
+    typeof merged.payload.title_text === "string"
+      ? merged.payload.title_text
+      : typeof merged.payload.title_key === "string"
+        ? merged.payload.title_key
+        : "",
   );
-  const [subtitleKey, setSubtitleKey] = useState(
-    typeof merged.payload.subtitle_key === "string" ? merged.payload.subtitle_key : "",
+  const [subtitleText, setSubtitleText] = useState(
+    typeof merged.payload.subtitle_text === "string"
+      ? merged.payload.subtitle_text
+      : typeof merged.payload.subtitle_key === "string"
+        ? merged.payload.subtitle_key
+        : "",
   );
   const [imagePublicId, setImagePublicId] = useState(
     typeof merged.payload.image_public_id === "string" ? merged.payload.image_public_id : "",
@@ -182,8 +193,8 @@ export function SlotEditor({ slot, variants, onSaved, onClose }: SlotEditorProps
   const buildPayload = (): Record<string, unknown> => {
     if (slot.slot_key === "hero") {
       return {
-        title_key: titleKey,
-        subtitle_key: subtitleKey,
+        title_text: titleText.trim() || undefined,
+        subtitle_text: subtitleText.trim() || undefined,
         image_public_id: imagePublicId || undefined,
         primary_cta_href: primaryHref || undefined,
         secondary_cta_href: secondaryHref || undefined,
@@ -243,32 +254,28 @@ export function SlotEditor({ slot, variants, onSaved, onClose }: SlotEditorProps
           <HeroVariantPicker variants={variants} selected={variantKey} onSelect={setVariantKey} />
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-xs text-muted">
-              {tHero("titleKey")}
+              {tHero("titleText")}
               <input
                 type="text"
-                value={titleKey}
-                onChange={(event) => setTitleKey(event.target.value)}
-                className="min-h-11 rounded-md border border-border px-3 text-sm"
+                value={titleText}
+                onChange={(event) => setTitleText(event.target.value)}
+                className="min-h-11 rounded-md border border-border bg-surface px-3 text-sm text-text"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs text-muted">
-              {tHero("subtitleKey")}
+              {tHero("subtitleText")}
               <input
                 type="text"
-                value={subtitleKey}
-                onChange={(event) => setSubtitleKey(event.target.value)}
-                className="min-h-11 rounded-md border border-border px-3 text-sm"
+                value={subtitleText}
+                onChange={(event) => setSubtitleText(event.target.value)}
+                className="min-h-11 rounded-md border border-border bg-surface px-3 text-sm text-text"
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs text-muted">
-              {tHero("imagePublicId")}
-              <input
-                type="text"
-                value={imagePublicId}
-                onChange={(event) => setImagePublicId(event.target.value)}
-                className="min-h-11 rounded-md border border-border px-3 text-sm"
-              />
-            </label>
+            <AdminImagePicker
+              label={tHero("image")}
+              value={imagePublicId}
+              onChange={setImagePublicId}
+            />
             <label className="flex flex-col gap-1 text-xs text-muted">
               {tHero("primaryCtaHref")}
               <input
@@ -347,7 +354,7 @@ export function SlotEditor({ slot, variants, onSaved, onClose }: SlotEditorProps
           type="button"
           disabled={saving}
           onClick={() => void saveDraft()}
-          className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
+          className={`${adminPrimaryButtonClass} disabled:opacity-60`}
         >
           {saving ? tCommon("saving") : tCommon("save")}
         </button>
