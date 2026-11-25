@@ -419,7 +419,9 @@ def _seed_single_pending(fake: FakeSupabaseClient, *, kyc_id: str = KYC_NEW_ID) 
     )
 
 
-def test_sign_kyc_documents_prefers_batch_and_orders_nrc_first(fake_client: FakeSupabaseClient) -> None:
+def test_sign_kyc_documents_prefers_batch_and_orders_nrc_first(
+    fake_client: FakeSupabaseClient,
+) -> None:
     service_wrapper = MagicMock()
     service_wrapper.client = fake_client
     paths = ["kyc/vendor-a/selfie.jpg", "kyc/vendor-a/extra.pdf", "kyc/vendor-a/nrc.jpg"]
