@@ -2,16 +2,17 @@
 
 import { buttonBaseClasses, buttonSizeClasses } from "@vergeo/ui/src/button";
 import { LinkButton } from "@vergeo/ui/src/link-button";
-import {
-  CI_PERF_IMAGE_ID,
-  ciPerfPublicEnabled,
-} from "../../../../../../packages/ui/src/media/ci-perf-fixture";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { HeroCarousel } from "@vergeo/ui/src/merch/hero-carousel";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
+
+import {
+  CI_PERF_IMAGE_ID,
+  ciPerfPublicEnabled,
+} from "../../../../../../packages/ui/src/media/ci-perf-fixture";
 
 import { AdTracker } from "./home-feed/ad-tracker";
 import { localizeHref, type AdCreative } from "./home-feed/feed-types";
