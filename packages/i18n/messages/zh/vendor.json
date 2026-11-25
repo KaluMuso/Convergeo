@@ -386,6 +386,11 @@
     }
   },
   "listings": {
+    "formAside": {
+      "previewHeading": "Buyer preview",
+      "previewPhotoAlt": "Main listing photo",
+      "noPhoto": "No photo"
+    },
     "images": {
       "heading": "照片",
       "intro": "{count}/{max} 张照片。第一张是主图。",
@@ -403,6 +408,8 @@
       "upload": "添加照片",
       "uploading": "上传中…",
       "upload_failed": "照片上传失败。请重试。",
+      "upload_error_with_name": "Could not upload \"{name}\": {detail}",
+      "retry_one": "Retry this photo",
       "minimum_required": "商品在售时，至少保留 {count} 张实拍照片。",
       "retry": "重试",
       "duplicate": "该照片已在此商品中。",
@@ -520,6 +527,8 @@
       "stockTracked": "我会计数",
       "stockAlways": "一直有货",
       "stockQtyLabel": "现有数量",
+      "wholesaleSectionHeading": "Wholesale / bulk prices",
+      "wholesaleBuyersHint": "Wholesale listings appear to verified buyers on Supplies.",
       "wholesaleLabel": "批发阶梯价",
       "wholesaleHelp": "仅限 T2 认证商家（营业文件已核实）",
       "wholesaleMeasureUnavailable": "按米、公斤或升出售的商品暂不支持批发价。",
@@ -728,6 +737,10 @@
       },
       "emptyTitle": "暂无商品",
       "statusLabel": "状态",
+      "productStatus": {
+        "inReview": "Live, in review: buyers see it once Convergeo approves it",
+        "rejected": "Product rejected"
+      },
       "stock": {
         "heading": "调整可用库存",
         "help": "输入以销售步数计算的增减量，而非实物盘点总量。可用库存已扣除预留数量。不能在此更改单位或库存模式。新增分店库存需由库存负责人处理。",
@@ -1317,6 +1330,10 @@
           "title": "{count, plural, other {有 # 个订单等待您处理}}",
           "body": "今天 14:00 的截止时间已过。现在准备好，下一批发货时将优先送出。"
         },
+        "productsInReview": {
+          "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
+          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
+        },
         "catalogueProducts": {
           "title": "检查您的商品",
           "body": "保持库存和价格准确，避免买家订购您没有的商品。"
@@ -1338,9 +1355,18 @@
       "progressComplete": "You're all caught up on setup.",
       "progressAria": "Setup progress"
     },
+    "shopStatus": {
+      "heading": "Your shop",
+      "shopLive": "Shop live",
+      "idVerified": "ID verified",
+      "payoutSet": "Payout number set",
+      "yes": "Yes",
+      "notYet": "Not yet"
+    },
     "quickActions": {
       "ariaLabel": "Quick actions",
       "addProduct": "Add product",
+      "sellWholesale": "Sell wholesale",
       "scan": "Scan",
       "orders": "Orders",
       "payouts": "Payouts"

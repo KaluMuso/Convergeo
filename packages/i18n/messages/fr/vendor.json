@@ -386,6 +386,11 @@
     }
   },
   "listings": {
+    "formAside": {
+      "previewHeading": "Buyer preview",
+      "previewPhotoAlt": "Main listing photo",
+      "noPhoto": "No photo"
+    },
     "images": {
       "heading": "Photos",
       "intro": "{count} sur {max} photos. La première est la photo principale.",
@@ -403,6 +408,8 @@
       "upload": "Ajouter des photos",
       "uploading": "Envoi en cours…",
       "upload_failed": "La photo n'est pas partie. Réessayez.",
+      "upload_error_with_name": "Could not upload \"{name}\": {detail}",
+      "retry_one": "Retry this photo",
       "minimum_required": "Gardez au moins {count} vraie photo tant que ce produit est en vente.",
       "retry": "Réessayer",
       "duplicate": "Cette photo figure déjà sur l'annonce.",
@@ -520,6 +527,8 @@
       "stockTracked": "Je les compte",
       "stockAlways": "J'en ai toujours",
       "stockQtyLabel": "Combien vous en avez",
+      "wholesaleSectionHeading": "Wholesale / bulk prices",
+      "wholesaleBuyersHint": "Wholesale listings appear to verified buyers on Supplies.",
       "wholesaleLabel": "Paliers de gros (prix de gros)",
       "wholesaleHelp": "Réservé aux entreprises vérifiées T2 (papiers contrôlés)",
       "wholesaleMeasureUnavailable": "Les prix de gros ne sont pas encore prêts pour les articles au mètre, kg ou litre.",
@@ -728,6 +737,10 @@
       },
       "emptyTitle": "Aucune annonce",
       "statusLabel": "Statut",
+      "productStatus": {
+        "inReview": "Live, in review: buyers see it once Convergeo approves it",
+        "rejected": "Product rejected"
+      },
       "stock": {
         "heading": "Ajuster le stock disponible",
         "help": "Saisissez une variation en pas de vente, pas un total physique compté. Les unités réservées sont déjà exclues. Les unités et le mode de stock sont fixes. La création de stocks par agence nécessite le responsable du stock.",
@@ -1317,6 +1330,10 @@
           "title": "{count, plural, one {# commande vous attend} other {# commandes vous attendent}}",
           "body": "La limite de 14 h est passée. Préparez-les maintenant pour qu'elles partent en premier à la prochaine tournée."
         },
+        "productsInReview": {
+          "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
+          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
+        },
         "catalogueProducts": {
           "title": "Vérifiez vos produits",
           "body": "Gardez stocks et prix à jour pour qu'aucun acheteur ne commande un article que vous n'avez pas."
@@ -1338,9 +1355,18 @@
       "progressComplete": "You're all caught up on setup.",
       "progressAria": "Setup progress"
     },
+    "shopStatus": {
+      "heading": "Your shop",
+      "shopLive": "Shop live",
+      "idVerified": "ID verified",
+      "payoutSet": "Payout number set",
+      "yes": "Yes",
+      "notYet": "Not yet"
+    },
     "quickActions": {
       "ariaLabel": "Quick actions",
       "addProduct": "Add product",
+      "sellWholesale": "Sell wholesale",
       "scan": "Scan",
       "orders": "Orders",
       "payouts": "Payouts"
