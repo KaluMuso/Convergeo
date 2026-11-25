@@ -108,6 +108,9 @@
     "codStep1": "⚠ You order",
     "codStep2": "⚠ We deliver",
     "codStep3": "⚠ You pay on arrival",
+    "escrowStep1": "Mwalipila",
+    "escrowStep2": "Yikwata bwino na Convergeo",
+    "escrowStep3": "Yasuminishwa pa kufika",
     "leadTimeWhen": {
       "oneDay": "⚠ within a day",
       "days": "⚠ in about {count} days",
