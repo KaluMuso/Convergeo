@@ -202,7 +202,9 @@ def _listing_thumbnails(client: Any, listing_ids: list[str]) -> dict[str, str]:
     return out
 
 
-def _enrich_catalog_entities(client: Any, kind: CatalogKind, entities: list[CatalogEntityOut]) -> None:
+def _enrich_catalog_entities(
+    client: Any, kind: CatalogKind, entities: list[CatalogEntityOut]
+) -> None:
     if not entities:
         return
     if kind == "listing":
