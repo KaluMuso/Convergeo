@@ -72,53 +72,90 @@ export function KycQueue({ locale }: KycQueueProps) {
       {items.length === 0 ? (
         <EmptyBlock illustration="verify-id" title={t("empty")} body={t("emptyHint")} />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="admin-data-table min-w-full">
-            <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                <th className="px-2 py-3 font-medium">{t("vendor")}</th>
-                <th className="px-2 py-3 font-medium">{t("submitted")}</th>
-                <th className="px-2 py-3 font-medium">{t("slaColumn")}</th>
-                <th className="px-2 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.vendor_id} className="border-b border-border hover:bg-bg-2">
-                  <td className="px-2 py-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <IconTile hue="teal" size={40} aria-hidden>
-                        <LcStore className="size-5" duotone />
-                      </IconTile>
-                      <div className="min-w-0">
-                        <div className="truncate font-medium text-text">{item.display_name}</div>
-                        <div className="truncate text-xs text-muted">
-                          {item.tier != null ? t("tier", { tier: item.tier }) : item.slug}
+        <>
+          <ul
+            className="m-0 flex list-none flex-col gap-3 p-0 sm:hidden"
+            data-testid="kyc-queue-cards"
+          >
+            {items.map((item) => (
+              <li
+                key={item.vendor_id}
+                className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <IconTile hue="teal" size={40} aria-hidden>
+                    <LcStore className="size-5" duotone />
+                  </IconTile>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-text">{item.display_name}</div>
+                    <div className="truncate text-xs text-muted">
+                      {item.tier != null ? t("tier", { tier: item.tier }) : item.slug}
+                    </div>
+                  </div>
+                  {item.sla_badge ? <SlaBadge badge={item.sla_badge} /> : null}
+                </div>
+                <div className="text-xs text-muted">
+                  {t("submitted")}: {new Date(item.updated_at).toLocaleString(locale)}
+                </div>
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-primary px-4 text-sm font-medium text-primary disabled:opacity-50"
+                  disabled={!item.kyc_record_id}
+                  onClick={() => setSelected(item)}
+                >
+                  {t("review")}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto sm:block">
+            <table className="admin-data-table min-w-full">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+                  <th className="px-2 py-3 font-medium">{t("vendor")}</th>
+                  <th className="px-2 py-3 font-medium">{t("submitted")}</th>
+                  <th className="px-2 py-3 font-medium">{t("slaColumn")}</th>
+                  <th className="px-2 py-3 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.vendor_id} className="border-b border-border hover:bg-bg-2">
+                    <td className="px-2 py-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <IconTile hue="teal" size={40} aria-hidden>
+                          <LcStore className="size-5" duotone />
+                        </IconTile>
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-text">{item.display_name}</div>
+                          <div className="truncate text-xs text-muted">
+                            {item.tier != null ? t("tier", { tier: item.tier }) : item.slug}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-2 py-3 text-muted">
-                    {new Date(item.updated_at).toLocaleString(locale)}
-                  </td>
-                  <td className="px-2 py-3">
-                    {item.sla_badge ? <SlaBadge badge={item.sla_badge} /> : "—"}
-                  </td>
-                  <td className="px-2 py-3 text-right">
-                    <button
-                      type="button"
-                      className="inline-flex min-h-11 items-center rounded-md border border-primary px-4 text-sm font-medium text-primary disabled:opacity-50"
-                      disabled={!item.kyc_record_id}
-                      onClick={() => setSelected(item)}
-                    >
-                      {t("review")}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </td>
+                    <td className="px-2 py-3 text-muted">
+                      {new Date(item.updated_at).toLocaleString(locale)}
+                    </td>
+                    <td className="px-2 py-3">
+                      {item.sla_badge ? <SlaBadge badge={item.sla_badge} /> : "—"}
+                    </td>
+                    <td className="px-2 py-3 text-right">
+                      <button
+                        type="button"
+                        className="inline-flex min-h-11 items-center rounded-md border border-primary px-4 text-sm font-medium text-primary disabled:opacity-50"
+                        disabled={!item.kyc_record_id}
+                        onClick={() => setSelected(item)}
+                      >
+                        {t("review")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {selected ? (
