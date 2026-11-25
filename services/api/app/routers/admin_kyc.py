@@ -338,10 +338,10 @@ def _parse_batch_signed_urls(
 
     documents: list[SignedDocUrl] = []
     for path in ordered_paths:
-        row = by_path.get(path)
-        if row is None:
+        match = by_path.get(path)
+        if match is None:
             return None
-        documents.append(_signed_url_from_result(row, reference=reference, path=path))
+        documents.append(_signed_url_from_result(match, reference=reference, path=path))
     return documents
 
 

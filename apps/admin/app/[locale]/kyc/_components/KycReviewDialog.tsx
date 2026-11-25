@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
-import { EMPTY_CHECKS, KycChecklist, type KycChecks } from "./KycChecklist";
 import { type VendorKycDetail, type VendorQueueItem, kycApi, prefetchVendorKycDetail } from "./api";
 import { DocViewer } from "./DocViewer";
+import { EMPTY_CHECKS, KycChecklist, type KycChecks } from "./KycChecklist";
 
 type KycReviewDialogProps = {
   item: VendorQueueItem;
