@@ -1,5 +1,4 @@
 import type { KeyboardEvent, ReactNode } from "react";
-import { useId } from "react";
 
 type StarRatingBaseProps = {
   className?: string;
@@ -31,7 +30,7 @@ function clampRating(value: number): number {
   return Math.min(STAR_COUNT, Math.max(0, value));
 }
 
-function StarIcon({ fill, clipId }: { fill: "empty" | "half" | "full"; clipId: string }) {
+function StarIcon({ fill }: { fill: "empty" | "half" | "full" }) {
   const starPath =
     "M12 2l2.9 6.26L22 9.27l-5 4.87L18.2 22 12 18.56 5.8 22 7 14.14l-5-4.87 7.1-1.01L12 2z";
 
@@ -60,13 +59,12 @@ function StarIcon({ fill, clipId }: { fill: "empty" | "half" | "full"; clipId: s
         data-star-fill="half"
         style={{ flexShrink: 0 }}
       >
-        <defs>
-          <clipPath id={clipId}>
-            <rect x="0" y="0" width="12" height="24" />
-          </clipPath>
-        </defs>
         <path d={starPath} fill="none" stroke="var(--text-3)" strokeWidth={1.5} />
-        <path d={starPath} fill="var(--accent)" clipPath={`url(#${clipId})`} />
+        {/* A nested viewport clips to the left half without an id, so SSR and
+            client markup can never disagree on a generated clipPath id. */}
+        <svg x={0} y={0} width={12} height={24} viewBox="0 0 12 24" overflow="hidden">
+          <path d={starPath} fill="var(--accent)" />
+        </svg>
       </svg>
     );
   }
@@ -93,7 +91,6 @@ function getStarFill(index: number, value: number): "empty" | "half" | "full" {
 }
 
 function StarRow({ value }: { value: number }) {
-  const clipId = useId();
   const clamped = clampRating(value);
 
   return (
@@ -104,7 +101,7 @@ function StarRow({ value }: { value: number }) {
       style={{ display: "inline-flex", gap: 2, alignItems: "center" }}
     >
       {Array.from({ length: STAR_COUNT }, (_, index) => (
-        <StarIcon key={index} fill={getStarFill(index, clamped)} clipId={`${clipId}-${index}`} />
+        <StarIcon key={index} fill={getStarFill(index, clamped)} />
       ))}
     </span>
   );
@@ -117,7 +114,6 @@ function StarRatingInput({
   inputAriaLabel,
   className,
 }: StarRatingInputProps) {
-  const clipId = useId();
   const clamped = clampRating(value);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -171,7 +167,7 @@ function StarRatingInput({
                 overflow: "hidden",
               }}
             />
-            <StarIcon fill={checked ? "full" : "empty"} clipId={`${clipId}-${starValue}`} />
+            <StarIcon fill={checked ? "full" : "empty"} />
           </label>
         );
       })}

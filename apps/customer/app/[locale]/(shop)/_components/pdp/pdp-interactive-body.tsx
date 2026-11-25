@@ -20,7 +20,6 @@ import { catalogLogisticsLabels } from "../plp/logistics-pills";
 
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
 import { BuyerTrustPanel } from "./buyer-trust-panel";
-import { buildComparisonValueRow, mergeComparisonListings } from "./comparison-enrichment";
 import { shouldShowComparison } from "./comparison-visibility";
 import { PdpGallery } from "./gallery";
 import { buildOfferPriceContext } from "./offer-price-context";
@@ -373,57 +372,6 @@ export function PdpInteractiveBody({
     ? `/${locale}/compare?product=${encodeURIComponent(productSlug)}`
     : null;
 
-  const productById = useMemo(
-    () => new Map(listings.map((listing) => [listing.id, listing])),
-    [listings],
-  );
-
-  const deliveryEstimateLabels = useMemo(() => catalogDeliveryLabels((key) => t.raw(key)), [t]);
-
-  const enrichedComparisonListings = useMemo(() => {
-    const valueById = new Map(
-      comparisonListings
-        .map((row) => {
-          const product = productById.get(row.id);
-          if (!product) {
-            return null;
-          }
-          return [
-            row.id,
-            buildComparisonValueRow(
-              product,
-              row,
-              {
-                buyBox: {
-                  ...buyBoxLabels,
-                  lowStockLabel: (count) => t("pdp.buyBox.lowStock", { count }),
-                },
-                delivery: deliveryEstimateLabels,
-                madeToOrderDays: (days) => t("pdp.value.madeToOrderDays", { days }),
-              },
-              {
-                codCapNgwee: comparisonCodCapNgwee,
-                codChipsEnabled: comparisonCodChipsEnabled,
-              },
-            ),
-          ] as const;
-        })
-        .filter(
-          (entry): entry is readonly [string, ReturnType<typeof buildComparisonValueRow>] =>
-            entry !== null,
-        ),
-    );
-    return mergeComparisonListings(comparisonListings, productById, valueById);
-  }, [
-    buyBoxLabels,
-    comparisonCodCapNgwee,
-    comparisonCodChipsEnabled,
-    comparisonListings,
-    deliveryEstimateLabels,
-    productById,
-    t,
-  ]);
-
   const selectedDeliveryFeeNgwee = selectedComparison?.deliveryFeeNgwee ?? null;
 
   return (
@@ -540,11 +488,17 @@ export function PdpInteractiveBody({
       {shouldShowComparison(comparisonListings.length) ? (
         <div className="min-w-0 md:col-span-2">
           <Comparison
-            listings={enrichedComparisonListings}
+            listings={comparisonListings}
             selectedListingId={selectedListingId}
             labels={comparisonLabels}
             logisticsPillLabels={logisticsPillLabels}
             onSelect={handleSelect}
+            enrichment={{
+              products: listings,
+              codCapNgwee: comparisonCodCapNgwee,
+              codChipsEnabled: comparisonCodChipsEnabled,
+              buyBoxLabels,
+            }}
           />
         </div>
       ) : null}

@@ -234,10 +234,7 @@ export function pickRailDepartments(
   return categories.slice(0, max);
 }
 
-export function hasDefaultHomeContent(
-  categories: CategoryRow[],
-  data: HomeDefaultData,
-): boolean {
+export function hasDefaultHomeContent(categories: CategoryRow[], data: HomeDefaultData): boolean {
   return (
     categories.length > 0 ||
     data.newest.length > 0 ||
@@ -253,18 +250,16 @@ async function loadDealListings(): Promise<CatalogListing[]> {
   return (data?.items ?? []).filter((deal) => deal.listing.in_stock).map(dealToListing);
 }
 
-export async function loadHomeDefaultData(
-  categories: CategoryRow[],
-): Promise<HomeDefaultData> {
+export async function loadHomeDefaultData(categories: CategoryRow[]): Promise<HomeDefaultData> {
   const [core, deals] = await Promise.all([loadCoreHomeData(categories), loadDealListings()]);
   return { ...core, deals };
 }
 
-async function loadCoreHomeData(categories: CategoryRow[]): Promise<Omit<HomeDefaultData, "deals">> {
+async function loadCoreHomeData(
+  categories: CategoryRow[],
+): Promise<Omit<HomeDefaultData, "deals">> {
   const departments = pickRailDepartments(categories);
-  const departmentPaths = departments
-    .map((category) => category.path)
-    .join(",");
+  const departmentPaths = departments.map((category) => category.path).join(",");
   const bffUrl = absoluteApiUrl(
     `/discovery/home?newest_limit=${NEW_RAIL_LIMIT}&department_limit=${DEPARTMENT_RAIL_LIMIT}` +
       `&services_limit=${SERVICES_RAIL_LIMIT}&vendors_limit=${VENDORS_RAIL_LIMIT}` +
@@ -288,9 +283,7 @@ async function loadCoreHomeData(categories: CategoryRow[]): Promise<Omit<HomeDef
         : (data.services?.items ?? []);
 
       const departmentRails = departments.map((category) => {
-        const rail = data.department_rails?.find(
-          (entry) => entry.category_path === category.path,
-        );
+        const rail = data.department_rails?.find((entry) => entry.category_path === category.path);
         return {
           category,
           listings: (rail?.listings?.items ?? []).map(mapListing),
@@ -366,45 +359,18 @@ type HomeHeroBandProps = {
   t: CatalogTranslator;
   /** Brand wordmark — must remain the strongest first-viewport signal. */
   brandName: string;
-  /**
-   * Optional catalogue image for the full-bleed hero plane. Honest merch only —
-   * never invent a stock scene when the feed has no public ids.
-   */
-  visualPublicId?: string | null;
   /** Sponsored carousel slides from `GET /home/feed` (first page only). */
   sponsoredSlides?: AdCreative[];
 };
-
-/** First newest listing with a Cloudinary public id (for the default hero plane). */
-export function pickHeroVisualPublicId(
-  listings: CatalogListing[],
-): string | null {
-  for (const listing of listings) {
-    if (listing.imagePublicId && listing.imagePublicId.trim()) {
-      return listing.imagePublicId;
-    }
-  }
-  return null;
-}
 
 /**
  * Merch-first default hero (audit §4.1): rotating carousel with curated imagery,
  * brand + headline + CTAs on slide 1. Escrow ladder lives in HomeTrustStrip.
  */
-export function HomeHeroBand({
-  locale,
-  brandName,
-  visualPublicId,
-  sponsoredSlides,
-}: HomeHeroBandProps) {
+export function HomeHeroBand({ locale, brandName, sponsoredSlides }: HomeHeroBandProps) {
   return (
     <div data-testid="home-hero-band">
-      <HomeHeroCarousel
-        locale={locale}
-        brandName={brandName}
-        catalogVisualPublicId={visualPublicId}
-        sponsoredSlides={sponsoredSlides}
-      />
+      <HomeHeroCarousel locale={locale} brandName={brandName} sponsoredSlides={sponsoredSlides} />
     </div>
   );
 }
@@ -476,10 +442,7 @@ export function HomeSellCta({ locale, t }: HomeSellCtaProps) {
       className="flex flex-col gap-4 rounded-lg bg-panel p-6 text-panel-text shadow-2 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:p-10"
     >
       <div className="flex flex-col gap-2 lg:max-w-2xl">
-        <h2
-          id="home-sell-cta-heading"
-          className="font-display text-h2 text-panel-text"
-        >
+        <h2 id="home-sell-cta-heading" className="font-display text-h2 text-panel-text">
           {t("home.sellCta.title")}
         </h2>
         <p className="text-body text-panel-muted">{t("home.sellCta.body")}</p>
@@ -545,10 +508,7 @@ export function HomeServicesRail({
           >
             <ServiceCard
               title={service.title}
-              providerLabel={labels.provider.replace(
-                "{provider}",
-                service.providerName,
-              )}
+              providerLabel={labels.provider.replace("{provider}", service.providerName)}
               media={
                 service.imagePublicId ? (
                   <CloudinaryImageStatic
@@ -565,9 +525,7 @@ export function HomeServicesRail({
               reviewCount={0}
               noReviewsLabel={labels.noReviews}
               fromNgwee={service.fromNgwee ?? undefined}
-              fromPriceLabel={
-                service.fromNgwee !== null ? labels.fromPrice : undefined
-              }
+              fromPriceLabel={service.fromNgwee !== null ? labels.fromPrice : undefined}
               ctaLabel={labels.view}
             />
           </Link>
@@ -646,9 +604,7 @@ export function HomeVendorsRail({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {vendors.map((vendor) => {
           const categoryText =
-            vendor.categories.length > 0
-              ? vendor.categories.join(", ")
-              : labels.listings;
+            vendor.categories.length > 0 ? vendor.categories.join(", ") : labels.listings;
           const ratingValue =
             vendor.ratingAvg !== null && vendor.ratingCount > 0
               ? labels.rating
@@ -659,10 +615,7 @@ export function HomeVendorsRail({
             { preferredBadge: vendor.preferredBadge, kycTier: vendor.kycTier },
             labels.trustLabels,
           );
-          const commercial = vendorCommercialTier(
-            vendor.commercialTier,
-            labels.trustLabels,
-          );
+          const commercial = vendorCommercialTier(vendor.commercialTier, labels.trustLabels);
           const trustLabel =
             trust.trust === "preferred"
               ? labels.preferred
@@ -682,9 +635,7 @@ export function HomeVendorsRail({
                 name={vendor.displayName}
                 categoryLabel={categoryText}
                 locationLabel={vendor.landmark ?? labels.location}
-                avatar={
-                  vendor.logoUrl ? vendorRailLogo(vendor.logoUrl) : undefined
-                }
+                avatar={vendor.logoUrl ? vendorRailLogo(vendor.logoUrl) : undefined}
                 trust={trust.trust}
                 trustLabel={trustLabel}
                 tier={commercial.tier}

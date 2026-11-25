@@ -10,7 +10,7 @@ import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
 import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
 import { LoadingBlock } from "../../_components/StateBlocks";
 
-import { type KycDetail, kycApi } from "./api";
+import { type KycDetail, prefetchKycDetail } from "./api";
 import { DecisionPanel } from "./DecisionPanel";
 import { DocViewer } from "./DocViewer";
 import { EMPTY_CHECKS, isChecklistComplete, KycChecklist, type KycChecks } from "./KycChecklist";
@@ -24,7 +24,7 @@ type KycReviewDetailProps = {
 export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
   const t = useTranslations("admin.kyc.detail");
   const [detail, setDetail] = useState<KycDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingDetail, setLoadingDetail] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -32,12 +32,12 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
   const [requestedDecision, setRequestedDecision] = useState<"approve" | "resubmit" | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    setLoadingDetail(true);
     setError(null);
     setPermissionDenied(false);
     setNotFound(false);
     try {
-      const data = await kycApi.request<KycDetail>(`/admin/kyc/${kycId}`);
+      const data = await prefetchKycDetail(kycId);
       setDetail(data);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
@@ -50,7 +50,7 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
       setError(t(failure.messageKey));
       setDetail(null);
     } finally {
-      setLoading(false);
+      setLoadingDetail(false);
     }
   }, [kycId, t]);
 
@@ -58,8 +58,14 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
     void load();
   }, [load]);
 
-  if (loading) {
-    return <LoadingBlock label={t("loading")} rows={4} />;
+  if (loadingDetail && !detail && !error && !notFound) {
+    return (
+      <div className="space-y-6">
+        <LoadingBlock label={t("loading")} rows={2} />
+        <KycChecklist checks={checks} onChange={setChecks} disabled momoMatched={null} />
+        <DocViewer documents={[]} docsAvailable loading />
+      </div>
+    );
   }
 
   if (notFound) {
@@ -148,6 +154,7 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
           <DocViewer
             documents={detail.documents}
             docsAvailable={detail.docs_available}
+            loading={loadingDetail}
             onRefresh={() => void load()}
           />
         </section>

@@ -52,8 +52,8 @@ function buildHeroCta(
 ): React.ReactNode {
   const className =
     variant === "primary"
-      ? "inline-flex min-h-11 items-center justify-center rounded-pill bg-primary px-4 text-sm font-semibold text-surface"
-      : "inline-flex min-h-11 items-center justify-center rounded-pill border border-border bg-surface px-4 text-sm font-semibold text-text";
+      ? "press-scale inline-flex min-h-11 items-center justify-center rounded-pill bg-primary px-4 text-sm font-semibold text-surface transition-transform motion-reduce:transition-none"
+      : "press-scale inline-flex min-h-11 items-center justify-center rounded-pill border border-border bg-surface px-4 text-sm font-semibold text-text transition-transform motion-reduce:transition-none";
 
   return (
     <Link href={href} className={className}>

@@ -2,10 +2,7 @@ import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-sta
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
 
-import {
-  vendorTrustForCard,
-  type VendorLadderLabels,
-} from "./vendor-ladder-labels";
+import { vendorTrustForCard, type VendorLadderLabels } from "./vendor-ladder-labels";
 
 export type DirectoryVendorCard = {
   id: string;
@@ -57,9 +54,7 @@ function formatVerifiedYear(createdAt: string | null | undefined): string {
     return String(new Date().getFullYear());
   }
   const year = new Date(createdAt).getFullYear();
-  return Number.isFinite(year)
-    ? String(year)
-    : String(new Date().getFullYear());
+  return Number.isFinite(year) ? String(year) : String(new Date().getFullYear());
 }
 
 function isCloudinaryPublicId(value: string): boolean {
@@ -88,11 +83,7 @@ function VendorLogo({ logoUrl }: { logoUrl: string }) {
   );
 }
 
-export function VendorCardGrid({
-  locale,
-  vendors,
-  labels,
-}: VendorCardGridProps) {
+export function VendorCardGrid({ locale, vendors, labels }: VendorCardGridProps) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {vendors.map((vendor) => {
@@ -133,14 +124,11 @@ export function VendorCardGrid({
             className="min-w-0 no-underline"
           >
             <VendorCard
+              className="card-lift h-full"
               name={vendor.displayName}
               categoryLabel={categoryText}
               locationLabel={vendor.landmark ?? labels.defaultLocation}
-              avatar={
-                vendor.logoUrl ? (
-                  <VendorLogo logoUrl={vendor.logoUrl} />
-                ) : undefined
-              }
+              avatar={vendor.logoUrl ? <VendorLogo logoUrl={vendor.logoUrl} /> : undefined}
               trust={trust.trust}
               trustLabel={trustLabel}
               stats={[

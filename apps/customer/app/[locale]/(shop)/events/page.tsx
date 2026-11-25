@@ -3,10 +3,8 @@ import { Badge } from "@vergeo/ui/src/badge";
 import { eventCategoryNodes } from "@vergeo/ui/src/category-selection-data";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
-import {
-  buildCanonicalAlternates,
-  buildLocaleCanonical,
-} from "@vergeo/ui/src/seo/json-ld";
+import { PageHeader } from "@vergeo/ui/src/page-header";
+import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -15,10 +13,7 @@ import { Suspense } from "react";
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 import { DateFilterChips } from "../_components/events/date-filter-chips";
-import {
-  EventGrid,
-  type EventBrowseItem,
-} from "../_components/events/event-grid";
+import { EventGrid, type EventBrowseItem } from "../_components/events/event-grid";
 import {
   EVENT_CATEGORIES,
   type EventCategory,
@@ -80,11 +75,7 @@ function parseCategory(value: string | undefined): EventCategory | null {
   return value;
 }
 
-function parseCoord(
-  value: string | undefined,
-  min: number,
-  max: number,
-): number | null {
+function parseCoord(value: string | undefined, min: number, max: number): number | null {
   if (!value) {
     return null;
   }
@@ -95,10 +86,7 @@ function parseCoord(
   return parsed;
 }
 
-function formatFeaturedEventDate(
-  iso: string | null,
-  locale: string,
-): string | null {
+function formatFeaturedEventDate(iso: string | null, locale: string): string | null {
   if (!iso) {
     return null;
   }
@@ -179,10 +167,7 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({
-  params,
-  searchParams,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const query = await searchParams;
   const t = await getEventsTranslator(locale);
@@ -239,9 +224,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   });
   const items = data?.items ?? [];
   const calendarDates = data?.calendar_dates ?? [];
-  const apiCategories = data?.categories?.length
-    ? data.categories
-    : [...EVENT_CATEGORIES];
+  const apiCategories = data?.categories?.length ? data.categories : [...EVENT_CATEGORIES];
   let categoryTaxonomy: {
     slug: string;
     parent_slug: string | null;
@@ -323,30 +306,15 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
         <div className="grid min-h-[24rem] lg:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)]">
           <div className="flex flex-col justify-center gap-5 p-6 md:p-10 lg:p-12">
             <div className="space-y-2">
-              <h1 className="font-display text-h2 text-panel-text">
-                {t("browse.title")}
-              </h1>
+              <h1 className="font-display text-h2 text-panel-text">{t("browse.title")}</h1>
               {featuredEvent ? (
                 <>
-                  <h2 className="font-display text-hero text-panel-text">
-                    {featuredEvent.title}
-                  </h2>
+                  <h2 className="font-display text-hero text-panel-text">{featuredEvent.title}</h2>
                   <div className="space-y-1 text-sm text-panel-muted">
-                    {formatFeaturedEventDate(
-                      featuredEvent.next_starts_at,
-                      locale,
-                    ) ? (
-                      <p>
-                        {formatFeaturedEventDate(
-                          featuredEvent.next_starts_at,
-                          locale,
-                        )}
-                      </p>
+                    {formatFeaturedEventDate(featuredEvent.next_starts_at, locale) ? (
+                      <p>{formatFeaturedEventDate(featuredEvent.next_starts_at, locale)}</p>
                     ) : null}
-                    <p>
-                      {featuredEvent.venue ??
-                        featuredEvent.organiser.display_name}
-                    </p>
+                    <p>{featuredEvent.venue ?? featuredEvent.organiser.display_name}</p>
                   </div>
                 </>
               ) : (
@@ -361,10 +329,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
                 {featuredEvent.is_sold_out ? (
                   <Badge variant="sold_out" label={t("browse.soldOut")} />
                 ) : featuredEvent.is_selling_fast ? (
-                  <Badge
-                    variant="selling_fast"
-                    label={t("browse.sellingFast")}
-                  />
+                  <Badge variant="selling_fast" label={t("browse.sellingFast")} />
                 ) : featuredEvent.is_free ? (
                   <Badge variant="free" label={t("browse.free")} />
                 ) : featuredEvent.min_price_ngwee ? (
@@ -403,19 +368,8 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
         </div>
       </header>
 
-      <section
-        className="flex flex-col gap-6"
-        aria-labelledby="events-results-heading"
-      >
-        <div className="space-y-1">
-          <h2
-            id="events-results-heading"
-            className="font-display text-h2 text-display-ink"
-          >
-            {t("browse.title")}
-          </h2>
-          <p className="text-sm text-text-2">{t("browse.subtitle")}</p>
-        </div>
+      <section className="flex flex-col gap-6" aria-labelledby="events-results-heading">
+        <PageHeader title={t("browse.title")} subtitle={t("browse.subtitle")} />
 
         <div>
           <Suspense fallback={null}>
@@ -435,10 +389,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
         </div>
 
         {items.length === 0 ? (
-          <EmptyState
-            title={t("browse.emptyTitle")}
-            body={t("browse.emptyBody")}
-          />
+          <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
         ) : remainingEvents.length > 0 ? (
           <>
             <EventGrid
@@ -466,15 +417,10 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
         aria-labelledby="events-host-cta"
       >
         <div className="max-w-2xl space-y-2">
-          <h2
-            id="events-host-cta"
-            className="font-display text-h2 text-display-ink"
-          >
+          <h2 id="events-host-cta" className="font-display text-h2 text-display-ink">
             {t("browse.hostCta")}
           </h2>
-          <p className="text-sm leading-relaxed text-text-2">
-            {t("browse.hostPitch")}
-          </p>
+          <p className="text-sm leading-relaxed text-text-2">{t("browse.hostPitch")}</p>
         </div>
         <Link
           href={`/${locale}/sell`}
