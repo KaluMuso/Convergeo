@@ -110,12 +110,8 @@ export function HomeHero({ slot, locale, t }: HomeHeroProps) {
   const variantKey = slot?.variant_key ?? "default";
   const HeroVariant = resolveHeroVariant(variantKey);
 
-  const title =
-    readPayloadString(payload, "title_text") ??
-    resolvePayloadText(payload, "title_key", t, "home.hero.fallbackTitle");
-  const subtitle =
-    readPayloadString(payload, "subtitle_text") ??
-    resolvePayloadText(payload, "subtitle_key", t, "home.hero.fallbackSubtitle");
+  const title = resolvePayloadText(payload, "title_key", t, "home.hero.fallbackTitle");
+  const subtitle = resolvePayloadText(payload, "subtitle_key", t, "home.hero.fallbackSubtitle");
   const eyebrow = readPayloadString(payload, "eyebrow_key")
     ? resolvePayloadText(payload, "eyebrow_key", t, "home.hero.eyebrow")
     : t("home.hero.eyebrow");

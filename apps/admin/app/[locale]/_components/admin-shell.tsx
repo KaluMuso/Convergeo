@@ -122,12 +122,16 @@ export function AdminShell({ locale, children }: AdminShellProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [menuOpen, isBareAuthRoute]);
 
+  const navSource = isBareAuthRoute
+    ? null
+    : (grants ??
+      (navGrants && !grantError && navGrants.route !== pathname ? navGrants.grants : null));
+  const pendingProducts = usePendingProductModerationCount(navSource);
+
   if (isBareAuthRoute) {
     return <>{children}</>;
   }
 
-  const navSource =
-    grants ?? (navGrants && !grantError && navGrants.route !== pathname ? navGrants.grants : null);
   const roleKind = resolveAdminRoleKind(navSource);
   const capabilities = resolveAdminNavCapabilities(
     navSource?.permissions ?? [],
@@ -136,7 +140,6 @@ export function AdminShell({ locale, children }: AdminShellProps) {
   );
   const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
   const visibleItems = flattenAdminNavItems(navGroups);
-  const pendingProducts = usePendingProductModerationCount(navSource);
 
   const activeKey = resolveAdminActiveItem(rest, visibleItems);
   const activeGroup = resolveAdminActiveGroup(rest, navGroups);
