@@ -45,6 +45,7 @@ export type ListingSummary = {
   return_window_hours: number | null;
   status: ListingStatus | string;
   product_id: string | null;
+  product_status?: string | null;
   images?: Array<{
     id: string;
     cloudinary_public_id: string;

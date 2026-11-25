@@ -86,6 +86,7 @@ class ListingSummary(StrictModel):
     return_window_hours: int | None
     status: str
     product_id: str | None
+    product_status: str | None = None
     images: list[ListingImageSummary] = Field(default_factory=list)
 
 
@@ -300,6 +301,15 @@ def _listing_images(row: dict[str, Any]) -> list[ListingImageSummary]:
     return sorted(images, key=lambda image: image.position)
 
 
+def _row_product_status(row: dict[str, Any]) -> str | None:
+    products = row.get("products")
+    if isinstance(products, dict):
+        status = products.get("status")
+        if status is not None:
+            return str(status)
+    return None
+
+
 def _row_fulfilment_options(row: dict[str, Any]) -> list[FulfilmentOption]:
     raw = row.get("fulfilment_options")
     allowed = ("lusaka_delivery", "pickup_shop", "pickup_nationwide")
@@ -346,6 +356,7 @@ def _to_listing_summary(row: dict[str, Any]) -> ListingSummary:
         ),
         status=str(row["status"]),
         product_id=str(row["product_id"]) if row.get("product_id") else None,
+        product_status=_row_product_status(row),
         images=_listing_images(row),
     )
 
@@ -362,7 +373,7 @@ def _load_listing(
             "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
             "condition_detail, fulfilment_options, "
             "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
-            "return_window_hours, status, products(name), "
+            "return_window_hours, status, products(name, status), "
             "listing_images(id, listing_id, cloudinary_public_id, position)"
         )
         .eq("id", listing_id)
@@ -743,7 +754,7 @@ async def list_vendor_listings(
             "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
             "condition_detail, fulfilment_options, "
             "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
-            "return_window_hours, status, products(name), "
+            "return_window_hours, status, products(name, status), "
             "listing_images(id, listing_id, cloudinary_public_id, position)"
         )
         .eq("vendor_id", vendor_id)

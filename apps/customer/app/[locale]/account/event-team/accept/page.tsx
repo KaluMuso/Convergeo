@@ -1,6 +1,5 @@
-import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
-import { createTranslator, type AbstractIntlMessages } from "next-intl";
-import { setRequestLocale } from "next-intl/server";
+import { LOCALES } from "@vergeo/i18n";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { EventTeamAcceptForm } from "./_components/event-team-accept-form";
@@ -22,12 +21,7 @@ export function generateStaticParams() {
 export default async function EventTeamAcceptPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const events = await loadNamespace(locale as Locale, "events");
-  const t = createTranslator({
-    locale,
-    messages: events as AbstractIntlMessages,
-    namespace: "teamAccept",
-  });
+  const t = await getTranslations("events.teamAccept");
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-8">
