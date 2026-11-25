@@ -1,9 +1,7 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
-import {
-  buildCanonicalAlternates,
-  buildLocaleCanonical,
-} from "@vergeo/ui/src/seo/json-ld";
+import { PageHeader } from "@vergeo/ui/src/page-header";
+import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -16,6 +14,8 @@ import { VendorCardGrid } from "../_components/directory/vendor-card-grid";
 import { buildVendorLadderLabels } from "../_components/directory/vendor-ladder-labels";
 
 import type { Metadata } from "next";
+
+import { CustomerRouteShell } from "@/components/customer-route-shell";
 
 export const revalidate = 60;
 
@@ -56,10 +56,7 @@ type DirectoryTranslator = {
   raw(key: string): unknown;
 };
 
-function readParam(
-  params: Record<string, string | string[] | undefined>,
-  key: string,
-): string {
+function readParam(params: Record<string, string | string[] | undefined>, key: string): string {
   const value = params[key];
   if (Array.isArray(value)) {
     return value[0] ?? "";
@@ -67,9 +64,7 @@ function readParam(
   return value ?? "";
 }
 
-async function getDirectoryTranslator(
-  locale: string,
-): Promise<DirectoryTranslator> {
+async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const directoryMessages = await loadNamespace(locale as Locale, "directory");
   const messages = {
@@ -84,9 +79,7 @@ async function getDirectoryTranslator(
   }) as unknown as DirectoryTranslator;
 }
 
-async function fetchDirectory(
-  query: Record<string, string>,
-): Promise<DirectoryApiResponse | null> {
+async function fetchDirectory(query: Record<string, string>): Promise<DirectoryApiResponse | null> {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (value) {
@@ -115,9 +108,7 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getDirectoryTranslator(locale);
   return {
@@ -135,10 +126,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function DirectoryPage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function DirectoryPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
   const resolvedSearchParams = await searchParams;
 
@@ -183,8 +171,7 @@ export default async function DirectoryPage({
   const categoryOptions = facets.categories.map((facet) => ({
     value: facet.value,
     label: formatFacetLabel(
-      categoryLabels[facet.value as keyof typeof categoryLabels] ??
-        facet.value.replace(/-/g, " "),
+      categoryLabels[facet.value as keyof typeof categoryLabels] ?? facet.value.replace(/-/g, " "),
       facet.count,
     ),
   }));
@@ -195,27 +182,19 @@ export default async function DirectoryPage({
   }));
 
   return (
-    <div className="space-y-4 lg:mx-auto lg:w-full lg:max-w-6xl">
-      {/* Compact title row: the grid is the hero, not a marketing panel. */}
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-        <div>
-          <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
-            {t("index.title")}
-          </h1>
-          <p className="m-0 mt-1 flex flex-wrap gap-x-3 text-sm text-text-2">
-            <span>{t("index.subtitle")}</span>
-            <span className="font-semibold text-text">
-              {t("index.results", { count: total })}
-            </span>
-          </p>
-        </div>
-        <Link
-          href={`/${locale}/sell`}
-          className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
-        >
-          {t("index.becomeVendor")}
-        </Link>
-      </div>
+    <CustomerRouteShell className="flex flex-col gap-4">
+      <PageHeader
+        title={t("index.title")}
+        subtitle={`${t("index.subtitle")} · ${t("index.results", { count: total })}`}
+        actions={
+          <Link
+            href={`/${locale}/sell`}
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+          >
+            {t("index.becomeVendor")}
+          </Link>
+        }
+      />
 
       <Suspense fallback={null}>
         <FilterBar
@@ -243,11 +222,7 @@ export default async function DirectoryPage({
       </Suspense>
 
       {vendors.length === 0 ? (
-        <EmptyState
-          title={t("empty.title")}
-          body={t("empty.body")}
-          data-testid="directory-empty"
-        />
+        <EmptyState title={t("empty.title")} body={t("empty.body")} data-testid="directory-empty" />
       ) : (
         <>
           <VendorCardGrid
@@ -286,6 +261,6 @@ export default async function DirectoryPage({
           <BackToTop label={tCatalog("plp.backToTop")} />
         </>
       )}
-    </div>
+    </CustomerRouteShell>
   );
 }

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { listPendingCanonicalProducts } from "../moderation/products/_components/api";
+
 import { classifyAdminRequestError } from "./admin-request";
 import { dashboardApi } from "./api";
 import { countOverdue, dispatchCutoffClock, type TodayTone, toneFor } from "./today-model";
@@ -109,13 +111,15 @@ export function TodayBoard({ locale, placedCount, placedLoading }: TodayBoardPro
   const [kyc, setKyc] = useState<Loaded>({ state: "loading" });
   const [disputes, setDisputes] = useState<Loaded>({ state: "loading" });
   const [ready, setReady] = useState<Loaded>({ state: "loading" });
+  const [products, setProducts] = useState<Loaded>({ state: "loading" });
   const [now, setNow] = useState<Date | null>(null);
 
   const load = useCallback(async () => {
     setKyc({ state: "loading" });
     setDisputes({ state: "loading" });
     setReady({ state: "loading" });
-    const [kycResult, disputeResult, readyResult] = await Promise.all([
+    setProducts({ state: "loading" });
+    const [kycResult, disputeResult, readyResult, productResult] = await Promise.all([
       loadList("/admin/vendors?status=pending"),
       loadList("/admin/disputes"),
       dashboardApi
@@ -130,10 +134,18 @@ export function TodayBoard({ locale, placedCount, placedLoading }: TodayBoardPro
             ? { state: "denied" }
             : { state: "error" },
         ),
+      listPendingCanonicalProducts()
+        .then((items): Loaded => ({ state: "ok", count: items.length, overdue: 0 }))
+        .catch((error: unknown): Loaded =>
+          classifyAdminRequestError(error).kind === "permission"
+            ? { state: "denied" }
+            : { state: "error" },
+        ),
     ]);
     setKyc(kycResult);
     setDisputes(disputeResult);
     setReady(readyResult);
+    setProducts(productResult);
   }, []);
 
   useEffect(() => {
@@ -196,6 +208,15 @@ export function TodayBoard({ locale, placedCount, placedLoading }: TodayBoardPro
             detail={clockText}
             loaded={ready}
             escalate={clock ? clock.passed || clock.urgent : false}
+          />
+        </li>
+        <li>
+          <TodayCard
+            testId="today-products"
+            href={`/${locale}/moderation/products`}
+            title={t("products.title")}
+            hint={t("products.hint")}
+            loaded={products}
           />
         </li>
         <li>

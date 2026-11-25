@@ -4,6 +4,8 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { rolesApi, useAdminPermissions } from "../../../lib/roles-api";
+import { adminPrimaryButtonClass } from "../_components/admin-primary-button";
+import { EmptyBlock } from "../_components/StateBlocks";
 
 export type AuditEntry = {
   id: string;
@@ -88,13 +90,13 @@ export function buildAuditQuery(
 export function AuditLogBoard({ locale }: { locale: string }) {
   const t = useTranslations("admin.auditLogUi");
   const grants = useAdminPermissions();
-  const allowed = grants?.permissions.includes("audit.read") === true;
+  const allowed = !!grants && (grants.unrestricted || grants.permissions.includes("audit.read"));
   const [draft, setDraft] = useState<AuditFilters>(EMPTY_FILTERS);
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS);
   const [items, setItems] = useState<AuditEntry[] | null>(null);
   const [nextBefore, setNextBefore] = useState<string | null>(null);
   const [error, setError] = useState<"" | "loadFailed" | "invalid">("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const generation = useRef(0);
 
   const load = useCallback(async (active: AuditFilters, before: string | null) => {
@@ -115,17 +117,34 @@ export function AuditLogBoard({ locale }: { locale: string }) {
       setItems((previous) => (before && previous ? [...previous, ...page.items] : page.items));
       setNextBefore(page.next_before ?? null);
     } catch {
-      if (current === generation.current) setError("loadFailed");
+      if (current === generation.current) {
+        setError("loadFailed");
+        setItems([]);
+      }
     } finally {
       if (current === generation.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (allowed) void load(filters, null);
-  }, [allowed, filters, load]);
+    if (grants === null) {
+      return;
+    }
+    if (!allowed) {
+      setLoading(false);
+      setItems([]);
+      return;
+    }
+    void load(filters, null);
+  }, [allowed, filters, grants, load]);
 
-  if (!allowed) return <p role="alert">{t("permissionDenied")}</p>;
+  if (grants === null) {
+    return <p role="status">{t("loadingGrants")}</p>;
+  }
+
+  if (!allowed) {
+    return <p role="alert">{t("permissionDenied")}</p>;
+  }
 
   const field = (key: keyof AuditFilters, label: string, type = "text") => (
     <label className="block text-sm">
@@ -176,7 +195,7 @@ export function AuditLogBoard({ locale }: { locale: string }) {
         {field("from", t("from"), "date")}
         {field("to", t("to"), "date")}
         <div className="flex items-end gap-3">
-          <button className="min-h-11 rounded bg-primary px-4 text-white" disabled={loading}>
+          <button type="submit" className={adminPrimaryButtonClass} disabled={loading}>
             {t("apply")}
           </button>
           <button
@@ -194,16 +213,16 @@ export function AuditLogBoard({ locale }: { locale: string }) {
       </form>
       <p className="text-xs text-muted">{t("maskingNote")}</p>
       {error ? (
-        <p role="alert" className="text-error">
+        <p role="alert" className="text-danger">
           {t(error)}
         </p>
       ) : null}
-      {items === null ? (
-        loading ? (
-          <p role="status">{t("loading")}</p>
-        ) : null
+      {loading && items === null ? (
+        <p role="status">{t("loading")}</p>
+      ) : items === null ? (
+        <EmptyBlock title={t("loadFailedTitle")} body={t("loadFailedBody")} />
       ) : items.length === 0 ? (
-        <p>{t("empty")}</p>
+        <EmptyBlock title={t("emptyTitle")} body={t("empty")} />
       ) : (
         <ul className="space-y-2">
           {items.map((entry) => (
@@ -228,7 +247,10 @@ export function AuditLogBoard({ locale }: { locale: string }) {
                 })}
               </p>
               <p className="text-muted">
-                {t("what", { resource: entry.entity_type, id: entry.entity_id ?? entityKey(entry) ?? "—" })}
+                {t("what", {
+                  resource: entry.entity_type,
+                  id: entry.entity_id ?? entityKey(entry) ?? "—",
+                })}
               </p>
               {entry.reason ? <p>{t("reason", { reason: entry.reason })}</p> : null}
               {entry.request_id ? (

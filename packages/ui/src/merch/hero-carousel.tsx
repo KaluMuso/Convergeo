@@ -367,13 +367,14 @@ export function HeroCarousel({
 
       {total > 1 ? (
         <>
+          {/* Phones swipe or use the dots; side arrows would cover the headline. */}
           <div
+            className="hidden sm:flex"
             style={{
               position: "absolute",
               insetInline: "var(--sp-2)",
               top: "50%",
               transform: "translateY(-50%)",
-              display: "flex",
               justifyContent: "space-between",
               pointerEvents: "none",
               zIndex: 2,

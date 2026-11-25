@@ -44,8 +44,13 @@ beforeEach(() => {
   holdPermissions = null;
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => {
+    vi.fn(async (input: string) => {
       await holdPermissions;
+      if (input.startsWith("/admin/products/canonical")) {
+        return new Response(JSON.stringify([]), {
+          headers: { "content-type": "application/json" },
+        });
+      }
       return new Response(
         JSON.stringify({ permissions: [], unrestricted: true, can_manage_roles: true }),
         { headers: { "content-type": "application/json" } },

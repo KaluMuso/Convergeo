@@ -1,6 +1,7 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
+import { formatK } from "@vergeo/i18n";
 import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -32,6 +33,8 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionHint, setActionHint] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
   // A ref, not state: two fast clicks land before React re-renders with `submitting`.
   const inFlight = useRef(false);
 
@@ -63,11 +66,14 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
     setActionHint(null);
   };
 
-  const submit = async (status: "active" | "rejected") => {
-    if (!selected) {
-      return;
-    }
-    if (status === "rejected" && reason.trim().length < 3) {
+  const decide = async (
+    item: CanonicalQueueItem,
+    status: "active" | "rejected",
+    rejectReasonText?: string,
+  ) => {
+    setSelected(item);
+    const effectiveReason = rejectReasonText ?? reason;
+    if (status === "rejected" && effectiveReason.trim().length < 3) {
       return;
     }
     if (inFlight.current) {
@@ -82,9 +88,9 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
       // fresh session token) is safe and hides a stale-token or dropped first request.
       await withDecisionRetry(
         () =>
-          patchCanonicalProductStatus(selected.id, {
+          patchCanonicalProductStatus(item.id, {
             status,
-            reason: status === "rejected" ? reason.trim() : null,
+            reason: status === "rejected" ? effectiveReason.trim() : null,
           }),
         {
           beforeRetry: async () => {
@@ -112,6 +118,11 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
       inFlight.current = false;
       setSubmitting(false);
     }
+  };
+
+  const submit = async (status: "active" | "rejected") => {
+    if (!selected) return;
+    await decide(selected, status);
   };
 
   if (loading) {
@@ -148,6 +159,7 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
               <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
                 <th className="px-2 py-3 font-medium">{t("product")}</th>
                 <th className="px-2 py-3 font-medium">{t("vendor")}</th>
+                <th className="px-2 py-3 font-medium">{t("price")}</th>
                 <th className="px-2 py-3 font-medium">{t("submitted")}</th>
                 <th className="px-2 py-3 font-medium" />
               </tr>
@@ -156,26 +168,88 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
               {items.map((item) => (
                 <tr key={item.id} className="border-b border-border hover:bg-bg-2">
                   <td className="px-2 py-3">
-                    <div className="font-medium text-text">{item.name}</div>
-                    <div className="text-xs text-muted">{item.slug}</div>
+                    <div className="flex items-center gap-2">
+                      {item.image_urls[0] ? (
+                        <img
+                          src={item.image_urls[0]}
+                          alt=""
+                          className="size-12 rounded-md border border-border object-cover"
+                        />
+                      ) : null}
+                      <div>
+                        <div className="font-medium text-text">{item.name}</div>
+                        <div className="text-xs text-muted">{item.slug}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-2 py-3 text-muted">{item.vendor_display_name ?? "—"}</td>
                   <td className="px-2 py-3 text-muted">
+                    {typeof item.price_ngwee === "number"
+                      ? formatK(item.price_ngwee, { locale })
+                      : "—"}
+                  </td>
+                  <td className="px-2 py-3 text-muted">
                     {new Date(item.updated_at).toLocaleString(locale)}
                   </td>
-                  <td className="px-2 py-3 text-right">
-                    <button
-                      type="button"
-                      className="inline-flex min-h-11 items-center rounded-md border border-primary px-4 text-sm font-medium text-primary"
-                      onClick={() => {
-                        setSelected(item);
-                        setMode("view");
-                        setReason("");
-                        setActionError(null);
-                      }}
-                    >
-                      {t("review")}
-                    </button>
+                  <td className="px-2 py-3">
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <button
+                          type="button"
+                          disabled={submitting}
+                          className="inline-flex min-h-11 items-center rounded-md bg-success px-3 text-sm font-medium text-on-danger"
+                          onClick={() => void decide(item, "active")}
+                        >
+                          {t("approve")}
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex min-h-11 items-center rounded-md border border-danger px-3 text-sm font-medium text-danger"
+                          onClick={() => {
+                            setRejectingId(rejectingId === item.id ? null : item.id);
+                            setRejectReason("");
+                          }}
+                        >
+                          {t("reject")}
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex min-h-11 items-center rounded-md border border-primary px-3 text-sm font-medium text-primary"
+                          onClick={() => {
+                            setSelected(item);
+                            setMode("view");
+                            setReason("");
+                            setActionError(null);
+                          }}
+                        >
+                          {t("review")}
+                        </button>
+                      </div>
+                      {rejectingId === item.id ? (
+                        <div className="w-full max-w-xs space-y-2 text-left">
+                          <label className="block text-xs text-muted">
+                            {t("rejectReasonShort")}
+                            <textarea
+                              className="mt-1 w-full rounded-md border border-border px-2 py-1 text-sm"
+                              rows={2}
+                              value={rejectReason}
+                              onChange={(event) => setRejectReason(event.target.value)}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            disabled={submitting || rejectReason.trim().length < 3}
+                            className="inline-flex min-h-11 items-center rounded-md bg-danger px-3 text-sm font-medium text-on-danger disabled:opacity-60"
+                            onClick={() => {
+                              void decide(item, "rejected", rejectReason);
+                              setRejectingId(null);
+                            }}
+                          >
+                            {t("dialog.reject")}
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}
