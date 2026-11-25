@@ -1,3 +1,8 @@
+export type {
+  ListingVariantOption,
+  VariantOptionGroup,
+  VariantOptionValue,
+} from "./variant-selection";
 import type { ListingVariantOption } from "./variant-selection";
 
 export function lowestVariantPriceForValue(

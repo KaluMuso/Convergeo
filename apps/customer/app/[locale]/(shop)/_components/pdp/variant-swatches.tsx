@@ -7,6 +7,7 @@ import {
   lowestVariantPriceForValue,
   type ListingVariantOption,
   type VariantOptionGroup,
+  type VariantOptionValue,
 } from "./variant-swatches-math";
 
 export type VariantSwatchesProps = {
@@ -35,8 +36,11 @@ export function VariantSwatches({
   }
 
   return (
-    <motionSafe data-testid="pdp-variant-swatches" className="flex flex-wrap gap-2">
-      {group.values.map((value) => {
+    <div
+      data-testid="pdp-variant-swatches"
+      className="motion-safe flex flex-wrap gap-2"
+    >
+      {group.values.map((value: VariantOptionValue) => {
         const fromNgwee = lowestVariantPriceForValue(variants, value.id);
         const imageId =
           variants.find((variant) => variant.optionValueIds.includes(value.id))?.imagePublicId ??
@@ -78,18 +82,6 @@ export function VariantSwatches({
           </button>
         );
       })}
-    </motionSafe>
-  );
-}
-
-function motionSafe({
-  className,
-  children,
-  ...rest
-}: import("react").HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={["motion-safe", className].filter(Boolean).join(" ")} {...rest}>
-      {children}
     </div>
   );
 }
