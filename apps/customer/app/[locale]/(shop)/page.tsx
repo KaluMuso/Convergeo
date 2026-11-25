@@ -27,8 +27,8 @@ import {
   HomeServicesRail,
   HomeVendorsRail,
   loadHomeDefaultData,
-  pickHeroVisualPublicId,
 } from "./_components/home-default";
+import { HomeEmptyRails } from "./_components/home-empty-rails";
 import { isRenderableSection } from "./_components/home-feed/feed-types";
 import {
   buildFeedLabels,
@@ -279,6 +279,11 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   });
 
   const brandName = tCommon("app.name");
+  const homeIsEmpty =
+    !useAdminFeed &&
+    !plan.showDefaultRails &&
+    defaultData.deals.length === 0 &&
+    !(streamLoad.status === "ok" && streamLoad.page.items.length > 0);
 
   return (
     <div className="v-home-fab-pad flex flex-col gap-4 lg:gap-6">
@@ -293,7 +298,6 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
           locale={locale}
           t={t}
           brandName={brandName}
-          visualPublicId={pickHeroVisualPublicId(defaultData.newest)}
           sponsoredSlides={feedPage.carousel}
         />
       )}
@@ -418,14 +422,26 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
         />
       ) : null}
 
-      {/* "Popular now": first batch is SSR; only later pages load on the client. */}
-      <HomeListingStream
-        stream={streamLoad}
-        sectionListingIds={listingIdsOf(feedPage.sections)}
-        locale={locale}
-        cardLabels={railLabels}
-        labels={streamLabels}
-      />
+      {homeIsEmpty ? (
+        <HomeEmptyRails
+          locale={locale}
+          labels={{
+            title: t("home.feed.stream.emptyTitle"),
+            body: t("home.feed.stream.emptyBody"),
+            browse: t("home.hero.primaryCta"),
+            sell: t("home.feed.stream.emptyCta"),
+          }}
+        />
+      ) : (
+        /* "Popular now": first batch is SSR; only later pages load on the client. */
+        <HomeListingStream
+          stream={streamLoad}
+          sectionListingIds={listingIdsOf(feedPage.sections)}
+          locale={locale}
+          cardLabels={railLabels}
+          labels={streamLabels}
+        />
+      )}
       <BackToTop label={t("plp.backToTop")} />
     </div>
   );
