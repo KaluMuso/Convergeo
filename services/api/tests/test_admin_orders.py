@@ -61,6 +61,10 @@ class FakeQuery:
         self._filters.append(("is", column, value))
         return self
 
+    def lt(self, column: str, value: Any) -> FakeQuery:
+        self._filters.append(("lt", column, value))
+        return self
+
     def or_(self, expression: str) -> FakeQuery:
         self._or_filter = expression
         return self
@@ -103,9 +107,7 @@ class FakeQuery:
             updated: list[dict[str, Any]] = []
             for row in self._parent.rows:
                 if all(
-                    row.get(column) == value
-                    for op, column, value in self._filters
-                    if op == "eq"
+                    row.get(column) == value for op, column, value in self._filters if op == "eq"
                 ):
                     row.update(self._payload)
                     updated.append(dict(row))
@@ -133,13 +135,16 @@ class FakeQuery:
                 filtered = [row for row in filtered if row.get(column) in allowed]
             elif op == "ilike":
                 needle = value.strip("%").lower()
+                filtered = [row for row in filtered if needle in str(row.get(column, "")).lower()]
+            elif op == "is" and value == "null":
+                filtered = [row for row in filtered if row.get(column) is None]
+            elif op == "lt":
                 filtered = [
                     row
                     for row in filtered
-                    if needle in str(row.get(column, "")).lower()
+                    if datetime.fromisoformat(str(row.get(column)))
+                    < datetime.fromisoformat(str(value))
                 ]
-            elif op == "is" and value == "null":
-                filtered = [row for row in filtered if row.get(column) is None]
         return filtered
 
     def _matches_or(self, row: dict[str, Any], expression: str) -> bool:
@@ -243,8 +248,8 @@ def _mock_audit_insert(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
             return AuditQuery(row)
 
     audit_client = MagicMock()
-    audit_client.client.table.side_effect = (
-        lambda name: AuditTable() if name == "audit_log" else MagicMock()
+    audit_client.client.table.side_effect = lambda name: (
+        AuditTable() if name == "audit_log" else MagicMock()
     )
     monkeypatch.setattr(
         "app.core.admin_audit.get_supabase_service_client",
@@ -572,3 +577,72 @@ def test_dispatch_records_timeline_note(
     assert "[dispatch]" in captured["note"]
     assert "Yango" in captured["note"]
     assert "BAK 1234" in captured["note"]
+
+
+def test_search_without_criteria_lists_recent_orders_with_totals(
+    admin_orders_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {ADMIN_ID: frozenset({"admin"})})
+    _seed_search_fixtures(fake_client)
+    fake_client.tables["orders"].rows[0].update(
+        {"delivery_fee_ngwee": 2500, "coupon_discount_ngwee": 1000}
+    )
+    fake_client.tables["order_items"].rows.extend(
+        [
+            {"order_id": ORDER_ID, "qty": 2, "unit_price_ngwee": 10000},
+            {"order_id": ORDER_ID, "qty": 1, "unit_price_ngwee": 550},
+            {"order_id": ORDER_B_ID, "qty": 1, "unit_price_ngwee": 40000},
+        ]
+    )
+
+    response = admin_orders_client.get(
+        "/admin/orders/search",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert [item["id"] for item in data] == [ORDER_B_ID, ORDER_ID]
+    assert data[0]["total_ngwee"] == 40000
+    assert data[1]["total_ngwee"] == 20000 + 550 + 2500 - 1000
+    assert data[1]["customer_display_name"] == "Jane Customer"
+
+
+def test_recent_orders_page_with_before_cursor(
+    admin_orders_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {ADMIN_ID: frozenset({"admin"})})
+    _seed_search_fixtures(fake_client)
+    headers = {"Authorization": f"Bearer {VALID_TOKEN}"}
+
+    first = admin_orders_client.get("/admin/orders/search?limit=1", headers=headers).json()
+    assert [item["id"] for item in first] == [ORDER_B_ID]
+    second = admin_orders_client.get(
+        "/admin/orders/search",
+        params={"limit": 1, "before": first[-1]["created_at"]},
+        headers=headers,
+    ).json()
+    assert [item["id"] for item in second] == [ORDER_ID]
+    assert (
+        admin_orders_client.get("/admin/orders/search?limit=0", headers=headers).status_code == 422
+    )
+
+
+def test_recent_orders_still_require_order_permission(
+    admin_orders_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_verify(monkeypatch, USER_ID)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"customer"})})
+    _seed_search_fixtures(fake_client)
+    response = admin_orders_client.get(
+        "/admin/orders/search",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+    )
+    assert response.status_code == 403

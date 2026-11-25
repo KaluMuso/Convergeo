@@ -19,6 +19,14 @@ from uuid import UUID
 from app.core.auth import CurrentUser, require_route_permission
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.admin_people import (
+    MAX_TERM_LEN,
+    Person,
+    clean_search_term,
+    is_uuid,
+    people_by_ids,
+    search_people,
+)
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
@@ -63,15 +71,68 @@ class AuditEntryOut(BaseModel):
     id: str
     at: datetime
     actor: str | None
+    actor_name: str | None = None
+    actor_email: str | None = None
     actor_roles: list[str] | None
     action: str
     entity_type: str
     entity_id: str | None
+    entity_label: str | None = None
     outcome: str
     request_id: str | None
     reason: str | None
     before: Any
     after: Any
+
+
+# Entities whose id is an administrator account (role assignments, deactivation).
+_ADMIN_ACCOUNT_ENTITIES = frozenset({"admin_role", "admin_account"})
+# entity_type -> (table, label column). Customer-owned records are never labelled.
+_ENTITY_LABELS: dict[str, tuple[str, str]] = {
+    "vendor": ("vendors", "display_name"),
+    "product": ("products", "name"),
+    "service": ("services", "title"),
+    "event": ("events", "title"),
+}
+
+
+def _person_field(
+    people: dict[str, Person], user_id: Any, field: Literal["display_name", "email"]
+) -> str | None:
+    person = people.get(str(user_id)) if user_id else None
+    return person[field] if person else None
+
+
+def _entity_labels(
+    service: ServiceRoleClient, rows: list[dict[str, Any]], people: dict[str, Person]
+) -> dict[tuple[str, str], str]:
+    wanted: dict[str, set[str]] = {}
+    for row in rows:
+        entity_type, entity_id = row.get("entity_type"), row.get("entity_id")
+        if entity_type in _ENTITY_LABELS and entity_id and is_uuid(str(entity_id)):
+            wanted.setdefault(str(entity_type), set()).add(str(entity_id))
+    labels: dict[tuple[str, str], str] = {}
+    for entity_type, ids in wanted.items():
+        table, column = _ENTITY_LABELS[entity_type]
+        try:
+            response = (
+                service.client.table(table).select(f"id,{column}").in_("id", sorted(ids)).execute()
+            )
+        except Exception:  # noqa: BLE001 - the entry still renders with its id
+            continue
+        data = getattr(response, "data", None)
+        for found in data if isinstance(data, list) else []:
+            label = found.get(column) if isinstance(found, dict) else None
+            if isinstance(label, str) and label.strip():
+                labels[(entity_type, str(found.get("id")))] = label.strip()
+    for row in rows:
+        entity_type, entity_id = row.get("entity_type"), row.get("entity_id")
+        if entity_type in _ADMIN_ACCOUNT_ENTITIES and entity_id:
+            person = people.get(str(entity_id))
+            label = (person["display_name"] or person["email"]) if person else None
+            if label:
+                labels[(str(entity_type), str(entity_id))] = label
+    return labels
 
 
 class AuditPageOut(BaseModel):
@@ -84,6 +145,7 @@ def read_audit_log(
     _viewer: Annotated[CurrentUser, Depends(require_route_permission)],
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     actor: Annotated[UUID | None, Query()] = None,
+    actor_q: Annotated[str | None, Query(max_length=MAX_TERM_LEN)] = None,
     action: Annotated[str | None, Query(max_length=80)] = None,
     entity_type: Annotated[str | None, Query(max_length=60)] = None,
     entity_id: Annotated[UUID | None, Query()] = None,
@@ -99,6 +161,13 @@ def read_audit_log(
         raise AppError(code="validation_error", message="Invalid resource filter", http_status=422)
     if since is not None and until is not None and since > until:
         raise AppError(code="validation_error", message="from must precede to", http_status=422)
+    actor_ids: list[str] | None = None
+    if actor_q is not None and actor is None:
+        if clean_search_term(actor_q) is None:
+            raise AppError(code="validation_error", message="Invalid actor filter", http_status=422)
+        actor_ids = [person["user_id"] for person in search_people(service, actor_q, limit=50)]
+        if not actor_ids:
+            return AuditPageOut(items=[], next_before=None)
 
     query = (
         service.client.table("audit_log")
@@ -112,6 +181,8 @@ def read_audit_log(
     )
     if actor is not None:
         query = query.eq("actor", str(actor))
+    elif actor_ids is not None:
+        query = query.in_("actor", actor_ids)
     if action is not None:
         # A trailing dot filters a family ("admin.orders.") — prefix match, no wildcards
         # from the caller (the regex above already refuses % and _ misuse).
@@ -136,15 +207,27 @@ def read_audit_log(
     data = getattr(query.execute(), "data", None)
     rows = [row for row in data if isinstance(row, dict)] if isinstance(data, list) else []
     page = rows[:limit]
+    account_ids = {str(row["actor"]) for row in page if row.get("actor")} | {
+        str(row["entity_id"])
+        for row in page
+        if row.get("entity_type") in _ADMIN_ACCOUNT_ENTITIES and row.get("entity_id")
+    }
+    people = people_by_ids(service, account_ids)
+    labels = _entity_labels(service, page, people)
     items = [
         AuditEntryOut(
             id=str(row.get("id")),
             at=row["at"],
             actor=str(row["actor"]) if row.get("actor") else None,
+            actor_name=_person_field(people, row.get("actor"), "display_name"),
+            actor_email=_person_field(people, row.get("actor"), "email"),
             actor_roles=row.get("actor_roles"),
             action=str(row.get("action") or ""),
             entity_type=str(row.get("entity_type") or ""),
             entity_id=str(row["entity_id"]) if row.get("entity_id") else None,
+            entity_label=labels.get(
+                (str(row.get("entity_type") or ""), str(row.get("entity_id") or ""))
+            ),
             outcome=str(row.get("outcome") or "success"),
             request_id=row.get("request_id"),
             reason=mask_pii(row.get("reason")),

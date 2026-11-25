@@ -1,7 +1,10 @@
 """Superadmin-only administrator directory and deactivation (2026-11 governance).
 
 * GET  /admin/accounts                    — every account holding an admin role, with
-  display name, email and roles. Assign/revoke stay on /admin/roles/* (manage_admin_role).
+  display name, email and roles; `q` filters by name, email or role, `limit`/`offset`
+  page. Assign/revoke stay on /admin/roles/* (manage_admin_role).
+* GET  /admin/accounts/lookup?q=           — any account by name, email or id, so the
+  role picker never needs a pasted UUID.
 * POST /admin/accounts/{user_id}/deactivate — decision D4: deactivating an administrator
   means revoking every admin role in one audited transaction
   (`public.deactivate_admin_account`). The next API call with the same token is refused,
@@ -18,7 +21,8 @@ from uuid import UUID
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
-from fastapi import APIRouter, Depends, Request
+from app.services.admin_people import MAX_TERM_LEN, clean_search_term, search_people
+from fastapi import APIRouter, Depends, Query, Request
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 
@@ -56,10 +60,33 @@ def _email_for(service: ServiceRoleClient, user_id: str) -> str | None:
     return email if isinstance(email, str) and email else None
 
 
+def _names_for(service: ServiceRoleClient, user_ids: list[str]) -> dict[str, str | None]:
+    names: dict[str, str | None] = {}
+    if not user_ids:
+        return names
+    profiles = getattr(
+        service.client.table("profiles").select("id,display_name").in_("id", user_ids).execute(),
+        "data",
+        None,
+    )
+    for row in profiles if isinstance(profiles, list) else []:
+        if isinstance(row, dict) and isinstance(row.get("id"), str):
+            name = row.get("display_name")
+            names[row["id"]] = name if isinstance(name, str) else None
+    return names
+
+
+def _sort_key(name: str | None, user_id: str) -> tuple[int, str, str]:
+    return (0 if name else 1, (name or "").casefold(), user_id)
+
+
 @router.get("/accounts")
 def list_admin_accounts(
     _actor: Annotated[CurrentUser, Depends(require_role("superadmin"))],
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    q: Annotated[str | None, Query(max_length=MAX_TERM_LEN)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    offset: Annotated[int, Query(ge=0, le=_MAX_ACCOUNTS)] = 0,
 ) -> dict[str, Any]:
     data = getattr(
         service.client.table("user_roles").select("user_id,role").execute(), "data", None
@@ -72,30 +99,78 @@ def list_admin_accounts(
         if isinstance(user_id, str) and isinstance(role, str) and is_admin_role(role):
             roles_by_user.setdefault(user_id, set()).add(role)
     user_ids = sorted(roles_by_user)[:_MAX_ACCOUNTS]
-    names: dict[str, str | None] = {}
-    if user_ids:
-        profiles = getattr(
-            service.client.table("profiles")
-            .select("id,display_name")
-            .in_("id", user_ids)
-            .execute(),
-            "data",
-            None,
-        )
-        for row in profiles if isinstance(profiles, list) else []:
-            if isinstance(row, dict) and isinstance(row.get("id"), str):
-                name = row.get("display_name")
-                names[row["id"]] = name if isinstance(name, str) else None
+    names = _names_for(service, user_ids)
+    user_ids.sort(key=lambda uid: _sort_key(names.get(uid), uid))
+    term = clean_search_term(q)
+    emails: dict[str, str | None] = {}
+    if term is not None:
+        needle = term.casefold()
+        matched: list[str] = []
+        for uid in user_ids:
+            haystack = [names.get(uid) or "", *roles_by_user[uid]]
+            if any(needle in value.casefold() for value in haystack):
+                matched.append(uid)
+                continue
+            emails[uid] = _email_for(service, uid)
+            if needle in (emails[uid] or "").casefold():
+                matched.append(uid)
+        user_ids = matched
+    total = len(user_ids)
+    page = user_ids[offset : offset + limit]
     accounts = [
         AdminAccountOut(
             user_id=user_id,
             display_name=names.get(user_id),
-            email=_email_for(service, user_id),
+            email=emails[user_id] if user_id in emails else _email_for(service, user_id),
             roles=sorted(roles_by_user[user_id]),
         )
-        for user_id in user_ids
+        for user_id in page
     ]
-    return {"accounts": [account.model_dump() for account in accounts]}
+    next_offset = offset + limit if offset + limit < total else None
+    return {
+        "accounts": [account.model_dump() for account in accounts],
+        "total": total,
+        "next_offset": next_offset,
+    }
+
+
+class AccountLookupOut(BaseModel):
+    user_id: str
+    display_name: str | None
+    email: str | None
+    roles: list[str]
+
+
+@router.get("/accounts/lookup")
+def lookup_accounts(
+    _actor: Annotated[CurrentUser, Depends(require_role("superadmin"))],
+    service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    q: Annotated[str, Query(min_length=2, max_length=MAX_TERM_LEN)],
+) -> dict[str, Any]:
+    """Any account (not only admins) by name, email or id, for the role-assignment picker."""
+    people = search_people(service, q, limit=10)
+    roles_by_user: dict[str, list[str]] = {}
+    ids = [person["user_id"] for person in people]
+    if ids:
+        rows = getattr(
+            service.client.table("user_roles").select("user_id,role").in_("user_id", ids).execute(),
+            "data",
+            None,
+        )
+        for row in rows if isinstance(rows, list) else []:
+            if isinstance(row, dict) and isinstance(row.get("role"), str):
+                roles_by_user.setdefault(str(row.get("user_id")), []).append(row["role"])
+    return {
+        "accounts": [
+            AccountLookupOut(
+                user_id=person["user_id"],
+                display_name=person["display_name"],
+                email=person["email"],
+                roles=sorted(roles_by_user.get(person["user_id"], [])),
+            ).model_dump()
+            for person in people
+        ]
+    }
 
 
 class DeactivateBody(BaseModel):

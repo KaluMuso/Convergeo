@@ -40,6 +40,7 @@ _ORDER_STATUSES = frozenset(
 )
 MANUAL_ESCROW_CONFIRMATION_PHRASE = "MANUAL ESCROW"
 MAX_SEARCH_LEN = 120
+RECENT_PAGE = 50
 
 Courier = Literal["yango", "indrive", "other"]
 EscrowOperation = Literal["hold", "release"]
@@ -61,6 +62,8 @@ class OrderSearchItem(BaseModel):
     vendor_slug: str
     customer_id: UUID
     customer_phone: str | None
+    customer_display_name: str | None = None
+    total_ngwee: int = 0
     created_at: datetime
 
 
@@ -297,10 +300,18 @@ def _order_to_search_item(
     *,
     vendors: dict[str, dict[str, Any]],
     profiles: dict[str, dict[str, Any]],
+    items_total: dict[str, int] | None = None,
 ) -> OrderSearchItem:
     vendor = vendors.get(str(row["vendor_id"]), {})
     profile = profiles.get(str(row["customer_id"]), {})
+    total = (
+        (items_total or {}).get(str(row["id"]), 0)
+        + _int_or_zero(row.get("delivery_fee_ngwee"))
+        - _int_or_zero(row.get("coupon_discount_ngwee"))
+    )
     return OrderSearchItem(
+        total_ngwee=max(0, total),
+        customer_display_name=profile.get("display_name") or None,
         id=row["id"],
         status=row["status"],
         fulfilment=row["fulfilment"],
@@ -321,17 +332,18 @@ def _search_orders(
     vendor: str | None = None,
     status: str | None = None,
     q: str | None = None,
+    before: datetime | None = None,
+    limit: int = RECENT_PAGE,
 ) -> list[OrderSearchItem]:
-    if not any((order_id, phone, vendor, status, q)):
-        raise AppError(
-            code="validation_error",
-            message="Provide at least one search parameter",
-            http_status=422,
-        )
-
     order_rows: list[dict[str, Any]] = []
 
-    if order_id:
+    if not any((order_id, phone, vendor, status, q)):
+        query = _table(client, "orders").select("*")
+        if before is not None:
+            query = query.lt("created_at", before.isoformat())
+        response = query.order("created_at", desc=True).limit(limit).execute()
+        order_rows = list(response.data or [])
+    elif order_id:
         validated_id = _validate_order_id(order_id)
         response = _table(client, "orders").select("*").eq("id", validated_id).limit(1).execute()
         order_rows = list(response.data or [])
@@ -369,14 +381,42 @@ def _search_orders(
                     response = query.in_("id", sorted(allowed_ids)).limit(50).execute()
                     order_rows = list(response.data or [])
             else:
-                response = query.order("created_at", desc=True).limit(50).execute()
+                if before is not None:
+                    query = query.lt("created_at", before.isoformat())
+                response = query.order("created_at", desc=True).limit(limit).execute()
                 order_rows = list(response.data or [])
 
     vendor_ids = {str(row["vendor_id"]) for row in order_rows}
     customer_ids = {str(row["customer_id"]) for row in order_rows}
     vendors = _load_vendor_map(client, vendor_ids)
     profiles = _load_profile_map(client, customer_ids)
-    return [_order_to_search_item(row, vendors=vendors, profiles=profiles) for row in order_rows]
+    items_total = _load_items_total_map(client, {str(row["id"]) for row in order_rows})
+    return [
+        _order_to_search_item(row, vendors=vendors, profiles=profiles, items_total=items_total)
+        for row in order_rows
+    ]
+
+
+def _load_items_total_map(client: ServiceRoleClient, order_ids: set[str]) -> dict[str, int]:
+    if not order_ids:
+        return {}
+    response = (
+        _table(client, "order_items")
+        .select("order_id, qty, unit_price_ngwee")
+        .in_("order_id", sorted(order_ids))
+        .execute()
+    )
+    totals: dict[str, int] = {}
+    for row in response.data or []:
+        qty, unit = row.get("qty"), row.get("unit_price_ngwee")
+        if isinstance(qty, int) and isinstance(unit, int):
+            key = str(row.get("order_id"))
+            totals[key] = totals.get(key, 0) + qty * unit
+    return totals
+
+
+def _int_or_zero(value: Any) -> int:
+    return value if isinstance(value, int) and not isinstance(value, bool) else 0
 
 
 def _search_by_phone(client: ServiceRoleClient, phone: str) -> list[dict[str, Any]]:
@@ -695,7 +735,10 @@ async def search_orders(
     vendor: Annotated[str | None, Query(max_length=MAX_SEARCH_LEN)] = None,
     status: Annotated[str | None, Query(max_length=32)] = None,
     q: Annotated[str | None, Query(max_length=MAX_SEARCH_LEN)] = None,
+    before: Annotated[datetime | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=RECENT_PAGE)] = RECENT_PAGE,
 ) -> list[OrderSearchItem]:
+    """With no criteria, returns the newest orders; page with ``before`` = last ``created_at``."""
     return _search_orders(
         service_client,
         order_id=order_id,
@@ -703,6 +746,8 @@ async def search_orders(
         vendor=vendor,
         status=status,
         q=q,
+        before=before,
+        limit=limit,
     )
 
 
