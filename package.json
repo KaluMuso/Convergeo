@@ -36,12 +36,12 @@
     "lefthook": "^1.11.3",
     "lighthouse": "13.6.0",
     "prettier": "^3.10.1",
-    "turbo": "^2.11.11",
+    "turbo": "^2.11.13",
     "typescript": "^5.8.2",
-    "typescript-eslint": "^8.72.2",
+    "typescript-eslint": "^8.73.0",
     "yauzl": "3.4.0",
-    "puppeteer": "25.17.0",
-    "lint-staged": "^17.6.0"
+    "puppeteer": "25.18.1",
+    "lint-staged": "^17.6.2"
   },
   "pnpm": {
     "overrides": {
