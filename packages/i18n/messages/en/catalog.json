@@ -324,11 +324,35 @@
       "zoomClose": "Close image viewer",
       "zoomTitle": "Product images",
       "zoomIn": "Zoom in",
-      "zoomOut": "Fit image"
+      "zoomOut": "Fit image",
+      "rolloverZoom": "Roll over image to zoom in",
+      "tapToExpand": "Tap to expand",
+      "openLightbox": "Open full-screen image viewer",
+      "thumbAria": "Image {current} of {total}",
+      "moreImages": "{count, plural, one {# more image} other {# more images}}"
+    },
+    "sectionNav": {
+      "top": "Top",
+      "about": "About this item",
+      "specs": "Specifications",
+      "reviews": "Reviews",
+      "similar": "Similar"
     },
     "specs": {
       "heading": "Specifications",
-      "empty": "No specifications listed"
+      "empty": "No specifications listed",
+      "seeMore": "See more",
+      "seeLess": "See less",
+      "groups": {
+        "features": "Features & specs",
+        "details": "Item details",
+        "measurements": "Measurements",
+        "materials": "Materials & care"
+      }
+    },
+    "about": {
+      "seeMore": "See more",
+      "seeLess": "See less"
     },
     "buyBox": {
       "priceLabel": "Price",
@@ -485,6 +509,7 @@
       }
     },
     "lightbox": {
+      "imagesTab": "Images",
       "open": "View image full screen",
       "dialog": "Image viewer",
       "close": "Close image viewer",

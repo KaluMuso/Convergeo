@@ -25,6 +25,7 @@ import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
 import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { PdpOfferBox } from "../../_components/offers/pdp-offer-box";
+import { AboutThisItem } from "../../_components/pdp/about-this-item";
 import {
   fetchProduct,
   productCacheTag,
@@ -41,7 +42,9 @@ import {
 import { PdpRatingChip } from "../../_components/pdp/pdp-rating-chip";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
-import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
+import { PdpSectionNav } from "../../_components/pdp/section-nav";
+import { groupSpecRows, PdpSpecTable } from "../../_components/pdp/spec-table";
+import { specRowsFromJson } from "../../_components/pdp/specs-table";
 
 import {
   productAggregateRatingForJsonLd,
@@ -703,7 +706,10 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   return (
     // Shop layout already provides the page <main> landmark — avoid nesting.
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 py-2 motion-rise md:py-4">
+    <div
+      id="pdp-top"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-5 py-2 motion-rise md:py-4"
+    >
       {productJsonLd ? <JsonLdScript data={productJsonLd} /> : null}
       <JsonLdScript data={breadcrumbJsonLd} />
       <ProductViewTracker
@@ -955,6 +961,22 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         </Suspense>
       ) : null}
 
+      <PdpSectionNav
+        items={[
+          { id: "pdp-top", label: t("pdp.sectionNav.top") },
+          ...(overviewParagraphs.length > 0
+            ? [{ id: "pdp-about", label: t("pdp.sectionNav.about") }]
+            : []),
+          { id: "pdp-specs", label: t("pdp.sectionNav.specs") },
+          { id: "pdp-reviews", label: t("pdp.sectionNav.reviews") },
+          { id: "pdp-similar", label: t("pdp.sectionNav.similar") },
+        ]}
+        productTitle={product.name}
+        thumbnailPublicId={images[0]?.publicId}
+        thumbnailAlt={product.name}
+        cloudName={cloudName}
+      />
+
       <PdpDetailsTabs
         labels={{
           ariaLabel: t("pdp.tabs.ariaLabel"),
@@ -964,18 +986,21 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         }}
         hasOverview={overviewParagraphs.length > 0}
         overviewPanel={
-          <div className="flex flex-col gap-2 text-sm leading-relaxed text-text-2">
-            {overviewParagraphs.map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </div>
+          <AboutThisItem
+            paragraphs={overviewParagraphs}
+            seeMoreLabel={t("pdp.about.seeMore")}
+            seeLessLabel={t("pdp.about.seeLess")}
+          />
         }
         specsPanel={
-          <SpecsTable
-            rows={specRows}
-            heading={t("pdp.specs.heading")}
+          <PdpSpecTable
+            groups={groupSpecRows(specRows, {
+              features: t("pdp.specs.groups.features"),
+              details: t("pdp.specs.groups.details"),
+              measurements: t("pdp.specs.groups.measurements"),
+              materials: t("pdp.specs.groups.materials"),
+            })}
             emptyLabel={t("pdp.specs.empty")}
-            hideHeading
           />
         }
         reviewsPanel={reviewsPanel}
@@ -986,12 +1011,14 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       {/* Founder rule: related items from OTHER shops, not only this one. */}
       {selectedListing ? (
         <Suspense fallback={null}>
-          <OtherShopsRail
-            locale={locale}
-            vendorSlug={selectedListing.vendor.slug}
-            lead="product"
-            focusProductSlug={product.slug}
-          />
+          <div id="pdp-similar">
+            <OtherShopsRail
+              locale={locale}
+              vendorSlug={selectedListing.vendor.slug}
+              lead="product"
+              focusProductSlug={product.slug}
+            />
+          </div>
         </Suspense>
       ) : null}
     </div>

@@ -229,15 +229,20 @@
     },
     "leadTime": "Ifwile {days} masiku ya kulanga",
     "gallery": {
-      "empty": "Takwaba amapictures",
-      "indicator": "Picture {current} ya {total}",
-      "next": "Picture iyakonka",
-      "previous": "Picture iyapita",
-      "zoomOpen": "Loleni icithunzi icikulu",
-      "zoomClose": "Isaleni ifithunzi",
-      "zoomTitle": "Ifithunzi fya product",
-      "zoomIn": "Kukusha icithunzi",
-      "zoomOut": "Bwesheni icithunzi kuti cikwane"
+      "empty": "No images yet",
+      "indicator": "Image {current} of {total}",
+      "next": "Next image",
+      "previous": "Previous image",
+      "zoomOpen": "Enlarge image",
+      "zoomClose": "Close image viewer",
+      "zoomTitle": "Product images",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Fit image",
+      "rolloverZoom": "Roll over image to zoom in",
+      "tapToExpand": "Tap to expand",
+      "openLightbox": "Open full-screen image viewer",
+      "thumbAria": "Image {current} of {total}",
+      "moreImages": "{count, plural, one {# more image} other {# more images}}"
     },
     "unavailableTitle": "Icintu tashifikapo",
     "unavailableBody": "Tatwaishibe ukuleta icintu ici nomba. Checkeni connection no wesheni limbi.",
@@ -265,8 +270,16 @@
       "heading": "Ifyo mwamonapo"
     },
     "specs": {
-      "empty": "Takwaba specifications",
-      "heading": "Ifya specs"
+      "empty": "No specifications listed",
+      "heading": "Specifications",
+      "seeMore": "See more",
+      "seeLess": "See less",
+      "groups": {
+        "features": "Features & specs",
+        "details": "Item details",
+        "measurements": "Measurements",
+        "materials": "Materials & care"
+      }
     },
     "tabs": {
       "ariaLabel": "Ifya product",
@@ -375,11 +388,12 @@
       }
     },
     "lightbox": {
-      "open": "Moneni picture pa screen yonse",
-      "dialog": "Ukumona amapictures",
-      "close": "Isalenipo ukumona amapictures",
-      "zoomIn": "Kusheni picture",
-      "zoomOut": "Cefyeni picture"
+      "open": "View image full screen",
+      "dialog": "Image viewer",
+      "close": "Close image viewer",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "imagesTab": "Images"
     },
     "value": {
       "madeToOrderDays": "Yapangwa muntu, yaba ready mu masiku {days}",
@@ -413,6 +427,17 @@
         "cta": "⚠ Set price alert",
         "subscribed": "⚠ We'll notify you when the price drops"
       }
+    },
+    "sectionNav": {
+      "top": "Top",
+      "about": "About this item",
+      "specs": "Specifications",
+      "reviews": "Reviews",
+      "similar": "Similar"
+    },
+    "about": {
+      "seeMore": "See more",
+      "seeLess": "See less"
     }
   },
   "plp": {
