@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { VendorGrid } from "../../_components/vendor-page";
 import { ListSkeleton } from "../../_components/vendor-skeletons";
@@ -137,53 +139,81 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
             <ListingStatusGuide />
           </div>
           <VendorGrid cols="cards" className="px-1">
-            {listings.map((listing) => (
-              <div key={listing.id} className="rounded-lg border border-border p-4 shadow-sm lg:p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <p className="truncate text-sm font-medium text-text">{listing.title}</p>
-                    <PriceBlock ngwee={listing.price_ngwee} />
-                    <p className="text-xs text-text-2">
-                      <span className="sr-only">{t("listings.manage.statusLabel")}</span>
-                      <span className="font-medium text-text">
-                        {statusLabel(listing.status, statusLabels)}
-                      </span>
-                    </p>
-                    <ListingVisibilityHint status={listing.status} />
-                  </div>
-                  <Badge
-                    variant={statusVariant(listing.status)}
-                    label={statusLabel(listing.status, statusLabels)}
-                  />
-                </div>
-
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <div className="text-xs text-text-2">
-                    <span className="font-medium text-text">{t("listings.manage.stockLabel")}</span>
-                    <span className="sr-only"> </span>
-                    {listing.stock_mode === "always_available"
-                      ? t("listings.manage.stockAlways")
-                      : t("listings.manage.stockValue", { qty: listing.stock_qty ?? 0 })}
-                  </div>
-
-                  {listing.stock_mode === "tracked" ? (
-                    <Link
-                      className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
-                      href={`/${locale}/listings/${listing.id}/edit#stock`}
-                    >
-                      {t("listings.manage.stock.heading")}
-                    </Link>
-                  ) : null}
-                </div>
-
-                <Link
-                  className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium"
-                  href={`/${locale}/listings/${listing.id}/edit`}
+            {listings.map((listing) => {
+              const coverImage = [...(listing.images ?? [])].sort(
+                (left, right) => left.position - right.position,
+              )[0];
+              return (
+                <div
+                  key={listing.id}
+                  className="rounded-lg border border-border p-4 shadow-sm lg:p-5"
                 >
-                  {t("listings.manage.editCta")}
-                </Link>
-              </div>
-            ))}
+                  <div className="flex items-start justify-between gap-3">
+                    {coverImage ? (
+                      <CloudinaryImage
+                        publicId={coverImage.cloudinary_public_id}
+                        alt={listing.title}
+                        width={72}
+                        ratio={1}
+                        className="size-[72px] shrink-0 rounded-md border border-border object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-bg-2 text-center">
+                        <Link
+                          className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+                          href={`/${locale}/listings/${listing.id}/edit#photos`}
+                        >
+                          {t("listings.manage.addPhotoLink")}
+                        </Link>
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="truncate text-sm font-medium text-text">{listing.title}</p>
+                      <PriceBlock ngwee={listing.price_ngwee} />
+                      <p className="text-xs text-text-2">
+                        <span className="sr-only">{t("listings.manage.statusLabel")}</span>
+                        <span className="font-medium text-text">
+                          {statusLabel(listing.status, statusLabels)}
+                        </span>
+                      </p>
+                      <ListingVisibilityHint status={listing.status} />
+                    </div>
+                    <Badge
+                      variant={statusVariant(listing.status)}
+                      label={statusLabel(listing.status, statusLabels)}
+                    />
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="text-xs text-text-2">
+                      <span className="font-medium text-text">
+                        {t("listings.manage.stockLabel")}
+                      </span>
+                      <span className="sr-only"> </span>
+                      {listing.stock_mode === "always_available"
+                        ? t("listings.manage.stockAlways")
+                        : t("listings.manage.stockValue", { qty: listing.stock_qty ?? 0 })}
+                    </div>
+
+                    {listing.stock_mode === "tracked" ? (
+                      <Link
+                        className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
+                        href={`/${locale}/listings/${listing.id}/edit#stock`}
+                      >
+                        {t("listings.manage.stock.heading")}
+                      </Link>
+                    ) : null}
+                  </div>
+
+                  <Link
+                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium"
+                    href={`/${locale}/listings/${listing.id}/edit`}
+                  >
+                    {t("listings.manage.editCta")}
+                  </Link>
+                </div>
+              );
+            })}
           </VendorGrid>
         </>
       )}

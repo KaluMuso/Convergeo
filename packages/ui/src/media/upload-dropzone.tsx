@@ -147,25 +147,23 @@ export function UploadDropzone({
         }}
       >
         <p>{dropLabel}</p>
-        <label htmlFor={inputId}>
-          <input
-            ref={inputRef}
-            id={inputId}
-            data-testid="upload-input"
-            type="file"
-            accept={accept}
-            multiple
-            onChange={handleInputChange}
-            style={{ display: "none" }}
-          />
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            style={{ minHeight: "44px", minWidth: "44px" }}
-          >
-            {browseLabel}
-          </button>
-        </label>
+        <input
+          ref={inputRef}
+          id={inputId}
+          data-testid="upload-input"
+          type="file"
+          accept={accept}
+          multiple
+          onChange={handleInputChange}
+          style={{ display: "none" }}
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          style={{ minHeight: "44px", minWidth: "44px" }}
+        >
+          {browseLabel}
+        </button>
         {compressHint ? <div data-testid="compress-hint">{compressHint}</div> : null}
       </div>
 

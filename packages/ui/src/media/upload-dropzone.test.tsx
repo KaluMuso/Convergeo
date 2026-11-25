@@ -72,6 +72,12 @@ describe("UploadDropzone", () => {
     expect(screen.getByTestId("upload-file-1")).toHaveTextContent("a.jpg");
   });
 
+  it("keeps the browse control outside a label", () => {
+    render(<Harness />);
+    const browse = screen.getByRole("button", { name: labels.browseLabel });
+    expect(browse.closest("label")).toBeNull();
+  });
+
   it("revokes object URLs on unmount", () => {
     const files = [makeFile("preview.jpg")];
 
