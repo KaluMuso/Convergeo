@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "@vergeo/ui/styles/theme.css";
 
+/* packages/ui is not in Tailwind's auto source scan (see theme.css). Scan the
+   shared components whose utilities the customer app otherwise loses: the
+   account AppHeader gutters, the hero arrows, the Select chevron and the
+   ProductCard body padding. */
+@source "../../../packages/ui/src/app-header.tsx";
+@source "../../../packages/ui/src/merch/hero-carousel.tsx";
+@source "../../../packages/ui/src/select.tsx";
+@source "../../../packages/ui/src/product-card.tsx";
+
 html,
 body {
   max-width: 100vw;

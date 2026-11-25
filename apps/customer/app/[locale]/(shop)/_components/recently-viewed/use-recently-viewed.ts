@@ -9,6 +9,8 @@ export type RecentlyViewedEntry = {
   slug: string;
   name: string;
   viewedAt: number;
+  /** Last seen price in ngwee when the PDP recorded it (optional). */
+  priceNgwee?: number;
 };
 
 type RecentStore = {
@@ -28,11 +30,15 @@ function isEntry(value: unknown): value is RecentlyViewedEntry {
     return false;
   }
   const record = value as Record<string, unknown>;
+  const price = record.priceNgwee;
+  const priceOk =
+    price === undefined || (typeof price === "number" && Number.isInteger(price) && price >= 0);
   return (
     typeof record.slug === "string" &&
     record.slug.length > 0 &&
     typeof record.name === "string" &&
-    typeof record.viewedAt === "number"
+    typeof record.viewedAt === "number" &&
+    priceOk
   );
 }
 
@@ -59,10 +65,7 @@ function writeEntries(entries: RecentlyViewedEntry[]): void {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(
-    RECENTLY_VIEWED_STORAGE_KEY,
-    JSON.stringify(entries),
-  );
+  window.localStorage.setItem(RECENTLY_VIEWED_STORAGE_KEY, JSON.stringify(entries));
 }
 
 function emit(): void {
@@ -105,16 +108,20 @@ export function upsertRecentlyViewed(
   return [next, ...without].slice(0, RECENTLY_VIEWED_MAX);
 }
 
-export function recordRecentlyViewed(slug: string, name: string): void {
+export function recordRecentlyViewed(slug: string, name: string, priceNgwee?: number): void {
   if (!slug) {
     return;
   }
   ensureHydrated();
-  store.entries = upsertRecentlyViewed(store.entries, {
+  const next: RecentlyViewedEntry = {
     slug,
     name: name.trim() || slug,
     viewedAt: Date.now(),
-  });
+  };
+  if (typeof priceNgwee === "number" && Number.isInteger(priceNgwee) && priceNgwee >= 0) {
+    next.priceNgwee = priceNgwee;
+  }
+  store.entries = upsertRecentlyViewed(store.entries, next);
   writeEntries(store.entries);
   emit();
 }
@@ -150,11 +157,7 @@ export function useRecentlyViewed(): {
   clear: () => void;
   remove: (slug: string) => void;
 } {
-  const snapshot = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
-  );
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

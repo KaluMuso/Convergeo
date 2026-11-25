@@ -1,6 +1,7 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { LinkButton } from "@vergeo/ui/src/link-button";
+import { PageHeader } from "@vergeo/ui/src/page-header";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -16,6 +17,8 @@ import { CompareResults } from "./_components/compare-results";
 import type { ComparisonLabels, ComparisonListing } from "../_components/pdp/comparison";
 import type { ListingCondition } from "../_components/pdp/condition-badge";
 import type { Metadata } from "next";
+
+import { CustomerRouteShell } from "@/components/customer-route-shell";
 
 export const revalidate = 60;
 
@@ -193,12 +196,13 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
 
   if (!slug) {
     return (
-      <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-3xl">
-        <header className="space-y-2">
-          <h1 className="font-display text-h1 text-display-ink">{t("comparePage.title")}</h1>
-          <p className="text-body text-text-2">{t("comparePage.subtitle")}</p>
-        </header>
-        <EmptyState title={t("comparePage.noProductTitle")} body={t("comparePage.noProductBody")} />
+      <CustomerRouteShell width="content" className="flex max-w-3xl flex-col gap-6">
+        <PageHeader title={t("comparePage.title")} subtitle={t("comparePage.subtitle")} />
+        <EmptyState
+          title={t("comparePage.noProductTitle")}
+          body={t("comparePage.noProductBody")}
+          illustration="no-results"
+        />
         <LinkButton
           href={`/${locale}/search`}
           variant="primary"
@@ -207,20 +211,19 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
         >
           {t("comparePage.browseCta")}
         </LinkButton>
-      </div>
+      </CustomerRouteShell>
     );
   }
 
   const comparison = await fetchComparison(slug);
   if (!comparison) {
     return (
-      <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-3xl">
-        <header className="space-y-2">
-          <h1 className="font-display text-h1 text-display-ink">{t("comparePage.title")}</h1>
-        </header>
+      <CustomerRouteShell width="content" className="flex max-w-3xl flex-col gap-6">
+        <PageHeader title={t("comparePage.title")} />
         <EmptyState
           title={t("comparePage.unavailableTitle")}
           body={t("comparePage.unavailableBody")}
+          illustration="offline"
         />
         <LinkButton
           href={`/${locale}/p/${slug}`}
@@ -230,7 +233,7 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
         >
           {t("comparePage.backToProduct")}
         </LinkButton>
-      </div>
+      </CustomerRouteShell>
     );
   }
 
@@ -238,24 +241,24 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
   const canCompare = shouldShowComparison(listings.length);
 
   return (
-    <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-5xl">
-      <header className="space-y-2">
-        <p className="text-sm text-text-2">
-          <Link
-            href={`/${locale}/p/${comparison.product_slug}`}
-            className="text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
-          >
-            {t("comparePage.backToProduct")}
-          </Link>
-        </p>
-        <h1 className="font-display text-h1 text-display-ink">{t("comparePage.title")}</h1>
-        <p className="text-body text-text-2">{t("comparePage.subtitle")}</p>
-      </header>
+    <CustomerRouteShell className="flex max-w-5xl flex-col gap-6">
+      <PageHeader
+        title={t("comparePage.title")}
+        subtitle={t("comparePage.subtitle")}
+        breadcrumbs={[
+          {
+            key: "product",
+            label: t("comparePage.backToProduct"),
+            href: `/${locale}/p/${comparison.product_slug}`,
+          },
+        ]}
+      />
 
       {!canCompare ? (
         <EmptyState
           title={t("comparePage.singleSellerTitle")}
           body={t("comparePage.singleSellerBody")}
+          illustration="no-results"
         />
       ) : (
         <>
@@ -276,6 +279,6 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
       >
         {t("comparePage.chooseOnProduct")}
       </LinkButton>
-    </div>
+    </CustomerRouteShell>
   );
 }

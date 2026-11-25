@@ -345,6 +345,7 @@ def test_vendor_kyc_detail_shows_incomplete_record_without_documents(
 
     response = api_client.get(f"/admin/vendors/{VENDOR_ID}/kyc", headers=_auth_headers())
     assert response.status_code == 200, response.text
+    assert response.headers.get("cache-control") == "private, max-age=240"
     assert response.json()["documents"] == []
     assert response.json()["docs_available"] is False
 
