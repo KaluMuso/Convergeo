@@ -139,7 +139,7 @@ describe("actual measured DOM snapshot", () => {
   it("rejects image count or order changes between snapshot and decode", async () => {
     const image = document.getElementById("fixture-image")!;
     const other = document.createElement("img");
-    document.querySelector('[data-testid="gallery-strip"]')!.append(other);
+    document.querySelector('[data-testid="pdp-interactive-gallery"]')!.append(other);
     Object.defineProperties(other, {
       naturalWidth: { configurable: true, value: 360 },
       complete: { configurable: true, value: true },
