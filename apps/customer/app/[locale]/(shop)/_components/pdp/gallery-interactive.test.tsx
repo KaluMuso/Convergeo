@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -54,16 +54,18 @@ function renderGallery(imageCount: number) {
 }
 
 describe("PdpInteractiveGallery", () => {
-  it("switches main image when a thumbnail is clicked", () => {
+  it("switches main image when a thumbnail is clicked", async () => {
     renderGallery(3);
     expect(screen.getByTestId("gallery-indicator")).toHaveTextContent("Image 1 of 3");
-    fireEvent.click(screen.getByTestId("gallery-thumb-1"));
-    expect(screen.getByTestId("gallery-indicator")).toHaveTextContent("Image 2 of 3");
+    fireEvent.click(await screen.findByTestId("gallery-thumb-1"));
+    await waitFor(() =>
+      expect(screen.getByTestId("gallery-indicator")).toHaveTextContent("Image 2 of 3"),
+    );
   });
 
-  it("shows +N overflow tile when more than six images", () => {
+  it("shows +N overflow tile when more than six images", async () => {
     renderGallery(8);
-    expect(screen.getByTestId("gallery-thumb-overflow")).toHaveTextContent("+2");
+    expect(await screen.findByTestId("gallery-thumb-overflow")).toHaveTextContent("+2");
   });
 
   it("omits the strip for a single image", () => {

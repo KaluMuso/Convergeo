@@ -314,7 +314,7 @@
     },
     "gallery": {
       "empty": "No images yet",
-      "indicator": "Image {current} of {total}",
+      "indicator": "第 {current}/{total} 张图片",
       "previous": "Previous image",
       "next": "Next image",
       "zoomOpen": "Enlarge image",

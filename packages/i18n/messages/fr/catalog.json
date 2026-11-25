@@ -314,7 +314,7 @@
     },
     "gallery": {
       "empty": "No images yet",
-      "indicator": "Image {current} of {total}",
+      "indicator": "Image {current} sur {total}",
       "previous": "Previous image",
       "next": "Next image",
       "zoomOpen": "Enlarge image",
