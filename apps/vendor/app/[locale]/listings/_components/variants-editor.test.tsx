@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { ApiError } from "@vergeo/config";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next-intl", () => ({
@@ -105,6 +106,36 @@ describe("VariantsEditor", () => {
       price_ngwee: null,
     });
     expect(payload.variants[1]).toMatchObject({ options: ["Blue", "M"], price_ngwee: null });
+  });
+
+  it("surfaces API validation field errors without wiping the draft", async () => {
+    const api = {
+      getVariants: vi.fn().mockResolvedValue(existing),
+      replaceVariants: vi.fn().mockRejectedValue(
+        new ApiError("validation_error", "Request validation failed", {
+          status: 422,
+          details: {
+            fields: [
+              {
+                field: "variants.0.price_ngwee",
+                message: "ngwee must be an integer, floats are forbidden",
+              },
+            ],
+          },
+        }),
+      ),
+    };
+    renderEditor(api);
+    await screen.findByTestId("variants-matrix");
+    fireEvent.change(screen.getByTestId("variants-stock-0"), { target: { value: "2" } });
+    fireEvent.change(screen.getByTestId("variants-stock-1"), { target: { value: "3" } });
+    fireEvent.click(screen.getByTestId("variants-save"));
+    await waitFor(() =>
+      expect(screen.getByTestId("variants-status")).toHaveTextContent(
+        "ngwee must be an integer, floats are forbidden",
+      ),
+    );
+    expect(screen.getByText(/listings\.variants\.errors\.invalidPrice/)).toBeInTheDocument();
   });
 
   it("explains why a listing kind cannot have options", () => {

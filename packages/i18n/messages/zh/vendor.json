@@ -65,6 +65,7 @@
       "subheadline": "通过商品、服务、活动、供货和您的商户主页触达赞比亚各地的买家——尽在一个商家应用。",
       "primaryCta": "继续卖家邀请",
       "secondaryCta": "查看佣金",
+      "existingSellerCta": "Already selling? Open vendor portal",
       "freeTierNote": "受邀卖家在管理员批准后可使用免费套餐（最多 30 个商品）。公开注册尚未开放。"
     },
     "valueProps": {
@@ -213,6 +214,8 @@
       "namePlaceholder": "例如：卢萨卡电子",
       "categoryLabel": "您主要卖什么？",
       "categoryPlaceholder": "请选择",
+      "archetypeLabel": "What kind of business are you?",
+      "archetypePlaceholder": "Choose one",
       "categories": {
         "electronics": "电子产品",
         "home": "家居生活",
@@ -220,6 +223,14 @@
         "services": "服务",
         "groceries": "食品杂货",
         "other": "其他"
+      },
+      "archetypes": {
+        "market_trader": "Market trader",
+        "registered_retailer": "Registered shop",
+        "service_professional": "I do services (repairs, beauty…)",
+        "manufacturer": "I make things",
+        "importer_wholesaler": "I import or sell in bulk",
+        "event_organiser": "I run events"
       },
       "continue": "继续",
       "saving": "保存中…"
@@ -263,6 +274,9 @@
       "heading": "核对并提交",
       "intro": "请核对信息。我们通常一个工作日内回复。",
       "businessSection": "商户",
+      "businessNameLabel": "Business name",
+      "businessCategoryLabel": "Main category",
+      "businessArchetypeLabel": "Business type",
       "docsSection": "证件",
       "momoSection": "移动支付",
       "nrcUploaded": "NRC 照片已上传",
@@ -372,6 +386,11 @@
     }
   },
   "listings": {
+    "formAside": {
+      "previewHeading": "Buyer preview",
+      "previewPhotoAlt": "Main listing photo",
+      "noPhoto": "No photo"
+    },
     "images": {
       "heading": "照片",
       "intro": "{count}/{max} 张照片。第一张是主图。",
@@ -389,6 +408,8 @@
       "upload": "添加照片",
       "uploading": "上传中…",
       "upload_failed": "照片上传失败。请重试。",
+      "upload_error_with_name": "Could not upload \"{name}\": {detail}",
+      "retry_one": "Retry this photo",
       "minimum_required": "商品在售时，至少保留 {count} 张实拍照片。",
       "retry": "重试",
       "duplicate": "该照片已在此商品中。",
@@ -506,6 +527,8 @@
       "stockTracked": "我会计数",
       "stockAlways": "一直有货",
       "stockQtyLabel": "现有数量",
+      "wholesaleSectionHeading": "Wholesale / bulk prices",
+      "wholesaleBuyersHint": "Wholesale listings appear to verified buyers on Supplies.",
       "wholesaleLabel": "批发阶梯价",
       "wholesaleHelp": "仅限 T2 认证商家（营业文件已核实）",
       "wholesaleMeasureUnavailable": "按米、公斤或升出售的商品暂不支持批发价。",
@@ -687,6 +710,10 @@
         "returnableLabel": "接受退货",
         "returnableHelp": "如果商品不合适，允许买家在下方期限内退货。",
         "returnWindowLabel": "退货窗口期（小时）",
+        "compareAtLabel": "Compare-at price (ZMW)",
+        "compareAtHelp": "Optional 'was' price, shown struck through on your listing. Leave blank for no sale; it must be higher than the price.",
+        "compareAtInvalid": "Enter a valid compare-at price, or leave it blank.",
+        "compareAtTooLow": "Compare-at price must be higher than the current price.",
         "tierHeading": "批发价格档位",
         "tierQtyLabel": "最小数量",
         "tierPriceLabel": "单价（ZMW）",
@@ -710,6 +737,10 @@
       },
       "emptyTitle": "暂无商品",
       "statusLabel": "状态",
+      "productStatus": {
+        "inReview": "Live, in review: buyers see it once Convergeo approves it",
+        "rejected": "Product rejected"
+      },
       "stock": {
         "heading": "调整可用库存",
         "help": "输入以销售步数计算的增减量，而非实物盘点总量。可用库存已扣除预留数量。不能在此更改单位或库存模式。新增分店库存需由库存负责人处理。",
@@ -986,7 +1017,9 @@
     },
     "actions": {
       "save": "保存资料",
-      "saving": "保存中…"
+      "saving": "保存中…",
+      "viewStorefront": "View public storefront",
+      "viewStorefrontUnavailable": "Public storefront preview is unavailable in this environment."
     },
     "success": {
       "saved": "资料已保存。更改将在一分钟内显示在您的公开页面上。"
@@ -1117,6 +1150,21 @@
       "trackingRequired": "请先写由谁送货。",
       "retryHint": "请检查网络连接后重试。"
     },
+    "courier": {
+      "heading": "Rider",
+      "courier": "Rider",
+      "reference": "Courier reference: {ref}",
+      "statuses": {
+        "requested": "Looking for a rider",
+        "accepted": "Rider found",
+        "picked_up": "Picked up",
+        "delivered": "Delivered",
+        "failed": "Not delivered",
+        "cancelled": "Cancelled"
+      },
+      "codDue": "The rider collects {amount} cash from the buyer",
+      "handoverNote": "The buyer gives the rider a code to show they got it."
+    },
     "guide": {
       "headingNow": "现在要做的",
       "headingNext": "接下来会怎样",
@@ -1181,10 +1229,20 @@
       "caption": "{date}（卢萨卡时间）已确认订单的金额",
       "emptyCaption": "今天还没有销售。合计只来自真实订单。"
     },
+    "analytics": {
+      "ariaLabel": "Your shop in the last 30 days",
+      "views": "People who looked",
+      "viewsCaption": "30 days",
+      "orders": "Orders",
+      "ordersCaption": "30 days",
+      "gmv": "销售额",
+      "gmvCaption": "30 days"
+    },
     "needsAction": {
       "heading": "待处理",
       "empty": "没有待办 — 没有订单在等您。",
-      "emptyTitle": "全部完成"
+      "emptyTitle": "全部完成",
+      "count": "{count, plural, one {# order needs you} other {# orders need you}}"
     },
     "actions": {
       "openQueue": "查看订单",
@@ -1201,7 +1259,20 @@
         "heading": "您的服务",
         "body": "展示服务并回复询价。",
         "cta": "查看我的服务"
+      },
+      "events": {
+        "heading": "Your events",
+        "body": "Make events, set ticket prices and get your door team ready.",
+        "cta": "See my events"
       }
+    },
+    "businessArchetypes": {
+      "market_trader": "market trader",
+      "registered_retailer": "registered retail",
+      "service_professional": "professional services",
+      "manufacturer": "manufacturing",
+      "importer_wholesaler": "import or wholesale",
+      "event_organiser": "events"
     },
     "businessTypes": {
       "electronics": "电子产品",
@@ -1226,9 +1297,6 @@
       "ariaLabel": "快捷入口",
       "listings": "商品",
       "profile": "资料"
-    },
-    "analytics": {
-      "gmv": "销售额"
     },
     "tasks": {
       "heading": "您的下一步",
@@ -1262,6 +1330,10 @@
           "title": "{count, plural, other {有 # 个订单等待您处理}}",
           "body": "今天 14:00 的截止时间已过。现在准备好，下一批发货时将优先送出。"
         },
+        "productsInReview": {
+          "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
+          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
+        },
         "catalogueProducts": {
           "title": "检查您的商品",
           "body": "保持库存和价格准确，避免买家订购您没有的商品。"
@@ -1278,7 +1350,32 @@
           "title": "完善店铺资料",
           "body": "店铺标志、营业时间和简短介绍能让买家更信任您。"
         }
-      }
+      },
+      "progress": "{count, plural, one {# step left} other {# steps left}}",
+      "progressComplete": "You're all caught up on setup.",
+      "progressAria": "Setup progress"
+    },
+    "shopStatus": {
+      "heading": "Your shop",
+      "shopLive": "Shop live",
+      "idVerified": "ID verified",
+      "payoutSet": "Payout number set",
+      "yes": "Yes",
+      "notYet": "Not yet"
+    },
+    "quickActions": {
+      "ariaLabel": "Quick actions",
+      "addProduct": "Add product",
+      "sellWholesale": "Sell wholesale",
+      "scan": "Scan",
+      "orders": "Orders",
+      "payouts": "Payouts"
+    },
+    "stats": {
+      "live": "Live today",
+      "quiet": "Quiet day",
+      "actionNeeded": "Needs you",
+      "caughtUp": "Caught up"
     }
   },
   "queue": {
@@ -1678,6 +1775,39 @@
       "saved": "更改已保存。",
       "backToList": "返回活动列表",
       "ticketsSold": "{count, plural, one {已售 # 张门票} other {已售 # 张门票}}",
+      "eventFormat": "Event format",
+      "eventTypes": {
+        "single": "Single event",
+        "multi_day": "Multi-day event",
+        "recurring": "Recurring series",
+        "free_rsvp": "Free RSVP",
+        "private": "Private event"
+      },
+      "visibility": "Visibility",
+      "visibilityOptions": {
+        "public": "Public — listed in event discovery",
+        "unlisted": "Unlisted — available only by direct link",
+        "private": "Private — access code required"
+      },
+      "accessCode": "Access code",
+      "accessCodeNewOptional": "New access code (optional)",
+      "accessCodeKeepPlaceholder": "Leave blank to keep the current code",
+      "accessCodeSetPlaceholder": "Set an event access code",
+      "recurrence": {
+        "heading": "Recurring schedule",
+        "help": "Use an RFC5545 rule, for example FREQ=WEEKLY;BYDAY=SA. The next 14–366 days are generated on the server.",
+        "rrule": "RRULE",
+        "rrulePlaceholder": "FREQ=WEEKLY;BYDAY=SA",
+        "timezone": "Timezone",
+        "timezonePlaceholder": "Africa/Lusaka",
+        "endSeries": "End series (optional)",
+        "horizonDays": "Rolling horizon (days)"
+      },
+      "platformFee": "Platform fee",
+      "platformFeeOptions": {
+        "organiser": "Absorb it as the organiser",
+        "buyer": "Show it as a buyer pass-through fee"
+      },
       "city": "城市",
       "cityPlaceholder": "Lusaka",
       "cityHelp": "用于城市发现筛选。地标和 GPS 仍用于寻址。",
@@ -2124,6 +2254,36 @@
       "actionFailed": "操作失败。请重试。"
     }
   },
+  "rfq": {
+    "title": "Quote requests",
+    "intro": "Direct quote requests from customers on your made-to-order listings and quote-based services.",
+    "loading": "Loading quote requests…",
+    "empty": "No quote requests yet.",
+    "loadFailed": "Could not load quote requests.",
+    "rejectFailed": "Could not decline this request.",
+    "reject": "Decline",
+    "yourQuote": "Your quote: {amount}",
+    "status": {
+      "pending": "Awaiting your quote",
+      "quoted": "Quote sent",
+      "accepted": "Accepted",
+      "rejected": "Declined"
+    },
+    "quoteForm": {
+      "open": "Send quote",
+      "close": "Cancel",
+      "amountLabel": "Quote price (ZMW)",
+      "amountPlaceholder": "e.g. 1,500.00",
+      "validityLabel": "Valid for (days)",
+      "messageLabel": "Message (optional)",
+      "submit": "Submit quote",
+      "submitting": "Submitting…",
+      "invalidAmount": "Enter a valid price.",
+      "invalidValidity": "Enter valid days (1–30).",
+      "invalidStatus": "This request can no longer be quoted.",
+      "submitFailed": "Could not submit quote. Try again."
+    }
+  },
   "jobs": {
     "eyebrow": "询价箱",
     "title": "匹配的任务",
@@ -2290,12 +2450,35 @@
     }
   },
   "shell": {
+    "groups": {
+      "operate": "Daily work",
+      "sell": "Sell more",
+      "business": "My business"
+    },
+    "moreMenu": {
+      "title": "Everything",
+      "close": "Close"
+    },
     "nav": {
       "ariaLabel": "商家导航",
+      "desktopAriaLabel": "Vendor sidebar",
       "home": "首页",
       "listings": "商品",
       "orders": "订单",
       "profile": "资料",
+      "more": "More",
+      "scan": "Scan a code",
+      "returns": "Returns",
+      "analytics": "How my shop is doing",
+      "services": "Services",
+      "events": "Events",
+      "rfq": "Quote requests",
+      "jobs": "Jobs",
+      "clips": "Videos",
+      "reviews": "Reviews",
+      "payouts": "Payouts",
+      "disputes": "Disputes",
+      "intake": "Products from WhatsApp",
       "settings": "设置",
       "offers": "优惠",
       "coupons": "优惠券",
@@ -2303,12 +2486,192 @@
     }
   },
   "intake": {
+    "meta": {
+      "title": "WhatsApp drafts — Convergeo Vendor",
+      "description": "Review product drafts created from your WhatsApp messages before they go live."
+    },
+    "title": "WhatsApp drafts",
+    "intro": "Products you sent by WhatsApp. Nothing is listed until you check it and submit.",
+    "loading": "Loading…",
+    "empty": {
+      "title": "No drafts yet",
+      "body": "Send a photo and a price to the Convergeo vendor number and it will appear here."
+    },
+    "error": {
+      "title": "Could not load your drafts",
+      "retry": "Try again"
+    },
+    "status": {
+      "collecting": "Collecting",
+      "needs_details": "Needs details",
+      "ready_for_vendor_review": "Ready to review",
+      "submitted": "Submitted",
+      "pending_admin_review": "With Convergeo",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "expired": "Expired"
+    },
     "detail": {
-      "canonicalProduct": "目录商品"
+      "title": "Check this draft",
+      "intro": "Correct anything that is wrong. It only goes live after Convergeo approves it.",
+      "photos": "Photos",
+      "photoAlt": "Draft photo {position}",
+      "noPhotos": "No photos yet.",
+      "provenance": "Where this came from",
+      "missing": "Still needed",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "submit": "Submit for review",
+      "submitting": "Submitting…",
+      "submitted": "Submitted for review. Convergeo will check it shortly.",
+      "back": "Back to drafts",
+      "canonicalProduct": "目录商品",
+      "canonicalTitle": "Select the catalog product",
+      "canonicalIntro": "For branded items sold individually, choose the exact existing product. Variant, commodity, unique and made-to-order intake needs a separate listing flow.",
+      "saveBeforeSubmit": "Save your changes before selecting a product and submitting."
+    },
+    "fields": {
+      "title": "Product name",
+      "price_ngwee": "Price",
+      "condition": "Condition",
+      "quantity": "Quantity",
+      "stock_mode": "Stock",
+      "sale_unit": "Sold per",
+      "description": "Description",
+      "category_slug": "Category",
+      "category_id": "Category",
+      "pricing_mode": "Pricing"
+    },
+    "source": {
+      "label": "Source",
+      "vendor_typed": "You typed this",
+      "rule": "Read from your message",
+      "model": "Suggested — please check"
+    },
+    "question": {
+      "title_missing": "What is this product called?",
+      "category_missing": "Which category does it belong to?",
+      "price_missing": "What is the price in kwacha?",
+      "condition_missing": "Is it new or refurbished?",
+      "possible_duplicate": "This looks like an earlier draft. Check before submitting.",
+      "prohibited_class": "This product class cannot be listed on Convergeo.",
+      "media_failed": "A photo could not be saved. Please send it again."
     },
     "errors": {
-      "canonical_required": "提交此草稿前，请选择目录中对应的在售商品。"
+      "loadFailed": "Could not load this draft.",
+      "saveFailed": "Could not save your changes.",
+      "submitFailed": "Could not submit this draft.",
+      "notYours": "This draft is not yours.",
+      "notEditable": "This draft can no longer be edited.",
+      "notReady": "This draft is not ready to submit yet.",
+      "linkInvalid": "This link has expired or has already been used.",
+      "rateLimited": "Too many requests. Please wait a moment.",
+      "incomplete_draft": "Some details are still missing.",
+      "invalid_price": "The price is not valid.",
+      "missing_quantity": "Add how many you have in stock.",
+      "unsupported_condition": "Used items cannot be listed. Choose new or refurbished.",
+      "unsupported_stock_mode": "That stock option is not supported.",
+      "canonical_required": "提交此草稿前，请选择目录中对应的在售商品。",
+      "canonicalRequired": "Select an existing catalog product before submitting.",
+      "canonicalUnavailable": "This product is unavailable. Select an active catalog product.",
+      "unsupportedClass": "Intake currently supports Class A branded items only. Use the normal listing flow for other product classes.",
+      "canonicalCategory": "The product category is unavailable, prohibited or different from your draft.",
+      "canonicalConflict": "This draft was already submitted with a different catalog product.",
+      "unsupported_mapping": "Intake currently supports fixed-price individual items only. Use the normal listing flow for other units or made-to-order items."
     }
+  },
+  "clips": {
+    "meta": {
+      "title": "Clips — Convergeo Vendor",
+      "description": "Record short product videos and track how they perform."
+    },
+    "title": "My clips",
+    "intro": "Short videos of your products. Every clip is checked by our team before it goes live.",
+    "loading": "Loading…",
+    "empty": {
+      "title": "No clips yet",
+      "body": "Record a short video of a product to get started."
+    },
+    "error": {
+      "title": "Could not load your clips",
+      "retry": "Try again"
+    },
+    "new": "New clip",
+    "quota": {
+      "label": "{remaining} of {cap} clips left this week",
+      "exhausted": "You've used all {cap} clips for this week. You can post again as clips older than {days} days drop off.",
+      "window": "Counted over the last {days} days."
+    },
+    "status": {
+      "draft": "Not uploaded",
+      "screening": "Checking",
+      "pending_review": "Awaiting review",
+      "published": "Live",
+      "rejected": "Not approved",
+      "taken_down": "Removed"
+    },
+    "statusHelp": {
+      "draft": "The video hasn't finished uploading yet.",
+      "screening": "We're processing the video. This usually takes a minute.",
+      "pending_review": "Our team is checking this clip. It is not visible to shoppers yet.",
+      "published": "Shoppers can see this clip in the feed.",
+      "rejected": "This clip was not approved. See the reason below.",
+      "taken_down": "This clip was removed and is no longer visible."
+    },
+    "rejectionReason": "Reason: {reason}",
+    "stats": {
+      "views": "{count, plural, one {# view} other {# views}}",
+      "likes": "{count, plural, one {# like} other {# likes}}",
+      "orders": "{count, plural, one {# order} other {# orders}}",
+      "title": "Performance"
+    },
+    "compose": {
+      "title": "New clip",
+      "chooseFile": "Choose a video",
+      "record": "Record a video",
+      "selected": "Selected: {name} ({size})",
+      "captionLabel": "Caption",
+      "captionPlaceholder": "Say what the product is and why it's good",
+      "categoryLabel": "Category",
+      "productsLabel": "Link up to 3 of your products",
+      "productsHelp": "Shoppers can add these straight to their cart from the clip.",
+      "addProduct": "Add product",
+      "removeProduct": "Remove",
+      "submit": "Upload clip",
+      "uploading": "Uploading… {percent}%",
+      "retry": "Retry upload",
+      "cancel": "Cancel",
+      "done": "Uploaded — we'll review it shortly"
+    },
+    "limits": {
+      "title": "Before you record",
+      "duration": "Up to 60 seconds",
+      "size": "Up to 80 MB",
+      "dataCost": "Uploading uses your own data. A 60-second clip is usually 20–80 MB, so use Wi-Fi where you can.",
+      "orientation": "Hold your phone upright — the feed is vertical."
+    },
+    "camera": {
+      "denied": "We can't reach your camera",
+      "deniedBody": "Your browser blocked camera access. You can allow it in your browser settings, or choose a video you've already recorded.",
+      "unavailable": "This device has no camera we can use — choose a video file instead.",
+      "usePicker": "Choose a video file"
+    },
+    "errors": {
+      "tooLong": "That video is longer than 60 seconds. Trim it and try again.",
+      "tooLarge": "That file is {size}, over the 80 MB limit. Record a shorter clip or lower the quality.",
+      "notVideo": "That file isn't a video.",
+      "weeklyCap": "You've reached your clip limit for this week.",
+      "rateLimited": "Too many requests. Please wait a moment.",
+      "uploadFailed": "The upload didn't finish. Your clip is saved — tap retry to send it again without picking the file twice.",
+      "notVerified": "Clips are for verified sellers. Verify your ID to start posting.",
+      "linkNotOwned": "You can only link your own products.",
+      "linkLimit": "A clip can link at most 3 products.",
+      "linkNotActive": "Only an active product can be linked.",
+      "notInPilot": "Clips is in a small pilot and your shop isn't part of it yet. We'll let you know when it opens.",
+      "paused": "Clip uploads are paused for the rest of this month. Your live clips are still showing."
+    },
+    "durationSeconds": "{seconds}s"
   },
   "settings": {
     "meta": {

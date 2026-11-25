@@ -5,14 +5,17 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { CloudinaryImage } from "../../../../../../packages/ui/src/media/cloudinary-image";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { VendorGrid } from "../../_components/vendor-page";
+import { VendorRouteHeader } from "../../_components/vendor-route-header";
 import { ListSkeleton } from "../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { createManageClient, type ListingSummary } from "../[id]/edit/_lib/manage-client";
 import { Badge, PriceBlock } from "../new/_lib/ui";
 
 import { ListingStatusGuide, ListingTipsPanel, ListingVisibilityHint } from "./listing-guide";
+import { ListingProductStatusChip } from "./listing-product-status";
 import { PlanUsageCard } from "./plan-usage-card";
 
 type ListingsManageListProps = {
@@ -105,10 +108,18 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="mb-2 space-y-1">
-        <h1 className="text-lg font-semibold text-text">{t("listings.manage.title")}</h1>
-        <p className="text-sm text-text-2">{t("listings.manage.intro")}</p>
-      </header>
+      <VendorRouteHeader
+        title={t("listings.manage.title")}
+        subtitle={t("listings.manage.intro")}
+        actions={
+          <Link
+            className="press-scale inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-[var(--primary-btn-fg)]"
+            href={`/${locale}/listings/new`}
+          >
+            {t("listings.manage.createCta")}
+          </Link>
+        }
+      />
 
       <div className="px-1">
         <PlanUsageCard refreshKey={listings.length} />
@@ -126,6 +137,7 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
       {listings.length === 0 ? (
         <div className="flex flex-col gap-3 px-1">
           <VendorEmptyState
+            illustration="no-products"
             title={t("listings.manage.emptyTitle")}
             body={t("listings.manage.empty")}
           />
@@ -137,53 +149,82 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
             <ListingStatusGuide />
           </div>
           <VendorGrid cols="cards" className="px-1">
-            {listings.map((listing) => (
-              <div key={listing.id} className="rounded-lg border border-border p-4 shadow-sm lg:p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <p className="truncate text-sm font-medium text-text">{listing.title}</p>
-                    <PriceBlock ngwee={listing.price_ngwee} />
-                    <p className="text-xs text-text-2">
-                      <span className="sr-only">{t("listings.manage.statusLabel")}</span>
-                      <span className="font-medium text-text">
-                        {statusLabel(listing.status, statusLabels)}
-                      </span>
-                    </p>
-                    <ListingVisibilityHint status={listing.status} />
-                  </div>
-                  <Badge
-                    variant={statusVariant(listing.status)}
-                    label={statusLabel(listing.status, statusLabels)}
-                  />
-                </div>
-
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <div className="text-xs text-text-2">
-                    <span className="font-medium text-text">{t("listings.manage.stockLabel")}</span>
-                    <span className="sr-only"> </span>
-                    {listing.stock_mode === "always_available"
-                      ? t("listings.manage.stockAlways")
-                      : t("listings.manage.stockValue", { qty: listing.stock_qty ?? 0 })}
-                  </div>
-
-                  {listing.stock_mode === "tracked" ? (
-                    <Link
-                      className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
-                      href={`/${locale}/listings/${listing.id}/edit#stock`}
-                    >
-                      {t("listings.manage.stock.heading")}
-                    </Link>
-                  ) : null}
-                </div>
-
-                <Link
-                  className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium"
-                  href={`/${locale}/listings/${listing.id}/edit`}
+            {listings.map((listing) => {
+              const cover = [...(listing.images ?? [])].sort((a, b) => a.position - b.position)[0]
+                ?.cloudinary_public_id;
+              return (
+                <div
+                  key={listing.id}
+                  className="rounded-lg border border-border p-4 shadow-sm lg:p-5"
                 >
-                  {t("listings.manage.editCta")}
-                </Link>
-              </div>
-            ))}
+                  <div className="flex items-start gap-3">
+                    {cover ? (
+                      <CloudinaryImage
+                        publicId={cover}
+                        alt={t("listings.formAside.previewPhotoAlt")}
+                        width={64}
+                        ratio={1}
+                        className="size-16 shrink-0 rounded-lg"
+                      />
+                    ) : (
+                      <div
+                        aria-hidden
+                        className="size-16 shrink-0 rounded-lg border border-dashed border-border bg-bg-2"
+                      />
+                    )}
+                    <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <p className="truncate text-sm font-medium text-text">{listing.title}</p>
+                        <PriceBlock ngwee={listing.price_ngwee} />
+                        <p className="text-xs text-text-2">
+                          <span className="sr-only">{t("listings.manage.statusLabel")}</span>
+                          <span className="font-medium text-text">
+                            {statusLabel(listing.status, statusLabels)}
+                          </span>
+                        </p>
+                        <ListingVisibilityHint status={listing.status} />
+                        <ListingProductStatusChip
+                          listingStatus={listing.status}
+                          productStatus={listing.product_status}
+                        />
+                      </div>
+                      <Badge
+                        variant={statusVariant(listing.status)}
+                        label={statusLabel(listing.status, statusLabels)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="text-xs text-text-2">
+                      <span className="font-medium text-text">
+                        {t("listings.manage.stockLabel")}
+                      </span>
+                      <span className="sr-only"> </span>
+                      {listing.stock_mode === "always_available"
+                        ? t("listings.manage.stockAlways")
+                        : t("listings.manage.stockValue", { qty: listing.stock_qty ?? 0 })}
+                    </div>
+
+                    {listing.stock_mode === "tracked" ? (
+                      <Link
+                        className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
+                        href={`/${locale}/listings/${listing.id}/edit#stock`}
+                      >
+                        {t("listings.manage.stock.heading")}
+                      </Link>
+                    ) : null}
+                  </div>
+
+                  <Link
+                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium"
+                    href={`/${locale}/listings/${listing.id}/edit`}
+                  >
+                    {t("listings.manage.editCta")}
+                  </Link>
+                </div>
+              );
+            })}
           </VendorGrid>
         </>
       )}

@@ -37,7 +37,7 @@ export function EventsManageList({ locale }: EventsManageListProps) {
   const { session, loading: sessionLoading } = useSession();
   const [items, setItems] = useState<EventSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
   const [notOrganiser, setNotOrganiser] = useState(false);
   const [collab, setCollab] = useState<CollabFlagStatus | null>(null);
 
@@ -68,7 +68,7 @@ export function EventsManageList({ locale }: EventsManageListProps) {
       .then((response) => {
         if (!cancelled) {
           setItems(response.items);
-          setError(null);
+          setErrorKey(null);
         }
       })
       .catch((caught: unknown) => {
@@ -77,10 +77,10 @@ export function EventsManageList({ locale }: EventsManageListProps) {
         }
         if (isNotOrganiserError(caught)) {
           setNotOrganiser(true);
-          setError(null);
+          setErrorKey(null);
           return;
         }
-        setError(t("events.errors.loadFailed"));
+        setErrorKey("events.errors.loadFailed");
       })
       .finally(() => {
         if (!cancelled) {
@@ -91,7 +91,7 @@ export function EventsManageList({ locale }: EventsManageListProps) {
     return () => {
       cancelled = true;
     };
-  }, [eventsClient, collabClient, session, sessionLoading, t]);
+  }, [eventsClient, collabClient, session, sessionLoading]);
 
   if (sessionLoading || loading) {
     return (
@@ -137,7 +137,11 @@ export function EventsManageList({ locale }: EventsManageListProps) {
         </Link>
       ) : null}
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {errorKey ? (
+        <p className="text-sm text-danger" role="alert">
+          {t(errorKey)}
+        </p>
+      ) : null}
 
       {items.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center">
