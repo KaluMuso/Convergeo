@@ -1,6 +1,7 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { LinkButton } from "@vergeo/ui/src/link-button";
+import { PageHeader } from "@vergeo/ui/src/page-header";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import { buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
 import Link from "next/link";
@@ -19,6 +20,8 @@ import { ListingGrid, type CatalogListing } from "../_components/plp/listing-gri
 import { DealCountdown } from "./_components/deal-countdown";
 
 import type { Metadata } from "next";
+
+import { CustomerRouteShell } from "@/components/customer-route-shell";
 
 export const revalidate = 60;
 
@@ -66,18 +69,16 @@ export default async function DealsPage({ params }: PageProps) {
   const listings: CatalogListing[] = items.map(dealToListing);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 pb-8">
-      <div>
-        <h1 className="m-0 font-display text-h1 font-bold text-display-ink">{t("deals.title")}</h1>
-        <p className="m-0 mt-1 text-sm text-text-2">{t("deals.subtitle")}</p>
-      </div>
+    <CustomerRouteShell width="full" className="flex flex-col gap-4 pb-8">
+      <PageHeader title={t("deals.title")} subtitle={t("deals.subtitle")} />
 
       {data === null ? (
-        <EmptyState title={t("deals.unavailable")} />
+        <EmptyState title={t("deals.unavailable")} illustration="no-products" />
       ) : items.length === 0 ? (
         <EmptyState
           title={t("deals.emptyTitle")}
           body={t("deals.emptyBody")}
+          illustration="no-products"
           action={
             <LinkButton href={`/${locale}/c/all`} variant="primary" LinkComponent={Link}>
               {t("deals.browse")}
@@ -120,6 +121,6 @@ export default async function DealsPage({ params }: PageProps) {
           <BackToTop label={t("plp.backToTop")} />
         </>
       )}
-    </div>
+    </CustomerRouteShell>
   );
 }

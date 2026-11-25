@@ -14,7 +14,6 @@ import {
   HomeSellCta,
   HomeServicesRail,
   HomeVendorsRail,
-  pickHeroVisualPublicId,
   pickRailDepartments,
   type HomeDefaultData,
 } from "./home-default";
@@ -23,10 +22,7 @@ import type { CategoryRow } from "./merch-data";
 import type { CatalogListing } from "./plp/listing-grid";
 
 // next/dynamic resolves asynchronously; render the real carousel synchronously in tests.
-vi.mock(
-  "./home-hero-carousel-lazy",
-  async () => await import("./home-hero-carousel"),
-);
+vi.mock("./home-hero-carousel-lazy", async () => await import("./home-hero-carousel"));
 
 vi.mock("@vergeo/ui/src/media/cloudinary-image-static", () => ({
   CloudinaryImageStatic: ({ alt }: { alt: string }) => (
@@ -84,23 +80,15 @@ const t = createTranslator({
   locale: "en",
   messages: { catalog: catalogMessages },
   namespace: "catalog",
-}) as unknown as (
-  key: string,
-  values?: Record<string, string | number>,
-) => string;
+}) as unknown as (key: string, values?: Record<string, string | number>) => string;
 
 function renderHomeHeroBand(props: {
   locale: string;
   t: (key: string, values?: Record<string, string | number>) => string;
   brandName: string;
-  visualPublicId?: string | null;
 }) {
   return render(
-    <NextIntlClientProvider
-      locale="en"
-      messages={{ catalog: catalogMessages }}
-      onError={() => {}}
-    >
+    <NextIntlClientProvider locale="en" messages={{ catalog: catalogMessages }} onError={() => {}}>
       <HomeHeroBand {...props} />
     </NextIntlClientProvider>,
   );
@@ -159,9 +147,7 @@ describe("pickRailDepartments", () => {
     const categories = ["a", "b", "c", "d"].map((slug, index) =>
       makeCategory({ id: slug, slug, path: slug, position: index }),
     );
-    expect(
-      pickRailDepartments(categories).map((category) => category.id),
-    ).toEqual(["a", "b", "c"]);
+    expect(pickRailDepartments(categories).map((category) => category.id)).toEqual(["a", "b", "c"]);
   });
 
   it("is empty-safe", () => {
@@ -203,9 +189,7 @@ describe("hasDefaultHomeContent", () => {
       hasDefaultHomeContent([], {
         deals: [],
         newest: [],
-        departmentRails: [
-          { category: makeCategory(), listings: [makeListing()] },
-        ],
+        departmentRails: [{ category: makeCategory(), listings: [makeListing()] }],
         services: [],
         topVendors: [],
       }),
@@ -241,27 +225,9 @@ describe("HomeProductRail", () => {
         labels={railLabels}
       />,
     );
-    expect(
-      screen.getByRole("heading", { name: "New on Convergeo" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View all" })).toHaveAttribute(
-      "href",
-      "/en/c/all",
-    );
+    expect(screen.getByRole("heading", { name: "New on Convergeo" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View all" })).toHaveAttribute("href", "/en/c/all");
     expect(screen.getByTestId("product-card")).toBeInTheDocument();
-  });
-});
-
-describe("pickHeroVisualPublicId", () => {
-  it("returns the first listing public id and skips empty ids", () => {
-    expect(pickHeroVisualPublicId([])).toBeNull();
-    expect(
-      pickHeroVisualPublicId([
-        makeListing({ imagePublicId: null }),
-        makeListing({ id: "2", imagePublicId: "  " }),
-        makeListing({ id: "3", imagePublicId: "demo/categories/phones" }),
-      ]),
-    ).toBe("demo/categories/phones");
   });
 });
 
@@ -269,61 +235,67 @@ describe("HomeHeroBand", () => {
   it("renders brand-first carousel hero with CTAs and no escrow pill row", () => {
     renderHomeHeroBand({ locale: "en", t, brandName: "Convergeo" });
     expect(screen.getByTestId("home-hero-band")).toBeInTheDocument();
-    expect(screen.getByTestId("hero-carousel")).toHaveAttribute(
-      "role",
-      "region",
-    );
-    expect(screen.getByTestId("hero-carousel")).toHaveAttribute(
-      "aria-roledescription",
-      "carousel",
-    );
-    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent(
-      "Convergeo",
-    );
+    expect(screen.getByTestId("hero-carousel")).toHaveAttribute("role", "region");
+    expect(screen.getByTestId("hero-carousel")).toHaveAttribute("aria-roledescription", "carousel");
+    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Convergeo");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       /Shop products, services, and events/i,
     );
-    expect(screen.getAllByTestId("cloudinary-image").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("hero-carousel-slide-0").querySelector("img")).not.toBeNull();
     expect(screen.queryByText("You pay")).not.toBeInTheDocument();
     expect(screen.queryByText("Held by Convergeo")).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Start browsing" }),
-    ).toHaveAttribute("href", "/en/search");
-    expect(
-      screen.getByRole("link", { name: "Sell on Convergeo" }),
-    ).toHaveAttribute("href", "/en/sell");
+    expect(screen.getByRole("link", { name: "Start browsing" })).toHaveAttribute(
+      "href",
+      "/en/search",
+    );
+    expect(screen.getByRole("link", { name: "Sell on Convergeo" })).toHaveAttribute(
+      "href",
+      "/en/sell",
+    );
   });
 
-  it("uses curated fallback slides with priority on the first image", () => {
+  it("leads with the brand illustration and curated Cloudinary slides after it", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "convergeo");
     renderHomeHeroBand({ locale: "en", t, brandName: "Convergeo" });
+    const slide1 = screen.getByTestId("hero-carousel-slide-0");
+    const illustration = slide1.querySelector("img");
+    expect(illustration?.getAttribute("src")).toContain("marketplace-1280.webp");
     const images = screen.getAllByTestId("cloudinary-image");
-    expect(images[0]).toHaveAttribute("data-priority", "true");
-    expect(images[0]).toHaveAttribute(
-      "data-public-id",
-      "demo/categories/mobile-phones",
-    );
-    expect(
-      images
-        .slice(1)
-        .every((image) => image.getAttribute("data-priority") === "false"),
-    ).toBe(true);
+    expect(images[0]).toHaveAttribute("data-public-id", "demo/categories/chitenge-fabric");
+    expect(images.every((image) => image.getAttribute("data-priority") === "false")).toBe(true);
+    vi.unstubAllEnvs();
   });
 
-  it("uses live catalogue imagery on slide 1 when visualPublicId is provided", () => {
-    renderHomeHeroBand({
-      locale: "en",
-      t,
-      brandName: "Convergeo",
-      visualPublicId: "vendors/acme/listing-hero",
-    });
-    const images = screen.getAllByTestId("cloudinary-image");
-    expect(images[0]).toHaveAttribute(
-      "data-public-id",
-      "vendors/acme/listing-hero",
-    );
-    expect(images[1]).toHaveAttribute(
-      "data-public-id",
-      "demo/categories/traditional-wear",
+  it("uses the CI perf fixture on slide 1 when the perf harness is active", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "demo");
+    vi.stubEnv("NEXT_PUBLIC_CI_PERF_HARNESS", "1");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "preview");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://10.0.0.1:8000");
+    renderHomeHeroBand({ locale: "en", t, brandName: "Convergeo" });
+    expect(
+      screen.getByTestId("hero-carousel-slide-0").querySelector('[data-testid="cloudinary-image"]'),
+    ).toHaveAttribute("data-public-id", "ci-perf/smartphone-x1");
+    vi.unstubAllEnvs();
+  });
+
+  it("falls back to the illustration on every slide when Cloudinary is not configured", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "");
+    renderHomeHeroBand({ locale: "en", t, brandName: "Convergeo" });
+    expect(screen.queryAllByTestId("cloudinary-image")).toHaveLength(0);
+    expect(
+      screen.getByTestId("hero-carousel-slide-1").querySelector("img")?.getAttribute("src"),
+    ).toContain("marketplace-1280.webp");
+    vi.unstubAllEnvs();
+  });
+
+  it("styles both CTAs with panel tokens so they stay legible on the dark scrim", () => {
+    renderHomeHeroBand({ locale: "en", t, brandName: "Convergeo" });
+    const sell = screen.getByRole("link", { name: "Sell on Convergeo" });
+    expect(sell.className).toContain("text-panel-text");
+    expect(sell.className).not.toMatch(/(^|\s)text-text(\s|$)/);
+    expect(screen.getByRole("link", { name: "Start browsing" }).className).toContain(
+      "bg-panel-text",
     );
   });
 });
@@ -331,13 +303,12 @@ describe("HomeHeroBand", () => {
 describe("HomeSellCta", () => {
   it("links to the sell page with invite-only messaging", () => {
     render(<HomeSellCta locale="en" t={t} />);
-    expect(
-      screen.getByRole("heading", { name: "Want to sell on Convergeo?" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Want to sell on Convergeo?" })).toBeInTheDocument();
     expect(screen.getByText(/only invited shops can join/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "See how selling works" }),
-    ).toHaveAttribute("href", "/en/sell");
+    expect(screen.getByRole("link", { name: "See how selling works" })).toHaveAttribute(
+      "href",
+      "/en/sell",
+    );
   });
 });
 
@@ -417,14 +388,9 @@ describe("HomeServicesRail", () => {
         labels={servicesRailLabels}
       />,
     );
-    expect(
-      screen.getByRole("heading", { name: "Services near you" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Services near you" })).toBeInTheDocument();
     expect(screen.getByTestId("service-card")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View all" })).toHaveAttribute(
-      "href",
-      "/en/services",
-    );
+    expect(screen.getByRole("link", { name: "View all" })).toHaveAttribute("href", "/en/services");
   });
 });
 
@@ -472,9 +438,7 @@ describe("HomeVendorsRail", () => {
         labels={vendorsRailLabels}
       />,
     );
-    expect(
-      screen.getByRole("heading", { name: "Top vendors" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Top vendors" })).toBeInTheDocument();
     expect(screen.getByTestId("vendor-card")).toBeInTheDocument();
   });
 });

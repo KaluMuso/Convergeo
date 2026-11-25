@@ -1,7 +1,7 @@
 "use client";
 
 import { BottomNav, type BottomNavItem } from "@vergeo/ui/src/bottom-nav";
-import { IconCategories, IconHome, IconOrders } from "@vergeo/ui/src/icons";
+import { LcMenu } from "@vergeo/ui/src/lucide-icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -18,6 +18,7 @@ import {
   VENDOR_NAV_GROUPS,
   vendorItemHref,
 } from "./vendor-nav-config";
+import { VendorNavIcon } from "./vendor-nav-icons";
 
 import type { VendorNavCapabilities } from "../../../lib/nav-capabilities";
 
@@ -26,36 +27,10 @@ type VendorNavProps = {
   capabilities: VendorNavCapabilities;
 };
 
-function IconMore() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      aria-hidden
-      className="h-5 w-5 shrink-0"
-    >
-      <path d="M5 7h14M5 12h14M5 17h14" />
-    </svg>
-  );
-}
-
-const MOBILE_ICONS: Record<string, React.ReactNode> = {
-  home: <IconHome />,
-  orders: <IconOrders />,
-  listings: <IconCategories />,
-  more: <IconMore />,
-};
-
 function navLinkClass(active: boolean): string {
   return [
-    "inline-flex min-h-11 w-full items-center rounded-md px-3 text-sm font-medium",
-    active
-      ? "bg-primary text-[var(--primary-btn-fg)]"
-      : "text-text-2 hover:bg-bg-2 hover:text-text",
+    "inline-flex min-h-11 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors duration-fast ease-std motion-reduce:transition-none",
+    active ? "bg-primary/12 text-primary" : "text-text-2 hover:bg-bg-2 hover:text-text",
   ].join(" ");
 }
 
@@ -100,7 +75,7 @@ export function VendorNav({ locale, capabilities }: VendorNavProps) {
     if (key === VENDOR_MORE_MENU_KEY) {
       return {
         key,
-        icon: MOBILE_ICONS.more,
+        icon: <LcMenu className="h-6 w-6 shrink-0" duotone aria-hidden />,
         label: t("shell.nav.more"),
         href: "#",
         active: moreActive,
@@ -109,7 +84,7 @@ export function VendorNav({ locale, capabilities }: VendorNavProps) {
     const item = visibleItems.find((entry) => entry.key === key)!;
     return {
       key,
-      icon: MOBILE_ICONS[key],
+      icon: <VendorNavIcon itemKey={key} size={32} />,
       label: t(`shell.nav.${key}` as "shell.nav.home"),
       href: vendorItemHref(locale, item.href),
       active: activeKey === key,
@@ -139,7 +114,10 @@ export function VendorNav({ locale, capabilities }: VendorNavProps) {
                         aria-current={active ? "page" : undefined}
                         className={navLinkClass(active)}
                       >
-                        {t(`shell.nav.${item.key}` as "shell.nav.home")}
+                        <VendorNavIcon itemKey={item.key} size={32} />
+                        <span className="truncate">
+                          {t(`shell.nav.${item.key}` as "shell.nav.home")}
+                        </span>
                       </Link>
                     </li>
                   );

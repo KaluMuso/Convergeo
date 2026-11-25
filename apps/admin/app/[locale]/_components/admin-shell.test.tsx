@@ -22,6 +22,11 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string) => {
+      if (input.startsWith("/admin/products/canonical")) {
+        return new Response(JSON.stringify([]), {
+          headers: { "content-type": "application/json" },
+        });
+      }
       if (input !== "/admin/me/permissions") {
         throw new Error("Unexpected request in isolated shell fixture");
       }
@@ -94,7 +99,7 @@ describe("AdminShell auth route transitions", () => {
       const isAuth = path !== "/en";
       expect(container.querySelector("nav") === null).toBe(isAuth);
       expect(container.querySelector("[aria-controls]") === null).toBe(isAuth);
-      expect(vi.mocked(fetch).mock.calls.length).toBe(permissionRequests + (isAuth ? 0 : 1));
+      expect(vi.mocked(fetch).mock.calls.length).toBe(permissionRequests + (isAuth ? 0 : 2));
     }
 
     expect(errors).not.toHaveBeenCalled();

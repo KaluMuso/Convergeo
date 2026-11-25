@@ -56,7 +56,6 @@ vi.mock("./_components/home-default", () => ({
   HomeServicesRail: () => null,
   HomeVendorsRail: () => null,
   loadHomeDefaultData: vi.fn(),
-  pickHeroVisualPublicId: vi.fn(),
 }));
 vi.mock("./_components/home-layout", () => ({ planHomeLayout: vi.fn() }));
 vi.mock("./_components/home-recently-viewed-rail", () => ({

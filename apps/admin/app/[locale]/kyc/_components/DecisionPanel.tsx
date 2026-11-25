@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ConfirmModal } from "../../_components/ConfirmModal";
 
@@ -11,6 +11,8 @@ type DecisionPanelProps = {
   detail: KycDetail;
   /** Review checklist complete; approving is blocked until it is. */
   checklistComplete?: boolean;
+  requestedMode?: DecisionMode | null;
+  onRequestedModeHandled?: () => void;
   onDecided: () => void;
 };
 
@@ -45,7 +47,13 @@ const REGULATED_CLASSES = [
   "financial_services",
 ] as const;
 
-export function DecisionPanel({ detail, checklistComplete = true, onDecided }: DecisionPanelProps) {
+export function DecisionPanel({
+  detail,
+  checklistComplete = true,
+  requestedMode = null,
+  onRequestedModeHandled,
+  onDecided,
+}: DecisionPanelProps) {
   const td = useTranslations("admin.kyc.detail");
   const tr = useTranslations("admin.kyc.reasons");
   const [mode, setMode] = useState<DecisionMode | null>(null);
@@ -65,6 +73,13 @@ export function DecisionPanel({ detail, checklistComplete = true, onDecided }: D
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (requestedMode) {
+      setMode(requestedMode);
+      onRequestedModeHandled?.();
+    }
+  }, [requestedMode, onRequestedModeHandled]);
 
   const reviewable = detail.status === "submitted" || detail.status === "under_review";
   const approved = detail.status === "approved";

@@ -128,3 +128,26 @@ export type VendorKycDetail = {
   momo_name_match: MomoNameMatch | null;
   updated_at: string;
 };
+
+const vendorKycDetailCache = new Map<string, Promise<VendorKycDetail>>();
+const kycDetailCache = new Map<string, Promise<KycDetail>>();
+
+export function prefetchVendorKycDetail(vendorId: string): Promise<VendorKycDetail> {
+  const existing = vendorKycDetailCache.get(vendorId);
+  if (existing) {
+    return existing;
+  }
+  const request = kycApi.request<VendorKycDetail>(`/admin/vendors/${vendorId}/kyc`);
+  vendorKycDetailCache.set(vendorId, request);
+  return request;
+}
+
+export function prefetchKycDetail(kycId: string): Promise<KycDetail> {
+  const existing = kycDetailCache.get(kycId);
+  if (existing) {
+    return existing;
+  }
+  const request = kycApi.request<KycDetail>(`/admin/kyc/${kycId}`);
+  kycDetailCache.set(kycId, request);
+  return request;
+}

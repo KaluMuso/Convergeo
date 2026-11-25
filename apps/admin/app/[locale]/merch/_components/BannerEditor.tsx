@@ -2,6 +2,8 @@
 
 import { useTranslations } from "next-intl";
 
+import { AdminImagePicker } from "./AdminImagePicker";
+
 export type BannerItemDraft = {
   key: string;
   title: string;
@@ -105,17 +107,11 @@ export function BannerEditor({
                 className="min-h-11 rounded-md border border-border bg-surface px-3 text-sm"
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs text-muted">
-              {t("itemImage")}
-              <input
-                type="text"
-                value={item.image_public_id ?? ""}
-                onChange={(event) =>
-                  updateItem(index, { image_public_id: event.target.value || undefined })
-                }
-                className="min-h-11 rounded-md border border-border bg-surface px-3 text-sm"
-              />
-            </label>
+            <AdminImagePicker
+              label={t("itemImage")}
+              value={item.image_public_id ?? ""}
+              onChange={(publicId) => updateItem(index, { image_public_id: publicId || undefined })}
+            />
             <button
               type="button"
               onClick={() => removeItem(index)}
