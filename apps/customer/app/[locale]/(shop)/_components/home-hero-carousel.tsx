@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonBaseClasses, buttonSizeClasses } from "@vergeo/ui/src/button";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { HeroCarousel } from "@vergeo/ui/src/merch/hero-carousel";
@@ -11,11 +12,34 @@ import { AdTracker } from "./home-feed/ad-tracker";
 import { localizeHref, type AdCreative } from "./home-feed/feed-types";
 import { HOME_HERO_FALLBACK_SLIDES } from "./home-hero-slides";
 
+const HERO_ILLUSTRATION_SRC = "/images/hero/marketplace-1280.webp";
+const HERO_ILLUSTRATION_SRCSET =
+  "/images/hero/marketplace-640.webp 640w, /images/hero/marketplace-1280.webp 1280w";
+
+/** CTAs sit on the always-dark `--panel` scrim, so they use panel tokens, not page tokens. */
+const HERO_PRIMARY_CTA = `${buttonBaseClasses} ${buttonSizeClasses.md} bg-panel-text text-panel hover:opacity-90`;
+const HERO_SECONDARY_CTA = `${buttonBaseClasses} ${buttonSizeClasses.md} border border-panel-text/80 bg-panel/50 text-panel-text hover:bg-panel-text/15`;
+
+function HeroIllustration({ priority }: { priority: boolean }) {
+  return (
+    <img
+      src={HERO_ILLUSTRATION_SRC}
+      srcSet={HERO_ILLUSTRATION_SRCSET}
+      sizes="100vw"
+      alt=""
+      width={1280}
+      height={720}
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : undefined}
+      decoding="async"
+      className="h-full w-full object-cover object-[72%_center]"
+    />
+  );
+}
+
 type HomeHeroCarouselProps = {
   locale: string;
   brandName: string;
-  /** Live catalogue image for slide 1 — honest merch only; never invent stock art. */
-  catalogVisualPublicId?: string | null;
   /**
    * Admin-scheduled sponsored slides (already filtered to enabled + in-window by
    * the API). Inserted after the brand slide and always labelled "Sponsored".
@@ -26,26 +50,23 @@ type HomeHeroCarouselProps = {
 export function HomeHeroCarousel({
   locale,
   brandName,
-  catalogVisualPublicId,
   sponsoredSlides = [],
 }: HomeHeroCarouselProps) {
   const t = useTranslations("catalog");
 
   const slides = useMemo(() => {
+    const hasCloudinary = Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
     const curated = HOME_HERO_FALLBACK_SLIDES.map((def, index) => {
       const isPrimary = def.primary === true;
       const priority = index === 0;
-      const publicId =
-        isPrimary && catalogVisualPublicId?.trim()
-          ? catalogVisualPublicId.trim()
-          : def.publicId;
+      const publicId = hasCloudinary ? def.publicId : undefined;
 
       return {
         key: def.key,
         eyebrow: isPrimary ? brandName : undefined,
         title: t(def.titleKey),
         subtitle: def.subtitleKey ? t(def.subtitleKey) : undefined,
-        media: (
+        media: publicId ? (
           <CloudinaryImage
             publicId={publicId}
             alt=""
@@ -55,24 +76,17 @@ export function HomeHeroCarousel({
             sizes="100vw"
             className="h-full w-full [&_img]:h-full [&_img]:w-full [&_img]:object-cover"
           />
+        ) : (
+          <HeroIllustration priority={priority} />
         ),
         cta: isPrimary ? (
           <>
-            <LinkButton
-              href={`/${locale}/search`}
-              variant="primary"
-              LinkComponent={Link}
-            >
+            <Link href={`/${locale}/search`} className={HERO_PRIMARY_CTA}>
               {t("home.hero.primaryCta")}
-            </LinkButton>
-            <LinkButton
-              href={`/${locale}/sell`}
-              variant="secondary"
-              LinkComponent={Link}
-              className="border-panel-text/40 bg-transparent text-panel-text hover:bg-panel-text/10"
-            >
+            </Link>
+            <Link href={`/${locale}/sell`} className={HERO_SECONDARY_CTA}>
               {t("home.hero.secondaryCta")}
-            </LinkButton>
+            </Link>
           </>
         ) : undefined,
       };
@@ -107,9 +121,7 @@ export function HomeHeroCarousel({
             variant="primary"
             LinkComponent={ad.external ? undefined : Link}
             aria-label={`${sponsoredLabel}: ${ad.cta_label ?? ad.headline}`}
-            {...(ad.external
-              ? { target: "_blank", rel: "sponsored noopener noreferrer" }
-              : {})}
+            {...(ad.external ? { target: "_blank", rel: "sponsored noopener noreferrer" } : {})}
           >
             {ad.cta_label ?? t("home.feed.adCta")}
           </LinkButton>
@@ -117,7 +129,7 @@ export function HomeHeroCarousel({
       ),
     }));
     return [...curated.slice(0, 1), ...sponsored, ...curated.slice(1)];
-  }, [brandName, catalogVisualPublicId, locale, sponsoredSlides, t]);
+  }, [brandName, locale, sponsoredSlides, t]);
 
   const labels = useMemo(
     () => ({
