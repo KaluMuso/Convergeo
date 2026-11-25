@@ -126,5 +126,30 @@
     "facebook": "https://www.facebook.com/",
     "twitter": "https://twitter.com/",
     "instagram": "https://www.instagram.com/"
+  },
+  "value": {
+    "share": {
+      "label": "Share on WhatsApp"
+    },
+    "save": {
+      "add": "Save",
+      "remove": "Remove from saved",
+      "savedAnnounce": "Saved to your list"
+    },
+    "trust": {
+      "ariaLabel": "Why it's safe to buy on Convergeo",
+      "escrow": "Held by Convergeo until you're happy",
+      "verified": "Verified sellers",
+      "returns": "Returns policy",
+      "momoCod": "Pay with MoMo or cash on delivery"
+    },
+    "recentlyViewed": {
+      "title": "Recently viewed",
+      "viewProduct": "View {name}"
+    },
+    "listing": {
+      "sellersFrom": "{count} sellers from {price}",
+      "deliversToday": "Delivers today (Lusaka)"
+    }
   }
 }

@@ -9,6 +9,7 @@ from uuid import UUID
 from app.deps import get_supabase_service_client  # type: ignore[attr-defined]
 from app.errors import AppError
 from app.services.kyc.approve_atomic import approve_kyc_vendor_atomic
+from app.services.kyc.name_match import score_name_match
 
 # Canonical DB statuses after migration 0056. Legacy `pending` is still accepted
 # on read (mapped to submitted) for mixed-environment safety during rollout.
@@ -603,6 +604,8 @@ def transition_approve(
 
     momo = kyc_record.momo_name_match or {}
     if momo.get("matched") is False:
+        momo = _rescore_momo_name_match(client, kyc_record_id, momo)
+    if momo.get("matched") is False:
         raise AppError(
             code="kyc_name_match_required",
             message="KYC cannot be approved while MoMo name-match is flagged",
@@ -883,3 +886,33 @@ def transition_upgrade_tier(
         after=after,
     )
     return after
+
+
+def _rescore_momo_name_match(
+    client: ServiceRoleClient, kyc_record_id: str, momo: dict[str, Any]
+) -> dict[str, Any]:
+    """Re-run the current name scorer on a flagged record before approval.
+
+    Records flagged by an older, stricter scorer (e.g. a missing middle name)
+    are re-scored from the stored names. Only an upgrade to matched is written,
+    and the original score is kept for the audit trail.
+    """
+    resolved = momo.get("resolved_name")
+    legal = momo.get("legal_name")
+    if not isinstance(resolved, str) or not isinstance(legal, str):
+        return momo
+    score, matched = score_name_match(resolved, legal)
+    if not matched:
+        return momo
+    updated = {
+        **momo,
+        "matched": True,
+        "match_score": score,
+        "previous_match_score": momo.get("match_score"),
+        "rescored_at": _utc_now_iso(),
+        "rescore_reason": "name_words_subset",
+    }
+    client.client.table("kyc_records").update({"momo_name_match": updated}).eq(
+        "id", kyc_record_id
+    ).execute()
+    return updated

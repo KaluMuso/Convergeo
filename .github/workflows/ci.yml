@@ -308,18 +308,13 @@ jobs:
   python:
     # Required check context "Python API" (master ruleset). Aggregates the shards.
     name: Python API
-    needs: [changes, python-shard]
+    needs: python-shard
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: All API test shards passed
         run: |
           echo "python-shard result: ${{ needs.python-shard.result }}"
-          if [[ "${{ needs.changes.result }}" = "success" && \
-                "${{ needs.changes.outputs.run_python }}" != "true" ]]; then
-            echo "Python tier not required for this change set"
-            exit 0
-          fi
           test "${{ needs.python-shard.result }}" = "success"
 
   ask-evals:
@@ -855,10 +850,7 @@ jobs:
   security-gates:
     name: Security gates (headers + authz matrix)
     needs: changes
-    if: >-
-      ${{ !cancelled() && (needs.changes.result != 'success' ||
-      (needs.changes.outputs.run_security == 'true' &&
-      needs.changes.outputs.docs_only != 'true')) }}
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_security == 'true') }}
     # Blocking (M15-P05) and the sole owner of the complete route x role matrix.
     # Keep this job name stable: it is a required master-branch check context.
     runs-on: ubuntu-latest
@@ -1329,6 +1321,7 @@ jobs:
           fetch-depth: 0
 
       - name: Warm pinned PostgreSQL service images
+        working-directory: ${{ github.workspace }}
         run: bash scripts/ci/warm-ci-docker-images.sh
 
       - name: Install PostgreSQL client

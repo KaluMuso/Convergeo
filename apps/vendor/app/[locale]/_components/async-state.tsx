@@ -3,6 +3,7 @@
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { ErrorState } from "@vergeo/ui/src/error-state";
 
+import type { SpotIllustrationId } from "@vergeo/ui/src/spot-illustrations";
 import type { ReactNode } from "react";
 
 type VendorErrorStateProps = {
@@ -30,7 +31,7 @@ export function VendorErrorState({
       onRetry={onRetry}
       action={action}
       data-testid={dataTestId ?? "vendor-error-state"}
-      className="min-h-[40vh]"
+      className="min-h-[40vh] rounded-xl border border-border bg-surface"
     />
   );
 }
@@ -39,6 +40,7 @@ type VendorEmptyStateProps = {
   title: string;
   body?: string;
   action?: ReactNode;
+  illustration?: SpotIllustrationId;
   "data-testid"?: string;
 };
 
@@ -46,6 +48,7 @@ export function VendorEmptyState({
   title,
   body,
   action,
+  illustration,
   "data-testid": dataTestId,
 }: VendorEmptyStateProps) {
   return (
@@ -53,8 +56,9 @@ export function VendorEmptyState({
       title={title}
       body={body}
       action={action}
+      illustration={illustration}
       data-testid={dataTestId ?? "vendor-empty-state"}
-      className="rounded-lg border border-dashed border-border"
+      className="w-full rounded-xl border border-dashed border-border bg-surface"
     />
   );
 }

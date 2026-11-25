@@ -159,6 +159,7 @@ class FakeTable:
 class FakeStorageBucket:
     def __init__(self) -> None:
         self.calls: list[tuple[str, int]] = []
+        self.batch_calls: list[tuple[list[str], int]] = []
         self.objects: set[str] = set()
         self.failure: Exception | None = None
 
@@ -172,6 +173,21 @@ class FakeStorageBucket:
         return {
             "signedURL": f"https://example.supabase.co/storage/v1/object/sign/{KYC_DOCS_BUCKET}/{path}?token=abc",
             "expires_in": expires_in,
+        }
+
+    def create_signed_urls(self, paths: list[str], expires_in: int) -> dict[str, Any]:
+        self.batch_calls.append((list(paths), expires_in))
+        return {
+            "data": [
+                {
+                    "path": path,
+                    "signedURL": (
+                        f"https://example.supabase.co/storage/v1/object/sign/{KYC_DOCS_BUCKET}/{path}?token=abc"
+                    ),
+                    "expires_in": expires_in,
+                }
+                for path in paths
+            ]
         }
 
 
@@ -403,6 +419,22 @@ def _seed_single_pending(fake: FakeSupabaseClient, *, kyc_id: str = KYC_NEW_ID) 
     )
 
 
+def test_sign_kyc_documents_prefers_batch_and_orders_nrc_first(
+    fake_client: FakeSupabaseClient,
+) -> None:
+    service_wrapper = MagicMock()
+    service_wrapper.client = fake_client
+    paths = ["kyc/vendor-a/selfie.jpg", "kyc/vendor-a/extra.pdf", "kyc/vendor-a/nrc.jpg"]
+    documents, docs_available = sign_kyc_documents(service_wrapper, paths)
+    assert docs_available is True
+    assert fake_client.storage.bucket.batch_calls
+    batch_paths, _expires = fake_client.storage.bucket.batch_calls[0]
+    assert batch_paths[0].endswith("nrc.jpg")
+    assert batch_paths[1].endswith("selfie.jpg")
+    assert documents[0].doc_type == "nrc"
+    assert documents[1].doc_type == "selfie"
+
+
 def test_signed_url_ttl_is_at_most_five_minutes(fake_client: FakeSupabaseClient) -> None:
     service_wrapper = MagicMock()
     service_wrapper.client = fake_client
@@ -411,10 +443,18 @@ def test_signed_url_ttl_is_at_most_five_minutes(fake_client: FakeSupabaseClient)
         ["kyc/vendor-a/nrc.jpg", "kyc/vendor-a/selfie.jpg"],
     )
     assert docs_available is True
-    assert fake_client.storage.bucket.calls
-    for path, expires_in in fake_client.storage.bucket.calls:
-        assert path
-        assert expires_in <= 300
+    expires_values: list[int] = []
+    if fake_client.storage.bucket.batch_calls:
+        for batch_paths, expires_in in fake_client.storage.bucket.batch_calls:
+            expires_values.append(expires_in)
+            for path in batch_paths:
+                assert path
+    else:
+        for path, expires_in in fake_client.storage.bucket.calls:
+            assert path
+            expires_values.append(expires_in)
+    assert expires_values
+    assert all(expires_in <= 300 for expires_in in expires_values)
     for doc in documents:
         assert doc.ttl_seconds <= 300
         assert doc.signed_url is not None

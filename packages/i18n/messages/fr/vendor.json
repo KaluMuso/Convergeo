@@ -65,6 +65,7 @@
       "subheadline": "Touchez des acheteurs dans toute la Zambie avec des produits, services, événements, fournitures et votre profil professionnel — le tout depuis une seule application vendeur.",
       "primaryCta": "Continuer l'invitation vendeur",
       "secondaryCta": "Voir les commissions",
+      "existingSellerCta": "Already selling? Open vendor portal",
       "freeTierNote": "Les vendeurs invités obtiennent l'offre gratuite (jusqu'à 30 annonces) après approbation. L'inscription publique n'est pas ouverte."
     },
     "valueProps": {
@@ -213,6 +214,8 @@
       "namePlaceholder": "ex. Lusaka Electronics",
       "categoryLabel": "Que vendez-vous surtout ?",
       "categoryPlaceholder": "Choisir",
+      "archetypeLabel": "What kind of business are you?",
+      "archetypePlaceholder": "Choose one",
       "categories": {
         "electronics": "Électronique",
         "home": "Maison et art de vivre",
@@ -220,6 +223,14 @@
         "services": "Services",
         "groceries": "Épicerie",
         "other": "Autre"
+      },
+      "archetypes": {
+        "market_trader": "Market trader",
+        "registered_retailer": "Registered shop",
+        "service_professional": "I do services (repairs, beauty…)",
+        "manufacturer": "I make things",
+        "importer_wholesaler": "I import or sell in bulk",
+        "event_organiser": "I run events"
       },
       "continue": "Continuer",
       "saving": "Enregistrement…"
@@ -263,6 +274,9 @@
       "heading": "Vérifier et envoyer",
       "intro": "Vérifiez vos informations. Nous répondons en général sous un jour ouvré.",
       "businessSection": "Entreprise",
+      "businessNameLabel": "Business name",
+      "businessCategoryLabel": "Main category",
+      "businessArchetypeLabel": "Business type",
       "docsSection": "Documents",
       "momoSection": "Mobile money",
       "nrcUploaded": "Photo du NRC importée",
@@ -372,6 +386,11 @@
     }
   },
   "listings": {
+    "formAside": {
+      "previewHeading": "Buyer preview",
+      "previewPhotoAlt": "Main listing photo",
+      "noPhoto": "No photo"
+    },
     "images": {
       "heading": "Photos",
       "intro": "{count} sur {max} photos. La première est la photo principale.",
@@ -389,6 +408,8 @@
       "upload": "Ajouter des photos",
       "uploading": "Envoi en cours…",
       "upload_failed": "La photo n'est pas partie. Réessayez.",
+      "upload_error_with_name": "Could not upload \"{name}\": {detail}",
+      "retry_one": "Retry this photo",
       "minimum_required": "Gardez au moins {count} vraie photo tant que ce produit est en vente.",
       "retry": "Réessayer",
       "duplicate": "Cette photo figure déjà sur l'annonce.",
@@ -506,6 +527,8 @@
       "stockTracked": "Je les compte",
       "stockAlways": "J'en ai toujours",
       "stockQtyLabel": "Combien vous en avez",
+      "wholesaleSectionHeading": "Wholesale / bulk prices",
+      "wholesaleBuyersHint": "Wholesale listings appear to verified buyers on Supplies.",
       "wholesaleLabel": "Paliers de gros (prix de gros)",
       "wholesaleHelp": "Réservé aux entreprises vérifiées T2 (papiers contrôlés)",
       "wholesaleMeasureUnavailable": "Les prix de gros ne sont pas encore prêts pour les articles au mètre, kg ou litre.",
@@ -687,6 +710,10 @@
         "returnableLabel": "Accepter les retours",
         "returnableHelp": "Permettre aux acheteurs de retourner cet article dans le délai ci-dessous s'il ne convient pas.",
         "returnWindowLabel": "Délai de retour (heures)",
+        "compareAtLabel": "Compare-at price (ZMW)",
+        "compareAtHelp": "Optional 'was' price, shown struck through on your listing. Leave blank for no sale; it must be higher than the price.",
+        "compareAtInvalid": "Enter a valid compare-at price, or leave it blank.",
+        "compareAtTooLow": "Compare-at price must be higher than the current price.",
         "tierHeading": "Paliers de gros",
         "tierQtyLabel": "Quantité min",
         "tierPriceLabel": "Prix unitaire (ZMW)",
@@ -710,6 +737,10 @@
       },
       "emptyTitle": "Aucune annonce",
       "statusLabel": "Statut",
+      "productStatus": {
+        "inReview": "Live, in review: buyers see it once Convergeo approves it",
+        "rejected": "Product rejected"
+      },
       "stock": {
         "heading": "Ajuster le stock disponible",
         "help": "Saisissez une variation en pas de vente, pas un total physique compté. Les unités réservées sont déjà exclues. Les unités et le mode de stock sont fixes. La création de stocks par agence nécessite le responsable du stock.",
@@ -986,7 +1017,9 @@
     },
     "actions": {
       "save": "Enregistrer le profil",
-      "saving": "Enregistrement…"
+      "saving": "Enregistrement…",
+      "viewStorefront": "View public storefront",
+      "viewStorefrontUnavailable": "Public storefront preview is unavailable in this environment."
     },
     "success": {
       "saved": "Profil enregistré. Les modifications apparaissent sur votre page publique en une minute."
@@ -1117,6 +1150,21 @@
       "trackingRequired": "Écrivez d'abord qui livre.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
+    "courier": {
+      "heading": "Rider",
+      "courier": "Rider",
+      "reference": "Courier reference: {ref}",
+      "statuses": {
+        "requested": "Looking for a rider",
+        "accepted": "Rider found",
+        "picked_up": "Picked up",
+        "delivered": "Delivered",
+        "failed": "Not delivered",
+        "cancelled": "Cancelled"
+      },
+      "codDue": "The rider collects {amount} cash from the buyer",
+      "handoverNote": "The buyer gives the rider a code to show they got it."
+    },
     "guide": {
       "headingNow": "À faire maintenant",
       "headingNext": "Et ensuite",
@@ -1181,10 +1229,20 @@
       "caption": "Argent des commandes confirmées le {date} (heure de Lusaka)",
       "emptyCaption": "Pas encore de ventes aujourd'hui. Les totaux viennent uniquement de vraies commandes."
     },
+    "analytics": {
+      "ariaLabel": "Your shop in the last 30 days",
+      "views": "People who looked",
+      "viewsCaption": "30 days",
+      "orders": "Orders",
+      "ordersCaption": "30 days",
+      "gmv": "Ventes",
+      "gmvCaption": "30 days"
+    },
     "needsAction": {
       "heading": "À faire",
       "empty": "Rien à faire — aucune commande ne vous attend.",
-      "emptyTitle": "Tout est fait"
+      "emptyTitle": "Tout est fait",
+      "count": "{count, plural, one {# order needs you} other {# orders need you}}"
     },
     "actions": {
       "openQueue": "Voir les commandes",
@@ -1201,7 +1259,20 @@
         "heading": "Vos services",
         "body": "Montrez vos services et répondez aux demandes de prix.",
         "cta": "Voir mes services"
+      },
+      "events": {
+        "heading": "Your events",
+        "body": "Make events, set ticket prices and get your door team ready.",
+        "cta": "See my events"
       }
+    },
+    "businessArchetypes": {
+      "market_trader": "market trader",
+      "registered_retailer": "registered retail",
+      "service_professional": "professional services",
+      "manufacturer": "manufacturing",
+      "importer_wholesaler": "import or wholesale",
+      "event_organiser": "events"
     },
     "businessTypes": {
       "electronics": "électronique",
@@ -1226,9 +1297,6 @@
       "ariaLabel": "Raccourcis",
       "listings": "Produits",
       "profile": "Profil"
-    },
-    "analytics": {
-      "gmv": "Ventes"
     },
     "tasks": {
       "heading": "Vos prochaines étapes",
@@ -1262,6 +1330,10 @@
           "title": "{count, plural, one {# commande vous attend} other {# commandes vous attendent}}",
           "body": "La limite de 14 h est passée. Préparez-les maintenant pour qu'elles partent en premier à la prochaine tournée."
         },
+        "productsInReview": {
+          "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
+          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
+        },
         "catalogueProducts": {
           "title": "Vérifiez vos produits",
           "body": "Gardez stocks et prix à jour pour qu'aucun acheteur ne commande un article que vous n'avez pas."
@@ -1278,7 +1350,32 @@
           "title": "Complétez le profil de votre boutique",
           "body": "Un logo, des horaires et une courte description aident les acheteurs à vous faire confiance."
         }
-      }
+      },
+      "progress": "{count, plural, one {# step left} other {# steps left}}",
+      "progressComplete": "You're all caught up on setup.",
+      "progressAria": "Setup progress"
+    },
+    "shopStatus": {
+      "heading": "Your shop",
+      "shopLive": "Shop live",
+      "idVerified": "ID verified",
+      "payoutSet": "Payout number set",
+      "yes": "Yes",
+      "notYet": "Not yet"
+    },
+    "quickActions": {
+      "ariaLabel": "Quick actions",
+      "addProduct": "Add product",
+      "sellWholesale": "Sell wholesale",
+      "scan": "Scan",
+      "orders": "Orders",
+      "payouts": "Payouts"
+    },
+    "stats": {
+      "live": "Live today",
+      "quiet": "Quiet day",
+      "actionNeeded": "Needs you",
+      "caughtUp": "Caught up"
     }
   },
   "queue": {
@@ -1678,6 +1775,39 @@
       "saved": "Modifications enregistrées.",
       "backToList": "Retour aux événements",
       "ticketsSold": "{count, plural, one {# billet vendu} other {# billets vendus}}",
+      "eventFormat": "Event format",
+      "eventTypes": {
+        "single": "Single event",
+        "multi_day": "Multi-day event",
+        "recurring": "Recurring series",
+        "free_rsvp": "Free RSVP",
+        "private": "Private event"
+      },
+      "visibility": "Visibility",
+      "visibilityOptions": {
+        "public": "Public — listed in event discovery",
+        "unlisted": "Unlisted — available only by direct link",
+        "private": "Private — access code required"
+      },
+      "accessCode": "Access code",
+      "accessCodeNewOptional": "New access code (optional)",
+      "accessCodeKeepPlaceholder": "Leave blank to keep the current code",
+      "accessCodeSetPlaceholder": "Set an event access code",
+      "recurrence": {
+        "heading": "Recurring schedule",
+        "help": "Use an RFC5545 rule, for example FREQ=WEEKLY;BYDAY=SA. The next 14–366 days are generated on the server.",
+        "rrule": "RRULE",
+        "rrulePlaceholder": "FREQ=WEEKLY;BYDAY=SA",
+        "timezone": "Timezone",
+        "timezonePlaceholder": "Africa/Lusaka",
+        "endSeries": "End series (optional)",
+        "horizonDays": "Rolling horizon (days)"
+      },
+      "platformFee": "Platform fee",
+      "platformFeeOptions": {
+        "organiser": "Absorb it as the organiser",
+        "buyer": "Show it as a buyer pass-through fee"
+      },
       "city": "Ville",
       "cityPlaceholder": "Lusaka",
       "cityHelp": "Utilisée pour les filtres de découverte. Le landmark et le GPS restent l'adresse.",
@@ -2124,6 +2254,36 @@
       "actionFailed": "Échec de l'action. Réessayez."
     }
   },
+  "rfq": {
+    "title": "Quote requests",
+    "intro": "Direct quote requests from customers on your made-to-order listings and quote-based services.",
+    "loading": "Loading quote requests…",
+    "empty": "No quote requests yet.",
+    "loadFailed": "Could not load quote requests.",
+    "rejectFailed": "Could not decline this request.",
+    "reject": "Decline",
+    "yourQuote": "Your quote: {amount}",
+    "status": {
+      "pending": "Awaiting your quote",
+      "quoted": "Quote sent",
+      "accepted": "Accepted",
+      "rejected": "Declined"
+    },
+    "quoteForm": {
+      "open": "Send quote",
+      "close": "Cancel",
+      "amountLabel": "Quote price (ZMW)",
+      "amountPlaceholder": "e.g. 1,500.00",
+      "validityLabel": "Valid for (days)",
+      "messageLabel": "Message (optional)",
+      "submit": "Submit quote",
+      "submitting": "Submitting…",
+      "invalidAmount": "Enter a valid price.",
+      "invalidValidity": "Enter valid days (1–30).",
+      "invalidStatus": "This request can no longer be quoted.",
+      "submitFailed": "Could not submit quote. Try again."
+    }
+  },
   "jobs": {
     "eyebrow": "Demandes de devis",
     "title": "Missions correspondantes",
@@ -2290,12 +2450,35 @@
     }
   },
   "shell": {
+    "groups": {
+      "operate": "Daily work",
+      "sell": "Sell more",
+      "business": "My business"
+    },
+    "moreMenu": {
+      "title": "Everything",
+      "close": "Close"
+    },
     "nav": {
       "ariaLabel": "Navigation vendeur",
+      "desktopAriaLabel": "Vendor sidebar",
       "home": "Accueil",
       "listings": "Produits",
       "orders": "Commandes",
       "profile": "Profil",
+      "more": "More",
+      "scan": "Scan a code",
+      "returns": "Returns",
+      "analytics": "How my shop is doing",
+      "services": "Services",
+      "events": "Events",
+      "rfq": "Quote requests",
+      "jobs": "Jobs",
+      "clips": "Videos",
+      "reviews": "Reviews",
+      "payouts": "Payouts",
+      "disputes": "Disputes",
+      "intake": "Products from WhatsApp",
       "settings": "Paramètres",
       "offers": "Offres",
       "coupons": "Coupons",
@@ -2303,12 +2486,192 @@
     }
   },
   "intake": {
+    "meta": {
+      "title": "WhatsApp drafts — Convergeo Vendor",
+      "description": "Review product drafts created from your WhatsApp messages before they go live."
+    },
+    "title": "WhatsApp drafts",
+    "intro": "Products you sent by WhatsApp. Nothing is listed until you check it and submit.",
+    "loading": "Loading…",
+    "empty": {
+      "title": "No drafts yet",
+      "body": "Send a photo and a price to the Convergeo vendor number and it will appear here."
+    },
+    "error": {
+      "title": "Could not load your drafts",
+      "retry": "Try again"
+    },
+    "status": {
+      "collecting": "Collecting",
+      "needs_details": "Needs details",
+      "ready_for_vendor_review": "Ready to review",
+      "submitted": "Submitted",
+      "pending_admin_review": "With Convergeo",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "expired": "Expired"
+    },
     "detail": {
-      "canonicalProduct": "Produit du catalogue"
+      "title": "Check this draft",
+      "intro": "Correct anything that is wrong. It only goes live after Convergeo approves it.",
+      "photos": "Photos",
+      "photoAlt": "Draft photo {position}",
+      "noPhotos": "No photos yet.",
+      "provenance": "Where this came from",
+      "missing": "Still needed",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "submit": "Submit for review",
+      "submitting": "Submitting…",
+      "submitted": "Submitted for review. Convergeo will check it shortly.",
+      "back": "Back to drafts",
+      "canonicalProduct": "Produit du catalogue",
+      "canonicalTitle": "Select the catalog product",
+      "canonicalIntro": "For branded items sold individually, choose the exact existing product. Variant, commodity, unique and made-to-order intake needs a separate listing flow.",
+      "saveBeforeSubmit": "Save your changes before selecting a product and submitting."
+    },
+    "fields": {
+      "title": "Product name",
+      "price_ngwee": "Price",
+      "condition": "Condition",
+      "quantity": "Quantity",
+      "stock_mode": "Stock",
+      "sale_unit": "Sold per",
+      "description": "Description",
+      "category_slug": "Category",
+      "category_id": "Category",
+      "pricing_mode": "Pricing"
+    },
+    "source": {
+      "label": "Source",
+      "vendor_typed": "You typed this",
+      "rule": "Read from your message",
+      "model": "Suggested — please check"
+    },
+    "question": {
+      "title_missing": "What is this product called?",
+      "category_missing": "Which category does it belong to?",
+      "price_missing": "What is the price in kwacha?",
+      "condition_missing": "Is it new or refurbished?",
+      "possible_duplicate": "This looks like an earlier draft. Check before submitting.",
+      "prohibited_class": "This product class cannot be listed on Convergeo.",
+      "media_failed": "A photo could not be saved. Please send it again."
     },
     "errors": {
-      "canonical_required": "Choisissez le produit actif correspondant dans le catalogue avant de soumettre ce brouillon."
+      "loadFailed": "Could not load this draft.",
+      "saveFailed": "Could not save your changes.",
+      "submitFailed": "Could not submit this draft.",
+      "notYours": "This draft is not yours.",
+      "notEditable": "This draft can no longer be edited.",
+      "notReady": "This draft is not ready to submit yet.",
+      "linkInvalid": "This link has expired or has already been used.",
+      "rateLimited": "Too many requests. Please wait a moment.",
+      "incomplete_draft": "Some details are still missing.",
+      "invalid_price": "The price is not valid.",
+      "missing_quantity": "Add how many you have in stock.",
+      "unsupported_condition": "Used items cannot be listed. Choose new or refurbished.",
+      "unsupported_stock_mode": "That stock option is not supported.",
+      "canonical_required": "Choisissez le produit actif correspondant dans le catalogue avant de soumettre ce brouillon.",
+      "canonicalRequired": "Select an existing catalog product before submitting.",
+      "canonicalUnavailable": "This product is unavailable. Select an active catalog product.",
+      "unsupportedClass": "Intake currently supports Class A branded items only. Use the normal listing flow for other product classes.",
+      "canonicalCategory": "The product category is unavailable, prohibited or different from your draft.",
+      "canonicalConflict": "This draft was already submitted with a different catalog product.",
+      "unsupported_mapping": "Intake currently supports fixed-price individual items only. Use the normal listing flow for other units or made-to-order items."
     }
+  },
+  "clips": {
+    "meta": {
+      "title": "Clips — Convergeo Vendor",
+      "description": "Record short product videos and track how they perform."
+    },
+    "title": "My clips",
+    "intro": "Short videos of your products. Every clip is checked by our team before it goes live.",
+    "loading": "Loading…",
+    "empty": {
+      "title": "No clips yet",
+      "body": "Record a short video of a product to get started."
+    },
+    "error": {
+      "title": "Could not load your clips",
+      "retry": "Try again"
+    },
+    "new": "New clip",
+    "quota": {
+      "label": "{remaining} of {cap} clips left this week",
+      "exhausted": "You've used all {cap} clips for this week. You can post again as clips older than {days} days drop off.",
+      "window": "Counted over the last {days} days."
+    },
+    "status": {
+      "draft": "Not uploaded",
+      "screening": "Checking",
+      "pending_review": "Awaiting review",
+      "published": "Live",
+      "rejected": "Not approved",
+      "taken_down": "Removed"
+    },
+    "statusHelp": {
+      "draft": "The video hasn't finished uploading yet.",
+      "screening": "We're processing the video. This usually takes a minute.",
+      "pending_review": "Our team is checking this clip. It is not visible to shoppers yet.",
+      "published": "Shoppers can see this clip in the feed.",
+      "rejected": "This clip was not approved. See the reason below.",
+      "taken_down": "This clip was removed and is no longer visible."
+    },
+    "rejectionReason": "Reason: {reason}",
+    "stats": {
+      "views": "{count, plural, one {# view} other {# views}}",
+      "likes": "{count, plural, one {# like} other {# likes}}",
+      "orders": "{count, plural, one {# order} other {# orders}}",
+      "title": "Performance"
+    },
+    "compose": {
+      "title": "New clip",
+      "chooseFile": "Choose a video",
+      "record": "Record a video",
+      "selected": "Selected: {name} ({size})",
+      "captionLabel": "Caption",
+      "captionPlaceholder": "Say what the product is and why it's good",
+      "categoryLabel": "Category",
+      "productsLabel": "Link up to 3 of your products",
+      "productsHelp": "Shoppers can add these straight to their cart from the clip.",
+      "addProduct": "Add product",
+      "removeProduct": "Remove",
+      "submit": "Upload clip",
+      "uploading": "Uploading… {percent}%",
+      "retry": "Retry upload",
+      "cancel": "Cancel",
+      "done": "Uploaded — we'll review it shortly"
+    },
+    "limits": {
+      "title": "Before you record",
+      "duration": "Up to 60 seconds",
+      "size": "Up to 80 MB",
+      "dataCost": "Uploading uses your own data. A 60-second clip is usually 20–80 MB, so use Wi-Fi where you can.",
+      "orientation": "Hold your phone upright — the feed is vertical."
+    },
+    "camera": {
+      "denied": "We can't reach your camera",
+      "deniedBody": "Your browser blocked camera access. You can allow it in your browser settings, or choose a video you've already recorded.",
+      "unavailable": "This device has no camera we can use — choose a video file instead.",
+      "usePicker": "Choose a video file"
+    },
+    "errors": {
+      "tooLong": "That video is longer than 60 seconds. Trim it and try again.",
+      "tooLarge": "That file is {size}, over the 80 MB limit. Record a shorter clip or lower the quality.",
+      "notVideo": "That file isn't a video.",
+      "weeklyCap": "You've reached your clip limit for this week.",
+      "rateLimited": "Too many requests. Please wait a moment.",
+      "uploadFailed": "The upload didn't finish. Your clip is saved — tap retry to send it again without picking the file twice.",
+      "notVerified": "Clips are for verified sellers. Verify your ID to start posting.",
+      "linkNotOwned": "You can only link your own products.",
+      "linkLimit": "A clip can link at most 3 products.",
+      "linkNotActive": "Only an active product can be linked.",
+      "notInPilot": "Clips is in a small pilot and your shop isn't part of it yet. We'll let you know when it opens.",
+      "paused": "Clip uploads are paused for the rest of this month. Your live clips are still showing."
+    },
+    "durationSeconds": "{seconds}s"
   },
   "settings": {
     "meta": {

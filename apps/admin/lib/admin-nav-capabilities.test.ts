@@ -26,8 +26,7 @@ vi.mock("next-intl/middleware", () => ({
   default: () => () => NextResponse.next(),
 }));
 vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@vergeo/auth/middleware")>();
+  const actual = await importOriginal<typeof import("@vergeo/auth/middleware")>();
   return {
     ...actual,
     updateSession: async () => ({
@@ -99,14 +98,7 @@ describe("admin navigation from current API permissions", () => {
   });
 
   it("combines multiple role permissions without adding global controls", () => {
-    expect(
-      visible([
-        "finance.read",
-        "products.manage",
-        "vendors.manage",
-        "finance.read",
-      ]),
-    ).toEqual([
+    expect(visible(["finance.read", "products.manage", "vendors.manage", "finance.read"])).toEqual([
       "analytics",
       "kyc",
       "branches",
@@ -117,10 +109,7 @@ describe("admin navigation from current API permissions", () => {
       "business",
       "extras",
     ]);
-    const caps = resolveAdminNavCapabilities([
-      "finance.read",
-      "analytics.read",
-    ]);
+    const caps = resolveAdminNavCapabilities(["finance.read", "analytics.read"]);
     expect(caps.disputes).toBe(false);
     expect(caps.config).toBe(false);
     expect(caps.support).toBe(false);
@@ -156,9 +145,7 @@ describe("admin navigation from current API permissions", () => {
 
   it("exposes read-only oversight while omitting empty groups and unauthorized role management", () => {
     expect(
-      filterAdminNavGroups(
-        resolveAdminNavCapabilities(["services.read", "inventory.read"]),
-      ),
+      filterAdminNavGroups(resolveAdminNavCapabilities(["services.read", "inventory.read"])),
     ).toEqual([
       {
         key: "commerce",
@@ -196,10 +183,7 @@ function reply(value: unknown, status = 200) {
   });
 }
 
-function grants(
-  permissions: string[] = ["finance.read"],
-  unrestricted = false,
-): AdminPermissions {
+function grants(permissions: string[] = ["finance.read"], unrestricted = false): AdminPermissions {
   return { permissions, unrestricted, can_manage_roles: unrestricted };
 }
 
@@ -229,6 +213,9 @@ beforeEach(() => {
         const result = nextReply;
         nextReply = undefined;
         return result ?? reply(current);
+      }
+      if (input.startsWith("/admin/products/canonical")) {
+        return reply([]);
       }
       if (input === "/admin/orders/local-order") {
         return reply({
@@ -260,9 +247,7 @@ beforeEach(() => {
           timeline: [],
         });
       }
-      throw new Error(
-        "Forbidden external/resource operation in mounted fixture",
-      );
+      throw new Error("Forbidden external/resource operation in mounted fixture");
     }),
   );
 });
@@ -287,11 +272,7 @@ async function renderRoute(path: string, order = false) {
               locale: "en",
               orderId: "local-order",
             })
-          : React.createElement(
-              "p",
-              { "data-protected-route": path },
-              "Route content",
-            ),
+          : React.createElement("p", { "data-protected-route": path }, "Route content"),
       }),
     );
   });
@@ -304,9 +285,7 @@ async function refocus() {
 }
 
 function navHrefs() {
-  return Array.from(container.querySelectorAll("nav a"), (node) =>
-    node.getAttribute("href"),
-  );
+  return Array.from(container.querySelectorAll("nav a"), (node) => node.getAttribute("href"));
 }
 
 describe("mounted current-permission shell", () => {
@@ -322,9 +301,7 @@ describe("mounted current-permission shell", () => {
     await act(async () => {
       request.resolve(reply(grants()));
     });
-    expect(
-      container.querySelector('[data-protected-route="/en/orders"]'),
-    ).not.toBeNull();
+    expect(container.querySelector('[data-protected-route="/en/orders"]')).not.toBeNull();
     expect(navHrefs()).toEqual(["/en/analytics", "/en/orders"]);
     expect(calls[0]?.init.cache).toBe("no-store");
   });
@@ -356,15 +333,11 @@ describe("mounted current-permission shell", () => {
         );
         await renderRoute("/en/orders");
       }
-      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-        "shell.permissionError",
-      );
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionError");
       expect(container.querySelector("[data-protected-route]")).toBeNull();
       expect(navHrefs()).toEqual([]);
       await refocus();
-      expect(
-        container.querySelector('[data-protected-route="/en/orders"]'),
-      ).not.toBeNull();
+      expect(container.querySelector('[data-protected-route="/en/orders"]')).not.toBeNull();
       expect(container.querySelector('[role="alert"]')).toBeNull();
     },
   );
@@ -376,9 +349,7 @@ describe("mounted current-permission shell", () => {
     expect(navHrefs()).toEqual(["/en/analytics", "/en/moderation", "/en/catalog", "/en/orders"]);
     current = grants(["products.manage"]);
     await refocus();
-    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-      "shell.permissionDenied",
-    );
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
     expect(container.querySelector("[data-protected-route]")).toBeNull();
     expect(navHrefs()).toEqual(["/en/moderation", "/en/catalog"]);
     current = grants([]);
@@ -401,9 +372,7 @@ describe("mounted current-permission shell", () => {
       old.resolve(reply(grants([], true)));
     });
     expect(navHrefs()).toEqual(["/en/moderation", "/en/catalog"]);
-    expect(
-      container.querySelector('[data-protected-route="/en/moderation"]'),
-    ).not.toBeNull();
+    expect(container.querySelector('[data-protected-route="/en/moderation"]')).not.toBeNull();
     const slower = deferred<Response>();
     nextReply = slower.promise;
     await refocus();
@@ -414,9 +383,7 @@ describe("mounted current-permission shell", () => {
       slower.resolve(reply(grants([], true)));
     });
     expect(navHrefs()).toEqual([]);
-    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-      "shell.permissionDenied",
-    );
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
   });
 
   it("invalidates grants on an auth event before resolving the next account", async () => {
@@ -433,54 +400,33 @@ describe("mounted current-permission shell", () => {
     await act(async () => {
       switched.resolve(reply(grants([])));
     });
-    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-      "shell.permissionDenied",
-    );
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
   });
 
   it("never mounts unauthorized finance action panels and removes formerly allowed panels", async () => {
     await renderRoute("/en/orders", true);
     expect(container.textContent).toContain("local-order");
-    expect(
-      container.querySelector('[data-testid="dispatch-courier"]'),
-    ).toBeNull();
+    expect(container.querySelector('[data-testid="dispatch-courier"]')).toBeNull();
     expect(container.querySelector('[data-testid="escrow-amount"]')).toBeNull();
     expect(
-      container.querySelectorAll(
-        "main input, main select, main button:not([data-copy-button])",
-      ),
+      container.querySelectorAll("main input, main select, main button:not([data-copy-button])"),
     ).toHaveLength(0);
     current = grants([], true);
     await refocus();
-    expect(
-      container.querySelector('[data-testid="dispatch-courier"]'),
-    ).not.toBeNull();
-    expect(
-      container.querySelector('[data-testid="escrow-amount"]'),
-    ).not.toBeNull();
+    expect(container.querySelector('[data-testid="dispatch-courier"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="escrow-amount"]')).not.toBeNull();
     current = grants();
     await refocus();
-    expect(
-      container.querySelector('[data-testid="dispatch-courier"]'),
-    ).toBeNull();
+    expect(container.querySelector('[data-testid="dispatch-courier"]')).toBeNull();
     expect(container.querySelector('[data-testid="escrow-amount"]')).toBeNull();
-    expect(calls.every((c) => !c.init.method || c.init.method === "GET")).toBe(
-      true,
-    );
+    expect(calls.every((c) => !c.init.method || c.init.method === "GET")).toBe(true);
   });
 
   it("denies unknown/global-control routes even when another domain was granted", async () => {
     current = grants(["products.manage"]);
-    for (const path of [
-      "/en/roles",
-      "/en/config",
-      "/en/moderation/flags",
-      "/en/unlisted",
-    ]) {
+    for (const path of ["/en/roles", "/en/config", "/en/moderation/flags", "/en/unlisted"]) {
       await renderRoute(path);
-      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-        "shell.permissionDenied",
-      );
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
       expect(container.querySelector("[data-protected-route]")).toBeNull();
     }
   });
@@ -489,13 +435,9 @@ describe("mounted current-permission shell", () => {
     current = grants(["products.manage"]);
     await renderRoute("/en/notifications");
     expect(container.querySelector('[role="alert"]')).toBeNull();
-    expect(
-      container.querySelector('[data-protected-route="/en/notifications"]'),
-    ).not.toBeNull();
+    expect(container.querySelector('[data-protected-route="/en/notifications"]')).not.toBeNull();
     await renderRoute("/en/notifications/extra");
-    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-      "shell.permissionDenied",
-    );
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
   });
 
   it("keeps mounted chrome/login/recovery transitions stable in both directions", async () => {
@@ -514,9 +456,7 @@ describe("mounted current-permission shell", () => {
     ]) {
       const before = calls.length;
       await renderRoute(path);
-      expect(
-        container.querySelector(`[data-protected-route="${path}"]`),
-      ).not.toBeNull();
+      expect(container.querySelector(`[data-protected-route="${path}"]`)).not.toBeNull();
       const bare = path !== "/en/orders";
       expect(container.querySelector("nav") === null).toBe(bare);
       expect(container.querySelector("[aria-controls]") === null).toBe(bare);
@@ -531,24 +471,18 @@ describe("mounted current-permission shell", () => {
     async (bare) => {
       current = grants([], true);
       await renderRoute("/en/orders", true);
-      expect(
-        container.querySelector('[data-testid="escrow-amount"]'),
-      ).not.toBeNull();
+      expect(container.querySelector('[data-testid="escrow-amount"]')).not.toBeNull();
       await renderRoute(bare);
       const fresh = deferred<Response>();
       nextReply = fresh.promise;
       await renderRoute("/en/orders", true);
       expect(container.querySelector('[role="status"]')).not.toBeNull();
-      expect(
-        container.querySelector('[data-testid="escrow-amount"]'),
-      ).toBeNull();
+      expect(container.querySelector('[data-testid="escrow-amount"]')).toBeNull();
       expect(navHrefs()).toEqual([]);
       await act(async () => {
         fresh.resolve(reply(grants()));
       });
-      expect(
-        container.querySelector('[data-testid="escrow-amount"]'),
-      ).toBeNull();
+      expect(container.querySelector('[data-testid="escrow-amount"]')).toBeNull();
     },
   );
 
@@ -556,9 +490,7 @@ describe("mounted current-permission shell", () => {
     current = grants([], true);
     const remove = vi.spyOn(window, "removeEventListener");
     await renderRoute("/en/orders");
-    const button = container.querySelector<HTMLButtonElement>(
-      "button[aria-controls]",
-    )!;
+    const button = container.querySelector<HTMLButtonElement>("button[aria-controls]")!;
     await act(async () => {
       button.click();
     });
@@ -567,9 +499,7 @@ describe("mounted current-permission shell", () => {
     expect(container.querySelector('[role="dialog"]')).toBeNull();
     expect(remove.mock.calls.some(([type]) => type === "keydown")).toBe(true);
     await renderRoute("/en/orders");
-    const returned = container.querySelector<HTMLButtonElement>(
-      "button[aria-controls]",
-    )!;
+    const returned = container.querySelector<HTMLButtonElement>("button[aria-controls]")!;
     expect(returned.getAttribute("aria-expanded")).toBe("false");
     await act(async () => {
       returned.click();
@@ -603,9 +533,7 @@ describe("permission response contract", () => {
     { permissions: ["finance.read"], unrestricted: false },
   ])("rejects malformed or unknown grants %#", async (value) => {
     nextReply = Promise.resolve(reply(value));
-    await expect(loadAdminPermissions()).rejects.toThrow(
-      "Invalid admin permissions response",
-    );
+    await expect(loadAdminPermissions()).rejects.toThrow("Invalid admin permissions response");
   });
 });
 
@@ -614,9 +542,7 @@ describe("platform shell admission preserves existing auth routes", () => {
     "admits verified %s claims to the shell without assigning API authority",
     async (role) => {
       fixture.claims = { app_metadata: { roles: [role] } };
-      const response = await middleware(
-        new NextRequest("https://admin.example.invalid/en/orders"),
-      );
+      const response = await middleware(new NextRequest("https://admin.example.invalid/en/orders"));
       expect(response.headers.get("location")).toBeNull();
       expect(calls).toEqual([]);
     },
@@ -629,12 +555,8 @@ describe("platform shell admission preserves existing auth routes", () => {
         app_metadata: { roles: [role] },
         user_metadata: { roles: ["superadmin"] },
       };
-      const response = await middleware(
-        new NextRequest("https://admin.example.invalid/en/orders"),
-      );
-      expect(new URL(response.headers.get("location")!).pathname).toBe(
-        "/en/permission-denied",
-      );
+      const response = await middleware(new NextRequest("https://admin.example.invalid/en/orders"));
+      expect(new URL(response.headers.get("location")!).pathname).toBe("/en/permission-denied");
     },
   );
 
@@ -647,14 +569,10 @@ describe("platform shell admission preserves existing auth routes", () => {
     "keeps existing auth/informational route %s available without platform roles",
     async (path) => {
       fixture.signedIn = path === "/en/permission-denied";
-      const response = await middleware(
-        new NextRequest(`https://admin.example.invalid${path}`),
-      );
+      const response = await middleware(new NextRequest(`https://admin.example.invalid${path}`));
       expect(response.headers.get("location")).toBeNull();
       await renderRoute(path);
-      expect(
-        container.querySelector(`[data-protected-route="${path}"]`),
-      ).not.toBeNull();
+      expect(container.querySelector(`[data-protected-route="${path}"]`)).not.toBeNull();
       expect(container.querySelector("nav")).toBeNull();
       expect(calls).toEqual([]);
     },

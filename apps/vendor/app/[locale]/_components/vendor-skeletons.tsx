@@ -59,6 +59,27 @@ export function DashboardSkeleton({ label }: SkeletonProps) {
   );
 }
 
+export function AnalyticsSkeleton({ label }: SkeletonProps) {
+  return (
+    <div className="flex flex-col gap-4" data-testid="vendor-analytics-skeleton">
+      <LoadingLabel label={label} />
+      <Skeleton shape="line" width="30%" height="1.75rem" />
+      <Skeleton shape="block" height="2.75rem" width="12rem" />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {Array.from({ length: 3 }, (_, index) => (
+          <div
+            key={index}
+            className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4"
+          >
+            <Skeleton shape="line" width="70%" />
+            <Skeleton shape="block" height="2.5rem" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function OrderDetailSkeleton({ label }: SkeletonProps) {
   return (
     <div className="flex flex-col gap-5 pb-8" data-testid="vendor-order-skeleton">
