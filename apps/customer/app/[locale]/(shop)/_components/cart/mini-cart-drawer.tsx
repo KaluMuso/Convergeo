@@ -25,6 +25,7 @@ import {
   type LeadTimePhrases,
 } from "../sale-quantity";
 
+import { CartEmptyTrustList, type CartEmptyTrustLabels } from "./cart-empty-trust-list";
 import {
   closeMiniCart,
   getCartItemCount,
@@ -34,8 +35,6 @@ import {
   useCartStore,
 } from "./cart-store";
 import { VariantLineLabel } from "./variant-line-label";
-
-import { CartEmptyTrustList, type CartEmptyTrustLabels } from "./cart-empty-trust-list";
 
 export {
   CartNavTrigger,
