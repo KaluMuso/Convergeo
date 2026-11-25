@@ -178,16 +178,12 @@ def store(monkeypatch: pytest.MonkeyPatch) -> Store:
             "kyc_tier": 2,
         }
     )
-    st.rows("categories").append(
-        {"id": CATEGORY_ID, "name": "Electronics", "prohibited": False}
-    )
+    st.rows("categories").append({"id": CATEGORY_ID, "name": "Electronics", "prohibited": False})
     for name in ("video_clips", "audit_log", "webhook_events"):
         st.rows(name)
     st.rows("feature_flags").append({"flag": "clips", "enabled": True})
     # Post-pilot behaviour: the allowlist gate is covered in test_clips_pilot.py.
-    st.rows("platform_config").append(
-        {"key": "clip_pilot_allowlist_enforced", "value": False}
-    )
+    st.rows("platform_config").append({"key": "clip_pilot_allowlist_enforced", "value": False})
     return st
 
 
@@ -197,9 +193,7 @@ def api(store: Store, monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, 
     monkeypatch.setattr("app.deps.get_supabase_service_client", lambda: wrapper)
     for module in ("app.routers.clips_upload", "app.routers.webhooks_cloudinary"):
         monkeypatch.setattr(f"{module}.get_supabase_client", lambda: wrapper, raising=False)
-    monkeypatch.setattr(
-        "app.media.authz.get_supabase_client", lambda: wrapper, raising=False
-    )
+    monkeypatch.setattr("app.media.authz.get_supabase_client", lambda: wrapper, raising=False)
     with TestClient(create_app(), raise_server_exceptions=False) as client:
         yield client
     from app.settings import get_settings
@@ -251,7 +245,9 @@ def test_every_signed_param_is_returned() -> None:
         notification_url="https://api.example/webhooks/cloudinary",
     )
 
-    returned = {k: v for k, v in signed.items() if k != "signature"}
+    # max_file_size is returned for the client but is not in Cloudinary's
+    # string-to-sign, so it is excluded here (signing it caused 401s).
+    returned = {k: v for k, v in signed.items() if k not in ("signature", "max_file_size")}
     recomputed = sign_upload_parameters(returned, "secret456")
     assert recomputed == signed["signature"], (
         "the returned params do not reproduce the signature — a signed param is missing "
@@ -261,9 +257,7 @@ def test_every_signed_param_is_returned() -> None:
 
 def test_the_signature_covers_the_eager_transform() -> None:
     """If `eager` were unsigned, a client could ask for any rendition it liked."""
-    base = build_signed_clip_params(
-        folder="clips/v", public_id="c", timestamp=1, api_secret="s"
-    )
+    base = build_signed_clip_params(folder="clips/v", public_id="c", timestamp=1, api_secret="s")
     tampered = dict(base)
     tampered["eager"] = "c_limit,w_4096"
     del tampered["signature"]
@@ -417,9 +411,7 @@ def test_a_user_without_a_vendor_row_is_refused(
 # --- The screen -------------------------------------------------------------
 def test_the_screen_has_no_path_to_published(store: Store) -> None:
     """Structural, not a reading: `published` is unreachable from `screening`."""
-    assert state_machine.PUBLISHED not in state_machine.ALLOWED_TRANSITIONS[
-        state_machine.SCREENING
-    ]
+    assert state_machine.PUBLISHED not in state_machine.ALLOWED_TRANSITIONS[state_machine.SCREENING]
 
 
 def test_a_passing_screen_queues_for_a_human(store: Store) -> None:
@@ -486,9 +478,7 @@ def _callback_body(
             {"secure_url": "https://cdn/720.mp4", "width": 720, "format": "mp4", "bytes": 2}
         )
     if include_poster:
-        eager.append(
-            {"secure_url": "https://cdn/poster.webp", "width": 480, "format": "webp"}
-        )
+        eager.append({"secure_url": "https://cdn/poster.webp", "width": 480, "format": "webp"})
     return json.dumps(
         {
             "public_id": f"clips/{VENDOR_ID}/{clip_id}",
@@ -501,9 +491,7 @@ def _callback_body(
 
 def _sign_callback(raw: bytes, secret: str = WEBHOOK_SECRET) -> dict[str, str]:
     timestamp = str(int(time.time()))
-    signature = hashlib.sha1(
-        raw + timestamp.encode("utf-8") + secret.encode("utf-8")
-    ).hexdigest()
+    signature = hashlib.sha1(raw + timestamp.encode("utf-8") + secret.encode("utf-8")).hexdigest()
     return {"X-Cld-Signature": signature, "X-Cld-Timestamp": timestamp}
 
 
@@ -522,9 +510,7 @@ def _seed_screening_clip(store: Store, clip_id: str = "clip-1") -> str:
     return clip_id
 
 
-def test_a_valid_callback_advances_to_pending_review(
-    api: TestClient, store: Store
-) -> None:
+def test_a_valid_callback_advances_to_pending_review(api: TestClient, store: Store) -> None:
     clip_id = _seed_screening_clip(store)
     raw = _callback_body(clip_id=clip_id)
 
@@ -585,9 +571,7 @@ def test_a_replayed_callback_is_a_no_op(api: TestClient, store: Store) -> None:
     assert len(store.rows("audit_log")) == audit_before, "replay caused a second effect"
 
 
-def test_a_callback_for_an_unknown_clip_creates_nothing(
-    api: TestClient, store: Store
-) -> None:
+def test_a_callback_for_an_unknown_clip_creates_nothing(api: TestClient, store: Store) -> None:
     raw = _callback_body(clip_id="00000000-0000-0000-0000-000000000000")
     response = api.post("/webhooks/cloudinary", content=raw, headers=_sign_callback(raw))
     assert response.status_code == 200
@@ -649,9 +633,7 @@ def test_a_prohibited_caption_is_rejected_at_callback_time(
     assert store.rows("video_clips")[0]["status"] == state_machine.REJECTED
 
 
-def test_the_renditions_are_keyed_by_width_not_array_order(
-    api: TestClient, store: Store
-) -> None:
+def test_the_renditions_are_keyed_by_width_not_array_order(api: TestClient, store: Store) -> None:
     """Mislabelling 720p as 480p would send cellular viewers the big file."""
     clip_id = _seed_screening_clip(store)
     payload = json.loads(_callback_body(clip_id=clip_id))
