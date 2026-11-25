@@ -153,7 +153,9 @@
       "notifications": "Server — WhatsApp, SMS and email templates",
       "account": "Customer — account and privacy",
       "ai": "Customer — Ask Convergeo",
-      "marketing": "Customer — about, contact, help, sell"
+      "marketing": "Customer — about, contact, help, sell",
+      "customer": "Customer app — shared strings and chrome",
+      "social": "Customer — contacts, follows and people discovery"
     },
     "addLanguage": {
       "title": "Add a language",
@@ -713,7 +715,7 @@
     "presets": {
       "slate": {
         "name": "Convergeo Slate",
-        "blurb": "The signature deep-blue brand palette. The default all year round."
+        "blurb": "Neutral zinc surfaces with a green accent — the default Convergeo look."
       },
       "harvest": {
         "name": "Harvest Gold",
@@ -1194,7 +1196,7 @@
         "overdue": "Overdue"
       },
       "emptyHint": "New disputes will appear here, oldest first.",
-      "payoutsOffBanner": "Payouts and customer refunds are switched off for the pilot. You can review disputes and release funds to the vendor; refund outcomes are unavailable until payouts are enabled."
+      "payoutsOffBanner": "Automated payouts and customer refunds are switched off. You can review disputes and release funds to the vendor; refund decisions that pay the customer are unavailable until payouts are enabled."
     },
     "detail": {
       "back": "Back to queue",

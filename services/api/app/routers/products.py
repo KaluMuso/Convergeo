@@ -12,7 +12,11 @@ from app.services.inventory.location_stock import (
     is_branch_tracked,
 )
 from app.services.listings.availability import is_listing_available
-from app.services.listings.demo import fetch_demo_listing_ids, is_non_genuine_public_id
+from app.services.listings.demo import (
+    fetch_demo_listing_ids,
+    fetch_demo_only_vendor_ids,
+    is_non_genuine_public_id,
+)
 from app.services.listings.variants import (
     ListingVariantSet,
     effective_price_ngwee,
@@ -765,12 +769,18 @@ def _shoppable_related_items(
     listing_rows = list(listings_response.data or [])
     all_listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
     demo_listing_ids = fetch_demo_listing_ids(client, all_listing_ids)
+    vendor_ids = sorted(
+        {str(row["vendor_id"]) for row in listing_rows if row.get("vendor_id") is not None}
+    )
+    demo_vendor_ids = fetch_demo_only_vendor_ids(client, vendor_ids)
 
     # Cheapest active *non-demo* listing per product (rows arrive price-ascending).
     cheapest_by_product: dict[str, dict[str, Any]] = {}
     for listing_row in listing_rows:
         listing_id = str(listing_row.get("id") or "")
         if listing_id in demo_listing_ids:
+            continue
+        if str(listing_row.get("vendor_id") or "") in demo_vendor_ids:
             continue
         vendor = listing_row.get("vendors") or {}
         if vendor_id is not None and str(listing_row.get("vendor_id")) != vendor_id:

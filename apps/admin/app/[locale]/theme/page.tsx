@@ -5,8 +5,10 @@ import {
   THEME_PRESET_LIST,
   DEFAULT_SEASONAL_PRESET,
 } from "@vergeo/ui/src/theme-presets";
+import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 
+import { adminNavPageMetadata } from "../../../lib/admin-page-metadata";
 import { getAdminTranslator } from "../../../lib/admin-translator";
 
 type PageProps = {
@@ -15,6 +17,11 @@ type PageProps = {
 
 // The single operator knob both apps read (see customer [locale]/layout.tsx).
 const ENV_VAR = "NEXT_PUBLIC_SEASONAL_THEME";
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  return adminNavPageMetadata(locale, "theme");
+}
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));

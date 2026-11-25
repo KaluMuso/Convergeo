@@ -13,7 +13,12 @@ type PageProps = {
   params: Promise<{ locale: string }>;
 };
 
-export const metadata: Metadata = { robots: { index: false, follow: false } };
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const accountMessages = await loadNamespace(locale as Locale, "account");
+  const nav = accountMessages.nav as { following: string };
+  return { title: nav.following, robots: { index: false, follow: false } };
+}
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));

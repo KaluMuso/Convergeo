@@ -2,22 +2,22 @@
   "about": {
     "meta": {
       "title": "About Convergeo",
-      "description": "Convergeo is Zambia's mobile-first marketplace for products, services and events — pay when your order arrives during our pilot."
+      "description": "Convergeo is Zambia's mobile-first marketplace for products, services and events — pay with mobile money, card, or cash on delivery."
     },
     "hero": {
       "eyebrow": "About us",
       "headline": "Zambia's marketplace, built for trust",
-      "subhead": "Convergeo brings products, services and events into one place — and during our pilot you pay when your order arrives."
+      "subhead": "Convergeo brings products, services and events into one place — with escrow on online payments and cash on delivery where offered."
     },
     "mission": {
       "heading": "Our mission",
-      "body": "Make buying and selling online in Zambia safe, simple and fast — even on a slow connection. Every conversation can happen on WhatsApp, and online payment with buyer protection is coming soon."
+      "body": "Make buying and selling online in Zambia safe, simple and fast — even on a slow connection. Every conversation can happen on WhatsApp, and online payments stay in escrow until you are happy."
     },
     "values": {
       "heading": "What we stand for",
       "trust": {
         "title": "Trust first",
-        "body": "You order, we deliver, you pay on arrival. No paying upfront and hoping a stranger delivers."
+        "body": "Online payments are held by Convergeo until you confirm delivery. Cash on delivery stays available on eligible orders."
       },
       "local": {
         "title": "Built for Zambia",
@@ -29,13 +29,13 @@
       },
       "fair": {
         "title": "Fair to vendors",
-        "body": "Transparent commissions shown before you publish. Online payouts are coming soon."
+        "body": "Transparent commissions shown before you publish. Payouts follow once escrow releases to you."
       }
     },
     "howItWorks": {
       "heading": "How Convergeo works",
       "step1": "Discover products, services and events from sellers across Zambia.",
-      "step2": "Place your order and pay cash when it arrives. Online payment is coming soon.",
+      "step2": "Pay with MTN or Airtel mobile money, card, or cash on delivery when your order qualifies.",
       "step3": "Your order is delivered or ready for pickup.",
       "step4": "We step in if anything goes wrong."
     },

@@ -1520,13 +1520,13 @@
     },
     "pilot": {
       "badge": "Not switched on yet",
-      "title": "Payouts aren't switched on during the pilot",
-      "body": "You won't receive payouts through this app yet, so there's no balance to show here. That's expected — nothing is wrong with your account.",
-      "meanwhileHeading": "How money works during the pilot",
+      "title": "Automated payouts are not switched on yet",
+      "body": "Customers can already pay with mobile money and cards on Convergeo. Automated payouts through this screen are still being turned on, so there is no balance to show here yet.",
+      "meanwhileHeading": "How money works right now",
       "meanwhile": {
         "cod": "Cash on delivery: the customer pays the rider in cash, and Convergeo settles with you.",
-        "prepaid": "Paid orders: Convergeo holds the customer's money safely until the order is delivered.",
-        "questions": "Questions about money owed to you? Ask the Convergeo pilot team."
+        "prepaid": "Paid orders: Convergeo holds the customer's payment in escrow until the order is delivered.",
+        "questions": "Questions about money owed to you? Contact Convergeo vendor support."
       },
       "laterHeading": "What you'll see here later",
       "later": {

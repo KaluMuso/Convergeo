@@ -37,7 +37,7 @@ describe("ServiceInfoBar", () => {
   });
 });
 
-describe("site-wide payment trust copy (COD-only pilot)", () => {
+describe("site-wide payment trust copy (live online payments)", () => {
   const locales = {
     en: { catalog: enCatalog, common: enCommon },
     bem: { catalog: bemCatalog, common: bemCommon },
@@ -45,12 +45,9 @@ describe("site-wide payment trust copy (COD-only pilot)", () => {
     fr: { catalog: frCatalog, common: frCommon },
     zh: { catalog: zhCatalog, common: zhCommon },
   };
-  // Escrow only exists for online payments, which are not live in the pilot.
-  const escrowClaim =
-    /escrow|séquestre|托管|held by|conservé par|ikusungidwa|yikwata/i;
 
   it.each(Object.entries(locales))(
-    "%s header strip and footer never promise escrow and keep placeholders out",
+    "%s header strip and footer keep placeholders out",
     (_locale, messages) => {
       const strings = [
         messages.catalog.home.serviceBar.message,
@@ -59,18 +56,15 @@ describe("site-wide payment trust copy (COD-only pilot)", () => {
       ];
       for (const value of strings) {
         expect(value.trim()).not.toBe("");
-        expect(value).not.toMatch(escrowClaim);
         expect(value).not.toMatch(/[{}]/);
       }
     },
   );
 
-  it("English header/footer lead with cash on delivery and mark online payment as coming", () => {
-    expect(enCatalog.home.serviceBar.message).toMatch(/^Cash on delivery/);
-    expect(enCommon.paymentTrust.footerPaymentNote).toMatch(/coming soon/i);
-    expect(enCommon.paymentTrust.footerPaymentNote).not.toMatch(
-      /MoMo|Airtel|Zamtel|Card/,
+  it("English footer mentions escrow or mobile money", () => {
+    expect(enCommon.paymentTrust.footerPaymentNote).toMatch(
+      /mobile money|escrow|MoMo/i,
     );
-    expect(enNav.shop.featuredPromo).not.toMatch(/escrow/i);
+    expect(enCommon.paymentTrust.footerSeal).toMatch(/Held by Convergeo/i);
   });
 });

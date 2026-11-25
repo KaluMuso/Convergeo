@@ -31,7 +31,17 @@ function formatSchedule(
     return openLabel;
   }
   const fmt = (iso: string | null) =>
-    iso ? new Date(iso).toLocaleString(locale, { timeZone: "Africa/Lusaka" }) : "—";
+    iso
+      ? new Date(iso).toLocaleString(locale, {
+          timeZone: "Africa/Lusaka",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: false,
+        })
+      : "—";
   return rangeLabel({ from: fmt(from), to: fmt(to) });
 }
 

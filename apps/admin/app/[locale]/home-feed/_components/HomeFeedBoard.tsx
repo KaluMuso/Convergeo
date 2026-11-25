@@ -14,6 +14,7 @@ import {
   ngweeToKwachaInput,
   parseKwachaToNgwee,
   RULE_SORTS,
+  FEED_SECTION_KEY_LABELS,
   SECTION_LAYOUTS,
   SECTION_TYPES,
   splitList,
@@ -316,7 +317,9 @@ export function HomeFeedBoard() {
                   </div>
                 </td>
                 <td className="px-2 py-3 font-medium text-text">
-                  {row.title_i18n.en ?? row.key}
+                  {row.title_i18n.en?.trim() ||
+                    FEED_SECTION_KEY_LABELS[row.key] ||
+                    t(`types.${row.section_type}`)}
                   <div className="text-xs text-muted">{row.key}</div>
                 </td>
                 <td className="px-2 py-3 text-muted">

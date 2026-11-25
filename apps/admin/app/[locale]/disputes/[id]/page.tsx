@@ -1,5 +1,9 @@
 import { setRequestLocale } from "next-intl/server";
 
+import type { Metadata } from "next";
+
+import { adminNavPageMetadata } from "../../../../lib/admin-page-metadata";
+
 import { DisputeReviewDetail } from "../_components/DisputeReviewDetail";
 
 export const dynamic = "force-dynamic";

@@ -109,7 +109,7 @@
         "title": "Welcome to Convergeo",
         "subtitle": "Your config-driven storefront will appear here as merchandising slots go live."
       },
-      "escrowLine": "Pay cash when your order arrives. Online payment is coming soon.",
+      "escrowLine": "Pay with mobile money or card — held by Convergeo until you are happy.",
       "escrowStep1": "You order",
       "escrowStep2": "We deliver",
       "escrowStep3": "You pay on arrival",
@@ -143,7 +143,7 @@
       "sellers": "Every shop has its own page. See who you buy from.",
       "fulfillment": "Delivery in Lusaka. Pickup across Zambia.",
       "returns": "Broken or wrong item? Return it within 48 hours.",
-      "escrow": "Pay when it arrives — cash on delivery during the pilot"
+      "escrow": "You pay → Held by Convergeo → Released"
     },
     "demo": {
       "sampleListing": "Sample listing"
@@ -460,7 +460,7 @@
       "delivery": "Delivery available for this seller",
       "pickup": "Pickup available for this seller",
       "returns": "Returns & refunds",
-      "escrow": "Pay when it arrives with cash on delivery on eligible orders. Online payment is coming soon."
+      "escrow": "Mobile money and cards are held in escrow; cash on delivery stays available on eligible orders."
     },
     "condition": {
       "new": "New",
@@ -530,7 +530,7 @@
   },
   "browseCategories": {
     "title": "Browse categories",
-    "subtitle": "Shop Phase-1 departments and their subcategories.",
+    "subtitle": "Browse every department and subcategory.",
     "emptyTitle": "No categories yet",
     "emptyBody": "The catalogue has no public categories right now. Check back soon, or use search.",
     "unavailableTitle": "Categories unavailable",
