@@ -443,10 +443,18 @@ def test_signed_url_ttl_is_at_most_five_minutes(fake_client: FakeSupabaseClient)
         ["kyc/vendor-a/nrc.jpg", "kyc/vendor-a/selfie.jpg"],
     )
     assert docs_available is True
-    assert fake_client.storage.bucket.calls
-    for path, expires_in in fake_client.storage.bucket.calls:
-        assert path
-        assert expires_in <= 300
+    expires_values: list[int] = []
+    if fake_client.storage.bucket.batch_calls:
+        for batch_paths, expires_in in fake_client.storage.bucket.batch_calls:
+            expires_values.append(expires_in)
+            for path in batch_paths:
+                assert path
+    else:
+        for path, expires_in in fake_client.storage.bucket.calls:
+            assert path
+            expires_values.append(expires_in)
+    assert expires_values
+    assert all(expires_in <= 300 for expires_in in expires_values)
     for doc in documents:
         assert doc.ttl_seconds <= 300
         assert doc.signed_url is not None

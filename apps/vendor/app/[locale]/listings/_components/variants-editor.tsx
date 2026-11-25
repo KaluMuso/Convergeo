@@ -147,16 +147,46 @@ export function VariantsEditor({
       setRows(draft.rows);
       setStatus({ kind: "saved", message: t("listings.variants.saved") });
     } catch (error) {
-      const reason =
-        error instanceof ApiError && typeof error.details.reason === "string"
-          ? (error.details.reason as VariantErrorKey)
-          : null;
-      setStatus({
-        kind: "error",
-        message: reason
-          ? t(`listings.variants.errors.${reason}`, { max: MAX_GROUPS })
-          : t("listings.variants.saveFailed"),
-      });
+      const apiFields =
+        error instanceof ApiError && Array.isArray(error.details.fields)
+          ? (error.details.fields as Array<{ field?: string; message?: string }>)
+          : [];
+      if (apiFields.length > 0) {
+        const nextErrors: VariantErrors = { ...found };
+        for (const entry of apiFields) {
+          const field = entry.field ?? "";
+          const variantMatch = /^variants\.(\d+)\.(?:price_ngwee|stock_qty|sku)$/.exec(field);
+          if (variantMatch) {
+            const index = variantMatch[1];
+            const leaf = field.endsWith("price_ngwee")
+              ? "price"
+              : field.endsWith("stock_qty")
+                ? "stock"
+                : "sku";
+            nextErrors[`variants.${index}.${leaf}`] =
+              leaf === "price" ? "invalidPrice" : leaf === "stock" ? "invalidStock" : "invalidSku";
+          }
+        }
+        if (Object.keys(nextErrors).length > 0) {
+          setErrors(nextErrors);
+        }
+        const firstMessage = apiFields.find((entry) => entry.message)?.message;
+        setStatus({
+          kind: "error",
+          message: firstMessage ?? t("listings.variants.saveFailed"),
+        });
+      } else {
+        const reason =
+          error instanceof ApiError && typeof error.details.reason === "string"
+            ? (error.details.reason as VariantErrorKey)
+            : null;
+        setStatus({
+          kind: "error",
+          message: reason
+            ? t(`listings.variants.errors.${reason}`, { max: MAX_GROUPS })
+            : t("listings.variants.saveFailed"),
+        });
+      }
     } finally {
       setSaving(false);
     }
@@ -378,9 +408,10 @@ export function VariantsEditor({
                   className="flex flex-col gap-2 rounded-lg border border-border p-3"
                   data-testid={`variants-row-${index}`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-text">{label}</p>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="min-w-0 font-medium text-text">{label}</p>
                     <Switch
+                      className="shrink-0 self-start sm:self-center"
                       label={t("listings.variants.offered")}
                       checked={row.active}
                       onChange={(event) => updateRow(index, { active: event.target.checked })}
