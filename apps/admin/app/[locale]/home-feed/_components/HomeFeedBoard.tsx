@@ -4,6 +4,8 @@ import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { adminPrimaryButtonClass } from "../../_components/admin-primary-button";
+
 import {
   AUDIENCES,
   feedAdminApi,
@@ -254,7 +256,7 @@ export function HomeFeedBoard() {
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm text-white"
+          className={adminPrimaryButtonClass}
           onClick={() => setDraft({ ...EMPTY_DRAFT })}
         >
           {t("create")}
@@ -592,10 +594,7 @@ export function HomeFeedBoard() {
             <span>{t("fields.enabled")}</span>
           </label>
           <div className="flex gap-2 md:col-span-2">
-            <button
-              type="submit"
-              className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm text-white"
-            >
+            <button type="submit" className={adminPrimaryButtonClass}>
               {t("save")}
             </button>
             <button type="button" className={buttonClass} onClick={() => setDraft(null)}>

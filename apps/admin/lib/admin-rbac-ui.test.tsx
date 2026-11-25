@@ -137,6 +137,7 @@ beforeEach(() => {
       const index = overrides.findIndex((value) => value.path === path && value.method === method);
       if (index >= 0) return overrides.splice(index, 1)[0]!.response;
       if (path === "/admin/me/permissions" && method === "GET") return reply(currentGrants());
+      if (path.startsWith("/admin/products/canonical") && method === "GET") return reply([]);
       if (path === "/admin/services" || path === "/admin/inventory") {
         if (method !== "GET") throw new Error("Read-only oversight mutation forbidden");
         return reply({ items: [] });
@@ -336,7 +337,13 @@ describe("role forms and mutation lifecycle through the current permission shell
 
     fixture.account = "target";
     await shell("/en/orders", <p data-target-content>Fixture order read</p>);
-    expect(nav()).toEqual(["/en/analytics", "/en/moderation", "/en/catalog", "/en/orders", "/en/services"]);
+    expect(nav()).toEqual([
+      "/en/analytics",
+      "/en/moderation",
+      "/en/catalog",
+      "/en/orders",
+      "/en/services",
+    ]);
     expect(container.querySelector("[data-target-content]")).not.toBeNull();
     // A separately authorized actor revokes the synthetic row in this fixture.
     // The restricted browser performs only its normal permission recheck.
@@ -694,7 +701,13 @@ describe("read-only oversight and moderation destinations", () => {
     managerGrants = restricted([]);
     await act(async () => window.dispatchEvent(new Event("focus")));
     expect(container.querySelector('a[href="/en/moderation/products"]')).toBeNull();
-    expect(calls.every((call) => call.path === "/admin/me/permissions")).toBe(true);
+    expect(
+      calls.every(
+        (call) =>
+          call.path === "/admin/me/permissions" ||
+          call.path.startsWith("/admin/products/canonical"),
+      ),
+    ).toBe(true);
     expect(permissionCalls()).toHaveLength(3);
   });
 });

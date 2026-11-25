@@ -10,15 +10,9 @@ import {
 } from "./merch-data";
 import { withLocaleHref } from "./merch-href";
 
-type CatalogTranslator = (
-  key: string,
-  values?: Record<string, string | number>,
-) => string;
+type CatalogTranslator = (key: string, values?: Record<string, string | number>) => string;
 
-function readPayloadString(
-  payload: Record<string, unknown>,
-  key: string,
-): string | undefined {
+function readPayloadString(payload: Record<string, unknown>, key: string): string | undefined {
   const value = payload[key];
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
@@ -39,10 +33,7 @@ function resolvePayloadText(
   }
 
   const normalized = normalizeMessageKey(messageKey);
-  if (
-    isPlaceholderHeroMessageKey(messageKey) ||
-    isPlaceholderHeroMessageKey(normalized)
-  ) {
+  if (isPlaceholderHeroMessageKey(messageKey) || isPlaceholderHeroMessageKey(normalized)) {
     return t(fallbackKey);
   }
 
@@ -119,18 +110,8 @@ export function HomeHero({ slot, locale, t }: HomeHeroProps) {
   const variantKey = slot?.variant_key ?? "default";
   const HeroVariant = resolveHeroVariant(variantKey);
 
-  const title = resolvePayloadText(
-    payload,
-    "title_key",
-    t,
-    "home.hero.fallbackTitle",
-  );
-  const subtitle = resolvePayloadText(
-    payload,
-    "subtitle_key",
-    t,
-    "home.hero.fallbackSubtitle",
-  );
+  const title = resolvePayloadText(payload, "title_key", t, "home.hero.fallbackTitle");
+  const subtitle = resolvePayloadText(payload, "subtitle_key", t, "home.hero.fallbackSubtitle");
   const eyebrow = readPayloadString(payload, "eyebrow_key")
     ? resolvePayloadText(payload, "eyebrow_key", t, "home.hero.eyebrow")
     : t("home.hero.eyebrow");
@@ -144,16 +125,8 @@ export function HomeHero({ slot, locale, t }: HomeHeroProps) {
     readPayloadString(payload, "secondary_cta_href") ?? `/${locale}/sell`,
   );
 
-  const primaryCta = buildHeroCta(
-    t("home.hero.primaryCta"),
-    primaryHref,
-    "primary",
-  );
-  const secondaryCta = buildHeroCta(
-    t("home.hero.secondaryCta"),
-    secondaryHref,
-    "secondary",
-  );
+  const primaryCta = buildHeroCta(t("home.hero.primaryCta"), primaryHref, "primary");
+  const secondaryCta = buildHeroCta(t("home.hero.secondaryCta"), secondaryHref, "secondary");
 
   const imagePublicId = readPayloadString(payload, "image_public_id");
   const media = buildHeroMedia(imagePublicId, title, true);
@@ -178,10 +151,7 @@ export function HomeHero({ slot, locale, t }: HomeHeroProps) {
               key: `${index}-${labelKey}`,
             };
           })
-          .filter(
-            (entry): entry is { label: string; value: string; key: string } =>
-              entry !== null,
-          )
+          .filter((entry): entry is { label: string; value: string; key: string } => entry !== null)
       : undefined;
 
   const slides =
