@@ -54,7 +54,7 @@ export async function ConfigPageShell({
               className={[
                 "inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium",
                 isActive
-                  ? "bg-primary text-white"
+                  ? "bg-primary text-[var(--primary-btn-fg)]"
                   : "border border-border bg-bg text-text hover:border-primary",
               ].join(" ")}
             >

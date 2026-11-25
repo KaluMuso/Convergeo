@@ -205,7 +205,7 @@ export function MerchBoard({ locale }: MerchBoardProps) {
                     {slot.has_draft ? (
                       <button
                         type="button"
-                        className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-xs text-white"
+                        className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-xs text-[var(--primary-btn-fg)]"
                         onClick={() => void publishSlot(slot)}
                       >
                         {tBoard("publish")}
