@@ -12,7 +12,10 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
-import { GalleryThumbnails } from "./gallery-thumbnails";
+const GalleryThumbnails = dynamic(
+  () => import("./gallery-thumbnails").then((m) => m.GalleryThumbnails),
+  { ssr: true },
+);
 import { isCoarsePointer } from "./zoom-math";
 
 import type { LightboxLabels } from "./lightbox";
@@ -291,33 +294,6 @@ export function PdpInteractiveGallery({
           >
             <span aria-hidden>›</span>
           </button>
-        </div>
-
-        <div
-          data-testid="gallery-mobile-strip"
-          className="-mx-1 mt-2 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 lg:hidden"
-        >
-          {usableImages.map((item, index) => (
-            <button
-              key={`${item.publicId}-mobile-${index}`}
-              type="button"
-              aria-label={thumbLabel(index + 1, usableImages.length)}
-              onClick={() => setCurrentIndex(index)}
-              className={[
-                "aspect-square w-16 shrink-0 snap-center overflow-hidden rounded border bg-surface",
-                index === currentIndex ? "border-2 border-primary" : "border-border",
-              ].join(" ")}
-            >
-              <CloudinaryImage
-                publicId={item.publicId}
-                alt=""
-                width={128}
-                ratio="1/1"
-                cloudName={cloudName}
-                className="h-full w-full object-contain"
-              />
-            </button>
-          ))}
         </div>
       </div>
 

@@ -25,13 +25,17 @@ import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
 import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { PdpOfferBox } from "../../_components/offers/pdp-offer-box";
-import { AboutThisItem } from "../../_components/pdp/about-this-item";
 import {
   fetchProduct,
   productCacheTag,
   type Listing,
   type ProductDetail,
 } from "../../_components/pdp/fetch-product";
+import {
+  LazyAboutThisItem,
+  LazyPdpSectionNav,
+  LazyPdpSpecTable,
+} from "../../_components/pdp/lazy-pdp-fold";
 import { LazyProductQuestions } from "../../_components/pdp/lazy-product-questions";
 import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
 import { PdpDetailsTabs } from "../../_components/pdp/pdp-details-tabs";
@@ -42,8 +46,7 @@ import {
 import { PdpRatingChip } from "../../_components/pdp/pdp-rating-chip";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
-import { PdpSectionNav } from "../../_components/pdp/section-nav";
-import { groupSpecRows, PdpSpecTable } from "../../_components/pdp/spec-table";
+import { groupSpecRows } from "../../_components/pdp/spec-table";
 import { specRowsFromJson } from "../../_components/pdp/specs-table";
 
 import {
@@ -961,7 +964,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         </Suspense>
       ) : null}
 
-      <PdpSectionNav
+      <LazyPdpSectionNav
         items={[
           { id: "pdp-top", label: t("pdp.sectionNav.top") },
           ...(overviewParagraphs.length > 0
@@ -986,14 +989,14 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         }}
         hasOverview={overviewParagraphs.length > 0}
         overviewPanel={
-          <AboutThisItem
+          <LazyAboutThisItem
             paragraphs={overviewParagraphs}
             seeMoreLabel={t("pdp.about.seeMore")}
             seeLessLabel={t("pdp.about.seeLess")}
           />
         }
         specsPanel={
-          <PdpSpecTable
+          <LazyPdpSpecTable
             groups={groupSpecRows(specRows, {
               features: t("pdp.specs.groups.features"),
               details: t("pdp.specs.groups.details"),

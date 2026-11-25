@@ -229,20 +229,20 @@
     },
     "leadTime": "Ifwile {days} masiku ya kulanga",
     "gallery": {
-      "empty": "No images yet",
-      "indicator": "Image {current} of {total}",
-      "next": "Next image",
-      "previous": "Previous image",
-      "zoomOpen": "Enlarge image",
-      "zoomClose": "Close image viewer",
-      "zoomTitle": "Product images",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Fit image",
-      "rolloverZoom": "Roll over image to zoom in",
-      "tapToExpand": "Tap to expand",
-      "openLightbox": "Open full-screen image viewer",
-      "thumbAria": "Image {current} of {total}",
-      "moreImages": "{count, plural, one {# more image} other {# more images}}"
+      "empty": "Takwaba amapictures",
+      "indicator": "Picture {current} ya {total}",
+      "next": "Picture iyakonka",
+      "previous": "Picture iyapita",
+      "zoomOpen": "Loleni icithunzi icikulu",
+      "zoomClose": "Isaleni ifithunzi",
+      "zoomTitle": "Ifithunzi fya product",
+      "zoomIn": "Kukusha icithunzi",
+      "zoomOut": "Bwesheni icithunzi kuti cikwane",
+      "rolloverZoom": "Pitilizani pa cithunzi ukuti mwalishe",
+      "tapToExpand": "Koseni ukufungula",
+      "openLightbox": "Funguleni ifithunzi ifyakwata",
+      "thumbAria": "Picture {current} ya {total}",
+      "moreImages": "{count, plural, one {picture # iyinshi} other {amapictures # ayinshi}}"
     },
     "unavailableTitle": "Icintu tashifikapo",
     "unavailableBody": "Tatwaishibe ukuleta icintu ici nomba. Checkeni connection no wesheni limbi.",
@@ -270,15 +270,15 @@
       "heading": "Ifyo mwamonapo"
     },
     "specs": {
-      "empty": "No specifications listed",
-      "heading": "Specifications",
-      "seeMore": "See more",
-      "seeLess": "See less",
+      "empty": "Takwaba specifications",
+      "heading": "Ifya specs",
+      "seeMore": "Moneni ukupya",
+      "seeLess": "Moneni ifingi",
       "groups": {
-        "features": "Features & specs",
-        "details": "Item details",
-        "measurements": "Measurements",
-        "materials": "Materials & care"
+        "features": "Ifyakufwaya & ifyakulondolola",
+        "details": "Ifintu fyakulondolola",
+        "measurements": "Ukulinga",
+        "materials": "Ubwali & ukusunga"
       }
     },
     "tabs": {
@@ -388,12 +388,12 @@
       }
     },
     "lightbox": {
-      "open": "View image full screen",
-      "dialog": "Image viewer",
-      "close": "Close image viewer",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "imagesTab": "Images"
+      "open": "Moneni picture pa screen yonse",
+      "dialog": "Ukumona amapictures",
+      "close": "Isalenipo ukumona amapictures",
+      "zoomIn": "Kusheni picture",
+      "zoomOut": "Cefyeni picture",
+      "imagesTab": "Amapictures"
     },
     "value": {
       "madeToOrderDays": "Yapangwa muntu, yaba ready mu masiku {days}",
@@ -429,15 +429,15 @@
       }
     },
     "sectionNav": {
-      "top": "Top",
-      "about": "About this item",
-      "specs": "Specifications",
-      "reviews": "Reviews",
-      "similar": "Similar"
+      "top": "Pa mulu",
+      "about": "Ifilondolola icintu",
+      "specs": "Ifyakulondolola",
+      "reviews": "Imilandu",
+      "similar": "Ifyafanana"
     },
     "about": {
-      "seeMore": "See more",
-      "seeLess": "See less"
+      "seeMore": "Moneni ukupya",
+      "seeLess": "Moneni ifingi"
     }
   },
   "plp": {

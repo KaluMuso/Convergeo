@@ -229,20 +229,20 @@
     },
     "leadTime": "Ifunika masiku {days} ogwira ntchito",
     "gallery": {
-      "empty": "No images yet",
-      "indicator": "Image {current} of {total}",
-      "next": "Next image",
-      "previous": "Previous image",
-      "zoomOpen": "Enlarge image",
-      "zoomClose": "Close image viewer",
-      "zoomTitle": "Product images",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Fit image",
-      "rolloverZoom": "Roll over image to zoom in",
-      "tapToExpand": "Tap to expand",
-      "openLightbox": "Open full-screen image viewer",
-      "thumbAria": "Image {current} of {total}",
-      "moreImages": "{count, plural, one {# more image} other {# more images}}"
+      "empty": "Palibe zithunzi",
+      "indicator": "Chithunzi {current} cha {total}",
+      "next": "Chithunzi chotsatira",
+      "previous": "Chithunzi chapitacho",
+      "zoomOpen": "Onani chithunzi chachikulu",
+      "zoomClose": "Tsekani chowonera zithunzi",
+      "zoomTitle": "Zithunzi za product",
+      "zoomIn": "Kulitsani chithunzi",
+      "zoomOut": "Bwezerani chithunzi kuti chikwanire",
+      "rolloverZoom": "Pitani pa chithunzi kuti muwonse bwino",
+      "tapToExpand": "Gwiritsani ntchito kuti mufotse",
+      "openLightbox": "Tsegulani chithunzi chakukulu",
+      "thumbAria": "Chithunzi {current} cha {total}",
+      "moreImages": "{count, plural, one {chithunzi # chinaso} other {zithunzi # zinaso}}"
     },
     "unavailableTitle": "Chinthu sichipezeka tsopano",
     "unavailableBody": "Sitinathe kutenga chinthu ichi pano. Onani connection yanu ndiye yesaninso.",
@@ -270,15 +270,15 @@
       "heading": "Zomwe mwaonapo"
     },
     "specs": {
-      "empty": "No specifications listed",
-      "heading": "Specifications",
-      "seeMore": "See more",
-      "seeLess": "See less",
+      "empty": "Palibe specifications",
+      "heading": "Za specs",
+      "seeMore": "Onani zambiri",
+      "seeLess": "Onani pang'ono",
       "groups": {
-        "features": "Features & specs",
-        "details": "Item details",
-        "measurements": "Measurements",
-        "materials": "Materials & care"
+        "features": "Mawonekedwe & zofotokozera",
+        "details": "Tsatanetsatane wa chinchere",
+        "measurements": "Miyeso",
+        "materials": "Zogwiritsira & kusunga"
       }
     },
     "tabs": {
@@ -388,12 +388,12 @@
       }
     },
     "lightbox": {
-      "open": "View image full screen",
-      "dialog": "Image viewer",
-      "close": "Close image viewer",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "imagesTab": "Images"
+      "open": "Onani chithunzi pa screen yonse",
+      "dialog": "Owonera zithunzi",
+      "close": "Tsekani owonera zithunzi",
+      "zoomIn": "Kulitsani",
+      "zoomOut": "Chepetsani",
+      "imagesTab": "Zithunzi"
     },
     "value": {
       "madeToOrderDays": "Zapangidwa, zizikhala ready masiku {days}",
@@ -429,15 +429,15 @@
       }
     },
     "sectionNav": {
-      "top": "Top",
-      "about": "About this item",
-      "specs": "Specifications",
-      "reviews": "Reviews",
-      "similar": "Similar"
+      "top": "Pamwamba",
+      "about": "Za izi",
+      "specs": "Zofotokozera",
+      "reviews": "Ndemanga",
+      "similar": "Zofanana"
     },
     "about": {
-      "seeMore": "See more",
-      "seeLess": "See less"
+      "seeMore": "Onani zambiri",
+      "seeLess": "Onani pang'ono"
     }
   },
   "plp": {
