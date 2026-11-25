@@ -221,6 +221,20 @@ export function imageErrorNotice(error: unknown, t: Translate): string | null {
   return t("listings.images.limit_reached");
 }
 
+function uploadErrorDetail(caught: unknown, fileName: string, t: Translate): string {
+  const limitNotice = imageErrorNotice(caught, t);
+  if (limitNotice) {
+    return limitNotice;
+  }
+  if (caught instanceof ApiError) {
+    return t("listings.images.upload_error_with_name", {
+      name: fileName,
+      detail: caught.message,
+    });
+  }
+  return t("listings.images.upload_failed");
+}
+
 function sortByPosition(images: ListingImageRecord[]): ListingImageRecord[] {
   return [...images].sort((left, right) => left.position - right.position);
 }
@@ -369,14 +383,13 @@ export function ImageManager({
               if (attached.length > 0) syncImages([...localImages, ...attached]);
               return;
             }
+            const message = uploadErrorDetail(caught, sourceFile.name, t);
             setPendingUploads((current) =>
               current.map((item, itemIndex) =>
-                itemIndex === index
-                  ? { ...item, error: t("listings.images.upload_failed"), progress: 0 }
-                  : item,
+                itemIndex === index ? { ...item, error: message, progress: 0 } : item,
               ),
             );
-            return;
+            continue;
           }
         }
 

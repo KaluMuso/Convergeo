@@ -16,6 +16,7 @@ export type HomeTaskKey =
   | "catalogueProducts"
   | "catalogueServices"
   | "catalogueEvents"
+  | "productsInReview"
   | "profile";
 
 export type HomeTaskTone = "danger" | "warning" | "info" | "neutral";
@@ -38,6 +39,8 @@ export type HomeTaskInput = {
   sellerKind: "products" | "services" | "events";
   /** true = no payout number on file; false = set; null/omitted = unknown (hide task). */
   payoutMissing?: boolean | null;
+  /** Live listings whose canonical product is still pending_moderation. */
+  productsInReviewCount?: number;
 };
 
 export const MAX_HOME_TASKS = 3;
@@ -66,6 +69,15 @@ export function buildHomeTasks(input: HomeTaskInput): HomeTask[] {
       key = "ordersWaitingAfterCutoff";
     }
     tasks.push({ key, href: "/orders", tone, count: input.needsActionCount });
+  }
+
+  if ((input.productsInReviewCount ?? 0) > 0) {
+    tasks.push({
+      key: "productsInReview",
+      href: "/listings",
+      tone: "warning",
+      count: input.productsInReviewCount,
+    });
   }
 
   // Informational only (nothing for the vendor to do), so it ranks after

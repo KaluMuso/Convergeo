@@ -6,15 +6,16 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
-
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { VendorGrid } from "../../_components/vendor-page";
+import { VendorRouteHeader } from "../../_components/vendor-route-header";
 import { ListSkeleton } from "../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { createManageClient, type ListingSummary } from "../[id]/edit/_lib/manage-client";
 import { Badge, PriceBlock } from "../new/_lib/ui";
 
 import { ListingStatusGuide, ListingTipsPanel, ListingVisibilityHint } from "./listing-guide";
+import { ListingProductStatusChip } from "./listing-product-status";
 import { PlanUsageCard } from "./plan-usage-card";
 
 type ListingsManageListProps = {
@@ -107,10 +108,18 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="mb-2 space-y-1">
-        <h1 className="text-lg font-semibold text-text">{t("listings.manage.title")}</h1>
-        <p className="text-sm text-text-2">{t("listings.manage.intro")}</p>
-      </header>
+      <VendorRouteHeader
+        title={t("listings.manage.title")}
+        subtitle={t("listings.manage.intro")}
+        actions={
+          <Link
+            className="press-scale inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-[var(--primary-btn-fg)]"
+            href={`/${locale}/listings/new`}
+          >
+            {t("listings.manage.createCta")}
+          </Link>
+        }
+      />
 
       <div className="px-1">
         <PlanUsageCard refreshKey={listings.length} />
@@ -128,6 +137,7 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
       {listings.length === 0 ? (
         <div className="flex flex-col gap-3 px-1">
           <VendorEmptyState
+            illustration="no-products"
             title={t("listings.manage.emptyTitle")}
             body={t("listings.manage.empty")}
           />
@@ -148,40 +158,46 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
                   key={listing.id}
                   className="rounded-lg border border-border p-4 shadow-sm lg:p-5"
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
                     {coverImage ? (
                       <CloudinaryImage
                         publicId={coverImage.cloudinary_public_id}
                         alt={listing.title}
-                        width={72}
+                        width={64}
                         ratio={1}
-                        className="size-[72px] shrink-0 rounded-md border border-border object-cover"
+                        className="size-16 shrink-0 rounded-lg border border-border object-cover"
                       />
                     ) : (
-                      <div className="flex size-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-bg-2 text-center">
+                      <div className="flex size-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-bg-2 p-1 text-center">
                         <Link
-                          className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+                          className="text-[0.65rem] font-medium leading-tight text-primary underline-offset-2 hover:underline"
                           href={`/${locale}/listings/${listing.id}/edit#photos`}
                         >
                           {t("listings.manage.addPhotoLink")}
                         </Link>
                       </div>
                     )}
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="truncate text-sm font-medium text-text">{listing.title}</p>
-                      <PriceBlock ngwee={listing.price_ngwee} />
-                      <p className="text-xs text-text-2">
-                        <span className="sr-only">{t("listings.manage.statusLabel")}</span>
-                        <span className="font-medium text-text">
-                          {statusLabel(listing.status, statusLabels)}
-                        </span>
-                      </p>
-                      <ListingVisibilityHint status={listing.status} />
+                    <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <p className="truncate text-sm font-medium text-text">{listing.title}</p>
+                        <PriceBlock ngwee={listing.price_ngwee} />
+                        <p className="text-xs text-text-2">
+                          <span className="sr-only">{t("listings.manage.statusLabel")}</span>
+                          <span className="font-medium text-text">
+                            {statusLabel(listing.status, statusLabels)}
+                          </span>
+                        </p>
+                        <ListingVisibilityHint status={listing.status} />
+                        <ListingProductStatusChip
+                          listingStatus={listing.status}
+                          productStatus={listing.product_status}
+                        />
+                      </div>
+                      <Badge
+                        variant={statusVariant(listing.status)}
+                        label={statusLabel(listing.status, statusLabels)}
+                      />
                     </div>
-                    <Badge
-                      variant={statusVariant(listing.status)}
-                      label={statusLabel(listing.status, statusLabels)}
-                    />
                   </div>
 
                   <div className="mt-3 flex items-center justify-between gap-3">

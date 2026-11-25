@@ -1,9 +1,7 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
-import {
-  buildCanonicalAlternates,
-  buildLocaleCanonical,
-} from "@vergeo/ui/src/seo/json-ld";
+import { PageHeader } from "@vergeo/ui/src/page-header";
+import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -12,14 +10,13 @@ import { Suspense } from "react";
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 
-import {
-  ServiceGrid,
-  type ServiceBrowseItem,
-} from "./_components/service-grid";
+import { ServiceGrid, type ServiceBrowseItem } from "./_components/service-grid";
 import { SERVICE_VERTICALS } from "./_components/service-verticals";
 import { VerticalFilterChips } from "./_components/vertical-filter-chips";
 
 import type { Metadata } from "next";
+
+import { CustomerRouteShell } from "@/components/customer-route-shell";
 
 export const revalidate = 60;
 
@@ -53,9 +50,7 @@ function parseCategory(value: string | undefined): string | null {
   return null;
 }
 
-async function getServicesTranslator(
-  locale: string,
-): Promise<ServicesTranslator> {
+async function getServicesTranslator(locale: string): Promise<ServicesTranslator> {
   const baseMessages = await getMessages();
   const servicesMessages = await loadNamespace(locale as Locale, "services");
   const messages = {
@@ -104,10 +99,7 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({
-  params,
-  searchParams,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const query = await searchParams;
   const t = await getServicesTranslator(locale);
@@ -128,10 +120,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function ServicesPage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function ServicesPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
   const query = await searchParams;
   setRequestLocale(locale);
@@ -169,20 +158,9 @@ export default async function ServicesPage({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 pb-8">
-      <section
-        className="flex flex-col gap-4"
-        aria-labelledby="services-results-heading"
-      >
-        <div className="space-y-1">
-          <h1
-            id="services-results-heading"
-            className="m-0 font-display text-h1 font-bold text-display-ink"
-          >
-            {t("browse.title")}
-          </h1>
-          <p className="m-0 text-sm text-text-2">{t("browse.subtitle")}</p>
-        </div>
+    <CustomerRouteShell width="full" className="flex flex-col gap-8 pb-8">
+      <section className="flex flex-col gap-4" aria-labelledby="services-results-heading">
+        <PageHeader title={t("browse.title")} subtitle={t("browse.subtitle")} />
 
         <div>
           <Suspense fallback={null}>
@@ -197,10 +175,7 @@ export default async function ServicesPage({
         </div>
 
         {items.length === 0 ? (
-          <EmptyState
-            title={t("browse.emptyTitle")}
-            body={t("browse.emptyBody")}
-          />
+          <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
         ) : (
           <>
             <ServiceGrid
@@ -229,15 +204,10 @@ export default async function ServicesPage({
         aria-labelledby="services-provider-cta"
       >
         <div className="max-w-2xl space-y-2">
-          <h2
-            id="services-provider-cta"
-            className="font-display text-h2 text-panel-text"
-          >
+          <h2 id="services-provider-cta" className="font-display text-h2 text-panel-text">
             {t("browse.providerCta")}
           </h2>
-          <p className="text-sm leading-relaxed text-panel-muted">
-            {t("browse.providerPitch")}
-          </p>
+          <p className="text-sm leading-relaxed text-panel-muted">{t("browse.providerPitch")}</p>
         </div>
         <Link
           href={`/${locale}/sell`}
@@ -246,6 +216,6 @@ export default async function ServicesPage({
           {t("browse.providerCta")}
         </Link>
       </section>
-    </div>
+    </CustomerRouteShell>
   );
 }

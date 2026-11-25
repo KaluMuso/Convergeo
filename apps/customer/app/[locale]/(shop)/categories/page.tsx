@@ -1,9 +1,7 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
-import {
-  buildCanonicalAlternates,
-  buildLocaleCanonical,
-} from "@vergeo/ui/src/seo/json-ld";
+import { PageHeader } from "@vergeo/ui/src/page-header";
+import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -15,6 +13,8 @@ import { resolveCategoriesBrowseView } from "./categories-view";
 
 import type { Metadata } from "next";
 
+import { CustomerRouteShell } from "@/components/customer-route-shell";
+
 export const revalidate = 300;
 
 type PageProps = {
@@ -25,9 +25,7 @@ type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
 
-async function getCatalogTranslator(
-  locale: string,
-): Promise<CatalogTranslator> {
+async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
   const messages = {
@@ -46,9 +44,7 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getCatalogTranslator(locale);
   const result = await fetchCategoriesResult();
@@ -79,15 +75,8 @@ export default async function CategoriesPage({ params }: PageProps) {
   const view = resolveCategoriesBrowseView(result);
 
   return (
-    <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-5xl">
-      <header className="space-y-2">
-        <h1 className="font-display text-h1 text-display-ink">
-          {t("browseCategories.title")}
-        </h1>
-        <p className="text-body text-text-2">
-          {t("browseCategories.subtitle")}
-        </p>
-      </header>
+    <CustomerRouteShell className="flex max-w-5xl flex-col gap-6">
+      <PageHeader title={t("browseCategories.title")} subtitle={t("browseCategories.subtitle")} />
 
       {view.kind === "populated" ? (
         <>
@@ -123,15 +112,17 @@ export default async function CategoriesPage({ params }: PageProps) {
         <EmptyState
           title={t("browseCategories.emptyTitle")}
           body={t("browseCategories.emptyBody")}
+          illustration="no-products"
           data-testid="categories-empty"
         />
       ) : (
         <EmptyState
           title={t("browseCategories.unavailableTitle")}
           body={t("browseCategories.unavailableBody")}
+          illustration="offline"
           data-testid={`categories-unavailable-${view.reason}`}
         />
       )}
-    </div>
+    </CustomerRouteShell>
   );
 }

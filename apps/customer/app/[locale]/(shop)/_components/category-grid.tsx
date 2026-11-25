@@ -1,3 +1,4 @@
+import { CategoryIcon } from "@vergeo/ui/src/category-icon-map";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { Rail } from "@vergeo/ui/src/rail";
 import Link from "next/link";
@@ -19,22 +20,8 @@ const CATEGORY_PASTELS = [
   "var(--cat-auto)",
 ] as const;
 
-/** Lightweight geometric marks — no emoji, no extra icon pack. */
-const CATEGORY_ICON_PATHS = [
-  "M4 8h16v10H4zM8 8V6h8v2",
-  "M12 4l8 6v10H4V10z",
-  "M6 18V8l6-4 6 4v10",
-  "M4 12h16M12 4v16",
-  "M5 7h14v10H5zM9 17v3h6v-3",
-  "M7 7h10v10H7zM4 10h3M17 10h3",
-] as const;
-
 function pastelForIndex(index: number): string {
   return CATEGORY_PASTELS[index % CATEGORY_PASTELS.length] ?? "var(--cat-beauty)";
-}
-
-function iconPathForIndex(index: number): string {
-  return CATEGORY_ICON_PATHS[index % CATEGORY_ICON_PATHS.length] ?? CATEGORY_ICON_PATHS[0];
 }
 
 /**
@@ -87,27 +74,6 @@ type CategoryGridProps = {
   locale: string;
   t: CatalogTranslator;
 };
-
-function CategoryFallbackMark({ index }: { index: number }) {
-  return (
-    <span
-      aria-hidden
-      className="absolute inset-0 m-auto inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface/50 text-text"
-      data-testid="category-fallback-icon"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        aria-hidden
-      >
-        <path d={iconPathForIndex(index)} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
-  );
-}
 
 export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps) {
   if (categories.length === 0) {
@@ -166,7 +132,12 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
                       />
                     </span>
                   ) : (
-                    <CategoryFallbackMark index={index} />
+                    <span
+                      className="absolute inset-0 flex items-center justify-center"
+                      data-testid="category-fallback-icon"
+                    >
+                      <CategoryIcon categorySlug={category.slug} size={48} />
+                    </span>
                   )}
                 </span>
                 <span className="line-clamp-2 min-h-10 w-full text-xs font-medium leading-snug text-text group-hover:text-primary md:min-h-11">

@@ -217,7 +217,7 @@ def _seed_base(fake: FakeSupabaseClient) -> None:
                 "returnable": False,
                 "return_window_hours": None,
                 "status": "active",
-                "products": {"name": "Demo Phone"},
+                "products": {"name": "Demo Phone", "status": "active"},
                 "listing_images": [],
                 "updated_at": "2026-07-09T10:00:00Z",
             },
@@ -245,7 +245,7 @@ def _seed_base(fake: FakeSupabaseClient) -> None:
                 "returnable": False,
                 "return_window_hours": None,
                 "status": "active",
-                "products": {"name": "Demo Phone"},
+                "products": {"name": "Demo Phone", "status": "active"},
                 "listing_images": [],
                 "updated_at": "2026-07-09T09:00:00Z",
             },
@@ -570,6 +570,22 @@ def test_list_vendor_listings_scoped_to_owner(manage_client: TestClient) -> None
     assert len(body) == 1
     assert body[0]["id"] == LISTING_A_ID
     assert body[0]["compare_at_ngwee"] is None
+    assert body[0]["product_status"] == "active"
+
+
+def test_list_vendor_listings_includes_pending_product_status(
+    manage_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    fake_client.tables["products"].rows[0]["status"] = "pending_moderation"
+    fake_client.tables["vendor_listings"].rows[0]["products"] = {
+        "name": "Demo Phone",
+        "status": "pending_moderation",
+    }
+
+    response = manage_client.get("/vendor/listings", headers=_auth_headers(TOKEN_A))
+
+    assert response.status_code == 200
+    assert response.json()[0]["product_status"] == "pending_moderation"
 
 
 def test_stock_adjust_updates_qty(

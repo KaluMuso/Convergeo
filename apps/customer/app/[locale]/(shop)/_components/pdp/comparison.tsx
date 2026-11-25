@@ -6,12 +6,16 @@ import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { catalogDeliveryLabels } from "../plp/delivery-labels";
 import { FulfillmentLogisticsPills, type LogisticsPillLabels } from "../plp/logistics-pills";
 
+import { type BuyBoxLabels } from "./buy-box";
+import { buildComparisonValueRow, mergeComparisonListings } from "./comparison-enrichment";
 import { shouldShowComparison } from "./comparison-visibility";
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
 
 import type { ComparisonValueChip } from "./comparison-enrichment";
+import type { ProductListing } from "./pdp-interactive-body";
 
 export { shouldShowComparison } from "./comparison-visibility";
 
@@ -235,12 +239,20 @@ export function sortComparisonListings(
   return sorted.map((entry) => entry.listing);
 }
 
+type ComparisonEnrichment = {
+  products: ProductListing[];
+  codCapNgwee: number;
+  codChipsEnabled: boolean;
+  buyBoxLabels: BuyBoxLabels;
+};
+
 type ComparisonProps = {
   listings: ComparisonListing[];
   selectedListingId: string | null;
   labels: ComparisonLabels;
   logisticsPillLabels: Pick<LogisticsPillLabels, "delivery" | "pickup">;
   onSelect: (listingId: string) => void;
+  enrichment?: ComparisonEnrichment;
 };
 
 export function Comparison({
@@ -249,6 +261,7 @@ export function Comparison({
   labels,
   logisticsPillLabels,
   onSelect,
+  enrichment,
 }: ComparisonProps) {
   const t = useTranslations("catalog");
   const [sort, setSort] = useState<ComparisonSort>("price");
@@ -281,9 +294,50 @@ export function Comparison({
   );
   const usingFallbackLocation = geo === null || permissionDenied;
 
+  const resolvedListings = useMemo(() => {
+    if (!enrichment) {
+      return listings;
+    }
+    const productById = new Map(enrichment.products.map((product) => [product.id, product]));
+    const deliveryEstimateLabels = catalogDeliveryLabels((key) => t.raw(key));
+    const valueById = new Map(
+      listings
+        .map((row) => {
+          const product = productById.get(row.id);
+          if (!product) {
+            return null;
+          }
+          return [
+            row.id,
+            buildComparisonValueRow(
+              product,
+              row,
+              {
+                buyBox: {
+                  ...enrichment.buyBoxLabels,
+                  lowStockLabel: (count) => t("pdp.buyBox.lowStock", { count }),
+                },
+                delivery: deliveryEstimateLabels,
+                madeToOrderDays: (days) => t("pdp.value.madeToOrderDays", { days }),
+              },
+              {
+                codCapNgwee: enrichment.codCapNgwee,
+                codChipsEnabled: enrichment.codChipsEnabled,
+              },
+            ),
+          ] as const;
+        })
+        .filter(
+          (entry): entry is readonly [string, ReturnType<typeof buildComparisonValueRow>] =>
+            entry !== null,
+        ),
+    );
+    return mergeComparisonListings(listings, productById, valueById);
+  }, [enrichment, listings, t]);
+
   const sortedListings = useMemo(
-    () => sortComparisonListings(listings, sort, userCoords),
-    [listings, sort, userCoords],
+    () => sortComparisonListings(resolvedListings, sort, userCoords),
+    [resolvedListings, sort, userCoords],
   );
 
   const lowestPriceNgwee = useMemo(() => {

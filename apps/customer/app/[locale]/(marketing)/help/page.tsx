@@ -1,5 +1,6 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { LinkButton } from "@vergeo/ui/src/link-button";
+import { PageHeader } from "@vergeo/ui/src/page-header";
 import Link from "next/link";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -10,6 +11,8 @@ import { HelpSearch } from "./_components/help-search";
 import { buildSearchIndex } from "./_lib/content";
 
 import type { Metadata } from "next";
+
+import { CustomerRouteShell } from "@/components/customer-route-shell";
 
 type MarketingTranslator = (key: string, values?: Record<string, string | number>) => string;
 
@@ -60,13 +63,12 @@ export default async function HelpPage({ params }: PageProps) {
 
   return (
     <main id="marketing-main" className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-      <header className="mx-auto mb-6 max-w-3xl space-y-3">
+      <CustomerRouteShell width="content" className="mb-6 max-w-3xl">
         <p className="text-sm font-semibold uppercase tracking-wide text-primary">
           {t("hero.eyebrow")}
         </p>
-        <h1 className="font-display text-h1 text-display-ink">{t("hero.headline")}</h1>
-        <p className="text-body text-text-2">{t("hero.subhead")}</p>
-      </header>
+        <PageHeader title={t("hero.headline")} subtitle={t("hero.subhead")} />
+      </CustomerRouteShell>
 
       <NextIntlClientProvider locale={locale} messages={clientMessages}>
         <HelpSearch index={index} locale={locale} />

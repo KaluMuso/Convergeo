@@ -31,6 +31,7 @@ from app.services.kyc.state_machine import (
 )
 from app.services.webhooks.n8n_dispatch import schedule_n8n_webhook
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, model_validator
 
 REVIEW_QUEUE_STATUSES = ("submitted", "under_review", "pending")
@@ -107,6 +108,31 @@ def _normalize_vendor_status_filter(status: str) -> str:
     return normalized
 
 
+def _load_reviewable_kyc_by_vendor_ids(
+    service_client: ServiceRoleClient,
+    vendor_ids: list[str],
+) -> dict[str, dict[str, Any]]:
+    if not vendor_ids:
+        return {}
+    response = (
+        _table(service_client, "kyc_records")
+        .select("id, vendor_id, tier, status, updated_at")
+        .in_("vendor_id", vendor_ids)
+        .in_("status", list(REVIEW_QUEUE_STATUSES))
+        .execute()
+    )
+    rows = response.data if isinstance(response.data, list) else []
+    by_vendor: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        vendor_id = str(row["vendor_id"])
+        current = by_vendor.get(vendor_id)
+        if current is None or str(row.get("updated_at", "")) > str(current.get("updated_at", "")):
+            by_vendor[vendor_id] = row
+    return by_vendor
+
+
 def _find_reviewable_kyc_record(
     service_client: ServiceRoleClient,
     vendor_id: str,
@@ -150,12 +176,14 @@ async def list_vendors_for_moderation(
         .execute()
     )
     rows = response.data if isinstance(response.data, list) else []
+    vendor_ids = [str(row["id"]) for row in rows if isinstance(row, dict)]
+    kyc_by_vendor = _load_reviewable_kyc_by_vendor_ids(service_client, vendor_ids)
     items: list[VendorQueueItem] = []
     for row in rows:
         if not isinstance(row, dict):
             continue
         vendor_id = str(row["id"])
-        kyc_row = _find_reviewable_kyc_record(service_client, vendor_id)
+        kyc_row = kyc_by_vendor.get(vendor_id)
         updated_at = _parse_timestamp(kyc_row["updated_at"] if kyc_row else row["updated_at"])
         sla_badge: Literal["on_track", "due_soon", "overdue"] | None = None
         age_hours: float | None = None
@@ -180,11 +208,11 @@ async def list_vendors_for_moderation(
     return items
 
 
-@vendors_router.get("/{vendor_id}/kyc", response_model=VendorKycDetail)
+@vendors_router.get("/{vendor_id}/kyc")
 async def get_vendor_kyc_detail(
     vendor_id: UUID,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
-) -> VendorKycDetail:
+) -> JSONResponse:
     vendor = _load_vendor_row(service_client, str(vendor_id))
     kyc_row = _find_reviewable_kyc_record(service_client, str(vendor_id))
     if kyc_row is None:
@@ -205,7 +233,7 @@ async def get_vendor_kyc_detail(
     documents, docs_available = sign_kyc_documents(service_client, paths)
     momo_raw = record.get("momo_name_match")
     updated_at = _parse_timestamp(record["updated_at"])
-    return VendorKycDetail(
+    payload = VendorKycDetail(
         vendor_id=UUID(str(vendor["id"])),
         kyc_record_id=UUID(str(record["id"])),
         vendor_display_name=str(vendor["display_name"]),
@@ -217,6 +245,10 @@ async def get_vendor_kyc_detail(
         docs_available=docs_available,
         momo_name_match=momo_raw if isinstance(momo_raw, dict) else None,
         updated_at=updated_at,
+    )
+    return JSONResponse(
+        content=payload.model_dump(mode="json"),
+        headers={"Cache-Control": "private, max-age=240"},
     )
 
 

@@ -53,7 +53,19 @@ def score_name_match(resolved_name: str | None, legal_name: str) -> tuple[float,
         return 0.0, False
 
     score = SequenceMatcher(None, left, right).ratio()
-    return score, score >= 0.85
+    if score >= 0.85:
+        return score, True
+
+    # Zambian MoMo wallets are often registered with first + surname only, or
+    # surname first ("MUSONDA KALUBA"), while the NRC carries every name. When
+    # one name's words are all in the other (at least two words, so a lone
+    # surname never passes), it is the same person.
+    left_tokens = set(re.findall(r"[a-z]+", left))
+    right_tokens = set(re.findall(r"[a-z]+", right))
+    shorter, longer = sorted((left_tokens, right_tokens), key=len)
+    if len(shorter) >= 2 and shorter <= longer:
+        return max(score, 0.9), True
+    return score, False
 
 
 def detect_momo_operator(phone: str) -> MomoOperator:

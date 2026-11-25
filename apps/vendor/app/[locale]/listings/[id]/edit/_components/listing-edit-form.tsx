@@ -8,10 +8,13 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../../../_components/async-state";
+import { VendorFormLayout } from "../../../../_components/vendor-page";
 import { ListSkeleton } from "../../../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../../../_lib/vendor-errors";
 import { ImageManager, type ListingImageRecord } from "../../../_components/image-manager";
-import { ListingTipsPanel, ListingVisibilityHint } from "../../../_components/listing-guide";
+import { ListingFormAside } from "../../../_components/listing-form-aside";
+import { ListingVisibilityHint } from "../../../_components/listing-guide";
+import { ListingProductStatusChip } from "../../../_components/listing-product-status";
 import { VariantsEditor } from "../../../_components/variants-editor";
 import {
   ListingFields,
@@ -301,12 +304,6 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     if (!listing) {
       return;
     }
-    if (listing.status === "draft" && (listing.images?.length ?? 0) === 0) {
-      const message = t("listings.manage.addPhotoFirst");
-      setError(message);
-      notify.error(message);
-      return;
-    }
     setActionLoading(
       listing.status === "draft" ? "publish" : listing.status === "paused" ? "unpause" : "pause",
     );
@@ -443,220 +440,259 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
           />
         </div>
         <ListingVisibilityHint status={listing.status} />
+        <ListingProductStatusChip
+          listingStatus={listing.status}
+          productStatus={listing.product_status}
+        />
       </header>
 
-      <ListingTipsPanel />
-
-      {error ? (
-        <p className="text-sm text-danger" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {notice ? (
-        <p className="text-sm text-success" role="status">
-          {notice}
-        </p>
-      ) : null}
-
-      <ListingFields
-        inventoryReadOnly
-        values={fieldValues}
-        onChange={(patch) =>
-          setFieldValues((current) => (current ? { ...current, ...patch } : current))
-        }
-        wholesaleEnabled={fieldValues.wholesale}
-        labels={fieldLabels}
-        errors={fieldErrors}
-        allowStandaloneClasses={listing.product_id === null}
-      />
-
-      <StockEditor listingId={listingId} client={manageClient} ownerId={session?.user.id ?? ""} />
-
-      <FormField
-        label={t("listings.manage.edit.compareAtLabel")}
-        helpText={t("listings.manage.edit.compareAtHelp")}
-      >
-        <Input
-          inputMode="decimal"
-          placeholder={fieldLabels.pricePlaceholder}
-          value={compareAtZmw}
-          onChange={(event) => setCompareAtZmw(event.target.value)}
-        />
-      </FormField>
-
-      <div className="space-y-3 rounded-lg border border-border p-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium text-text">
-              {t("listings.manage.edit.returnableLabel")}
-            </p>
-            <p className="text-xs text-text-2">{t("listings.manage.edit.returnableHelp")}</p>
-          </div>
-          <Switch
-            label={t("listings.manage.edit.returnableLabel")}
-            checked={returnable}
-            onChange={(event) => setReturnable(event.target.checked)}
+      <VendorFormLayout
+        aside={
+          <ListingFormAside
+            title={listing.title}
+            priceNgwee={listing.price_ngwee}
+            listingStatus={listing.status}
+            productStatus={listing.product_status}
+            coverPublicId={
+              [...(listing.images ?? [])].sort((a, b) => a.position - b.position)[0]
+                ?.cloudinary_public_id
+            }
           />
-        </div>
-        {returnable ? (
-          <FormField label={t("listings.manage.edit.returnWindowLabel")}>
-            <Input
-              inputMode="numeric"
-              value={returnWindowHours}
-              onChange={(event) => setReturnWindowHours(event.target.value)}
+        }
+        main={
+          <>
+            {error ? (
+              <p className="text-sm text-danger" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {notice ? (
+              <p className="text-sm text-success" role="status">
+                {notice}
+              </p>
+            ) : null}
+
+            <ListingFields
+              inventoryReadOnly
+              values={fieldValues}
+              onChange={(patch) =>
+                setFieldValues((current) => (current ? { ...current, ...patch } : current))
+              }
+              wholesaleEnabled={fieldValues.wholesale}
+              labels={fieldLabels}
+              errors={fieldErrors}
+              allowStandaloneClasses={listing.product_id === null}
             />
-          </FormField>
-        ) : null}
-      </div>
 
-      <ImageManager
-        listingId={listingId}
-        images={(listing.images ?? []) as ListingImageRecord[]}
-        getToken={getToken}
-        minimumImages={minimumEvidenceImages}
-        onImagesChange={(images) =>
-          setListing((current) => (current ? { ...current, images } : current))
-        }
-      />
+            <StockEditor
+              listingId={listingId}
+              client={manageClient}
+              ownerId={session?.user.id ?? ""}
+            />
 
-      <VariantsEditor
-        listingId={listingId}
-        client={manageClient}
-        imagePublicIds={[...(listing.images ?? [])]
-          .sort((a, b) => a.position - b.position)
-          .map((image) => image.cloudinary_public_id)}
-        stockTracked={listing.stock_mode === "tracked"}
-        listingPriceNgwee={listing.price_ngwee}
-        unsupportedReason={
-          listing.product_class === "E"
-            ? "classE"
-            : listing.wholesale || (listing.price_tiers?.length ?? 0) > 0
-              ? "wholesale"
-              : (listing.sale_unit ?? "each") !== "each"
-                ? "measured"
-                : null
-        }
-      />
+            <FormField
+              label={t("listings.manage.edit.compareAtLabel")}
+              helpText={t("listings.manage.edit.compareAtHelp")}
+            >
+              <Input
+                inputMode="decimal"
+                placeholder={fieldLabels.pricePlaceholder}
+                value={compareAtZmw}
+                onChange={(event) => setCompareAtZmw(event.target.value)}
+              />
+            </FormField>
 
-      {activationBlocked ? (
-        <p
-          className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-text"
-          role="status"
-        >
-          {t("listings.manage.edit.evidenceRequired")}
-        </p>
-      ) : null}
-
-      {fieldValues.wholesale ? (
-        <div className="space-y-3 rounded-lg border border-border p-3">
-          <p className="text-sm font-medium text-text">{t("listings.manage.edit.tierHeading")}</p>
-          {tiers.map((tier, index) => (
-            <div key={`tier-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-              <FormField label={t("listings.manage.edit.tierQtyLabel")}>
-                <Input
-                  inputMode="numeric"
-                  value={tier.minQty}
-                  onChange={(event) =>
-                    setTiers((current) =>
-                      current.map((row, rowIndex) =>
-                        rowIndex === index ? { ...row, minQty: event.target.value } : row,
-                      ),
-                    )
-                  }
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-text">
+                    {t("listings.manage.edit.returnableLabel")}
+                  </p>
+                  <p className="text-xs text-text-2">{t("listings.manage.edit.returnableHelp")}</p>
+                </div>
+                <Switch
+                  label={t("listings.manage.edit.returnableLabel")}
+                  checked={returnable}
+                  onChange={(event) => setReturnable(event.target.checked)}
                 />
-              </FormField>
-              <FormField label={t("listings.manage.edit.tierPriceLabel")}>
-                <Input
-                  inputMode="decimal"
-                  value={tier.priceZmw}
-                  onChange={(event) =>
-                    setTiers((current) =>
-                      current.map((row, rowIndex) =>
-                        rowIndex === index ? { ...row, priceZmw: event.target.value } : row,
-                      ),
-                    )
-                  }
-                />
-              </FormField>
-              <Button
-                type="button"
-                variant="secondary"
-                className="mt-6 min-h-11"
-                loadingLabel={t("listings.manage.edit.saving")}
-                onClick={() =>
-                  setTiers((current) => current.filter((_, rowIndex) => rowIndex !== index))
-                }
-              >
-                {t("listings.manage.edit.removeTier")}
-              </Button>
+              </div>
+              {returnable ? (
+                <FormField label={t("listings.manage.edit.returnWindowLabel")}>
+                  <Input
+                    inputMode="numeric"
+                    value={returnWindowHours}
+                    onChange={(event) => setReturnWindowHours(event.target.value)}
+                  />
+                </FormField>
+              ) : null}
             </div>
-          ))}
-          <Button
-            type="button"
-            variant="secondary"
-            className="min-h-11 w-full"
-            loadingLabel={t("listings.manage.edit.saving")}
-            onClick={() => setTiers((current) => [...current, { minQty: "", priceZmw: "" }])}
-          >
-            {t("listings.manage.edit.addTier")}
-          </Button>
-        </div>
-      ) : null}
 
-      <Button
-        type="button"
-        className="min-h-11 w-full"
-        disabled={saving}
-        loading={saving}
-        loadingLabel={t("listings.manage.edit.saving")}
-        onClick={() => void handleSave()}
-      >
-        {saving ? t("listings.manage.edit.saving") : t("listings.manage.edit.save")}
-      </Button>
+            <ImageManager
+              listingId={listingId}
+              images={(listing.images ?? []) as ListingImageRecord[]}
+              getToken={getToken}
+              minimumImages={minimumEvidenceImages}
+              onImagesChange={(images) =>
+                setListing((current) => (current ? { ...current, images } : current))
+              }
+            />
 
-      <Button
-        type="button"
-        variant="secondary"
-        className="min-h-11 w-full"
-        disabled={actionLoading !== null || activationBlocked}
-        loading={
-          actionLoading === "publish" || actionLoading === "pause" || actionLoading === "unpause"
+            <VariantsEditor
+              listingId={listingId}
+              client={manageClient}
+              imagePublicIds={[...(listing.images ?? [])]
+                .sort((a, b) => a.position - b.position)
+                .map((image) => image.cloudinary_public_id)}
+              stockTracked={listing.stock_mode === "tracked"}
+              listingPriceNgwee={listing.price_ngwee}
+              unsupportedReason={
+                listing.product_class === "E"
+                  ? "classE"
+                  : listing.wholesale || (listing.price_tiers?.length ?? 0) > 0
+                    ? "wholesale"
+                    : (listing.sale_unit ?? "each") !== "each"
+                      ? "measured"
+                      : null
+              }
+            />
+
+            {activationBlocked ? (
+              <p
+                className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-text"
+                role="status"
+              >
+                {t("listings.manage.edit.evidenceRequired")}
+              </p>
+            ) : null}
+
+            {fieldValues.wholesale ? (
+              <section
+                id="wholesale"
+                className="space-y-3 rounded-lg border border-border p-3"
+                aria-labelledby="listing-edit-wholesale-heading"
+              >
+                <h3
+                  id="listing-edit-wholesale-heading"
+                  className="font-display text-h4 text-display-ink"
+                >
+                  {t("listings.fields.wholesaleSectionHeading")}
+                </h3>
+                <p className="text-xs text-text-2">{t("listings.fields.wholesaleBuyersHint")}</p>
+                <p className="text-sm font-medium text-text">
+                  {t("listings.manage.edit.tierHeading")}
+                </p>
+                {tiers.map((tier, index) => (
+                  <div key={`tier-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                    <FormField label={t("listings.manage.edit.tierQtyLabel")}>
+                      <Input
+                        inputMode="numeric"
+                        value={tier.minQty}
+                        onChange={(event) =>
+                          setTiers((current) =>
+                            current.map((row, rowIndex) =>
+                              rowIndex === index ? { ...row, minQty: event.target.value } : row,
+                            ),
+                          )
+                        }
+                      />
+                    </FormField>
+                    <FormField label={t("listings.manage.edit.tierPriceLabel")}>
+                      <Input
+                        inputMode="decimal"
+                        value={tier.priceZmw}
+                        onChange={(event) =>
+                          setTiers((current) =>
+                            current.map((row, rowIndex) =>
+                              rowIndex === index ? { ...row, priceZmw: event.target.value } : row,
+                            ),
+                          )
+                        }
+                      />
+                    </FormField>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="mt-6 min-h-11"
+                      loadingLabel={t("listings.manage.edit.saving")}
+                      onClick={() =>
+                        setTiers((current) => current.filter((_, rowIndex) => rowIndex !== index))
+                      }
+                    >
+                      {t("listings.manage.edit.removeTier")}
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="min-h-11 w-full"
+                  loadingLabel={t("listings.manage.edit.saving")}
+                  onClick={() => setTiers((current) => [...current, { minQty: "", priceZmw: "" }])}
+                >
+                  {t("listings.manage.edit.addTier")}
+                </Button>
+              </section>
+            ) : null}
+
+            <Button
+              type="button"
+              className="min-h-11 w-full"
+              disabled={saving}
+              loading={saving}
+              loadingLabel={t("listings.manage.edit.saving")}
+              onClick={() => void handleSave()}
+            >
+              {saving ? t("listings.manage.edit.saving") : t("listings.manage.edit.save")}
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              className="min-h-11 w-full"
+              disabled={actionLoading !== null || activationBlocked}
+              loading={
+                actionLoading === "publish" ||
+                actionLoading === "pause" ||
+                actionLoading === "unpause"
+              }
+              loadingLabel={
+                actionLoading === "publish"
+                  ? t("listings.manage.edit.publishingListing")
+                  : actionLoading === "pause"
+                    ? t("listings.manage.edit.pausing")
+                    : t("listings.manage.edit.unpausing")
+              }
+              onClick={() => void handlePauseToggle()}
+            >
+              {actionLoading === "publish"
+                ? t("listings.manage.edit.publishingListing")
+                : actionLoading === "pause"
+                  ? t("listings.manage.edit.pausing")
+                  : actionLoading === "unpause"
+                    ? t("listings.manage.edit.unpausing")
+                    : listing.status === "draft"
+                      ? t("listings.manage.edit.publishListing")
+                      : listing.status === "paused"
+                        ? t("listings.manage.edit.unpause")
+                        : t("listings.manage.edit.pause")}
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              className="min-h-11 w-full text-danger"
+              disabled={actionLoading !== null}
+              loading={actionLoading === "delete"}
+              loadingLabel={t("listings.manage.edit.deleting")}
+              onClick={() => void handleDelete()}
+            >
+              {actionLoading === "delete"
+                ? t("listings.manage.edit.deleting")
+                : t("listings.manage.edit.delete")}
+            </Button>
+          </>
         }
-        loadingLabel={
-          actionLoading === "publish"
-            ? t("listings.manage.edit.publishingListing")
-            : actionLoading === "pause"
-              ? t("listings.manage.edit.pausing")
-              : t("listings.manage.edit.unpausing")
-        }
-        onClick={() => void handlePauseToggle()}
-      >
-        {actionLoading === "publish"
-          ? t("listings.manage.edit.publishingListing")
-          : actionLoading === "pause"
-            ? t("listings.manage.edit.pausing")
-            : actionLoading === "unpause"
-              ? t("listings.manage.edit.unpausing")
-              : listing.status === "draft"
-                ? t("listings.manage.edit.publishListing")
-                : listing.status === "paused"
-                  ? t("listings.manage.edit.unpause")
-                  : t("listings.manage.edit.pause")}
-      </Button>
-
-      <Button
-        type="button"
-        variant="secondary"
-        className="min-h-11 w-full text-danger"
-        disabled={actionLoading !== null}
-        loading={actionLoading === "delete"}
-        loadingLabel={t("listings.manage.edit.deleting")}
-        onClick={() => void handleDelete()}
-      >
-        {actionLoading === "delete"
-          ? t("listings.manage.edit.deleting")
-          : t("listings.manage.edit.delete")}
-      </Button>
+      />
     </div>
   );
 }

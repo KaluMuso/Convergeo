@@ -1,12 +1,15 @@
+import { PageHeader } from "@vergeo/ui/src/page-header";
+
 import type { ReactNode } from "react";
 
 const WIDTH_CLASSES = {
   full: "max-w-[1400px]",
-  form: "max-w-2xl",
+  /** Single column on 360px; two-column shell at xl (≥1280px). */
+  form: "max-w-[1400px]",
 } as const;
 
 const GRID_CLASSES = {
-  cards: "grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3",
+  cards: "grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
   stats: "grid gap-3 grid-cols-2 md:grid-cols-4",
   two: "grid gap-4 grid-cols-1 lg:grid-cols-2",
 } as const;
@@ -34,16 +37,10 @@ export function VendorPage({
 }: VendorPageProps) {
   return (
     <main
-      className={`flex w-full flex-col space-y-4 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 ${WIDTH_CLASSES[width]} ${className}`.trim()}
+      className={`animate-page-in flex w-full flex-col space-y-4 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 ${WIDTH_CLASSES[width]} ${className}`.trim()}
     >
-      {title || subtitle || actions ? (
-        <header className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 space-y-1">
-            {title ? <h1 className="text-lg font-semibold text-text">{title}</h1> : null}
-            {subtitle ? <p className="text-sm text-text-2">{subtitle}</p> : null}
-          </div>
-          {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
-        </header>
+      {title ? (
+        <PageHeader title={title} subtitle={subtitle} actions={actions} className="!pb-4" />
       ) : null}
       {children}
     </main>
@@ -52,10 +49,40 @@ export function VendorPage({
 
 type VendorGridProps = {
   cols?: VendorGridCols;
+  /** Use `ul` when the children are `<li>` cards. */
+  as?: "div" | "ul";
   children: ReactNode;
   className?: string;
 };
 
-export function VendorGrid({ cols = "cards", children, className = "" }: VendorGridProps) {
-  return <div className={`${GRID_CLASSES[cols]} ${className}`.trim()}>{children}</div>;
+type VendorFormLayoutProps = {
+  main: ReactNode;
+  aside: ReactNode;
+  className?: string;
+};
+
+/** Form column + sticky preview / tips from xl (1280px) up; single column at 360px. */
+export function VendorFormLayout({ main, aside, className = "" }: VendorFormLayoutProps) {
+  return (
+    <div
+      className={`grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,22rem)] xl:items-start ${className}`.trim()}
+    >
+      <div className="min-w-0 flex flex-col gap-4">{main}</div>
+      <aside className="flex flex-col gap-3 xl:sticky xl:top-4">{aside}</aside>
+    </div>
+  );
+}
+
+export function VendorGrid({
+  cols = "cards",
+  as: Tag = "div",
+  children,
+  className = "",
+}: VendorGridProps) {
+  const listReset = Tag === "ul" ? "m-0 list-none p-0" : "";
+  return (
+    <Tag className={`${GRID_CLASSES[cols]} ${listReset} ${className}`.replace(/\s+/g, " ").trim()}>
+      {children}
+    </Tag>
+  );
 }

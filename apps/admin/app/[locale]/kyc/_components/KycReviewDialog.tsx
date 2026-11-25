@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
-import { type VendorKycDetail, type VendorQueueItem, kycApi } from "./api";
+import { type VendorKycDetail, type VendorQueueItem, kycApi, prefetchVendorKycDetail } from "./api";
 import { DocViewer } from "./DocViewer";
+import { EMPTY_CHECKS, KycChecklist, type KycChecks } from "./KycChecklist";
 
 type KycReviewDialogProps = {
   item: VendorQueueItem;
@@ -18,22 +19,24 @@ export function KycReviewDialog({ item, onClose, onComplete }: KycReviewDialogPr
   const t = useTranslations("admin.kyc.queue.dialog");
   const locale = useLocale();
   const [detail, setDetail] = useState<VendorKycDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingDocs, setLoadingDocs] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"view" | "reject" | "confirmApprove">("view");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [checks, setChecks] = useState<KycChecks>(EMPTY_CHECKS);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    setLoadingDocs(true);
     setError(null);
     try {
-      const data = await kycApi.request<VendorKycDetail>(`/admin/vendors/${item.vendor_id}/kyc`);
+      const data = await prefetchVendorKycDetail(item.vendor_id);
       setDetail(data);
     } catch {
       setError(t("failure"));
+      setDetail(null);
     } finally {
-      setLoading(false);
+      setLoadingDocs(false);
     }
   }, [item.vendor_id, t]);
 
@@ -68,6 +71,11 @@ export function KycReviewDialog({ item, onClose, onComplete }: KycReviewDialogPr
     }
   };
 
+  const momoMatched =
+    detail?.momo_name_match === undefined || detail?.momo_name_match === null
+      ? null
+      : detail.momo_name_match.matched;
+
   return (
     <Modal
       open
@@ -79,25 +87,28 @@ export function KycReviewDialog({ item, onClose, onComplete }: KycReviewDialogPr
       data-testid="kyc-review-dialog"
     >
       <div className="space-y-4">
-        <p className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
-          <span>
-            {item.display_name} · {item.slug}
-          </span>
-          {item.kyc_record_id ? (
-            <Link
-              href={`/${locale}/kyc/${item.kyc_record_id}`}
-              className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {t("openFullReview")}
-            </Link>
-          ) : null}
-        </p>
-
-        {loading ? (
-          <p role="status" className="text-sm text-muted">
-            {t("loading")}
+        <header className="space-y-2">
+          <p className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
+            <span>
+              {item.display_name} · {item.slug}
+            </span>
+            {item.kyc_record_id ? (
+              <Link
+                href={`/${locale}/kyc/${item.kyc_record_id}`}
+                className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-2 hover:underline"
+              >
+                {t("openFullReview")}
+              </Link>
+            ) : null}
           </p>
-        ) : null}
+          <KycChecklist
+            checks={checks}
+            onChange={setChecks}
+            disabled={submitting || loadingDocs}
+            momoMatched={momoMatched}
+          />
+        </header>
+
         {error ? (
           <div role="alert" className="space-y-2">
             <p className="text-sm text-danger">{error}</p>
@@ -113,17 +124,18 @@ export function KycReviewDialog({ item, onClose, onComplete }: KycReviewDialogPr
           </div>
         ) : null}
 
+        <section aria-label={t("documents")}>
+          <h3 className="mb-2 text-sm font-semibold text-text">{t("documents")}</h3>
+          <DocViewer
+            documents={detail?.documents ?? []}
+            docsAvailable={detail?.docs_available ?? true}
+            loading={loadingDocs}
+            onRefresh={() => void load()}
+          />
+        </section>
+
         {detail ? (
           <>
-            <section aria-label={t("documents")}>
-              <h3 className="mb-2 text-sm font-semibold text-text">{t("documents")}</h3>
-              <DocViewer
-                documents={detail.documents}
-                docsAvailable={detail.docs_available}
-                onRefresh={() => void load()}
-              />
-            </section>
-
             {mode === "reject" ? (
               <div className="space-y-2">
                 <label className="block text-sm text-text">
@@ -197,9 +209,7 @@ export function KycReviewDialog({ item, onClose, onComplete }: KycReviewDialogPr
               )}
             </div>
           </>
-        ) : null}
-
-        {!loading && !detail && !error ? (
+        ) : !loadingDocs && !error ? (
           <p className="text-sm text-muted">{t("noKycRecord")}</p>
         ) : null}
       </div>

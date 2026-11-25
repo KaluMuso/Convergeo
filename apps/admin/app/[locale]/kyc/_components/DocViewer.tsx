@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import type { SignedDocUrl } from "./api";
 
@@ -9,6 +10,7 @@ type DocViewerProps = {
   docsAvailable: boolean;
   /** Signed links expire; lets the reviewer fetch fresh ones. */
   onRefresh?: () => void;
+  loading?: boolean;
 };
 
 function docLabel(
@@ -24,8 +26,60 @@ function docLabel(
   return t("otherDoc");
 }
 
-export function DocViewer({ documents, docsAvailable, onRefresh }: DocViewerProps) {
+function DocSkeleton({ label }: { label: string }) {
+  return (
+    <figure className="space-y-2" aria-busy="true" data-testid="kyc-doc-skeleton">
+      <figcaption className="text-sm font-medium text-text">{label}</figcaption>
+      <div className="h-[18rem] w-full animate-pulse rounded-md border border-border bg-bg-2" />
+    </figure>
+  );
+}
+
+function DocImage({
+  doc,
+  label,
+  t,
+}: {
+  doc: SignedDocUrl;
+  label: string;
+  t: ReturnType<typeof useTranslations<"admin.kyc.detail">>;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  if (!doc.signed_url) {
+    return (
+      <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted">
+        {t("noPreview")}
+      </p>
+    );
+  }
+  return (
+    <img
+      alt={label}
+      className={`max-h-[28rem] w-full rounded-md border border-border bg-bg object-contain transition-opacity duration-300 ${
+        loaded ? "opacity-100" : "opacity-0"
+      }`}
+      src={doc.signed_url}
+      onLoad={() => setLoaded(true)}
+    />
+  );
+}
+
+export function DocViewer({
+  documents,
+  docsAvailable,
+  onRefresh,
+  loading = false,
+}: DocViewerProps) {
   const t = useTranslations("admin.kyc.detail");
+
+  if (loading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        <DocSkeleton label={t("nrc")} />
+        <DocSkeleton label={t("selfie")} />
+      </div>
+    );
+  }
 
   if (!docsAvailable) {
     return (
@@ -59,16 +113,12 @@ export function DocViewer({ documents, docsAvailable, onRefresh }: DocViewerProp
           </a>
         ) : null}
       </figcaption>
-      {doc.signed_url ? (
-        <img
-          alt={docLabel(doc.doc_type, t)}
-          className="max-h-[28rem] w-full rounded-md border border-border bg-bg object-contain"
-          src={doc.signed_url}
-        />
-      ) : (
+      {!doc.signed_url ? (
         <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted">
           {t("noPreview")}
         </p>
+      ) : (
+        <DocImage doc={doc} label={docLabel(doc.doc_type, t)} t={t} />
       )}
     </figure>
   );

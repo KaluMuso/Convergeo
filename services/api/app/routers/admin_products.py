@@ -638,6 +638,7 @@ class CanonicalQueueItem(BaseModel):
     vendor_display_name: str | None = None
     listing_id: UUID | None = None
     image_urls: list[str] = Field(default_factory=list)
+    price_ngwee: int | None = None
     updated_at: datetime
 
 
@@ -706,10 +707,10 @@ def _load_canonical_images(
 def _load_submitter_context(
     service_client: ServiceRoleClient,
     product_id: str,
-) -> tuple[UUID | None, str | None, UUID | None]:
+) -> tuple[UUID | None, str | None, UUID | None, int | None]:
     response = (
         _table(service_client, "vendor_listings")
-        .select("id, vendor_id, vendors(display_name)")
+        .select("id, vendor_id, price_ngwee, vendors(display_name)")
         .eq("product_id", product_id)
         .order("created_at", desc=False)
         .limit(1)
@@ -717,7 +718,7 @@ def _load_submitter_context(
     )
     rows = _rows(response)
     if not rows:
-        return None, None, None
+        return None, None, None, None
     row = rows[0]
     vendor_id = row.get("vendor_id")
     listing_id = row.get("id")
@@ -726,10 +727,13 @@ def _load_submitter_context(
     if isinstance(vendors, dict):
         name = vendors.get("display_name")
         vendor_name = str(name) if isinstance(name, str) else None
+    price_raw = row.get("price_ngwee")
+    price_ngwee = int(price_raw) if isinstance(price_raw, int) else None
     return (
         UUID(str(vendor_id)) if vendor_id else None,
         vendor_name,
         UUID(str(listing_id)) if listing_id else None,
+        price_ngwee,
     )
 
 
@@ -886,7 +890,9 @@ async def list_pending_canonical_products(
     items: list[CanonicalQueueItem] = []
     for row in _rows(response):
         product_id = str(row["id"])
-        vendor_id, vendor_name, listing_id = _load_submitter_context(service_client, product_id)
+        vendor_id, vendor_name, listing_id, price_ngwee = _load_submitter_context(
+            service_client, product_id
+        )
         updated_raw = row.get("updated_at")
         updated_at = (
             datetime.fromisoformat(str(updated_raw).replace("Z", "+00:00"))
@@ -911,6 +917,7 @@ async def list_pending_canonical_products(
                 vendor_display_name=vendor_name,
                 listing_id=listing_id,
                 image_urls=_load_canonical_images(service_client, product_id),
+                price_ngwee=price_ngwee,
                 updated_at=updated_at,
             )
         )
