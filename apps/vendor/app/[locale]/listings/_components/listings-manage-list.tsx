@@ -155,73 +155,64 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
               return (
                 <div
                   key={listing.id}
-                  className="rounded-lg border border-border p-4 shadow-sm lg:p-5"
+                  className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-sm"
                 >
-                  <div className="flex items-start gap-3">
-                    {cover ? (
-                      <CloudinaryImage
-                        publicId={cover}
-                        alt={t("listings.formAside.previewPhotoAlt")}
-                        width={64}
-                        ratio={1}
-                        className="size-16 shrink-0 rounded-lg"
-                      />
-                    ) : (
-                      <div
-                        aria-hidden
-                        className="size-16 shrink-0 rounded-lg border border-dashed border-border bg-bg-2"
-                      />
-                    )}
-                    <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-1">
-                        <p className="truncate text-sm font-medium text-text">{listing.title}</p>
-                        <PriceBlock ngwee={listing.price_ngwee} />
-                        <p className="text-xs text-text-2">
-                          <span className="sr-only">{t("listings.manage.statusLabel")}</span>
-                          <span className="font-medium text-text">
-                            {statusLabel(listing.status, statusLabels)}
-                          </span>
-                        </p>
-                        <ListingVisibilityHint status={listing.status} />
-                        <ListingProductStatusChip
-                          listingStatus={listing.status}
-                          productStatus={listing.product_status}
-                        />
+                  {cover ? (
+                    <CloudinaryImage
+                      publicId={cover}
+                      alt={t("listings.formAside.previewPhotoAlt")}
+                      width={640}
+                      ratio="4/3"
+                      className="aspect-[4/3] w-full rounded-none object-cover"
+                    />
+                  ) : (
+                    <div
+                      aria-hidden
+                      className="aspect-[4/3] w-full border-b border-dashed border-border bg-bg-2"
+                    />
+                  )}
+                  <div className="flex flex-1 flex-col gap-2 p-4">
+                    <Badge
+                      variant={statusVariant(listing.status)}
+                      label={statusLabel(listing.status, statusLabels)}
+                    />
+                    <p className="m-0 line-clamp-2 text-base font-semibold text-text">
+                      {listing.title}
+                    </p>
+                    <PriceBlock ngwee={listing.price_ngwee} />
+                    <ListingVisibilityHint status={listing.status} />
+                    <ListingProductStatusChip
+                      listingStatus={listing.status}
+                      productStatus={listing.product_status}
+                    />
+                    <div className="mt-1 flex items-center justify-between gap-3">
+                      <div className="text-xs text-text-2">
+                        <span className="font-medium text-text">
+                          {t("listings.manage.stockLabel")}
+                        </span>
+                        <span className="sr-only"> </span>
+                        {listing.stock_mode === "always_available"
+                          ? t("listings.manage.stockAlways")
+                          : t("listings.manage.stockValue", { qty: listing.stock_qty ?? 0 })}
                       </div>
-                      <Badge
-                        variant={statusVariant(listing.status)}
-                        label={statusLabel(listing.status, statusLabels)}
-                      />
-                    </div>
-                  </div>
 
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    <div className="text-xs text-text-2">
-                      <span className="font-medium text-text">
-                        {t("listings.manage.stockLabel")}
-                      </span>
-                      <span className="sr-only"> </span>
-                      {listing.stock_mode === "always_available"
-                        ? t("listings.manage.stockAlways")
-                        : t("listings.manage.stockValue", { qty: listing.stock_qty ?? 0 })}
+                      {listing.stock_mode === "tracked" ? (
+                        <Link
+                          className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
+                          href={`/${locale}/listings/${listing.id}/edit#stock`}
+                        >
+                          {t("listings.manage.stock.heading")}
+                        </Link>
+                      ) : null}
                     </div>
 
-                    {listing.stock_mode === "tracked" ? (
-                      <Link
-                        className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
-                        href={`/${locale}/listings/${listing.id}/edit#stock`}
-                      >
-                        {t("listings.manage.stock.heading")}
-                      </Link>
-                    ) : null}
+                    <Link
+                      className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium"
+                      href={`/${locale}/listings/${listing.id}/edit`}
+                    >
+                      {t("listings.manage.editCta")}
+                    </Link>
                   </div>
-
-                  <Link
-                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium"
-                    href={`/${locale}/listings/${listing.id}/edit`}
-                  >
-                    {t("listings.manage.editCta")}
-                  </Link>
                 </div>
               );
             })}

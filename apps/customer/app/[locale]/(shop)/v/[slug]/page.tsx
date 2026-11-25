@@ -215,6 +215,52 @@ const ZAMBIA_LOCALITIES = [
   "mufulira",
 ] as const;
 
+function isCloudinaryPublicId(value: string): boolean {
+  return !value.startsWith("http://") && !value.startsWith("https://");
+}
+
+function VendorCover({ coverUrl, className }: { coverUrl: string; className?: string }) {
+  if (isCloudinaryPublicId(coverUrl)) {
+    return (
+      <CloudinaryImageStatic
+        publicId={coverUrl}
+        alt=""
+        width={1280}
+        ratio="21/9"
+        className={className ?? "h-full w-full object-cover"}
+      />
+    );
+  }
+  return (
+    <div
+      aria-hidden
+      className={className ?? "h-full w-full bg-cover bg-center"}
+      style={{ backgroundImage: `url(${coverUrl})` }}
+    />
+  );
+}
+
+function VendorLogo({ logoUrl }: { logoUrl: string }) {
+  if (isCloudinaryPublicId(logoUrl)) {
+    return (
+      <CloudinaryImageStatic
+        publicId={logoUrl}
+        alt=""
+        width={192}
+        ratio="1/1"
+        className="h-full w-full object-cover"
+      />
+    );
+  }
+  return (
+    <div
+      aria-hidden
+      className="h-full w-full bg-cover bg-center"
+      style={{ backgroundImage: `url(${logoUrl})` }}
+    />
+  );
+}
+
 function inferAddressLocality(landmark: string | null | undefined): string {
   if (!landmark) {
     return "Lusaka";
@@ -588,11 +634,9 @@ export default async function VendorProfilePage({ params }: PageProps) {
           Convergeo is the street, not the shop sign. */}
       <header className="relative">
         {vendor.cover_url ? (
-          <div
-            aria-hidden
-            className="h-28 rounded-lg bg-panel bg-cover bg-center sm:h-40"
-            style={{ backgroundImage: `url(${vendor.cover_url})` }}
-          />
+          <div aria-hidden className="h-28 overflow-hidden rounded-lg bg-panel sm:h-40">
+            <VendorCover coverUrl={vendor.cover_url} />
+          </div>
         ) : (
           <div className="h-16 rounded-lg bg-panel sm:h-24" aria-hidden />
         )}
@@ -601,9 +645,10 @@ export default async function VendorProfilePage({ params }: PageProps) {
             {vendor.logo_url ? (
               <div
                 aria-hidden
-                className="h-20 w-20 rounded-lg border-4 border-bg bg-surface bg-cover bg-center sm:h-24 sm:w-24"
-                style={{ backgroundImage: `url(${vendor.logo_url})` }}
-              />
+                className="h-20 w-20 overflow-hidden rounded-lg border-4 border-bg bg-surface sm:h-24 sm:w-24"
+              >
+                <VendorLogo logoUrl={vendor.logo_url} />
+              </div>
             ) : (
               <div
                 aria-hidden

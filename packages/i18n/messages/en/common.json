@@ -116,8 +116,8 @@
     "hideFooter": "Hide site links"
   },
   "paymentTrust": {
-    "footerSeal": "Pay cash when your order arrives",
-    "footerPaymentNote": "Cash on delivery · Online payment coming soon"
+    "footerSeal": "MoMo escrow until you confirm delivery",
+    "footerPaymentNote": "MTN & Airtel MoMo escrow · Cash on delivery under K500"
   },
   "codTrust": {
     "line": "You pay on delivery → We deliver → You confirm"

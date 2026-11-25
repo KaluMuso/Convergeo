@@ -1,9 +1,6 @@
 import Link from "next/link";
 
-import {
-  FulfillmentLogisticsPills,
-  type LogisticsPillLabels,
-} from "../plp/logistics-pills";
+import { FulfillmentLogisticsPills, type LogisticsPillLabels } from "../plp/logistics-pills";
 
 export type BuyerTrustPanelProps = {
   sellerStatusLabel: string;
@@ -20,7 +17,7 @@ export type BuyerTrustPanelProps = {
 /**
  * Compact buyer-confidence strip placed near Add to Cart.
  * Delivery/pickup pills are omitted unless the listing actually supports them.
- * Escrow copy must not claim online payments are live when they are gated.
+ * Escrow copy comes from i18n and reflects live payment options.
  */
 export function BuyerTrustPanel({
   sellerStatusLabel,
@@ -60,10 +57,7 @@ export function BuyerTrustPanel({
             <path d="M6 10V8a6 6 0 1 1 12 0v2M5 10h14v10H5zM12 14v2.5" />
           </svg>
         </span>
-        <p
-          data-testid="pdp-trust-escrow"
-          className="m-0 font-medium leading-snug"
-        >
+        <p data-testid="pdp-trust-escrow" className="m-0 font-medium leading-snug">
           {escrowLabel}
         </p>
       </div>

@@ -18,6 +18,7 @@ export type ProductSummary = {
   slug: string;
   brand: string | null;
   category_id: string;
+  category_name?: string | null;
   status: string;
   aliases: string[];
 };

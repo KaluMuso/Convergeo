@@ -58,7 +58,7 @@ import type { ListingCondition } from "../../_components/pdp/condition-badge";
 import type { Metadata } from "next";
 
 // Must be a literal for Next.js segment config (imported constants are rejected).
-export const revalidate = 3600;
+export const revalidate = 300;
 
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
@@ -263,16 +263,23 @@ function descriptionParagraphs(description: string | null): string[] {
     .filter((paragraph) => paragraph.length > 0);
 }
 
+function hasUsablePublicId(publicId: string | null | undefined): publicId is string {
+  return typeof publicId === "string" && publicId.trim().length > 0;
+}
+
 function galleryImages(
   product: ProductDetail,
   selectedListing: Listing | null,
   alt: string,
 ): Array<{ publicId: string; alt: string }> {
-  const source =
-    selectedListing && selectedListing.images.length > 0 ? selectedListing.images : product.images;
+  const listingImages = (selectedListing?.images ?? []).filter((image) =>
+    hasUsablePublicId(image.public_id),
+  );
+  const productImages = product.images.filter((image) => hasUsablePublicId(image.public_id));
+  const source = listingImages.length > 0 ? listingImages : productImages;
 
   return source.map((image) => ({
-    publicId: image.public_id,
+    publicId: image.public_id.trim(),
     alt,
   }));
 }
@@ -325,10 +332,12 @@ function toProductListings(
       verified: listing.vendor.verified ?? false,
       memberSince: formatMemberSince(listing.vendor.member_since, locale),
     },
-    images: listing.images.map((image) => ({
-      publicId: image.public_id,
-      alt,
-    })),
+    images: listing.images
+      .filter((image) => hasUsablePublicId(image.public_id))
+      .map((image) => ({
+        publicId: image.public_id.trim(),
+        alt,
+      })),
     optionGroups: (listing.option_groups ?? []).map((group) => ({
       id: group.id,
       name: group.name,

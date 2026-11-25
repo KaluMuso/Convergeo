@@ -5,7 +5,7 @@ import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
 import type { SaleUnit } from "../sale-quantity";
 import type { ListingCondition } from "./condition-badge";
 
-export const PRODUCT_REVALIDATE_SECONDS = 3600;
+export const PRODUCT_REVALIDATE_SECONDS = 300;
 export const PRODUCT_CACHE_TAG_PREFIX = "product:";
 
 export type ProductImage = {
