@@ -23,6 +23,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
+from app.routers.admin_products import _cloudinary_delivery_url
 from app.services.catalog_visibility import load_targets, search_targets
 from fastapi import APIRouter, Depends, Query
 from postgrest.exceptions import APIError
@@ -116,6 +117,10 @@ class CatalogEntityOut(BaseModel):
     label: str
     status: str
     vendor_id: str | None = None
+    vendor_label: str | None = None
+    product_label: str | None = None
+    price_ngwee: int | None = None
+    thumbnail_url: str | None = None
     visible: bool
     href: str
     hold: HoldOut | None = None
@@ -153,6 +158,116 @@ def _active_holds(client: Any, kind: str, ids: list[str]) -> dict[str, HoldOut]:
 def _entity_out(client: Any, kind: str, row: dict[str, Any]) -> CatalogEntityOut:
     holds = _active_holds(client, kind, [row["id"]])
     return CatalogEntityOut(**row, hold=holds.get(row["id"]))
+
+
+def _embed_display_name(row: dict[str, Any]) -> str | None:
+    vendors = row.get("vendors")
+    if isinstance(vendors, dict):
+        name = vendors.get("display_name")
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+    return None
+
+
+def _embed_product_name(row: dict[str, Any]) -> str | None:
+    products = row.get("products")
+    if isinstance(products, dict):
+        name = products.get("name")
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+    return None
+
+
+def _listing_thumbnails(client: Any, listing_ids: list[str]) -> dict[str, str]:
+    if not listing_ids:
+        return {}
+    rows = _rows(
+        client.table("listing_images")
+        .select("listing_id, cloudinary_public_id, position")
+        .in_("listing_id", listing_ids)
+        .order("position")
+        .execute()
+    )
+    out: dict[str, str] = {}
+    for row in rows:
+        listing_id = str(row.get("listing_id") or "")
+        if listing_id in out:
+            continue
+        public_id = row.get("cloudinary_public_id")
+        if not isinstance(public_id, str) or not public_id.strip():
+            continue
+        url = _cloudinary_delivery_url(public_id)
+        if url:
+            out[listing_id] = url
+    return out
+
+
+def _enrich_catalog_entities(
+    client: Any, kind: CatalogKind, entities: list[CatalogEntityOut]
+) -> None:
+    if not entities:
+        return
+    if kind == "listing":
+        ids = [entity.id for entity in entities]
+        rows = _rows(
+            client.table("vendor_listings")
+            .select("id, title_override, price_ngwee, vendors(display_name), products(name)")
+            .in_("id", ids)
+            .execute()
+        )
+        by_id = {str(row["id"]): row for row in rows if row.get("id")}
+        thumbs = _listing_thumbnails(client, ids)
+        for entity in entities:
+            row = by_id.get(entity.id)
+            if not row:
+                continue
+            entity.vendor_label = _embed_display_name(row)
+            entity.product_label = _embed_product_name(row)
+            title = row.get("title_override")
+            if isinstance(title, str) and title.strip():
+                entity.label = title.strip()
+            elif entity.product_label:
+                entity.label = entity.product_label
+            price = row.get("price_ngwee")
+            entity.price_ngwee = int(price) if isinstance(price, int) else None
+            entity.thumbnail_url = thumbs.get(entity.id)
+        return
+    if kind == "vendor":
+        for entity in entities:
+            entity.vendor_label = entity.label
+        return
+    if kind in {"service", "event"}:
+        vendor_column = "vendor_id" if kind == "service" else "organiser_vendor_id"
+        table = "services" if kind == "service" else "events"
+        ids = [entity.id for entity in entities]
+        service_price_col = ", from_price_ngwee" if kind == "service" else ""
+        rows = _rows(
+            client.table(table)
+            .select(f"id, {vendor_column}{service_price_col}")
+            .in_("id", ids)
+            .execute()
+        )
+        vendor_ids = sorted(
+            {str(row[vendor_column]) for row in rows if row.get(vendor_column) is not None}
+        )
+        vendor_labels: dict[str, str] = {}
+        if vendor_ids:
+            for vendor in _rows(
+                client.table("vendors").select("id, display_name").in_("id", vendor_ids).execute()
+            ):
+                name = vendor.get("display_name")
+                if isinstance(name, str) and name.strip():
+                    vendor_labels[str(vendor["id"])] = name.strip()
+        by_id = {str(row["id"]): row for row in rows if row.get("id")}
+        for entity in entities:
+            row = by_id.get(entity.id)
+            if row and row.get(vendor_column):
+                entity.vendor_label = vendor_labels.get(str(row[vendor_column]))
+        if kind == "service":
+            for entity in entities:
+                row = by_id.get(entity.id)
+                if row and isinstance(row.get("from_price_ngwee"), int):
+                    entity.price_ngwee = row["from_price_ngwee"]
 
 
 def _load_one(client: Any, kind: str, entity_id: UUID) -> dict[str, Any]:
@@ -227,7 +342,9 @@ def _register(segment: str) -> None:
         else:
             rows = search_targets(client, kind, q, limit=50)
         holds = _active_holds(client, kind, [row["id"] for row in rows])
-        return [CatalogEntityOut(**row, hold=holds.get(row["id"])) for row in rows]
+        entities = [CatalogEntityOut(**row, hold=holds.get(row["id"])) for row in rows]
+        _enrich_catalog_entities(client, kind, entities)
+        return entities
 
     @catalog_router.post(
         f"/{segment}/{{entity_id}}/moderate",

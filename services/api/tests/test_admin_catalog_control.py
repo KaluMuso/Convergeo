@@ -130,6 +130,20 @@ def test_catalog_routes_refuse_anon_and_customer(
     assert http.request(method, path, json={}, headers=headers).status_code == 403
 
 
+def test_list_catalog_services_without_slug_column(
+    http: TestClient, catalog: FakeClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Services table has no slug; catalog read must not select it."""
+    headers = _login(monkeypatch, ADMIN_ID, frozenset({"admin"}))
+    response = http.get("/admin/catalog/services", headers=headers)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["kind"] == "service"
+    assert body[0]["label"] == "Plumbing"
+    assert body[0]["href"] == f"/s/{SERVICE}"
+
+
 def test_permissions_are_scoped_per_kind(
     http: TestClient, catalog: FakeClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

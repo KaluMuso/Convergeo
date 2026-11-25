@@ -20,7 +20,8 @@ TARGET_KINDS: tuple[TargetKind, ...] = ("listing", "product", "service", "event"
 _SPEC: dict[str, tuple[str, str, str | None, str | None]] = {
     "listing": ("vendor_listings", "active", "vendor_id", None),
     "product": ("products", "active", None, "slug"),
-    "service": ("services", "active", "vendor_id", "slug"),
+    # Services have no slug column; customer URLs use the service id (same as listing hrefs).
+    "service": ("services", "active", "vendor_id", None),
     "event": ("events", "published", "organiser_vendor_id", "slug"),
     "vendor": ("vendors", "active", None, "slug"),
 }

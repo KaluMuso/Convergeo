@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { adminPrimaryButtonClass } from "../../_components/admin-primary-button";
 import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
 import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
 import { LoadingBlock } from "../../_components/StateBlocks";
@@ -28,6 +29,7 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [checks, setChecks] = useState<KycChecks>(EMPTY_CHECKS);
+  const [requestedDecision, setRequestedDecision] = useState<"approve" | "resubmit" | null>(null);
 
   const load = useCallback(async () => {
     setLoadingDetail(true);
@@ -95,97 +97,125 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
 
   const momo = detail.momo_name_match;
 
+  const reviewable = detail.status === "submitted" || detail.status === "under_review";
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          className="text-sm font-medium text-primary underline-offset-2 hover:underline"
-          href={`/${locale}/kyc`}
+    <>
+      {reviewable ? (
+        <div
+          className="sticky top-0 z-20 -mx-3 mb-4 flex flex-wrap items-center justify-end gap-2 border-b border-border bg-surface/95 px-3 py-3 backdrop-blur"
+          data-testid="kyc-sticky-actions"
         >
-          {t("back")}
-        </Link>
-        <SlaBadge badge={detail.sla_badge} />
-      </div>
+          <button
+            type="button"
+            disabled={!isChecklistComplete(checks)}
+            className={adminPrimaryButtonClass}
+            onClick={() => setRequestedDecision("approve")}
+          >
+            {t("approve")}
+          </button>
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center rounded-md border border-warning px-4 text-sm font-medium text-warning"
+            onClick={() => setRequestedDecision("resubmit")}
+          >
+            {t("requestResubmit")}
+          </button>
+        </div>
+      ) : null}
+      <div className="space-y-6 pb-24">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+            href={`/${locale}/kyc`}
+          >
+            {t("back")}
+          </Link>
+          <SlaBadge badge={detail.sla_badge} />
+        </div>
 
-      <header className="space-y-1">
-        <h1 className="font-serif text-xl text-text">{detail.vendor_display_name}</h1>
-        <p className="text-sm text-muted">
-          {t("vendorSummary", {
-            context: t("vendorContext"),
-            slug: detail.vendor_slug,
-            tierLabel: t("tierLabel", { tier: detail.tier }),
-            statusLabel: t("statusLabel"),
-            status: detail.status,
-          })}
-        </p>
-      </header>
+        <header className="space-y-1">
+          <h1 className="font-serif text-xl text-text">{detail.vendor_display_name}</h1>
+          <p className="text-sm text-muted">
+            {t("vendorSummary", {
+              context: t("vendorContext"),
+              slug: detail.vendor_slug,
+              tierLabel: t("tierLabel", { tier: detail.tier }),
+              statusLabel: t("statusLabel"),
+              status: detail.status,
+            })}
+          </p>
+        </header>
 
-      <section className="space-y-3" aria-labelledby="kyc-docs-heading">
-        <h2 id="kyc-docs-heading" className="text-sm font-semibold text-text">
-          {t("documents")}
-        </h2>
-        <DocViewer
-          documents={detail.documents}
-          docsAvailable={detail.docs_available}
-          loading={loadingDetail}
-          onRefresh={() => void load()}
-        />
-      </section>
+        <section className="space-y-3" aria-labelledby="kyc-docs-heading">
+          <h2 id="kyc-docs-heading" className="text-sm font-semibold text-text">
+            {t("documents")}
+          </h2>
+          <DocViewer
+            documents={detail.documents}
+            docsAvailable={detail.docs_available}
+            loading={loadingDetail}
+            onRefresh={() => void load()}
+          />
+        </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-6">
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-text">{t("momoMatch")}</h2>
-            {momo ? (
-              <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-muted">{t("momoPhone")}</dt>
-                  <dd>{momo.phone}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">{t("momoOperator")}</dt>
-                  <dd>{momo.operator}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">{t("legalName")}</dt>
-                  <dd>{momo.legal_name}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">{t("resolvedName")}</dt>
-                  <dd>{momo.resolved_name ?? t("missingValue")}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">{t("matchScore")}</dt>
-                  <dd>{momo.match_score.toFixed(2)}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">{t("matchResult")}</dt>
-                  <dd className={momo.matched ? "text-success" : "text-danger"}>
-                    {momo.matched ? t("matched") : t("notMatched")}
-                  </dd>
-                </div>
-              </dl>
-            ) : (
-              <p className="text-sm text-muted">{t("missingValue")}</p>
-            )}
-          </section>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold text-text">{t("momoMatch")}</h2>
+              {momo ? (
+                <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-muted">{t("momoPhone")}</dt>
+                    <dd>{momo.phone}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">{t("momoOperator")}</dt>
+                    <dd>{momo.operator}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">{t("legalName")}</dt>
+                    <dd>{momo.legal_name}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">{t("resolvedName")}</dt>
+                    <dd>{momo.resolved_name ?? t("missingValue")}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">{t("matchScore")}</dt>
+                    <dd>{momo.match_score.toFixed(2)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">{t("matchResult")}</dt>
+                    <dd className={momo.matched ? "text-success" : "text-danger"}>
+                      {momo.matched ? t("matched") : t("notMatched")}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="text-sm text-muted">{t("missingValue")}</p>
+              )}
+            </section>
 
-          <KycChecklist
-            checks={checks}
-            onChange={setChecks}
-            disabled={detail.status !== "submitted" && detail.status !== "under_review"}
-            momoMatched={momo ? momo.matched : null}
+            <KycChecklist
+              checks={checks}
+              onChange={setChecks}
+              disabled={detail.status !== "submitted" && detail.status !== "under_review"}
+              momoMatched={momo ? momo.matched : null}
+            />
+          </div>
+          <DecisionPanel
+            detail={detail}
+            checklistComplete={isChecklistComplete(checks)}
+            requestedMode={requestedDecision}
+            onRequestedModeHandled={() => setRequestedDecision(null)}
+            onDecided={() => {
+              setChecks(EMPTY_CHECKS);
+              void load();
+            }}
           />
         </div>
-        <DecisionPanel
-          detail={detail}
-          checklistComplete={isChecklistComplete(checks)}
-          onDecided={() => {
-            setChecks(EMPTY_CHECKS);
-            void load();
-          }}
-        />
       </div>
-    </div>
+    </>
   );
 }
