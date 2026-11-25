@@ -64,6 +64,26 @@
     "venue": "Venue",
     "landmark": "Pepi na {landmark}",
     "mapHint": "Fungula mu maps",
+    "directions": "Directions",
+    "ageLimit": "{age}+ only",
+    "countdown": {
+      "ended": "Ended",
+      "today": "Today at {time}",
+      "tomorrow": "Starts tomorrow",
+      "days": "Starts in {count} days"
+    },
+    "calendar": {
+      "heading": "Add to calendar",
+      "addSingle": "Add to calendar",
+      "addForDate": "Add {date} to calendar"
+    },
+    "refund": {
+      "heading": "Refund policy",
+      "platform_standard": "More than 7 days before start: full refund minus 5% admin fee. 1–7 days: 50% refund. Under 24 hours: no refund (you can still transfer). Refunds are queued, not paid instantly.",
+      "no_refunds": "Tickets are non-refundable unless the organiser cancels the event.",
+      "flexible": "Refunds are handled case by case — contact the organiser before you buy if unsure.",
+      "unknown": "Ask the organiser about refunds before you buy."
+    },
     "organiser": "Organised by",
     "organiserCta": "Lolesha organiser",
     "soldOut": "Yapwa",
@@ -100,6 +120,7 @@
     "remaining": "{count, plural, one {# ishale} other {# shishale}}",
     "perCustomerCap": "Max {count} pa umuntu",
     "earlyBird": "Early-bird: {price} ukufika {until}",
+    "earlyBirdEnds": "Early bird ends {until}",
     "groupTier": "Shita {minQty}+ pa {price} cimo",
     "groupUpsell": "Onja {count, plural, one {# imbi} other {# shimbi}} ukulipila {price} cimo",
     "discountApplied": "Discount yapangwa — {price} cimo",

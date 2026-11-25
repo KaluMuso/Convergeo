@@ -64,6 +64,26 @@
     "venue": "Venue",
     "landmark": "Pafupi ndi {landmark}",
     "mapHint": "Tsegulani mu maps",
+    "directions": "Directions",
+    "ageLimit": "{age}+ only",
+    "countdown": {
+      "ended": "Ended",
+      "today": "Today at {time}",
+      "tomorrow": "Starts tomorrow",
+      "days": "Starts in {count} days"
+    },
+    "calendar": {
+      "heading": "Add to calendar",
+      "addSingle": "Add to calendar",
+      "addForDate": "Add {date} to calendar"
+    },
+    "refund": {
+      "heading": "Refund policy",
+      "platform_standard": "More than 7 days before start: full refund minus 5% admin fee. 1–7 days: 50% refund. Under 24 hours: no refund (you can still transfer). Refunds are queued, not paid instantly.",
+      "no_refunds": "Tickets are non-refundable unless the organiser cancels the event.",
+      "flexible": "Refunds are handled case by case — contact the organiser before you buy if unsure.",
+      "unknown": "Ask the organiser about refunds before you buy."
+    },
     "organiser": "Organised by",
     "organiserCta": "Onani organiser",
     "soldOut": "Zapatha",
@@ -100,6 +120,7 @@
     "remaining": "{count, plural, one {# yatsala} other {# zatsala}}",
     "perCustomerCap": "Max {count} pa munthu",
     "earlyBird": "Early-bird: {price} mpaka {until}",
+    "earlyBirdEnds": "Early bird ends {until}",
     "groupTier": "Gulani {minQty}+ pa {price} chilichonse",
     "groupUpsell": "Onjezerani {count, plural, one {# ina} other {# zina}} kuti mulipire {price} chilichonse",
     "discountApplied": "Discount yapangidwa — {price} chilichonse",

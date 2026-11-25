@@ -894,6 +894,25 @@
       "logo": "Logo",
       "location": "位置"
     },
+    "location": {
+      "useMyLocation": "Use my current location",
+      "locating": "Finding your location…",
+      "accuracy": "Accuracy about {metres} m",
+      "geoUnsupported": "This browser cannot use GPS here. Search for a place or drag the pin on the map.",
+      "geoDenied": "Location access was denied. Search for a place or drag the pin on the map instead.",
+      "geoFailed": "Could not read GPS. Try again, or search for a place instead.",
+      "searchLabel": "Search a place or area",
+      "searchPlaceholder": "e.g. Arcades, Lusaka",
+      "searchAction": "Search",
+      "searching": "Searching…",
+      "searchTooShort": "Type at least 3 characters to search.",
+      "searchEmpty": "No matches in Zambia. Try a nearby landmark or drag the pin.",
+      "searchUnavailable": "Place search is unavailable. Drag the pin on the map to set your shop.",
+      "searchFailed": "Search failed. Try again or drag the pin on the map.",
+      "searchRateLimited": "Too many searches. Wait a minute and try again.",
+      "mapAttribution": "© OpenStreetMap contributors",
+      "advanced": "Advanced (coordinates)"
+    },
     "fields": {
       "displayNameLabel": "显示名称",
       "descriptionLabel": "您的故事",

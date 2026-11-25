@@ -9,6 +9,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getVendorStorefrontUrl } from "../../../../lib/customer-app";
 import { VendorErrorState } from "../../_components/async-state";
+import { buildLocationPayload } from "../../_components/location-picker/build-location-payload";
+import { LocationPicker } from "../../_components/location-picker/location-picker";
 import { shouldShowPreferredBadge } from "../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { Button, FormField, Input, Spinner, Switch, Textarea } from "../../listings/new/_lib/ui";
@@ -125,14 +127,9 @@ export function ProfileEditor() {
       payload.slug = slug.trim();
     }
 
-    const parsedLat = Number.parseFloat(lat);
-    const parsedLng = Number.parseFloat(lng);
-    if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng) && landmark.trim()) {
-      payload.location = {
-        lat: parsedLat,
-        lng: parsedLng,
-        landmark: landmark.trim(),
-      };
+    const locationPayload = buildLocationPayload(profile, { lat, lng, landmark });
+    if (locationPayload) {
+      payload.location = locationPayload;
     }
 
     try {
@@ -310,35 +307,16 @@ export function ProfileEditor() {
 
         <section className="space-y-2">
           <h2 className="text-sm font-semibold text-text">{t("profile.sections.location")}</h2>
-          <FormField label={t("profile.fields.landmarkLabel")}>
-            <Input
-              value={landmark}
-              onChange={(event) => setLandmark(event.target.value)}
-              disabled={saving}
-              placeholder={t("profile.fields.landmarkPlaceholder")}
-            />
-          </FormField>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label={t("profile.fields.latLabel")}>
-              <Input
-                inputMode="decimal"
-                value={lat}
-                onChange={(event) => setLat(event.target.value)}
-                disabled={saving}
-                placeholder={t("profile.fields.latPlaceholder")}
-              />
-            </FormField>
-            <FormField label={t("profile.fields.lngLabel")}>
-              <Input
-                inputMode="decimal"
-                value={lng}
-                onChange={(event) => setLng(event.target.value)}
-                disabled={saving}
-                placeholder={t("profile.fields.lngPlaceholder")}
-              />
-            </FormField>
-          </div>
-          <p className="text-xs text-text-3">{t("profile.fields.locationHelp")}</p>
+          <LocationPicker
+            value={{ lat, lng, landmark }}
+            onChange={(next) => {
+              setLat(next.lat);
+              setLng(next.lng);
+              setLandmark(next.landmark);
+            }}
+            getToken={getToken}
+            disabled={saving}
+          />
         </section>
 
         <section>

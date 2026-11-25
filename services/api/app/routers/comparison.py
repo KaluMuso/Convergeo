@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import math
-from typing import Annotated, Any, Protocol
+from typing import Annotated, Any, Literal, Protocol
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.routers.checkout import _load_delivery_zones, load_zone_fees, resolve_delivery_zone
+from app.routers.checkout_payment import DEFAULT_COD_CAP_NGEWEE, _load_cod_cap_ngwee
 from app.routers.products import _aggregate_vendor_ratings, _parse_vendor_row
 from app.services.listings.demo import fetch_demo_listing_ids
+from app.services.logistics.delivery_pricing import RawLine, price_checkout_delivery
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
@@ -67,6 +70,9 @@ class ComparisonVendorResponse(BaseModel):
     landmark: str | None = None
 
 
+DeliveryFundingKind = Literal["customer", "vendor", "platform"]
+
+
 class ComparisonListingItem(BaseModel):
     id: str
     price_ngwee: int
@@ -74,6 +80,8 @@ class ComparisonListingItem(BaseModel):
     vendor: ComparisonVendorResponse
     delivery_available: bool
     pickup_available: bool
+    delivery_fee_ngwee: int | None = None
+    delivery_funding: DeliveryFundingKind | None = None
 
 
 class ComparisonResponse(BaseModel):
@@ -81,6 +89,10 @@ class ComparisonResponse(BaseModel):
     product_slug: str
     listing_count: int
     listings: list[ComparisonListingItem] = Field(default_factory=list)
+    #: Cap for cash-on-delivery chips (from platform_config, default K500).
+    cod_cap_ngwee: int = DEFAULT_COD_CAP_NGEWEE
+    #: When false, hide pay-on-delivery chips (prepaid-only checkout).
+    cod_chips_enabled: bool = True
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -97,6 +109,74 @@ def is_lusaka_delivery_available(lat: float | None, lng: float | None) -> bool:
         return False
     # Lusaka CBD fallback reference for metro delivery eligibility (D16).
     return haversine_m(lat, lng, -15.4167, 28.2833) <= LUSAKA_DELIVERY_RADIUS_M
+
+
+LUSAKA_BUYER_LAT = -15.4167
+LUSAKA_BUYER_LNG = 28.2833
+
+
+def _map_delivery_funding(raw: str) -> DeliveryFundingKind | None:
+    if raw == "vendor_self":
+        return "vendor"
+    if raw == "customer":
+        return "customer"
+    if raw == "vendor":
+        return "vendor"
+    if raw == "platform":
+        return "platform"
+    return None
+
+
+def _attach_comparison_delivery_fees(
+    client: Any,
+    listings: list[ComparisonListingItem],
+) -> list[ComparisonListingItem]:
+    """Quote delivery to default Lusaka CBD for each deliverable seller."""
+    zones = _load_delivery_zones(_ServiceClientAdapter(client))
+    zone_fees = load_zone_fees(zones)
+    buyer_zone = resolve_delivery_zone(lat=LUSAKA_BUYER_LAT, lng=LUSAKA_BUYER_LNG)
+    if buyer_zone is None:
+        return listings
+
+    enriched: list[ComparisonListingItem] = []
+    for item in listings:
+        if not item.delivery_available:
+            enriched.append(item)
+            continue
+        prices = price_checkout_delivery(
+            client,
+            raw_lines=[
+                RawLine(
+                    vendor_id=item.vendor.id,
+                    listing_id=item.id,
+                    qty=1,
+                    unit_price_ngwee=item.price_ngwee,
+                    wholesale=False,
+                )
+            ],
+            delivery_zones={item.vendor.id: buyer_zone},
+            zone_fees=zone_fees,
+        )
+        priced = prices.get(item.vendor.id)
+        if priced is None:
+            enriched.append(item)
+            continue
+        enriched.append(
+            item.model_copy(
+                update={
+                    "delivery_fee_ngwee": priced.customer_fee_ngwee,
+                    "delivery_funding": _map_delivery_funding(priced.funding),
+                }
+            )
+        )
+    return enriched
+
+
+class _ServiceClientAdapter:
+    """Minimal adapter so checkout helpers accept a bare Supabase client."""
+
+    def __init__(self, client: Any) -> None:
+        self.client = client
 
 
 def _fetch_product_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
@@ -209,11 +289,16 @@ def build_comparison(
             )
         )
 
+    listings = _attach_comparison_delivery_fees(client, listings)
+    cod_cap = _load_cod_cap_ngwee(_ServiceClientAdapter(client))
+
     return ComparisonResponse(
         product_id=product_id,
         product_slug=str(product["slug"]),
         listing_count=len(listings),
         listings=listings,
+        cod_cap_ngwee=cod_cap,
+        cod_chips_enabled=True,
     )
 
 

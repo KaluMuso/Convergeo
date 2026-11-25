@@ -16,6 +16,7 @@ export type AccountNavLabels = {
   quotes: string;
   saved: string;
   following: string;
+  people?: string;
   addresses: string;
   preferences: string;
   profile: string;
@@ -28,6 +29,7 @@ export type AccountNavLabels = {
 type AccountNavProps = {
   locale: string;
   labels: AccountNavLabels;
+  showPeople?: boolean;
 };
 
 type NavItem = {
@@ -44,6 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: "quotes", href: (locale) => `/${locale}/account/quotes` },
   { key: "saved", href: (locale) => `/${locale}/wishlist` },
   { key: "following", href: (locale) => `/${locale}/account/following` },
+  { key: "people", href: (locale) => `/${locale}/account/people/contacts` },
   { key: "addresses", href: (locale) => `/${locale}/account/addresses` },
   { key: "preferences", href: (locale) => `/${locale}/account/preferences` },
   { key: "profile", href: (locale) => `/${locale}/account/profile` },
@@ -60,7 +63,7 @@ function isActivePath(pathname: string, href: string, key: NavItem["key"]): bool
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AccountNav({ locale, labels }: AccountNavProps) {
+export function AccountNav({ locale, labels, showPeople = false }: AccountNavProps) {
   const pathname = usePathname() ?? `/${locale}/account`;
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [scrollFade, setScrollFade] = useState<ScrollFade>({
@@ -136,6 +139,9 @@ export function AccountNav({ locale, labels }: AccountNavProps) {
           className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-lg:flex-nowrap lg:flex-wrap lg:overflow-x-visible"
         >
           {NAV_ITEMS.map((item) => {
+            if (item.key === "people" && (!showPeople || !labels.people)) {
+              return null;
+            }
             const href = item.href(locale);
             const isActive = isActivePath(pathname, href, item.key);
 

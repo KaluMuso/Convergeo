@@ -64,6 +64,26 @@
     "venue": "场地",
     "landmark": "靠近{landmark}",
     "mapHint": "在地图中打开",
+    "directions": "Directions",
+    "ageLimit": "{age}+ only",
+    "countdown": {
+      "ended": "Ended",
+      "today": "Today at {time}",
+      "tomorrow": "Starts tomorrow",
+      "days": "Starts in {count} days"
+    },
+    "calendar": {
+      "heading": "Add to calendar",
+      "addSingle": "Add to calendar",
+      "addForDate": "Add {date} to calendar"
+    },
+    "refund": {
+      "heading": "Refund policy",
+      "platform_standard": "More than 7 days before start: full refund minus 5% admin fee. 1–7 days: 50% refund. Under 24 hours: no refund (you can still transfer). Refunds are queued, not paid instantly.",
+      "no_refunds": "Tickets are non-refundable unless the organiser cancels the event.",
+      "flexible": "Refunds are handled case by case — contact the organiser before you buy if unsure.",
+      "unknown": "Ask the organiser about refunds before you buy."
+    },
     "organiser": "主办方",
     "organiserCta": "查看主办方",
     "soldOut": "已售罄",
@@ -100,6 +120,7 @@
     "remaining": "{count, plural, one {剩余 #} other {剩余 #}}",
     "perCustomerCap": "每人最多 {count} 张",
     "earlyBird": "早鸟票：{price}，截止 {until}",
+    "earlyBirdEnds": "Early bird ends {until}",
     "groupTier": "购买 {minQty} 张及以上，每张 {price}",
     "groupUpsell": "再加 {count, plural, one {# 张} other {# 张}}，每张仅需 {price}",
     "discountApplied": "已应用折扣 — 每张 {price}",

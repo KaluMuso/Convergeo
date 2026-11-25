@@ -34,3 +34,27 @@ Every route matches the design system, light and dark, mono and green, at 360 px
 4. Never touch `supabase/`, `scripts/ci/`, `.github/`, `infra/`, payments, escrow, ledger, payouts, webhooks, auth or checkout money logic (presentation of checkout may change; amounts, calls and flows may not). No secrets. Never merge, force-push or `git stash`.
 5. Zero hardcoded strings. For bem, nya, fr and zh, copy the English text and mark it for review.
 6. When done: row to `ready for review`, one line of notes, PR link in Slack #convergeo-dev.
+
+## Additions (King, 25 Nov): Amazon and Alibaba home and category patterns
+
+Don't touch the product page; T41 owns it.
+
+1. **"Shop by department" drawer** (the "All" menu):
+   - A left slide-in drawer with the signed-in greeting at the top.
+   - Top-level categories each have a coloured icon tile (the T31 category map) and a chevron.
+   - Tapping one slides to a sub-panel with "← Main menu" and that category's children.
+   - On desktop, hovering a top-level category opens a mega-menu with circular category images.
+2. **Home deal rails:**
+   - A full-width band (accent-tinted surface) with a bold title and a "›" link, plus a horizontal rail of white product cards.
+   - Each card shows the image, a red "−35%" badge plus a label (e.g. "Deal"), the price via `formatK` and the struck-through old price.
+   - Use only real compare-at/old-price data; when there's no discount, show no badge.
+   - Rails use arrows on desktop and swipe on mobile.
+3. **Quad category cards:**
+   - A grid of 4-up cards ("Phones & accessories", "Home & kitchen" …).
+   - Each card has a title, a "›" link and a 2×2 grid of sub-category images with labels.
+   - Use 4 columns on desktop, a horizontal swipe on mobile.
+4. **Category landing:**
+   - a banner;
+   - a row of circular "Shop by category" images;
+   - then rails ("Best sellers", "New in", "Under K500").
+5. **Trust strip** with coloured icons: "Pay with MTN/Airtel MoMo", "Money held until you confirm delivery", "Verified sellers", "Lusaka delivery / nationwide pickup".

@@ -176,6 +176,7 @@ class EventDetailResponse(BaseModel):
     is_sold_out: bool = False
     organiser: EventOrganiserResponse
     co_host: EventCoHostResponse | None = None
+    refund_policy_key: str | None = None
 
 
 class EventAccessUnlockRequest(BaseModel):
@@ -520,7 +521,7 @@ def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
             "category_slug, landmark, event_type, visibility, "
-            "age_restriction, platform_fee_payer, id_check_enabled, city, "
+            "age_restriction, platform_fee_payer, id_check_enabled, refund_policy_key, city, "
             "organiser_vendor_id, vendors!inner("
             "id, slug, display_name, preferred_badge, logo_url, description, status, "
             "vendor_locations(landmark)"
@@ -935,6 +936,10 @@ def build_detail_response(
         ),
         organiser=organiser,
         co_host=_fetch_co_host(client, event_id),
+        refund_policy_key=event.get("refund_policy_key")
+        if isinstance(event.get("refund_policy_key"), str)
+        and str(event.get("refund_policy_key")).strip()
+        else None,
     )
 
 

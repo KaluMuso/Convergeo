@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
+import { LocationPicker } from "../../_components/location-picker/location-picker";
 import { branchErrorKey, tooCloseValues } from "../_lib/branch-errors";
 import {
   createBusinessesClient,
@@ -106,18 +107,6 @@ export function AddBranchForm({ locale, businessId }: Props) {
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  const useMyLocation = () => {
-    if (!("geolocation" in navigator)) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        set("lat", pos.coords.latitude.toFixed(6));
-        set("lng", pos.coords.longitude.toFixed(6));
-      },
-      () => setError("branches.errors.locationDenied"),
-      { enableHighAccuracy: true, timeout: 10_000 },
-    );
-  };
-
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy(true);
@@ -190,42 +179,20 @@ export function AddBranchForm({ locale, businessId }: Props) {
           <legend className="mb-2 font-display text-h3 text-display-ink">
             {t("form.location")}
           </legend>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={useMyLocation}
-            loadingLabel={t("actions.saving")}
-          >
-            {t("form.useMyLocation")}
-          </Button>
-          <div className="grid grid-cols-2 gap-2">
-            {field(
-              t("form.lat"),
-              <Input
-                inputMode="decimal"
-                value={form.lat}
-                onChange={(e) => set("lat", e.target.value)}
-              />,
-            )}
-            {field(
-              t("form.lng"),
-              <Input
-                inputMode="decimal"
-                value={form.lng}
-                onChange={(e) => set("lng", e.target.value)}
-              />,
-            )}
-          </div>
-          {field(
-            t("form.landmark"),
-            <Input
-              maxLength={200}
-              value={form.landmark}
-              onChange={(e) => set("landmark", e.target.value)}
-            />,
-            t("form.landmarkHelp"),
-          )}
+          <LocationPicker
+            value={{
+              lat: form.lat,
+              lng: form.lng,
+              landmark: form.landmark,
+            }}
+            onChange={(next) => {
+              set("lat", next.lat);
+              set("lng", next.lng);
+              set("landmark", next.landmark);
+            }}
+            getToken={() => token}
+            disabled={busy}
+          />
           {field(
             t("form.address"),
             <Input

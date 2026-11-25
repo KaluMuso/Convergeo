@@ -49,7 +49,44 @@
     "provider": "服务商",
     "providerCta": "查看服务商资料",
     "imageAlt": "作品集照片 {position}",
-    "free": "免费"
+    "free": "免费",
+    "responseTime": {
+      "fast": "Usually replies within an hour",
+      "same_day": "Usually replies the same day",
+      "slow": "Usually replies within a few days"
+    },
+    "howItWorks": {
+      "heading": "How it works",
+      "step1": "Request a quote and describe what you need",
+      "step2": "Compare replies and pick your provider",
+      "step3": "Pay safely through Vergeo5",
+      "escrow": "Your payment is held until the job is done."
+    },
+    "providerCard": {
+      "heading": "Provider",
+      "preferredBadge": "Preferred",
+      "reviewCount": "{count, plural, one {# review} other {# reviews}}",
+      "starsAria": "{rating} out of 5 stars",
+      "viewProfile": "View provider profile"
+    },
+    "portfolioLightbox": {
+      "open": "View image full screen",
+      "dialog": "Image viewer",
+      "close": "Close image viewer",
+      "previous": "Previous image",
+      "next": "Next image",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "indicator": "Image {current} of {total}"
+    },
+    "stickyCta": {
+      "ariaLabel": "Quick quote and booking",
+      "freeCta": "Request free",
+      "bookCta": "Book now",
+      "quoteCta": "Request a quote",
+      "freeSubmitting": "Sending…",
+      "bookSubmitting": "Booking…"
+    }
   },
   "vendor": {
     "eyebrow": "服务",
