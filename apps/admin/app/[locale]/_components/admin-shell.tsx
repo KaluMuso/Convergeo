@@ -157,7 +157,9 @@ export function AdminShell({ locale, children }: AdminShellProps) {
       <header className="shrink-0 border-b border-border bg-panel text-panel-text">
         <div className="flex w-full items-center justify-between gap-3 px-3 py-2">
           <div className="flex min-w-0 items-center gap-2">
-            <AdminNavIcon itemKey="home" size={40} className="hidden sm:flex" />
+            <span className="hidden sm:block">
+              <AdminNavIcon itemKey="home" size={40} />
+            </span>
             <div className="min-w-0">
               <h1 className="truncate font-display text-lg font-semibold tracking-tight text-panel-text">
                 {t("title")}
@@ -169,14 +171,16 @@ export function AdminShell({ locale, children }: AdminShellProps) {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <AdminCommandPalette locale={locale} />
-            <AdminDensityToggle />
+            <span className="hidden sm:block">
+              <AdminDensityToggle />
+            </span>
             <AdminNotificationBell locale={locale} />
             <ThemeToggle
               label={tCommon("theme.label")}
               lightLabel={tCommon("theme.light")}
               darkLabel={tCommon("theme.dark")}
               systemLabel={tCommon("theme.system")}
-              className="border-panel-muted/40 bg-transparent text-panel-text hover:border-panel-text hover:text-panel-text"
+              className="!border-panel-muted/40 !bg-transparent !text-panel-text hover:!border-panel-text"
             />
             <AdminAccountMenu locale={locale} identity={identity} roleKind={roleKind} />
           </div>
