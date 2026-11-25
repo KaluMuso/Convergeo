@@ -1,10 +1,8 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { LinkButton } from "@vergeo/ui/src/link-button";
-import {
-  buildCanonicalAlternates,
-  buildLocaleCanonical,
-} from "@vergeo/ui/src/seo/json-ld";
+import { PageHeader } from "@vergeo/ui/src/page-header";
+import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -16,12 +14,11 @@ import { catalogLogisticsLabels } from "../_components/plp/logistics-pills";
 
 import { CompareResults } from "./_components/compare-results";
 
-import type {
-  ComparisonLabels,
-  ComparisonListing,
-} from "../_components/pdp/comparison";
+import type { ComparisonLabels, ComparisonListing } from "../_components/pdp/comparison";
 import type { ListingCondition } from "../_components/pdp/condition-badge";
 import type { Metadata } from "next";
+
+import { CustomerRouteShell } from "@/components/customer-route-shell";
 
 export const revalidate = 60;
 
@@ -62,9 +59,7 @@ type ComparisonApiResponse = {
   listings: ComparisonApiListing[];
 };
 
-async function getCatalogTranslator(
-  locale: string,
-): Promise<CatalogTranslator> {
+async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
   const messages = {
@@ -79,10 +74,7 @@ async function getCatalogTranslator(
   }) as unknown as CatalogTranslator;
 }
 
-function resolveProductSlug(query: {
-  product?: string;
-  slug?: string;
-}): string | null {
+function resolveProductSlug(query: { product?: string; slug?: string }): string | null {
   const raw = query.product?.trim() || query.slug?.trim();
   if (!raw) {
     return null;
@@ -94,23 +86,18 @@ function resolveProductSlug(query: {
   return raw;
 }
 
-async function fetchComparison(
-  slug: string,
-): Promise<ComparisonApiResponse | null> {
+async function fetchComparison(slug: string): Promise<ComparisonApiResponse | null> {
   const apiBase = resolveApiBaseUrl();
   if (!apiBase) {
     return null;
   }
   try {
-    const response = await fetch(
-      `${apiBase}/products/${encodeURIComponent(slug)}/comparison`,
-      {
-        next: {
-          revalidate,
-          tags: ["products", "comparison", `product:${slug}`],
-        },
+    const response = await fetch(`${apiBase}/products/${encodeURIComponent(slug)}/comparison`, {
+      next: {
+        revalidate,
+        tags: ["products", "comparison", `product:${slug}`],
       },
-    );
+    });
     if (!response.ok) {
       return null;
     }
@@ -120,9 +107,7 @@ async function fetchComparison(
   }
 }
 
-function toComparisonListings(
-  response: ComparisonApiResponse,
-): ComparisonListing[] {
+function toComparisonListings(response: ComparisonApiResponse): ComparisonListing[] {
   return response.listings.map((listing) => ({
     id: listing.id,
     priceNgwee: listing.price_ngwee,
@@ -175,9 +160,7 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getCatalogTranslator(locale);
 
@@ -207,16 +190,12 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
 
   if (!slug) {
     return (
-      <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-3xl">
-        <header className="space-y-2">
-          <h1 className="font-display text-h1 text-display-ink">
-            {t("comparePage.title")}
-          </h1>
-          <p className="text-body text-text-2">{t("comparePage.subtitle")}</p>
-        </header>
+      <CustomerRouteShell width="content" className="flex max-w-3xl flex-col gap-6">
+        <PageHeader title={t("comparePage.title")} subtitle={t("comparePage.subtitle")} />
         <EmptyState
           title={t("comparePage.noProductTitle")}
           body={t("comparePage.noProductBody")}
+          illustration="no-results"
         />
         <LinkButton
           href={`/${locale}/search`}
@@ -226,22 +205,19 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
         >
           {t("comparePage.browseCta")}
         </LinkButton>
-      </div>
+      </CustomerRouteShell>
     );
   }
 
   const comparison = await fetchComparison(slug);
   if (!comparison) {
     return (
-      <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-3xl">
-        <header className="space-y-2">
-          <h1 className="font-display text-h1 text-display-ink">
-            {t("comparePage.title")}
-          </h1>
-        </header>
+      <CustomerRouteShell width="content" className="flex max-w-3xl flex-col gap-6">
+        <PageHeader title={t("comparePage.title")} />
         <EmptyState
           title={t("comparePage.unavailableTitle")}
           body={t("comparePage.unavailableBody")}
+          illustration="offline"
         />
         <LinkButton
           href={`/${locale}/p/${slug}`}
@@ -251,7 +227,7 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
         >
           {t("comparePage.backToProduct")}
         </LinkButton>
-      </div>
+      </CustomerRouteShell>
     );
   }
 
@@ -259,26 +235,24 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
   const canCompare = shouldShowComparison(listings.length);
 
   return (
-    <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-5xl">
-      <header className="space-y-2">
-        <p className="text-sm text-text-2">
-          <Link
-            href={`/${locale}/p/${comparison.product_slug}`}
-            className="text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
-          >
-            {t("comparePage.backToProduct")}
-          </Link>
-        </p>
-        <h1 className="font-display text-h1 text-display-ink">
-          {t("comparePage.title")}
-        </h1>
-        <p className="text-body text-text-2">{t("comparePage.subtitle")}</p>
-      </header>
+    <CustomerRouteShell className="flex max-w-5xl flex-col gap-6">
+      <PageHeader
+        title={t("comparePage.title")}
+        subtitle={t("comparePage.subtitle")}
+        breadcrumbs={[
+          {
+            key: "product",
+            label: t("comparePage.backToProduct"),
+            href: `/${locale}/p/${comparison.product_slug}`,
+          },
+        ]}
+      />
 
       {!canCompare ? (
         <EmptyState
           title={t("comparePage.singleSellerTitle")}
           body={t("comparePage.singleSellerBody")}
+          illustration="no-results"
         />
       ) : (
         <>
@@ -299,6 +273,6 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
       >
         {t("comparePage.chooseOnProduct")}
       </LinkButton>
-    </div>
+    </CustomerRouteShell>
   );
 }

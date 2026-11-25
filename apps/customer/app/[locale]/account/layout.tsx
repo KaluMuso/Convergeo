@@ -1,5 +1,6 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { IconAccount, IconAsk, IconHome, IconOrders, IconSearch } from "@vergeo/ui/src/icons";
+import { PageHeader } from "@vergeo/ui/src/page-header";
 import Link from "next/link";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -125,15 +126,18 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
       />
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] pt-6 sm:px-6 lg:px-8 lg:pb-12">
         <main id="account-main" tabIndex={-1} className="focus-visible:outline-none">
-          <header className="mb-2 flex flex-wrap items-end justify-between gap-3">
-            <h1 className="font-display text-h1 text-display-ink">{t("title")}</h1>
-            <Link
-              href={`/${locale}`}
-              className="text-sm font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {t("hub.backToShop")}
-            </Link>
-          </header>
+          <PageHeader
+            title={t("title")}
+            actions={
+              <Link
+                href={`/${locale}`}
+                className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
+              >
+                {t("hub.backToShop")}
+              </Link>
+            }
+            className="mb-2"
+          />
           <AccountNav
             locale={locale}
             labels={{
