@@ -5,7 +5,6 @@ import { ApiError } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { BottomSheet } from "@vergeo/ui/src/bottom-sheet";
 import { LinkButton } from "@vergeo/ui/src/link-button";
-import { LcPackage, LcShieldCheck, LcTruck } from "@vergeo/ui/src/lucide-icons";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from "react";
@@ -36,7 +35,7 @@ import {
 } from "./cart-store";
 import { VariantLineLabel } from "./variant-line-label";
 
-import { CustomerTrustStrip } from "@/components/customer-trust-strip";
+import { CartEmptyTrustList, type CartEmptyTrustLabels } from "./cart-empty-trust-list";
 
 export {
   CartNavTrigger,
@@ -968,11 +967,8 @@ export type MiniCartLabels = {
   leadTimeWhen?: LeadTimePhrases;
 };
 
-export type CartEmptyTrustLabels = {
-  escrow: string;
-  delivery: string;
-  pickup: string;
-};
+export type { CartEmptyTrustLabels } from "./cart-empty-trust-list";
+export { CartEmptyTrustList } from "./cart-empty-trust-list";
 
 function EmptyCartIcon() {
   return (
@@ -992,48 +988,6 @@ function EmptyCartIcon() {
       />
       <path d="m9 10.8 1.9 1.9 4.2-4.4" stroke="currentColor" strokeWidth="1.5" />
     </svg>
-  );
-}
-
-export function CartEmptyTrustList({
-  labels,
-  compact = false,
-}: {
-  labels: CartEmptyTrustLabels;
-  compact?: boolean;
-}) {
-  const iconClass = "size-5";
-  const items = [
-    {
-      id: "escrow",
-      label: labels.escrow,
-      hue: "green" as const,
-      testId: "cart-trust-escrow",
-      icon: <LcShieldCheck className={iconClass} duotone aria-hidden />,
-    },
-    {
-      id: "delivery",
-      label: labels.delivery,
-      hue: "amber" as const,
-      testId: "cart-trust-delivery",
-      icon: <LcTruck className={iconClass} duotone aria-hidden />,
-    },
-    {
-      id: "pickup",
-      label: labels.pickup,
-      hue: "teal" as const,
-      testId: "cart-trust-pickup",
-      icon: <LcPackage className={iconClass} duotone aria-hidden />,
-    },
-  ];
-
-  return (
-    <CustomerTrustStrip
-      items={items}
-      compact={compact}
-      data-testid="cart-empty-trust-list"
-      className={compact ? "border-0 bg-transparent px-0 py-0" : "mt-3"}
-    />
   );
 }
 
