@@ -17,11 +17,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
-import {
-  getMessages,
-  getTranslations,
-  setRequestLocale,
-} from "next-intl/server";
+import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 
 import { SentryInit } from "../sentry-init";
 
@@ -157,8 +153,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     namespace: "checkout",
   });
   const year = new Date().getFullYear();
-  const fabCopy = ((messages.common as AbstractIntlMessages | undefined)?.fab ??
-    {}) as Record<string, string>;
+  const fabCopy = ((messages.common as AbstractIntlMessages | undefined)?.fab ?? {}) as Record<
+    string,
+    string
+  >;
   const fabLabels: FloatingActionsLabels = {
     ask: fabCopy.ask ?? "",
     askTitle: fabCopy.askTitle ?? "",
@@ -174,8 +172,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     hideFooter: fabCopy.hideFooter ?? "",
   };
   // Translated toast copy for emitToastKey() call sites (no i18n hook needed there).
-  const toastCopy = ((messages.common as AbstractIntlMessages | undefined)
-    ?.toast ?? {}) as Record<string, unknown>;
+  const toastCopy = ((messages.common as AbstractIntlMessages | undefined)?.toast ?? {}) as Record<
+    string,
+    unknown
+  >;
   const appName = tCommon("app.name");
   const localeSwitcherLabels = {
     ariaLabel: tCommon("locale.switchAria"),
@@ -244,7 +244,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   ];
 
   return (
-    <html lang={locale} className={fontVariables()}>
+    <html lang={locale} className={fontVariables()} suppressHydrationWarning>
       <head>
         {/* Pre-paint theme bootstrap — sets <html data-theme> before first paint
             so the token palette (and body bg/text) never flash. Default choice
@@ -261,19 +261,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
       <body className="flex min-h-dvh flex-col font-body antialiased">
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
-            <ToastProvider
-              dismissLabel={tCommon("toast.dismiss")}
-              copy={toastCopy}
-            >
+            <ToastProvider dismissLabel={tCommon("toast.dismiss")} copy={toastCopy}>
               {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
               <SentryInit />
               {/* Probe `/sw.js` before registering — never register a missing worker. */}
               <ServiceWorkerRegister />
               {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
                 only on consent — the anonymized server log is the source of truth. */}
-              <AnalyticsProvider
-                measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}
-              />
+              <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID} />
               {/* analytics_v2 page_view (no-op unless NEXT_PUBLIC_ANALYTICS_V2_TRACKING=1). */}
               <PageViewTracker />
               <CustomerAuthBarrier
@@ -310,14 +305,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
                     LinkComponent={Link}
                     trailing={
                       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-                        <LocaleSwitcher
-                          locale={locale}
-                          labels={localeSwitcherLabels}
-                        />
-                        <p
-                          className="m-0 text-micro"
-                          style={{ color: "var(--panel-muted)" }}
-                        >
+                        <LocaleSwitcher locale={locale} labels={localeSwitcherLabels} />
+                        <p className="m-0 text-micro" style={{ color: "var(--panel-muted)" }}>
                           <Link
                             href={`/${locale}/account/preferences`}
                             className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
