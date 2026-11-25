@@ -6,22 +6,36 @@ type ShareLinkButtonProps = {
   label: string;
   /** Title passed to the native share sheet when available. */
   title?: string;
+  /** Body line for native share and WhatsApp fallback (e.g. product name + price). */
+  text?: string;
+  /** Share target URL; defaults to the current page when omitted. */
+  url?: string;
   className?: string;
 };
 
+function buildWhatsAppHref(text: string, url: string): string {
+  const payload = text.trim() ? `${text.trim()} ${url}` : url;
+  return `https://wa.me/?text=${encodeURIComponent(payload)}`;
+}
+
 /**
- * Native share sheet on phones (WhatsApp is one tap away); falls back to
- * copying the current URL with a "Link copied" toast.
+ * Native share sheet on phones (WhatsApp is one tap away); WhatsApp web
+ * fallback when share is unavailable; copies the link as a last resort.
  */
-export function ShareLinkButton({ label, title, className }: ShareLinkButtonProps) {
+export function ShareLinkButton({ label, title, text, url, className }: ShareLinkButtonProps) {
   const onClick = async () => {
-    const url = window.location.href;
+    const shareUrl = url ?? window.location.href;
+    const body = text?.trim() ?? "";
     const nav = window.navigator as Navigator & {
-      share?: (data: { title?: string; url: string }) => Promise<void>;
+      share?: (data: { title?: string; text?: string; url: string }) => Promise<void>;
     };
     if (typeof nav.share === "function") {
       try {
-        await nav.share({ title, url });
+        await nav.share({
+          title,
+          text: body || undefined,
+          url: shareUrl,
+        });
         return;
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -29,8 +43,17 @@ export function ShareLinkButton({ label, title, className }: ShareLinkButtonProp
         }
       }
     }
+    const waPayload = body || title?.trim() || "";
+    const opened = window.open(
+      buildWhatsAppHref(waPayload, shareUrl),
+      "_blank",
+      "noopener,noreferrer",
+    );
+    if (opened != null) {
+      return;
+    }
     try {
-      await nav.clipboard.writeText(url);
+      await nav.clipboard.writeText(shareUrl);
       emitToastKey("linkCopied", { type: "success" });
     } catch {
       emitToastKey("copyFailed", { type: "error" });
