@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
 
+import { SpotIllustration, type SpotIllustrationId } from "./spot-illustrations";
+
 export type EmptyStateProps = {
   icon?: ReactNode;
+  /** Soft line spot illustration — overrides default icon tile when set. */
+  illustration?: SpotIllustrationId;
   title: string;
   body?: string;
   action?: ReactNode;
@@ -27,6 +31,7 @@ function DefaultEmptyIcon() {
  */
 export function EmptyState({
   icon,
+  illustration,
   title,
   body,
   action,
@@ -50,22 +55,28 @@ export function EmptyState({
         background: "var(--surface)",
       }}
     >
-      <div
-        aria-hidden="true"
-        style={{
-          color: "var(--primary)",
-          background: "var(--primary-tint)",
-          width: "4rem",
-          height: "4rem",
-          borderRadius: "var(--r-pill)",
-          marginBottom: "var(--sp-2)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {icon ?? <DefaultEmptyIcon />}
-      </div>
+      {illustration ? (
+        <div aria-hidden="true" className="mb-2 w-[7.5rem] text-primary">
+          <SpotIllustration id={illustration} className="h-auto w-full" />
+        </div>
+      ) : (
+        <div
+          aria-hidden="true"
+          style={{
+            color: "var(--primary)",
+            background: "var(--primary-tint)",
+            width: "4rem",
+            height: "4rem",
+            borderRadius: "var(--r-pill)",
+            marginBottom: "var(--sp-2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {icon ?? <DefaultEmptyIcon />}
+        </div>
+      )}
       <h3
         style={{
           margin: 0,

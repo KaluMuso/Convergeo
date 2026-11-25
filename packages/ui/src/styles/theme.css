@@ -121,8 +121,8 @@
 
   --max-width-container: 87.5rem;
 
-  --duration-fast: 150ms;
-  --duration-page: 300ms;
+  --duration-fast: 120ms;
+  --duration-page: 320ms;
   --duration-slow: 400ms;
 
   --ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
@@ -183,6 +183,18 @@
 }
 .tap:active {
   transform: scale(0.97);
+}
+
+.animate-page-in {
+  animation: page-in var(--dur-page) var(--ease-out) both;
+}
+
+.animate-pop {
+  animation: v-pop var(--dur) var(--ease-spring) both;
+}
+
+.press-scale:active {
+  transform: scale(0.98);
 }
 
 /* Interactive card elevation — hover/focus-within lift. Reduced-motion

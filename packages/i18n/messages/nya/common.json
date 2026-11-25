@@ -38,7 +38,12 @@
     "label": "Maonekedwe",
     "light": "Kuwala",
     "system": "System ya device",
-    "displayPreferences": "Zokonda za maonekedwe"
+    "displayPreferences": "Zokonda za maonekedwe",
+    "accentLabel": "⚠ Accent colour",
+    "accentMono": "⚠ Mono",
+    "accentGreen": "⚠ Green",
+    "accentBlue": "⚠ Blue",
+    "accentGold": "⚠ Gold"
   },
   "locale": {
     "switchAria": "Sankhani chilankhulo",

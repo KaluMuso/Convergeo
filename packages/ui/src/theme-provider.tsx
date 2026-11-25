@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { ACCENT_STORAGE_KEY, resolveAccentChoice, type AccentChoice } from "./accent-palette";
 import {
   resolveInitialTheme,
   THEME_STORAGE_KEY,
@@ -26,6 +27,8 @@ type ThemeContextValue = {
   setTheme: (theme: ThemeChoice) => void;
   /** Cycle light → dark → system → light. */
   cycleTheme: () => void;
+  accent: AccentChoice;
+  setAccent: (accent: AccentChoice) => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -52,27 +55,45 @@ function readStoredChoice(): ThemeChoice {
   return "system";
 }
 
+function readStoredAccent(): AccentChoice {
+  if (typeof window === "undefined") {
+    return "mono";
+  }
+  try {
+    return resolveAccentChoice(window.localStorage.getItem(ACCENT_STORAGE_KEY));
+  } catch {
+    return "mono";
+  }
+}
+
 function applyResolvedTheme(resolved: ResolvedTheme): void {
   if (typeof document !== "undefined") {
     document.documentElement.dataset.theme = resolved;
   }
 }
 
+function applyAccent(accent: AccentChoice): void {
+  if (typeof document !== "undefined") {
+    document.documentElement.dataset.accent = accent;
+  }
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Initialise from storage/OS on mount. The pre-paint <ThemeScript/> has already
-  // stamped data-theme, so this only syncs React state — no visible flash.
   const [theme, setThemeState] = useState<ThemeChoice>("system");
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
+  const [accent, setAccentState] = useState<AccentChoice>("mono");
 
   useEffect(() => {
     const stored = readStoredChoice();
+    const storedAccent = readStoredAccent();
     setThemeState(stored);
+    setAccentState(storedAccent);
     const resolved = resolveInitialTheme(stored === "system" ? null : stored, prefersDark());
     setResolvedTheme(resolved);
     applyResolvedTheme(resolved);
+    applyAccent(storedAccent);
   }, []);
 
-  // Follow OS changes only while the choice is "system".
   useEffect(() => {
     if (theme !== "system" || typeof window === "undefined") {
       return;
@@ -99,13 +120,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyResolvedTheme(resolved);
   }, []);
 
+  const setAccent = useCallback((next: AccentChoice) => {
+    setAccentState(next);
+    try {
+      window.localStorage.setItem(ACCENT_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+    applyAccent(next);
+  }, []);
+
   const cycleTheme = useCallback(() => {
     setTheme(CYCLE[(CYCLE.indexOf(theme) + 1) % CYCLE.length] ?? "system");
   }, [theme, setTheme]);
 
   const value = useMemo<ThemeContextValue>(
-    () => ({ theme, resolvedTheme, setTheme, cycleTheme }),
-    [theme, resolvedTheme, setTheme, cycleTheme],
+    () => ({ theme, resolvedTheme, setTheme, cycleTheme, accent, setAccent }),
+    [theme, resolvedTheme, setTheme, cycleTheme, accent, setAccent],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
