@@ -801,6 +801,16 @@ def test_detail_and_browse_surface_event_type(store: FakeSupabaseStore) -> None:
     assert series.event_type == "recurring"
 
 
+def test_detail_surfaces_refund_policy_key(store: FakeSupabaseStore) -> None:
+    _add_event(store, event_id="e-refund", slug="refund-policy-gig")
+    store.events[-1]["refund_policy_key"] = "no_refunds"
+    detail = build_detail_response(store, "refund-policy-gig")
+    assert detail.refund_policy_key == "no_refunds"
+    store.events[-1]["refund_policy_key"] = None
+    missing = build_detail_response(store, "refund-policy-gig")
+    assert missing.refund_policy_key is None
+
+
 def test_neighbourhood_filter_matches_landmark(store: FakeSupabaseStore) -> None:
     for row in store.events:
         if row["id"] == EVENT_A:
