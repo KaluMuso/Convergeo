@@ -10,6 +10,7 @@ import {
   type AdminRole,
   type AdminRoleAssignment,
 } from "../../../lib/roles-api";
+import { AdminPageClient } from "../_components/admin-page-client";
 
 const PERMISSIONS = [
   "finance.read",
@@ -141,15 +142,11 @@ export function RolesBoard() {
     );
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="font-serif text-xl">{t("title")}</h1>
-        <p className="text-sm text-muted">{t("subtitle")}</p>
-        <p className="text-sm text-muted" data-testid="roles-deactivate-help">
-          {t("deactivateHelp")}
-        </p>
-        <p className="text-sm text-muted">{t("permissionsHelp")}</p>
-      </header>
+    <AdminPageClient title={t("title")} subtitle={t("subtitle")} className="space-y-6">
+      <p className="text-sm text-text-2" data-testid="roles-deactivate-help">
+        {t("deactivateHelp")}
+      </p>
+      <p className="text-sm text-text-2">{t("permissionsHelp")}</p>
       {error ? (
         <p role="alert" className="text-error">
           {t(error)}
@@ -380,6 +377,6 @@ export function RolesBoard() {
           </div>
         ))}
       </section>
-    </div>
+    </AdminPageClient>
   );
 }

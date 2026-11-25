@@ -1,5 +1,7 @@
 "use client";
 
+import { IconTile } from "@vergeo/ui/src/icon-tile";
+import { LcStore } from "@vergeo/ui/src/lucide-icons";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -68,10 +70,10 @@ export function KycQueue({ locale }: KycQueueProps) {
         </p>
       ) : null}
       {items.length === 0 ? (
-        <EmptyBlock title={t("empty")} body={t("emptyHint")} />
+        <EmptyBlock illustration="verify-id" title={t("empty")} body={t("emptyHint")} />
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
+          <table className="admin-data-table min-w-full">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
                 <th className="px-2 py-3 font-medium">{t("vendor")}</th>
@@ -84,9 +86,16 @@ export function KycQueue({ locale }: KycQueueProps) {
               {items.map((item) => (
                 <tr key={item.vendor_id} className="border-b border-border hover:bg-bg-2">
                   <td className="px-2 py-3">
-                    <div className="font-medium text-text">{item.display_name}</div>
-                    <div className="text-xs text-muted">
-                      {item.tier != null ? t("tier", { tier: item.tier }) : item.slug}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <IconTile hue="teal" size={40} aria-hidden>
+                        <LcStore className="size-5" duotone />
+                      </IconTile>
+                      <div className="min-w-0">
+                        <div className="truncate font-medium text-text">{item.display_name}</div>
+                        <div className="truncate text-xs text-muted">
+                          {item.tier != null ? t("tier", { tier: item.tier }) : item.slug}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="px-2 py-3 text-muted">

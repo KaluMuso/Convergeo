@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
-
 import { useAdminPermissions } from "../../../lib/roles-api";
+import { AdminHubCard } from "../_components/admin-hub-card";
 
 type Destination = { key: string; href: string; title: string; body: string };
 
@@ -15,13 +14,12 @@ export function ModerationDestinations({ destinations }: { destinations: readonl
         .filter((item) => canModerate && (item.key !== "flags" || grants?.unrestricted))
         .map((item) => (
           <li key={item.key}>
-            <Link
+            <AdminHubCard
               href={item.href}
-              className="block rounded border border-border bg-surface p-4 no-underline transition-colors hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-            >
-              <p className="font-semibold text-text">{item.title}</p>
-              <p className="mt-1 text-sm text-muted">{item.body}</p>
-            </Link>
+              title={item.title}
+              body={item.body}
+              hue={item.key === "flags" ? "red" : "orange"}
+            />
           </li>
         ))}
     </ul>
