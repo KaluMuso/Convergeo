@@ -6,10 +6,13 @@
 export const WISHLIST_STORAGE_KEY_V1 = "vergeo5:wishlist:v1";
 export const WISHLIST_STORAGE_KEY = "vergeo5:wishlist:v2";
 
+export type WishlistKind = "product" | "service" | "event";
+
 export type WishlistEntry = {
   productId?: string;
   slug: string;
   savedAt: string;
+  kind?: WishlistKind;
 };
 
 type WishlistStore = {
@@ -28,12 +31,31 @@ function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
+const WISHLIST_KINDS: readonly WishlistKind[] = ["product", "service", "event"];
+
+function normalizeKind(value: unknown): WishlistKind | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  return WISHLIST_KINDS.includes(value as WishlistKind) ? (value as WishlistKind) : undefined;
+}
+
 function isEntry(value: unknown): value is WishlistEntry {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
   }
   const record = value as Record<string, unknown>;
-  return typeof record.slug === "string" && record.slug.length > 0;
+  if (typeof record.slug !== "string" || record.slug.length === 0) {
+    return false;
+  }
+  if (record.kind !== undefined && !normalizeKind(record.kind)) {
+    return false;
+  }
+  return true;
+}
+
+function withDefaultKind(entry: WishlistEntry): WishlistEntry {
+  return entry.kind ? entry : { ...entry, kind: "product" };
 }
 
 function migrateV1(raw: string): WishlistEntry[] {
@@ -45,6 +67,7 @@ function migrateV1(raw: string): WishlistEntry[] {
         .map((slug) => ({
           slug,
           savedAt: new Date(0).toISOString(),
+          kind: "product" as const,
         }));
     }
     if (parsed && typeof parsed === "object") {
@@ -57,6 +80,7 @@ function migrateV1(raw: string): WishlistEntry[] {
           // Legacy PDP map had no slug — use productId as a temporary key until PDP re-saves.
           slug: productId,
           savedAt: String(savedAt),
+          kind: "product" as const,
         }));
     }
   } catch {
@@ -74,7 +98,7 @@ function readEntries(): WishlistEntry[] {
     if (v2) {
       const parsed = JSON.parse(v2) as unknown;
       if (Array.isArray(parsed)) {
-        return parsed.filter(isEntry);
+        return parsed.filter(isEntry).map(withDefaultKind);
       }
     }
     const v1 = window.localStorage.getItem(WISHLIST_STORAGE_KEY_V1);
@@ -131,7 +155,7 @@ export function getWishlistServerSnapshot(): string {
 export function parseWishlistSnapshot(snapshot: string): WishlistEntry[] {
   try {
     const parsed = JSON.parse(snapshot) as unknown;
-    return Array.isArray(parsed) ? parsed.filter(isEntry) : [];
+    return Array.isArray(parsed) ? parsed.filter(isEntry).map(withDefaultKind) : [];
   } catch {
     return [];
   }
@@ -176,15 +200,20 @@ export function isWishlistedLocal(identity: {
   return store.entries.some((entry) => entryMatches(entry, identity));
 }
 
-export function upsertWishlistLocal(input: { productId?: string | null; slug: string }): void {
+export function upsertWishlistLocal(input: {
+  productId?: string | null;
+  slug: string;
+  kind?: WishlistKind;
+}): void {
   ensureHydrated();
   const slug = input.slug.trim();
   if (!slug) {
     return;
   }
   const productId = input.productId?.trim() || undefined;
+  const kind = input.kind ?? "product";
   const without = store.entries.filter((entry) => !entryMatches(entry, { productId, slug }));
-  store.entries = [{ productId, slug, savedAt: new Date().toISOString() }, ...without];
+  store.entries = [{ productId, slug, savedAt: new Date().toISOString(), kind }, ...without];
   writeEntries(store.entries);
   emit();
 }
@@ -204,7 +233,11 @@ export function removeWishlistLocal(identity: {
 }
 
 /** Toggle by slug and/or productId. Returns true when saved after toggle. */
-export function toggleWishlistLocal(input: { productId?: string | null; slug: string }): boolean {
+export function toggleWishlistLocal(input: {
+  productId?: string | null;
+  slug: string;
+  kind?: WishlistKind;
+}): boolean {
   const identity = { productId: input.productId, slug: input.slug };
   if (isWishlistedLocal(identity)) {
     removeWishlistLocal(identity);
