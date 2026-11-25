@@ -9,9 +9,9 @@ import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { ApiUnavailablePanel } from "../_components/api-unavailable";
+import { BackToTop } from "../_components/back-to-top";
 import { BROWSE_PAGE_SIZE, BrowsePager, parseBrowsePage } from "../_components/browse-pager";
 import { resolveFacetCategoryLabel } from "../_components/category-display-name";
-import { BackToTop } from "../_components/back-to-top";
 import { FilterBar } from "../_components/directory/filter-bar";
 import { VendorCardGrid } from "../_components/directory/vendor-card-grid";
 import { buildVendorLadderLabels } from "../_components/directory/vendor-ladder-labels";

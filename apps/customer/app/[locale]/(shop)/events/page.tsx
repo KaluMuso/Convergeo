@@ -12,8 +12,8 @@ import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { ApiUnavailablePanel } from "../_components/api-unavailable";
-import { BrowsePager, parseBrowsePage, sliceBrowsePage } from "../_components/browse-pager";
 import { BackToTop } from "../_components/back-to-top";
+import { BrowsePager, parseBrowsePage, sliceBrowsePage } from "../_components/browse-pager";
 import { DateFilterChips } from "../_components/events/date-filter-chips";
 import { EventGrid, type EventBrowseItem } from "../_components/events/event-grid";
 import {

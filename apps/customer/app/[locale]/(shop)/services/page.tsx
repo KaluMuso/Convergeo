@@ -9,8 +9,8 @@ import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { ApiUnavailablePanel } from "../_components/api-unavailable";
-import { BrowsePager, parseBrowsePage, sliceBrowsePage } from "../_components/browse-pager";
 import { BackToTop } from "../_components/back-to-top";
+import { BrowsePager, parseBrowsePage, sliceBrowsePage } from "../_components/browse-pager";
 
 import { ServiceGrid, type ServiceBrowseItem } from "./_components/service-grid";
 import { SERVICE_VERTICALS } from "./_components/service-verticals";

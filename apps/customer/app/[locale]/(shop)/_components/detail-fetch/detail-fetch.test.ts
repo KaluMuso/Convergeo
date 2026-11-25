@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 vi.mock("../../../../../lib/api-base-url", () => ({
   absoluteApiUrl: (p: string) => `https://api.example.test${p}`,
   getApiBaseUrl: () => "https://api.example.test",

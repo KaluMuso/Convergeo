@@ -1,4 +1,5 @@
 import { createApiClient } from "@vergeo/config";
+
 import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
 export type EventDetailPayload = Record<string, unknown> & {
   id: string;

@@ -1,4 +1,5 @@
 import { createApiClient } from "@vergeo/config";
+
 import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
 export const SERVICE_REVALIDATE_SECONDS = 300;
 export type ServiceDetailPayload = {

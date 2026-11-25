@@ -14,9 +14,9 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { ShareLinkButton } from "../../../_components/share-link-button";
 import { ApiUnavailablePanel } from "../../_components/api-unavailable";
 import { fetchVendorProfile } from "../../_components/detail-fetch/fetch-vendor";
-import { ShareLinkButton } from "../../../_components/share-link-button";
 import { buildStorefrontCompare } from "../../_components/directory/business-home/compare-other-shops";
 import {
   ClipsRow,
