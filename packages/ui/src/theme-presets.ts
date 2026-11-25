@@ -47,7 +47,7 @@ export const THEME_PRESETS: Record<SeasonalPresetId, ThemePreset> = {
   slate: {
     id: "slate",
     i18nKey: "slate",
-    swatch: ["#0b5d45", "#a4501c", "#f7f6f2"],
+    swatch: ["#18181b", "#3f3f46", "#fafafa"],
     light: [],
     dark: [],
   },

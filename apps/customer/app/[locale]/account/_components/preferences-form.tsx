@@ -4,6 +4,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { Switch } from "@vergeo/ui/src/switch";
 import { ThemePreference } from "@vergeo/ui/src/theme-preference";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { LocaleSwitcher, type LocaleSwitcherLabels } from "../../_components/locale-switcher";
@@ -45,6 +46,7 @@ export function PreferencesForm({
   localeSwitcherLabels,
 }: PreferencesFormProps) {
   const router = useRouter();
+  const tCommon = useTranslations("common");
   const api = createAccountApiClient(() => accessToken);
 
   const [prefs, setPrefs] = useState(initialPrefs);
@@ -78,6 +80,11 @@ export function PreferencesForm({
         lightLabel={labels.themeLight}
         darkLabel={labels.themeDark}
         systemLabel={labels.themeSystem}
+        accentLabel={tCommon("theme.accentLabel")}
+        accentMonoLabel={tCommon("theme.accentMono")}
+        accentGreenLabel={tCommon("theme.accentGreen")}
+        accentBlueLabel={tCommon("theme.accentBlue")}
+        accentGoldLabel={tCommon("theme.accentGold")}
       />
 
       <section className="space-y-2">

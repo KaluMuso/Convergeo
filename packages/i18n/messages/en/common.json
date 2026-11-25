@@ -22,7 +22,12 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System",
-    "displayPreferences": "Display preferences"
+    "displayPreferences": "Display preferences",
+    "accentLabel": "Accent colour",
+    "accentMono": "Mono",
+    "accentGreen": "Green",
+    "accentBlue": "Blue",
+    "accentGold": "Gold"
   },
   "locale": {
     "switchAria": "Choose language",
