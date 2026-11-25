@@ -48,10 +48,22 @@ export function VendorPage({
 
 type VendorGridProps = {
   cols?: VendorGridCols;
+  /** Use `ul` when the children are `<li>` cards. */
+  as?: "div" | "ul";
   children: ReactNode;
   className?: string;
 };
 
-export function VendorGrid({ cols = "cards", children, className = "" }: VendorGridProps) {
-  return <div className={`${GRID_CLASSES[cols]} ${className}`.trim()}>{children}</div>;
+export function VendorGrid({
+  cols = "cards",
+  as: Tag = "div",
+  children,
+  className = "",
+}: VendorGridProps) {
+  const listReset = Tag === "ul" ? "m-0 list-none p-0" : "";
+  return (
+    <Tag className={`${GRID_CLASSES[cols]} ${listReset} ${className}`.replace(/\s+/g, " ").trim()}>
+      {children}
+    </Tag>
+  );
 }

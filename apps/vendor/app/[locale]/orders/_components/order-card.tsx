@@ -279,9 +279,9 @@ export function OrderCard({ locale, order, onUpdated, onError }: OrderCardProps)
             {t("queue.card.items", { count: order.item_count })}
           </p>
           <OrderNextStepHint order={order} />
-          <p className="mt-1 text-sm font-medium text-text">
+          <div className="mt-1 text-sm font-medium text-text">
             <PriceBlock ngwee={order.total_ngwee} />
-          </p>
+          </div>
         </Link>
 
         {action ? (
@@ -601,7 +601,7 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
             />
           )
         ) : (
-          <VendorGrid cols="cards">
+          <VendorGrid cols="cards" as="ul">
             {orders.map((order) => (
               <OrderCard
                 key={order.id}
