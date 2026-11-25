@@ -4,6 +4,7 @@ import { buttonBaseClasses, buttonSizeClasses } from "@vergeo/ui/src/button";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { HeroCarousel } from "@vergeo/ui/src/merch/hero-carousel";
+import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
@@ -13,8 +14,6 @@ import { localizeHref, type AdCreative } from "./home-feed/feed-types";
 import { HOME_HERO_FALLBACK_SLIDES } from "./home-hero-slides";
 
 const HERO_ILLUSTRATION_SRC = "/images/hero/marketplace-1280.webp";
-const HERO_ILLUSTRATION_SRCSET =
-  "/images/hero/marketplace-640.webp 640w, /images/hero/marketplace-1280.webp 1280w";
 
 /** CTAs sit on the always-dark `--panel` scrim, so they use panel tokens, not page tokens. */
 const HERO_PRIMARY_CTA = `${buttonBaseClasses} ${buttonSizeClasses.md} bg-panel-text text-panel hover:opacity-90`;
@@ -22,16 +21,13 @@ const HERO_SECONDARY_CTA = `${buttonBaseClasses} ${buttonSizeClasses.md} border 
 
 function HeroIllustration({ priority }: { priority: boolean }) {
   return (
-    <img
+    <Image
       src={HERO_ILLUSTRATION_SRC}
-      srcSet={HERO_ILLUSTRATION_SRCSET}
-      sizes="100vw"
       alt=""
       width={1280}
       height={720}
-      loading={priority ? "eager" : "lazy"}
-      fetchPriority={priority ? "high" : undefined}
-      decoding="async"
+      sizes="100vw"
+      priority={priority}
       className="h-full w-full object-cover object-[72%_center]"
     />
   );
