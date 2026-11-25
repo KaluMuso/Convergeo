@@ -4,11 +4,12 @@ import type { ReactNode } from "react";
 
 const WIDTH_CLASSES = {
   full: "max-w-[1400px]",
-  form: "max-w-2xl",
+  /** Single column on 360px; two-column shell at xl (≥1280px). */
+  form: "max-w-[1400px]",
 } as const;
 
 const GRID_CLASSES = {
-  cards: "grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3",
+  cards: "grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
   stats: "grid gap-3 grid-cols-2 md:grid-cols-4",
   two: "grid gap-4 grid-cols-1 lg:grid-cols-2",
 } as const;
@@ -53,6 +54,24 @@ type VendorGridProps = {
   children: ReactNode;
   className?: string;
 };
+
+type VendorFormLayoutProps = {
+  main: ReactNode;
+  aside: ReactNode;
+  className?: string;
+};
+
+/** Form column + sticky preview / tips from xl (1280px) up; single column at 360px. */
+export function VendorFormLayout({ main, aside, className = "" }: VendorFormLayoutProps) {
+  return (
+    <div
+      className={`grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,22rem)] xl:items-start ${className}`.trim()}
+    >
+      <div className="min-w-0 flex flex-col gap-4">{main}</div>
+      <aside className="flex flex-col gap-3 xl:sticky xl:top-4">{aside}</aside>
+    </div>
+  );
+}
 
 export function VendorGrid({
   cols = "cards",
