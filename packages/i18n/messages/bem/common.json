@@ -38,7 +38,12 @@
     "label": "Cilangululo",
     "light": "Cilanguka",
     "system": "System ya device",
-    "displayPreferences": "Ifyo mukwata fyakulangulula"
+    "displayPreferences": "Ifyo mukwata fyakulangulula",
+    "accentLabel": "⚠ Accent colour",
+    "accentMono": "⚠ Mono",
+    "accentGreen": "⚠ Green",
+    "accentBlue": "⚠ Blue",
+    "accentGold": "⚠ Gold"
   },
   "locale": {
     "switchAria": "Sungeni ululimi",

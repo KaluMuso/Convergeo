@@ -3,40 +3,41 @@
  * Import in app globals after tailwindcss: @import "@vergeo/ui/styles/base.css";
  */
 
-:root {
-  /* ── Ground & surfaces ── */
-  --bg: #f7f6f2;
-  --bg-2: #eeede8;
+:root,
+[data-accent="mono"] {
+  /* ── Ground & surfaces (mono / zinc default) ── */
+  --bg: #fafafa;
+  --bg-2: #f4f4f5;
   --surface: #ffffff;
   --surface-elevated: #ffffff;
-  --border: #e3e1da;
+  --border: #e4e4e7;
 
-  /* ── Dark panels (reference light-theme chrome) ── */
-  --panel: #0f2a21;
-  --panel-2: #163a2e;
-  --panel-text: #f3f0e8;
-  --panel-muted: #a9bfb4;
+  /* ── Dark panels ── */
+  --panel: #18181b;
+  --panel-2: #27272a;
+  --panel-text: #fafafa;
+  --panel-muted: #a1a1aa;
   --panel-border: rgba(255, 255, 255, 0.12);
 
   /* ── Ink & display ── */
-  --text: #15201b;
-  --text-2: #4a5550;
-  --text-3: #5e6963;
-  --display-ink: #0f2a21;
+  --text: #18181b;
+  --text-2: #52525b;
+  --text-3: #5f6570;
+  --display-ink: #09090b;
 
   /* ── Brand & semantic ── */
-  --primary: #0b5d45;
-  --primary-deep: #08473a;
-  --primary-tint: #e3f0ea;
-  --accent: #a4501c;
-  --accent-deep: #7e3c12;
-  --accent-tint: #f6e8dd;
+  --primary: #18181b;
+  --primary-deep: #09090b;
+  --primary-tint: #f4f4f5;
+  --accent: #3f3f46;
+  --accent-deep: #27272a;
+  --accent-tint: #f4f4f5;
   --success: #1e7a4c;
   --danger: #b3261e;
   --warning: #b7791f;
   --info: #1d5e8c;
   --on-danger: #ffffff;
-  --price: #15201b;
+  --price: #18181b;
   --discount: #b3261e;
 
   /* Zambia mobile-money rail brand marks (checkout/payout selectors). */
@@ -106,13 +107,13 @@
   --shadow-1: 0 1px 2px rgba(15, 42, 33, 0.06), 0 2px 8px rgba(15, 42, 33, 0.05);
   --shadow-2: 0 2px 4px rgba(15, 42, 33, 0.06), 0 8px 24px rgba(15, 42, 33, 0.1);
   --shadow-3: 0 4px 8px rgba(15, 42, 33, 0.06), 0 20px 48px rgba(15, 42, 33, 0.16);
-  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px rgba(11, 93, 69, 0.55);
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px rgba(24, 24, 27, 0.45);
   --ds-tracking-display: -0.02em;
 
   /* ── Motion ── */
-  --dur-fast: 150ms;
-  --dur: 250ms;
-  --dur-page: 300ms;
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-page: 320ms;
   --dur-slow: 400ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
   --ease-std: cubic-bezier(0.4, 0, 0.2, 1);
@@ -134,12 +135,64 @@
 
 /* Dark palette — warm charcoal (audit §6.1). Page ground is independent of
    --panel so marketing panels stay distinct chrome rather than tinting the app. */
-[data-theme="dark"] {
+[data-theme="dark"],
+[data-theme="dark"][data-accent="mono"] {
+  --bg: #0a0a0b;
+  --bg-2: #111113;
+  --surface: #18181b;
+  --surface-elevated: #27272a;
+  --border: rgba(255, 255, 255, 0.1);
+  --text: #fafafa;
+  --text-2: #a1a1aa;
+  --text-3: #a1a1aa;
+  --display-ink: #fafafa;
+  --primary: #fafafa;
+  --primary-deep: #e4e4e7;
+  --primary-tint: #27272a;
+  --accent: #d4d4d8;
+  --accent-deep: #f4f4f5;
+  --accent-tint: #27272a;
+  --price: #fafafa;
+  --discount: #ef8a80;
+  --on-danger: #ffffff;
+  --primary-btn-fg: #18181b;
+  --primary-btn-hover: #e4e4e7;
+  --shadow-1: 0 1px 4px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 12px 48px rgba(0, 0, 0, 0.55);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(250, 250, 250, 0.35);
+
+  color-scheme: dark;
+}
+
+/* ── Accent: green (legacy malachite identity) ── */
+[data-accent="green"] {
+  --bg: #f7f6f2;
+  --bg-2: #eeede8;
+  --border: #e3e1da;
+  --text: #15201b;
+  --text-2: #4a5550;
+  --text-3: #5e6963;
+  --display-ink: #0f2a21;
+  --primary: #0b5d45;
+  --primary-deep: #08473a;
+  --primary-tint: #e3f0ea;
+  --accent: #a4501c;
+  --accent-deep: #7e3c12;
+  --accent-tint: #f6e8dd;
+  --panel: #0f2a21;
+  --panel-2: #163a2e;
+  --panel-text: #f3f0e8;
+  --panel-muted: #a9bfb4;
+  --price: #15201b;
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px rgba(11, 93, 69, 0.55);
+}
+
+[data-theme="dark"][data-accent="green"] {
   --bg: #121614;
   --bg-2: #181d1a;
   --surface: #1b201d;
   --surface-elevated: #232925;
-  --border: rgba(255, 255, 255, 0.1);
   --text: #e4e8e5;
   --text-2: #a8b1ac;
   --text-3: #8e9892;
@@ -151,17 +204,65 @@
   --accent-deep: #f0ae7c;
   --accent-tint: #2e2219;
   --price: #e4e8e5;
-  --discount: #ef8a80;
-  --on-danger: #ffffff;
-  /* Primary button in dark: lifted malachite bg needs dark text for AA. */
   --primary-btn-fg: #121614;
   --primary-btn-hover: #78d0ad;
-  --shadow-1: 0 1px 4px rgba(0, 0, 0, 0.3);
-  --shadow-2: 0 4px 24px rgba(0, 0, 0, 0.4);
-  --shadow-3: 0 12px 48px rgba(0, 0, 0, 0.55);
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(95, 196, 156, 0.6);
+}
 
-  color-scheme: dark;
+[data-accent="blue"] {
+  --primary: #1d4ed8;
+  --primary-deep: #1e3a8a;
+  --primary-tint: #dbeafe;
+  --accent: #2563eb;
+  --accent-deep: #1d4ed8;
+  --accent-tint: #eff6ff;
+  --panel: #172554;
+  --panel-2: #1e3a8a;
+  --panel-text: #eff6ff;
+  --panel-muted: #93c5fd;
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px rgba(37, 99, 235, 0.45);
+}
+
+[data-theme="dark"][data-accent="blue"] {
+  --primary: #60a5fa;
+  --primary-deep: #3b82f6;
+  --primary-tint: #172554;
+  --accent: #93c5fd;
+  --accent-deep: #bfdbfe;
+  --accent-tint: #1e3a8a;
+  --panel: #172554;
+  --panel-2: #1e3a8a;
+  --primary-btn-fg: #0a0a0b;
+  --primary-btn-hover: #93c5fd;
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(96, 165, 250, 0.45);
+}
+
+[data-accent="gold"] {
+  --primary: #92400e;
+  --primary-deep: #78350f;
+  --primary-tint: #fef3c7;
+  --accent: #d97706;
+  --accent-deep: #b45309;
+  --accent-tint: #fffbeb;
+  --panel: #451a03;
+  --panel-2: #78350f;
+  --panel-text: #fffbeb;
+  --panel-muted: #fcd34d;
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px rgba(217, 119, 6, 0.45);
+}
+
+[data-theme="dark"][data-accent="gold"] {
+  --primary: #fbbf24;
+  --primary-deep: #f59e0b;
+  --primary-tint: #451a03;
+  --accent: #fcd34d;
+  --accent-deep: #fde68a;
+  --accent-tint: #78350f;
+  --panel: #451a03;
+  --panel-2: #78350f;
+  --primary-btn-fg: #0a0a0b;
+  --primary-btn-hover: #fcd34d;
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(251, 191, 36, 0.45);
 }
 
 @media (min-width: 64rem) {
@@ -412,6 +513,17 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes v-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 

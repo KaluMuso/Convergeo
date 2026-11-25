@@ -21,4 +21,10 @@ describe("EmptyState", () => {
     expect(screen.getByText("Try again later")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Browse" })).toBeInTheDocument();
   });
+
+  it("renders a spot illustration when illustration is set", () => {
+    render(<EmptyState illustration="empty-cart" title="Cart is empty" />);
+    expect(screen.getByRole("img", { hidden: true })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Cart is empty" })).toBeInTheDocument();
+  });
 });
