@@ -392,7 +392,9 @@
       "minimum_required": "Gardez au moins {count} vraie photo tant que ce produit est en vente.",
       "retry": "Réessayer",
       "duplicate": "Cette photo figure déjà sur l'annonce.",
-      "dedupCanonical": "Cette photo est déjà la photo principale du produit : les acheteurs la voient sur votre annonce. Inutile de la téléverser à nouveau."
+      "dedupCanonical": "Cette photo est déjà la photo principale du produit : les acheteurs la voient sur votre annonce. Inutile de la téléverser à nouveau.",
+      "upload_error_with_name": "Could not upload \"{name}\": {detail}",
+      "retry_one": "Retry this photo"
     },
     "meta": {
       "title": "Ajouter un produit — Convergeo Vendeur",
@@ -528,7 +530,9 @@
       "optionLusakaDelivery": "Livraison à Lusaka",
       "optionPickupShop": "Retrait dans ma boutique ou mon agence",
       "optionPickupNationwide": "Retrait national (les acheteurs de tout le pays peuvent venir chercher)",
-      "stockLockedHint": "Les articles sur commande ne sont pas comptés en stock ; ils sont toujours disponibles."
+      "stockLockedHint": "Les articles sur commande ne sont pas comptés en stock ; ils sont toujours disponibles.",
+      "wholesaleSectionHeading": "Wholesale / bulk prices",
+      "wholesaleBuyersHint": "Wholesale listings appear to verified buyers on Supplies."
     },
     "success": {
       "live": "Votre produit est en vente !",
@@ -748,6 +752,10 @@
         "title": "Cette annonce a été supprimée",
         "body": "Elle n'est plus visible par les acheteurs et ne peut plus être modifiée. Les commandes passées conservent son historique.",
         "back": "Retour aux annonces"
+      },
+      "productStatus": {
+        "inReview": "Live, in review: buyers see it once Convergeo approves it",
+        "rejected": "Product rejected"
       }
     },
     "kycGate": {
@@ -877,6 +885,11 @@
       "spec_invalid": "Vérifiez les détails du produit saisis.",
       "product_required": "Choisissez un produit du catalogue.",
       "fulfilment_not_offered": "Le vendeur ne propose pas cette option pour un article de votre commande."
+    },
+    "formAside": {
+      "previewHeading": "Buyer preview",
+      "previewPhotoAlt": "Main listing photo",
+      "noPhoto": "No photo"
     }
   },
   "profile": {
@@ -1278,6 +1291,10 @@
         "profile": {
           "title": "Complétez le profil de votre boutique",
           "body": "Un logo, des horaires et une courte description aident les acheteurs à vous faire confiance."
+        },
+        "productsInReview": {
+          "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
+          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
         }
       },
       "progress": "{count, plural, one {# step left} other {# steps left}}",
@@ -1289,13 +1306,22 @@
       "addProduct": "Add product",
       "scan": "Scan",
       "orders": "Orders",
-      "payouts": "Payouts"
+      "payouts": "Payouts",
+      "sellWholesale": "Sell wholesale"
     },
     "stats": {
       "live": "Live today",
       "quiet": "Quiet day",
       "actionNeeded": "Needs you",
       "caughtUp": "Caught up"
+    },
+    "shopStatus": {
+      "heading": "Your shop",
+      "shopLive": "Shop live",
+      "idVerified": "ID verified",
+      "payoutSet": "Payout number set",
+      "yes": "Yes",
+      "notYet": "Not yet"
     }
   },
   "queue": {

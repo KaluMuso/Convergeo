@@ -392,7 +392,9 @@
       "minimum_required": "商品在售时，至少保留 {count} 张实拍照片。",
       "retry": "重试",
       "duplicate": "该照片已在此商品中。",
-      "dedupCanonical": "该照片已是产品主图，买家会在您的商品中看到它，无需重复上传。"
+      "dedupCanonical": "该照片已是产品主图，买家会在您的商品中看到它，无需重复上传。",
+      "upload_error_with_name": "Could not upload \"{name}\": {detail}",
+      "retry_one": "Retry this photo"
     },
     "meta": {
       "title": "添加商品 — Convergeo 卖家",
@@ -528,7 +530,9 @@
       "optionLusakaDelivery": "卢萨卡市内配送",
       "optionPickupShop": "到我的店铺或分店自提",
       "optionPickupNationwide": "全国自提（赞比亚各地买家均可提货）",
-      "stockLockedHint": "按订单制作的商品不统计库存，因此始终可订。"
+      "stockLockedHint": "按订单制作的商品不统计库存，因此始终可订。",
+      "wholesaleSectionHeading": "Wholesale / bulk prices",
+      "wholesaleBuyersHint": "Wholesale listings appear to verified buyers on Supplies."
     },
     "success": {
       "live": "您的商品已上架！",
@@ -748,6 +752,10 @@
         "title": "此商品已被移除",
         "body": "买家已看不到此商品，也无法再编辑。历史订单仍保留其记录。",
         "back": "返回商品列表"
+      },
+      "productStatus": {
+        "inReview": "Live, in review: buyers see it once Convergeo approves it",
+        "rejected": "Product rejected"
       }
     },
     "kycGate": {
@@ -877,6 +885,11 @@
       "spec_invalid": "请检查您填写的商品详情。",
       "product_required": "请选择目录商品。",
       "fulfilment_not_offered": "卖家对订单中的某件商品不提供此方式。"
+    },
+    "formAside": {
+      "previewHeading": "Buyer preview",
+      "previewPhotoAlt": "Main listing photo",
+      "noPhoto": "No photo"
     }
   },
   "profile": {
@@ -1278,6 +1291,10 @@
         "profile": {
           "title": "完善店铺资料",
           "body": "店铺标志、营业时间和简短介绍能让买家更信任您。"
+        },
+        "productsInReview": {
+          "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
+          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
         }
       },
       "progress": "{count, plural, one {# step left} other {# steps left}}",
@@ -1289,13 +1306,22 @@
       "addProduct": "Add product",
       "scan": "Scan",
       "orders": "Orders",
-      "payouts": "Payouts"
+      "payouts": "Payouts",
+      "sellWholesale": "Sell wholesale"
     },
     "stats": {
       "live": "Live today",
       "quiet": "Quiet day",
       "actionNeeded": "Needs you",
       "caughtUp": "Caught up"
+    },
+    "shopStatus": {
+      "heading": "Your shop",
+      "shopLive": "Shop live",
+      "idVerified": "ID verified",
+      "payoutSet": "Payout number set",
+      "yes": "Yes",
+      "notYet": "Not yet"
     }
   },
   "queue": {
