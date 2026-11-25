@@ -298,9 +298,11 @@ describe("PdpInteractiveBody gallery (digest 1378788464 regression)", () => {
     expect(screen.getByTestId("gallery-indicator")).toHaveTextContent("第 1/1 张图片");
   });
 
-  it("keeps honest escrow trust copy on the buy box panel", () => {
+  it("keeps honest escrow trust copy on the buy box panel", async () => {
     renderBody();
-    expect(screen.getByText("Held in escrow until you confirm")).toBeInTheDocument();
+    expect(await screen.findByTestId("pdp-trust-escrow")).toHaveTextContent(
+      "Held in escrow until you confirm",
+    );
   });
 
   it("loads comparison and carries a selected seller's image and minimum quantity into purchase", async () => {
