@@ -14,6 +14,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import { ExternalUrlImage } from "../../../../../lib/media/external-url-image";
 import { eventAccessCookieName } from "../../../../../lib/event-access";
 import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 
@@ -168,13 +169,15 @@ function directionsUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }
 
-function organiserLogo(logoUrl: string) {
+function organiserLogo(logoUrl: string, _organiserName: string) {
   if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://")) {
     return (
-      <div
-        aria-hidden
-        className="h-full w-full bg-cover bg-center"
-        style={{ backgroundImage: `url(${logoUrl})` }}
+      <ExternalUrlImage
+        src={logoUrl}
+        alt=""
+        className="h-full w-full object-cover"
+        width={96}
+        height={96}
       />
     );
   }
@@ -190,7 +193,7 @@ function organiserLogo(logoUrl: string) {
 }
 
 export function generateStaticParams() {
-  return LOCALES.flatMap((locale) => [{ locale, slug: "zed-summer-festival" }]);
+  return [];
 }
 
 function eventImageUrls(images: string[]): string[] {
@@ -325,7 +328,7 @@ export default async function EventDetailPage({ params }: PageProps) {
           />
         )}
 
-        <div className="absolute inset-0 flex items-end bg-gradient-to-t from-panel via-panel/60 to-transparent p-6 md:p-10 lg:p-12">
+        <div className="absolute inset-0 flex items-end bg-gradient-to-t from-panel via-panel/80 to-transparent p-6 md:p-10 lg:p-12">
           <div className="max-w-4xl space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               {event.is_sold_out ? <Badge variant="sold_out" label={t("detail.soldOut")} /> : null}
@@ -482,7 +485,7 @@ export default async function EventDetailPage({ params }: PageProps) {
             <div className="mt-3 flex items-start gap-3">
               {event.organiser.logo_url ? (
                 <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-border bg-bg">
-                  {organiserLogo(event.organiser.logo_url)}
+                  {organiserLogo(event.organiser.logo_url, event.organiser.display_name)}
                 </div>
               ) : null}
               <div className="min-w-0">

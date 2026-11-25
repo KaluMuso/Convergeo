@@ -1,3 +1,4 @@
+import { browseCardGridClass, browseProductGridClass } from "@vergeo/ui/src/browse-grid";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ServiceCard } from "@vergeo/ui/src/service-card";
@@ -5,7 +6,10 @@ import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
+import { ExternalUrlImage } from "../../../../lib/media/external-url-image";
 import { fetchJson } from "../../../../lib/fetch-json";
+
+import { categoryDisplayName } from "./category-display-name";
 
 import { dealToListing, fetchDeals } from "./deals-data";
 import {
@@ -499,7 +503,7 @@ export function HomeServicesRail({
           {viewAllLabel}
         </Link>
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+      <div className={browseProductGridClass}>
         {services.map((service) => (
           <Link
             key={service.id}
@@ -569,13 +573,7 @@ function vendorRailLogo(logoUrl: string) {
       />
     );
   }
-  return (
-    <div
-      aria-hidden
-      className="h-full w-full bg-cover bg-center"
-      style={{ backgroundImage: `url(${logoUrl})` }}
-    />
-  );
+  return <ExternalUrlImage src={logoUrl} alt="" className="h-full w-full object-cover" />;
 }
 
 export function HomeVendorsRail({
@@ -601,10 +599,12 @@ export function HomeVendorsRail({
           {viewAllLabel}
         </Link>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className={browseCardGridClass}>
         {vendors.map((vendor) => {
           const categoryText =
-            vendor.categories.length > 0 ? vendor.categories.join(", ") : labels.listings;
+            vendor.categories.length > 0
+              ? vendor.categories.map((value) => categoryDisplayName(value)).join(", ")
+              : labels.listings;
           const ratingValue =
             vendor.ratingAvg !== null && vendor.ratingCount > 0
               ? labels.rating

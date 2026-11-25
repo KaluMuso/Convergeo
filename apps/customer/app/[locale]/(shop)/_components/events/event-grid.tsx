@@ -1,5 +1,6 @@
 "use client";
 
+import { browseCardGridClass } from "@vergeo/ui/src/browse-grid";
 import { Badge } from "@vergeo/ui/src/badge";
 import { EventCard } from "@vergeo/ui/src/event-card";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
@@ -41,9 +42,7 @@ type EventGridProps = {
 };
 
 function formatCapacity(template: string, sold: number, total: number): string {
-  return template
-    .replace("{sold}", String(sold))
-    .replace("{total}", String(total));
+  return template.replace("{sold}", String(sold)).replace("{total}", String(total));
 }
 
 function formatEventDate(iso: string | null, locale: string): string {
@@ -67,7 +66,7 @@ export function EventGrid({ items, locale, labels }: EventGridProps) {
   }
 
   return (
-    <ul className="grid list-none gap-5 p-0 md:grid-cols-2 xl:grid-cols-3">
+    <ul className={`motion-fade list-none p-0 ${browseCardGridClass}`}>
       {items.map((item) => {
         const dateLabel = formatEventDate(item.next_starts_at, locale);
         const venueLabel = item.venue ?? item.organiser.display_name;
@@ -86,9 +85,7 @@ export function EventGrid({ items, locale, labels }: EventGridProps) {
                 venueLabel={venueLabel}
                 isFree={item.is_free}
                 freeLabel={labels.free}
-                ngwee={
-                  item.is_free ? undefined : (item.min_price_ngwee ?? undefined)
-                }
+                ngwee={item.is_free ? undefined : (item.min_price_ngwee ?? undefined)}
                 spotsFilled={item.spots_sold}
                 spotsTotal={item.spots_total}
                 capacityLabel={formatCapacity(

@@ -166,7 +166,7 @@ function badgeVariant(tier: ServiceDetail["provider"]["response_time_tier"]) {
 }
 
 export function generateStaticParams() {
-  return LOCALES.map((locale) => ({ locale, slug: "placeholder" }));
+  return [];
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
