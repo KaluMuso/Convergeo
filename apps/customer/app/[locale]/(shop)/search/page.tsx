@@ -1,10 +1,8 @@
 import { createApiClient } from "@vergeo/config";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
-import {
-  buildCanonicalAlternates,
-  buildLocaleCanonical,
-} from "@vergeo/ui/src/seo/json-ld";
+import { PageHeader } from "@vergeo/ui/src/page-header";
+import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import { buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -13,10 +11,7 @@ import { Suspense } from "react";
 import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
-import {
-  fetchCategoriesResult,
-  type CategoryRow,
-} from "../_components/merch-data";
+import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
 import { buildOfferBadgeLabels } from "../_components/offers/offer-badge";
 import { buildTopCategorySuggestions } from "../_components/search/category-suggestions";
 import { NearMeToggle } from "../_components/search/near-me-toggle";
@@ -52,6 +47,8 @@ import { ZeroResults } from "../_components/search/zero-results";
 
 import type { SearchKind } from "../_components/search/search-kinds";
 import type { Metadata } from "next";
+
+import { CustomerRouteShell } from "@/components/customer-route-shell";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -119,9 +116,7 @@ async function fetchSearch(params: {
   }
 
   try {
-    return await client.request<SearchResponse>(
-      `/search?${searchParams.toString()}`,
-    );
+    return await client.request<SearchResponse>(`/search?${searchParams.toString()}`);
   } catch {
     return null;
   }
@@ -140,9 +135,7 @@ function buildSearchCategoryOptions(categories: CategoryRow[]) {
 function buildCategoryLabelMap(
   options: Array<{ path: string; label: string }>,
 ): Record<string, string> {
-  return Object.fromEntries(
-    options.map((option) => [option.path, option.label]),
-  );
+  return Object.fromEntries(options.map((option) => [option.path, option.label]));
 }
 
 function kindTotalsToTabCounts(totals: SearchKindTotals): TabCounts {
@@ -155,10 +148,7 @@ function kindTotalsToTabCounts(totals: SearchKindTotals): TabCounts {
   };
 }
 
-export async function generateMetadata({
-  params,
-  searchParams,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const { q } = await searchParams;
   const trimmed = q?.trim();
@@ -271,9 +261,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       : null;
 
   const tabCounts =
-    searchResponse?.kind_totals != null
-      ? kindTotalsToTabCounts(searchResponse.kind_totals)
-      : null;
+    searchResponse?.kind_totals != null ? kindTotalsToTabCounts(searchResponse.kind_totals) : null;
 
   const view = resolveSearchPageView({
     normalized,
@@ -333,9 +321,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   // A tab or filter that narrows a query to nothing offers a one-tap way back to
   // the unfiltered query; a plain zero-result search has nothing to reset.
   const zeroResetHref =
-    query &&
-    (activeKind !== "all" ||
-      encodeSearchFilters(filterState).toString().length > 0)
+    query && (activeKind !== "all" || encodeSearchFilters(filterState).toString().length > 0)
       ? `/${locale}/search?q=${encodeURIComponent(query)}`
       : undefined;
   const retryHref =
@@ -371,10 +357,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   const categoryCounts =
     view.status === "results" && view.response.facets
       ? Object.fromEntries(
-          view.response.facets.categories.map((bucket) => [
-            bucket.value,
-            bucket.count,
-          ]),
+          view.response.facets.categories.map((bucket) => [bucket.value, bucket.count]),
         )
       : {};
 
@@ -424,7 +407,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
   return (
     // Shop layout already provides the page <main> landmark — avoid nesting.
-    <div className="mx-auto w-full max-w-3xl py-3 motion-rise sm:py-5 lg:max-w-6xl xl:max-w-7xl">
+    <CustomerRouteShell width="full" className="max-w-3xl py-3 sm:py-5 lg:max-w-6xl xl:max-w-7xl">
       {view.status === "results" ? (
         <SearchAnalytics
           normalizedTerm={view.query}
@@ -433,39 +416,30 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         />
       ) : null}
       {view.status === "zero" ? (
-        <SearchAnalytics
-          normalizedTerm={view.query}
-          zeroResult
-          resultCount={0}
-        />
+        <SearchAnalytics normalizedTerm={view.query} zeroResult resultCount={0} />
       ) : null}
 
-      <header className="mb-3 space-y-3 lg:mb-4">
-        <h1 className="font-display text-h1 text-display-ink">{t("title")}</h1>
-        {query ? (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p
-              className="m-0 text-sm text-text-2"
-              data-testid="search-query-summary"
-            >
-              {t("results.forQuery", { query })}
-            </p>
-            <SaveSearchButton
-              locale={locale}
-              query={query}
-              labels={{
-                cta: tCatalog("saveSearch.cta"),
-                saved: tCatalog("saveSearch.saved"),
-                failed: tCatalog("saveSearch.failed"),
-              }}
-            />
-          </div>
-        ) : null}
+      <div className="mb-3 space-y-3 lg:mb-4">
+        <PageHeader
+          title={t("title")}
+          subtitle={query ? t("results.forQuery", { query }) : undefined}
+          actions={
+            query ? (
+              <SaveSearchButton
+                locale={locale}
+                query={query}
+                labels={{
+                  cta: tCatalog("saveSearch.cta"),
+                  saved: tCatalog("saveSearch.saved"),
+                  failed: tCatalog("saveSearch.failed"),
+                }}
+              />
+            ) : undefined
+          }
+        />
         <SearchInput
           locale={locale}
-          initialQuery={
-            query || (normalized.status === "invalid" ? (q?.trim() ?? "") : "")
-          }
+          initialQuery={query || (normalized.status === "invalid" ? (q?.trim() ?? "") : "")}
           autoFocus={!query && normalized.status !== "invalid"}
           labels={{
             placeholder: t("placeholder"),
@@ -477,17 +451,14 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           }}
         />
         {!query ? (
-          <BrowseDiscoveryChips
-            ariaLabel={browseDiscoveryAria}
-            chips={browseDiscoveryChips}
-          />
+          <BrowseDiscoveryChips ariaLabel={browseDiscoveryAria} chips={browseDiscoveryChips} />
         ) : null}
         {query ? (
           <div className="flex flex-wrap items-center gap-2">
             <NearMeToggle locale={locale} labels={nearMeLabels} />
           </div>
         ) : null}
-      </header>
+      </div>
 
       <RecentSearches
         locale={locale}
@@ -501,11 +472,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       />
 
       {!query ? (
-        <PopularSearches
-          locale={locale}
-          className="mb-6"
-          labels={{ title: t("popular.title") }}
-        />
+        <PopularSearches locale={locale} className="mb-6" labels={{ title: t("popular.title") }} />
       ) : null}
 
       {view.status === "unavailable" ? (
@@ -612,9 +579,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         </Suspense>
       ) : null}
 
-      {view.status === "results" ? (
-        <BackToTop label={t("pagination.backToTop")} />
-      ) : null}
-    </div>
+      {view.status === "results" ? <BackToTop label={t("pagination.backToTop")} /> : null}
+    </CustomerRouteShell>
   );
 }

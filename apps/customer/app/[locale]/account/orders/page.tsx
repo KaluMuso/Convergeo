@@ -85,7 +85,11 @@ export default async function AccountOrdersPage({ params }: PageProps) {
             <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
               <p className="text-sm font-medium text-display-ink">
                 {t("list.checkoutGroup", {
-                  date: new Date(group.created_at).toLocaleDateString(locale),
+                  date: new Date(group.created_at).toLocaleDateString(locale, {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  }),
                 })}
               </p>
               <p className="font-mono text-sm text-display-ink">

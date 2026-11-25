@@ -6,8 +6,6 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { addCartItem } from "../../../(shop)/_components/cart/mini-cart-drawer";
-
 import type { ClipListing } from "../types";
 
 /**
@@ -101,6 +99,7 @@ export function ProductSheet({
       try {
         // The existing cart call, plus the clip that led here. The server decides
         // whether that clip actually earns the attribution.
+        const { addCartItem } = await import("../../../(shop)/_components/cart/mini-cart-drawer");
         await addCartItem(listingId, 1, clipId);
         setAddedId(listingId);
         emitToastKey("addedToCart", { type: "cart" });
