@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildAuditQuery,
+  diffRows,
   entityKey,
+  formatDiffValue,
   type AuditEntry,
   type AuditFilters,
 } from "./audit-log-board";
@@ -43,13 +45,54 @@ describe("audit log query builder", () => {
     );
   });
 
+  it("sends an actor UUID as actor and a name or email as actor_q", () => {
+    const byId = buildAuditQuery({ ...EMPTY, actor: "00000000-0000-0000-0000-0000000000a1" }, null);
+    expect("query" in byId && new URLSearchParams(byId.query).get("actor")).toBe(
+      "00000000-0000-0000-0000-0000000000a1",
+    );
+    const byName = buildAuditQuery({ ...EMPTY, actor: " chanda@example.test " }, null);
+    expect("query" in byName && new URLSearchParams(byName.query).get("actor_q")).toBe(
+      "chanda@example.test",
+    );
+    expect("query" in byName && new URLSearchParams(byName.query).has("actor")).toBe(false);
+  });
+
   it("refuses malformed IDs and wildcard actions instead of sending them", () => {
-    expect(buildAuditQuery({ ...EMPTY, actor: "not-a-uuid" }, null)).toEqual({ invalid: true });
+    expect(buildAuditQuery({ ...EMPTY, actor: "x" }, null)).toEqual({ invalid: true });
     expect(buildAuditQuery({ ...EMPTY, entityId: "123" }, null)).toEqual({ invalid: true });
     expect(buildAuditQuery({ ...EMPTY, action: "admin%" }, null)).toEqual({ invalid: true });
     expect(buildAuditQuery({ ...EMPTY, entityType: "Order;drop" }, null)).toEqual({
       invalid: true,
     });
+  });
+});
+
+describe("diffRows", () => {
+  it("lists only changed fields, by dotted path", () => {
+    expect(
+      diffRows(
+        { status: "pending", note: "same", meta: { tier: 1, kept: true } },
+        { status: "approved", note: "same", meta: { tier: 2, kept: true }, added: "x" },
+      ),
+    ).toEqual([
+      { key: "added", before: undefined, after: "x" },
+      { key: "meta.tier", before: 1, after: 2 },
+      { key: "status", before: "pending", after: "approved" },
+    ]);
+  });
+
+  it("treats a creation as every field added and scalars as one value row", () => {
+    expect(diffRows(null, { enabled: true })).toEqual([
+      { key: "enabled", before: undefined, after: true },
+    ]);
+    expect(diffRows("a", "b")).toEqual([{ key: "value", before: "a", after: "b" }]);
+    expect(diffRows({ a: [1] }, { a: [1] })).toEqual([]);
+  });
+
+  it("formats values for display", () => {
+    expect(formatDiffValue(undefined)).toBe("");
+    expect(formatDiffValue("text")).toBe("text");
+    expect(formatDiffValue({ a: 1 })).toBe('{"a":1}');
   });
 });
 
