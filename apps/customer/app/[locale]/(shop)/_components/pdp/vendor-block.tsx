@@ -8,6 +8,8 @@ export type VendorBlockData = {
   ratingAvg: number | null;
   ratingCount: number;
   landmark: string | null;
+  verified?: boolean;
+  memberSince?: string | null;
 };
 
 export type VendorBlockProps = {
@@ -18,6 +20,8 @@ export type VendorBlockProps = {
   noReviewsLabel: string;
   ratingLabel: string;
   viewStoreLabel: string;
+  verifiedLabel: string;
+  memberSinceLabel: string;
 };
 
 export function VendorBlock({
@@ -28,11 +32,11 @@ export function VendorBlock({
   noReviewsLabel,
   ratingLabel,
   viewStoreLabel,
+  verifiedLabel,
+  memberSinceLabel,
 }: VendorBlockProps) {
   const ratingText =
-    vendor.ratingAvg !== null && vendor.ratingCount > 0
-      ? ratingLabel
-      : noReviewsLabel;
+    vendor.ratingAvg !== null && vendor.ratingCount > 0 ? ratingLabel : noReviewsLabel;
 
   return (
     <section
@@ -40,9 +44,7 @@ export function VendorBlock({
       className="rounded border border-border bg-surface p-4"
       style={{ borderRadius: "var(--r)" }}
     >
-      <h2 className="mb-3 font-display text-lg font-semibold text-text">
-        {heading}
-      </h2>
+      <h2 className="mb-3 font-display text-lg font-semibold text-text">{heading}</h2>
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -55,6 +57,18 @@ export function VendorBlock({
         <p className="text-sm text-text-2" data-testid="pdp-vendor-rating">
           {ratingText}
         </p>
+
+        {vendor.verified ? (
+          <p className="text-sm font-medium text-success" data-testid="pdp-vendor-verified">
+            {verifiedLabel}
+          </p>
+        ) : null}
+
+        {vendor.memberSince ? (
+          <p className="text-sm text-text-2" data-testid="pdp-vendor-member-since">
+            {memberSinceLabel.replace("{date}", vendor.memberSince)}
+          </p>
+        ) : null}
 
         {vendor.landmark ? (
           <p className="text-sm text-text-2" data-testid="pdp-vendor-landmark">

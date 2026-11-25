@@ -76,6 +76,8 @@ class VendorSummaryResponse(BaseModel):
     rating_avg: float | None = None
     rating_count: int = 0
     location: VendorLocationResponse | None = None
+    verified: bool = False
+    member_since: str | None = None
 
 
 class OptionValueResponse(BaseModel):
@@ -181,6 +183,21 @@ def _listing_title(row: dict[str, Any], product_name: str) -> str:
     return product_name
 
 
+def _vendor_is_verified(row: dict[str, Any]) -> bool:
+    """Same trust signal as catalogue search / directory storefronts."""
+    if row.get("preferred_badge"):
+        return True
+    tier = row.get("kyc_tier")
+    return isinstance(tier, int) and not isinstance(tier, bool) and tier >= 2
+
+
+def _vendor_member_since(row: dict[str, Any]) -> str | None:
+    created = row.get("created_at")
+    if not isinstance(created, str) or not created.strip():
+        return None
+    return created.split("T", maxsplit=1)[0]
+
+
 def _parse_vendor_row(
     row: dict[str, Any],
     *,
@@ -210,6 +227,8 @@ def _parse_vendor_row(
         rating_avg=rating_avg,
         rating_count=rating_count,
         location=location,
+        verified=_vendor_is_verified(row),
+        member_since=_vendor_member_since(row),
     )
 
 
@@ -529,7 +548,7 @@ def build_product_detail(
             "moq, wholesale, status, sale_unit, unit_step_milli, min_steps, "
             "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
             "vendors!inner("
-            "id, slug, display_name, preferred_badge, status, "
+            "id, slug, display_name, preferred_badge, status, kyc_tier, created_at, "
             "vendor_locations(landmark, lat, lng)"
             ")"
         )

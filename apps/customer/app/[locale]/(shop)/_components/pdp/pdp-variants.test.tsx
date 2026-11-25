@@ -1,34 +1,16 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import catalogMessages from "../../../../../../../packages/i18n/messages/en/catalog.json";
 import { addCartItem } from "../cart/mini-cart-drawer";
 
 import { type ContactVendorLabels } from "./contact-vendor-button";
 import { assertRscSafeGalleryLabels } from "./gallery-labels";
-import {
-  PdpInteractiveBody,
-  type ProductListing,
-} from "./pdp-interactive-body";
+import { PdpInteractiveBody, type ProductListing } from "./pdp-interactive-body";
 import { GROUPS, VARIANTS } from "./variant-fixtures";
 
 vi.mock("../cart/mini-cart-drawer", () => ({
@@ -38,15 +20,11 @@ vi.mock("../cart/mini-cart-drawer", () => ({
 }));
 
 vi.mock("./pickup-locations", () => ({
-  fetchPickupLocations: vi
-    .fn()
-    .mockResolvedValue({ branchTracked: false, locations: [] }),
+  fetchPickupLocations: vi.fn().mockResolvedValue({ branchTracked: false, locations: [] }),
 }));
 
 vi.mock("./contact-vendor-button", () => ({
-  ContactVendorButton: () => (
-    <button type="button" data-testid="pdp-contact-vendor-cta" />
-  ),
+  ContactVendorButton: () => <button type="button" data-testid="pdp-contact-vendor-cta" />,
 }));
 
 afterEach(() => {
@@ -122,11 +100,7 @@ function renderBody(
   };
 
   return render(
-    <NextIntlClientProvider
-      locale={locale}
-      messages={{ catalog }}
-      onError={() => {}}
-    >
+    <NextIntlClientProvider locale={locale} messages={{ catalog }} onError={() => {}}>
       <PdpInteractiveBody
         locale={locale}
         productId="product-1"
@@ -171,6 +145,7 @@ function renderBody(
           vendorCount: "{count} vendors",
           sortLabel: "Sort",
           sortPrice: "Price",
+          sortTotal: "Total",
           sortDistance: "Distance",
           price: "Price",
           condition: "Condition",
@@ -189,12 +164,19 @@ function renderBody(
           conditionUsed: "Used",
           usingFallbackLocation: "Using Lusaka CBD",
           lowestPriceBadge: "Lowest price",
+          deliveryFeeFree: "Free delivery",
+          deliveryFeePlus: "+{fee} delivery",
+          chipCod: "Pay on delivery",
+          chipEscrow: "Held by Vergeo5",
+          readyIn: "Ready in {days} days",
         }}
         vendorLabels={{
           heading: "Seller",
           preferredBadge: "Preferred",
           noReviews: "No reviews",
           viewStore: "View store",
+          verified: "Verified seller",
+          memberSince: "Member since {date}",
         }}
         trustLabels={{
           delivery: "Delivery available",
@@ -208,20 +190,16 @@ function renderBody(
           saved: "Saved to wishlist",
         }}
         contactVendorEnabled={options.contactVendorEnabled ?? true}
-        contactVendorLabels={
-          catalogMessages.pdp.contactVendor as ContactVendorLabels
-        }
+        contactVendorLabels={catalogMessages.pdp.contactVendor as ContactVendorLabels}
         requestQuoteLabels={
-          catalogMessages.pdp
-            .requestQuote as import("./request-quote-button").RequestQuoteLabels
+          catalogMessages.pdp.requestQuote as import("./request-quote-button").RequestQuoteLabels
         }
         reportListingLabels={{
           cta: catalogMessages.pdp.reportListing.cta,
           heading: catalogMessages.pdp.reportListing.heading,
           reasonLegend: catalogMessages.pdp.reportListing.reasonLegend,
           detailLabel: catalogMessages.pdp.reportListing.detailLabel,
-          detailPlaceholder:
-            catalogMessages.pdp.reportListing.detailPlaceholder,
+          detailPlaceholder: catalogMessages.pdp.reportListing.detailPlaceholder,
           submit: catalogMessages.pdp.reportListing.submit,
           cancel: catalogMessages.pdp.reportListing.cancel,
           success: catalogMessages.pdp.reportListing.success,
@@ -251,6 +229,8 @@ function renderBody(
             },
           ],
         }}
+        comparisonCodCapNgwee={50_000}
+        comparisonCodChipsEnabled
         comparePageLabel="Compare sellers"
       />
     </NextIntlClientProvider>,
@@ -272,24 +252,21 @@ describe("PdpInteractiveBody colour/size variants", () => {
       "aria-checked",
       "false",
     );
-    expect(
-      screen.getByRole("radiogroup", { name: "Choose Size" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Choose Size" })).toBeInTheDocument();
   });
 
   it("blocks add-to-cart until every option is chosen and highlights what is missing", async () => {
     await renderBodyReady();
-    await waitFor(() =>
-      expect(screen.getByTestId("pdp-add-to-cart")).not.toBeDisabled(),
-    );
+    await waitFor(() => expect(screen.getByTestId("pdp-add-to-cart")).not.toBeDisabled());
     fireEvent.click(screen.getByTestId("pdp-add-to-cart"));
     expect(addCartItem).not.toHaveBeenCalled();
     expect(screen.getByTestId("pdp-add-to-cart-error")).toHaveTextContent(
       "Choose Colour and Size to add this to your cart",
     );
-    expect(
-      screen.getByRole("radiogroup", { name: "Choose Size" }),
-    ).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("radiogroup", { name: "Choose Size" })).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
   });
 
   it("disables sold-out and unoffered combinations with the reason in their name", async () => {
@@ -309,20 +286,13 @@ describe("PdpInteractiveBody colour/size variants", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Blue" }));
     fireEvent.click(screen.getByRole("radio", { name: "M" }));
 
-    expect(
-      screen.getByRole("radiogroup", { name: "Colour: Blue" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Colour: Blue" })).toBeInTheDocument();
     expect(screen.getByTestId("pdp-price")).toHaveTextContent("K250.00");
     expect(
-      screen
-        .getByTestId("gallery-slide-0")
-        .querySelector("img")
-        ?.getAttribute("src"),
+      screen.getByTestId("gallery-slide-0").querySelector("img")?.getAttribute("src"),
     ).toContain("img/blue");
 
-    await waitFor(() =>
-      expect(screen.getByTestId("pdp-add-to-cart")).not.toBeDisabled(),
-    );
+    await waitFor(() => expect(screen.getByTestId("pdp-add-to-cart")).not.toBeDisabled());
     fireEvent.click(screen.getByTestId("pdp-add-to-cart"));
     await waitFor(() => expect(addCartItem).toHaveBeenCalledTimes(1));
     expect(addCartItem).toHaveBeenCalledWith("listing-1", 1, undefined, {
@@ -344,15 +314,9 @@ describe("PdpInteractiveBody colour/size variants", () => {
 
   it("opens the zoomable full-screen viewer from the gallery", async () => {
     renderBody();
-    fireEvent.click(
-      screen.getByRole("button", { name: "View image full screen" }),
-    );
-    expect(
-      await screen.findByRole("dialog", { name: "Image viewer" }),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View image full screen" }));
+    expect(await screen.findByRole("dialog", { name: "Image viewer" })).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 });
