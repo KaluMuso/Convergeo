@@ -15,6 +15,7 @@ from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 from supabase import Client, create_client
+from supabase_auth.types import VerifyEmailOtpParams, VerifyMobileOtpParams
 
 logger = logging.getLogger(__name__)
 
@@ -302,15 +303,7 @@ def verify_reauth_otp(
         )
 
     email = _email_from_jwt(token, settings)
-    if phone:
-        verify_payload: dict[str, str] = {
-            "phone": _normalize_phone(phone),
-            "token": otp,
-            "type": "sms",
-        }
-    elif email:
-        verify_payload = {"email": email, "token": otp, "type": "email"}
-    else:
+    if not phone and not email:
         raise AppError(
             code="reauth_required",
             message="Step-up verification requires a verified phone or email on your account",
@@ -319,7 +312,21 @@ def verify_reauth_otp(
 
     auth_client = create_client(settings.supabase_url, settings.supabase_anon_key)
     try:
-        response = auth_client.auth.verify_otp(verify_payload)
+        if phone:
+            mobile_payload: VerifyMobileOtpParams = {
+                "phone": _normalize_phone(phone),
+                "token": otp,
+                "type": "sms",
+            }
+            response = auth_client.auth.verify_otp(mobile_payload)
+        else:
+            assert email is not None
+            email_payload: VerifyEmailOtpParams = {
+                "email": email,
+                "token": otp,
+                "type": "email",
+            }
+            response = auth_client.auth.verify_otp(email_payload)
     except Exception as exc:
         raise AppError(
             code="reauth_failed",
