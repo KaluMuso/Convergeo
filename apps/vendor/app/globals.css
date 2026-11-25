@@ -6,6 +6,7 @@
    mobile nav sat over the top of every page and hid its heading at 360px.
    Force-generate exactly the BottomNav classes the vendor shell renders. */
 @source inline("animate-page-in card-lift press-scale shadow-1 shadow-focusRing line-clamp-2 line-clamp-3 backdrop-blur-sm");
+@source "../../../packages/ui/src/stat-card.tsx";
 @source inline("fixed inset-x-0 bottom-0 z-50 border-t md:hidden mx-auto flex h-14 max-w-lg list-none items-stretch justify-around p-0 min-w-0 flex-1 relative min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 py-1 text-micro font-medium transition-[color,transform] duration-fast ease-std motion-reduce:transition-none text-primary text-text-3 h-6 w-6 absolute -right-1.5 -top-1 min-h-4 min-w-4 rounded-pill bg-accent text-[0.625rem] font-semibold leading-none text-surface truncate");
 
 html,
