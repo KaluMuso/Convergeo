@@ -14,9 +14,8 @@ import {
 
 const GalleryThumbnails = dynamic(
   () => import("./gallery-thumbnails").then((m) => m.GalleryThumbnails),
-  { ssr: true },
+  { ssr: false },
 );
-import { isCoarsePointer } from "./zoom-math";
 
 import type { LightboxLabels } from "./lightbox";
 
@@ -59,19 +58,11 @@ function GalleryFallback({ label }: { label: string }) {
   );
 }
 
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return;
-    }
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-  return reduced;
+function isCoarsePointer(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia("(pointer: coarse)").matches;
 }
 
 export function PdpInteractiveGallery({
@@ -99,7 +90,6 @@ export function PdpInteractiveGallery({
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const [zoomReady, setZoomReady] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
-  const reducedMotion = usePrefersReducedMotion();
   const coarse = useMemo(() => isCoarsePointer(), []);
 
   useEffect(() => {
@@ -190,7 +180,7 @@ export function PdpInteractiveGallery({
       className="relative flex w-full flex-col gap-2 lg:flex-row lg:items-start lg:gap-3"
       data-testid="pdp-interactive-gallery"
     >
-      {layout === "vertical" ? (
+      {layout === "vertical" && usableImages.length > 1 ? (
         <GalleryThumbnails
           images={usableImages}
           currentIndex={currentIndex}
@@ -237,7 +227,6 @@ export function PdpInteractiveGallery({
               cloudName={cloudName}
               pointer={pointer}
               box={boxSize}
-              reducedMotion={reducedMotion}
             />
           ) : null}
 

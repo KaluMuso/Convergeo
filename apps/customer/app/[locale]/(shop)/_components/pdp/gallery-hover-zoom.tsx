@@ -14,7 +14,7 @@ export type HoverZoomPaneProps = {
   cloudName?: string;
   pointer: { x: number; y: number } | null;
   box: { width: number; height: number };
-  reducedMotion: boolean;
+  reducedMotion?: boolean;
 };
 
 export function HoverZoomPane({
@@ -23,7 +23,7 @@ export function HoverZoomPane({
   cloudName,
   pointer,
   box,
-  reducedMotion,
+  reducedMotion = false,
 }: HoverZoomPaneProps) {
   const [hiResUrl, setHiResUrl] = useState<string | null>(null);
   useEffect(() => {
