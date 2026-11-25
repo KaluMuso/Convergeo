@@ -386,6 +386,11 @@
     }
   },
   "listings": {
+    "formAside": {
+      "previewHeading": "Buyer preview",
+      "previewPhotoAlt": "Main listing photo",
+      "noPhoto": "No photo"
+    },
     "images": {
       "heading": "Photos",
       "intro": "{count} of {max} photos. The first photo is the main one.",
@@ -403,12 +408,12 @@
       "upload": "Add photos",
       "uploading": "Uploading…",
       "upload_failed": "Photo didn't send. Try again.",
+      "upload_error_with_name": "Could not upload \"{name}\": {detail}",
+      "retry_one": "Retry this photo",
       "minimum_required": "⚠ At least {count} evidence photo must remain attached while this listing is live.",
       "retry": "Esheni limbi",
       "duplicate": "This photo is already on the listing.",
-      "dedupCanonical": "This photo is already the product's main photo, so shoppers see it on your listing. No need to upload it again.",
-      "upload_error_with_name": "Could not upload \"{name}\": {detail}",
-      "retry_one": "Retry this photo"
+      "dedupCanonical": "This photo is already the product's main photo, so shoppers see it on your listing. No need to upload it again."
     },
     "meta": {
       "title": "Add a product — Convergeo Seller",
@@ -522,6 +527,8 @@
       "stockTracked": "I will count them",
       "stockAlways": "I always have it",
       "stockQtyLabel": "How many you have now",
+      "wholesaleSectionHeading": "Wholesale / bulk prices",
+      "wholesaleBuyersHint": "Wholesale listings appear to verified buyers on Supplies.",
       "wholesaleLabel": "⚠ Wholesale tiers",
       "wholesaleHelp": "Only for T2-verified businesses (business papers checked)",
       "wholesaleMeasureUnavailable": "⚠ Wholesale tiers for per-measure listings are not available yet.",
@@ -544,9 +551,7 @@
       "optionLusakaDelivery": "⚠ Delivery in Lusaka",
       "optionPickupShop": "⚠ Pickup at my shop or branch",
       "optionPickupNationwide": "⚠ Nationwide pickup (buyers anywhere in Zambia can collect)",
-      "stockLockedHint": "⚠ Made-to-order items are not stock-counted, so they are always available.",
-      "wholesaleSectionHeading": "Wholesale / bulk prices",
-      "wholesaleBuyersHint": "Wholesale listings appear to verified buyers on Supplies."
+      "stockLockedHint": "⚠ Made-to-order items are not stock-counted, so they are always available."
     },
     "success": {
       "live": "Your product is on sale!",
@@ -732,6 +737,10 @@
       },
       "emptyTitle": "No listings yet",
       "statusLabel": "Status",
+      "productStatus": {
+        "inReview": "Live, in review: buyers see it once Convergeo approves it",
+        "rejected": "Product rejected"
+      },
       "stock": {
         "heading": "Adjust available stock",
         "help": "Enter a change in sale steps, not a physical counted total. Reserved units are already excluded. Units and stock mode cannot be changed here. Branch provisioning requires the stock owner.",
@@ -770,10 +779,6 @@
         "title": "⚠ This listing was removed",
         "body": "⚠ It is no longer visible to buyers and cannot be edited. Past orders keep their record of it.",
         "back": "⚠ Back to listings"
-      },
-      "productStatus": {
-        "inReview": "Live, in review: buyers see it once Convergeo approves it",
-        "rejected": "Product rejected"
       }
     },
     "kycGate": {
@@ -903,11 +908,6 @@
       "spec_invalid": "⚠ Check the product details you entered.",
       "product_required": "⚠ Choose a catalogue product.",
       "fulfilment_not_offered": "⚠ The seller does not offer this option for an item in your order."
-    },
-    "formAside": {
-      "previewHeading": "Buyer preview",
-      "previewPhotoAlt": "Main listing photo",
-      "noPhoto": "No photo"
     }
   },
   "profile": {
@@ -1330,6 +1330,10 @@
           "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",
           "body": "Today's 14:00 cut-off has passed. Get them ready now so they leave first on the next run."
         },
+        "productsInReview": {
+          "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
+          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
+        },
         "catalogueProducts": {
           "title": "Check your products",
           "body": "Keep stock and prices right so buyers never order something you don't have."
@@ -1345,29 +1349,11 @@
         "profile": {
           "title": "Complete your shop profile",
           "body": "A logo, opening hours and a short description help buyers trust you."
-        },
-        "productsInReview": {
-          "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
-          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
         }
       },
       "progress": "{count, plural, one {# step left} other {# steps left}}",
       "progressComplete": "You're all caught up on setup.",
       "progressAria": "Setup progress"
-    },
-    "quickActions": {
-      "ariaLabel": "Quick actions",
-      "addProduct": "Add product",
-      "scan": "Scan",
-      "orders": "Orders",
-      "payouts": "Payouts",
-      "sellWholesale": "Sell wholesale"
-    },
-    "stats": {
-      "live": "Live today",
-      "quiet": "Quiet day",
-      "actionNeeded": "Needs you",
-      "caughtUp": "Caught up"
     },
     "shopStatus": {
       "heading": "Your shop",
@@ -1376,6 +1362,20 @@
       "payoutSet": "Payout number set",
       "yes": "Yes",
       "notYet": "Not yet"
+    },
+    "quickActions": {
+      "ariaLabel": "Quick actions",
+      "addProduct": "Add product",
+      "sellWholesale": "Sell wholesale",
+      "scan": "Scan",
+      "orders": "Orders",
+      "payouts": "Payouts"
+    },
+    "stats": {
+      "live": "Live today",
+      "quiet": "Quiet day",
+      "actionNeeded": "Needs you",
+      "caughtUp": "Caught up"
     }
   },
   "queue": {
