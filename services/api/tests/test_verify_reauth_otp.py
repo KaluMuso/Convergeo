@@ -4,8 +4,11 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+
 from app.errors import AppError
 from app.routers.privacy import verify_reauth_otp
+
+
 def _settings() -> Any:
     return type(
         "SettingsStub",
