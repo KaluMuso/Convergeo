@@ -134,6 +134,7 @@ function comparisonLabels(t: CatalogTranslator): ComparisonLabels {
     vendorCount: String(t.raw("comparison.vendorCount")),
     sortLabel: t("comparison.sortLabel"),
     sortPrice: t("comparison.sortPrice"),
+    sortTotal: t("comparison.sortTotal"),
     sortDistance: t("comparison.sortDistance"),
     price: t("comparison.price"),
     condition: t("comparison.condition"),
@@ -153,6 +154,11 @@ function comparisonLabels(t: CatalogTranslator): ComparisonLabels {
     conditionUsed: t("comparison.conditionUsed"),
     usingFallbackLocation: t("comparison.usingFallbackLocation"),
     lowestPriceBadge: t("comparison.lowestPriceBadge"),
+    deliveryFeeFree: t("comparison.deliveryFeeFree"),
+    deliveryFeePlus: String(t.raw("comparison.deliveryFeePlus")),
+    chipCod: t("comparison.chipCod"),
+    chipEscrow: t("comparison.chipEscrow"),
+    readyIn: t("comparison.readyIn"),
   };
 }
 
