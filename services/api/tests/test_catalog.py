@@ -4,6 +4,7 @@ from collections.abc import Generator
 from typing import Any, cast
 
 import pytest
+from app.core.ttl_cache import clear_ttl_cache_store
 from app.main import create_app
 from app.routers import catalog as catalog_module
 from app.routers.catalog import (
@@ -320,6 +321,7 @@ class FakeQuery:
         self._order: tuple[str, bool] | None = None
         self._select = "*"
         self._limit: int | None = None
+        self._range: tuple[int, int] | None = None
 
     def select(self, columns: str) -> FakeQuery:
         self._select = columns
@@ -327,6 +329,10 @@ class FakeQuery:
 
     def limit(self, value: int) -> FakeQuery:
         self._limit = value
+        return self
+
+    def range(self, start: int, end: int) -> FakeQuery:
+        self._range = (start, end)
         return self
 
     def eq(self, column: str, value: Any) -> FakeQuery:
@@ -401,6 +407,9 @@ class FakeQuery:
         if self._order is not None:
             column, desc = self._order
             rows = sorted(rows, key=lambda row: str(row.get(column) or ""), reverse=desc)
+        if self._range is not None:
+            start, end = self._range
+            rows = rows[start : end + 1]
         if self._limit is not None:
             rows = rows[: self._limit]
         return type("Result", (), {"data": rows})()
@@ -450,6 +459,13 @@ class FakeSupabaseClient:
 
     def table(self, name: str) -> FakeQuery:
         return FakeQuery(name, list(self._store.get(name, [])), self._store)
+
+
+@pytest.fixture(autouse=True)
+def _clear_catalog_candidate_cache() -> Generator[None, None, None]:
+    clear_ttl_cache_store()
+    yield
+    clear_ttl_cache_store()
 
 
 @pytest.fixture
@@ -707,12 +723,34 @@ def test_injection_safe_category_path_is_literal(
     assert "'; drop" in captured[0]
 
 
+def test_catalog_candidates_cache_avoids_rebuild(
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clear_ttl_cache_store()
+    build_calls = 0
+    original_build = catalog_module._build_candidates
+
+    def counting_build(client: Any, category_path: str | None) -> list[_CatalogCandidate]:
+        nonlocal build_calls
+        build_calls += 1
+        return original_build(client, category_path)
+
+    monkeypatch.setattr(catalog_module, "_build_candidates", counting_build)
+    list_catalog(fake_client, PlpFilterState(limit=5))
+    list_catalog(fake_client, PlpFilterState(limit=10))
+    assert build_calls == 1
+    clear_ttl_cache_store()
+
+
 def test_catalog_endpoint_returns_facets(catalog_client: TestClient) -> None:
     response = catalog_client.get("/catalog/listings", params={"category_path": "electronics"})
     assert response.status_code == 200
     body = response.json()
     assert body["total"] == 2
     assert len(body["items"]) == 2
+    assert "Cache-Control" in response.headers
+    assert "s-maxage=30" in response.headers["Cache-Control"]
 
 
 def test_catalog_endpoint_distance_sort(catalog_client: TestClient) -> None:

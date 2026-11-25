@@ -6,15 +6,17 @@ import math
 from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
+from app.core.ttl_cache import get_cached_json, set_cached_json
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.comparison import is_lusaka_delivery_available
 from app.schemas.offers import OfferBadgeOut
+from app.services.db_chunk import POSTGREST_PAGE_SIZE, chunked_in_query
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import fetch_demo_listing_ids
 from app.services.vendor_plans.canonical_photos import load_canonical_images
 from app.services.vendor_plans.resolver import shared_photos_enabled
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -24,6 +26,12 @@ router = APIRouter(prefix="/catalog", tags=["catalog"])
 DEFAULT_PAGE_SIZE = 24
 MAX_PAGE_SIZE = 50
 EARTH_RADIUS_M = 6_371_000
+
+CATALOG_CANDIDATES_CACHE_TTL_SECONDS = 45
+CATALOG_CANDIDATES_CACHE_PREFIX = "catalog:candidates:v1:"
+PUBLIC_CATALOG_LISTINGS_CACHE_CONTROL = (
+    "public, s-maxage=30, stale-while-revalidate=120"
+)
 
 CatalogSort = Literal[
     "relevance", "cheapest", "nearest", "newest", "price_asc", "verified", "bundle", "best"
@@ -363,7 +371,7 @@ def _response_rows(response: Any) -> list[dict[str, Any]]:
     return cast(list[dict[str, Any]], data)
 
 
-def _fetch_search_documents(client: Any, category_path: str | None) -> list[_SearchDocRow]:
+def _search_documents_base_query(client: Any, category_path: str | None) -> Any:
     query = (
         client.table("search_documents")
         .select("entity_id,title,category_path,price_min_ngwee,lat,lng,boost_signals,updated_at")
@@ -373,10 +381,26 @@ def _fetch_search_documents(client: Any, category_path: str | None) -> list[_Sea
     if category_path:
         escaped = category_path.replace("%", r"\%").replace("_", r"\_")
         query = query.like("category_path", f"{escaped}%")
+    return query
 
-    response = query.execute()
-    rows = _response_rows(response)
-    return [_SearchDocRow.model_validate(row) for row in rows]
+
+def _fetch_search_documents(client: Any, category_path: str | None) -> list[_SearchDocRow]:
+    all_rows: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        response = (
+            _search_documents_base_query(client, category_path)
+            .range(offset, offset + POSTGREST_PAGE_SIZE - 1)
+            .execute()
+        )
+        batch = _response_rows(response)
+        if not batch:
+            break
+        all_rows.extend(batch)
+        if len(batch) < POSTGREST_PAGE_SIZE:
+            break
+        offset += POSTGREST_PAGE_SIZE
+    return [_SearchDocRow.model_validate(row) for row in all_rows]
 
 
 def _nested_rows(value: Any) -> list[dict[str, Any]]:
@@ -621,17 +645,19 @@ def _fetch_listings_enriched(
     """Batch-fetch listings with vendor, product, image, and landmark data embedded."""
     if not listing_ids:
         return {}
-    unique_ids = list(dict.fromkeys(listing_ids))
-    response = (
-        client.table("vendor_listings")
-        .select(_LISTING_ENRICHED_SELECT)
-        .in_("id", unique_ids)
-        .eq("status", "active")
-        .eq("vendors.status", "active")
-        .execute()
+    rows = chunked_in_query(
+        listing_ids,
+        run=lambda chunk: (
+            client.table("vendor_listings")
+            .select(_LISTING_ENRICHED_SELECT)
+            .in_("id", chunk)
+            .eq("status", "active")
+            .eq("vendors.status", "active")
+            .execute()
+        ),
     )
     enriched: dict[str, dict[str, Any]] = {}
-    for row in _response_rows(response):
+    for row in rows:
         listing_id = row.get("id")
         if not listing_id:
             continue
@@ -693,26 +719,31 @@ def _fill_canonical_card_images(client: Any, enriched: dict[str, dict[str, Any]]
 def _fetch_listing_ratings(client: Any, listing_ids: list[str]) -> dict[str, tuple[float, int]]:
     if not listing_ids:
         return {}
-    oip_response = (
-        client.table("order_item_products")
-        .select("listing_id,order_item_id")
-        .in_("listing_id", listing_ids)
-        .execute()
+    oip_rows = chunked_in_query(
+        listing_ids,
+        run=lambda chunk: (
+            client.table("order_item_products")
+            .select("listing_id,order_item_id")
+            .in_("listing_id", chunk)
+            .execute()
+        ),
     )
-    oip_rows = _response_rows(oip_response)
     if not oip_rows:
         return {}
 
     order_item_ids = [str(row["order_item_id"]) for row in oip_rows]
-    reviews_response = (
-        client.table("reviews")
-        .select("order_item_id,rating")
-        .in_("order_item_id", order_item_ids)
-        .eq("status", "published")
-        .execute()
+    review_rows = chunked_in_query(
+        order_item_ids,
+        run=lambda chunk: (
+            client.table("reviews")
+            .select("order_item_id,rating")
+            .in_("order_item_id", chunk)
+            .eq("status", "published")
+            .execute()
+        ),
     )
     rating_by_order_item = {
-        str(row["order_item_id"]): int(row["rating"]) for row in _response_rows(reviews_response)
+        str(row["order_item_id"]): int(row["rating"]) for row in review_rows
     }
 
     totals: dict[str, list[int]] = {}
@@ -838,6 +869,34 @@ def _build_candidates(client: Any, category_path: str | None) -> list[_CatalogCa
             )
         )
     return candidates
+
+
+def _catalog_candidates_cache_key(category_path: str | None) -> str:
+    normalized = category_path if category_path else "__all__"
+    return f"{CATALOG_CANDIDATES_CACHE_PREFIX}{normalized}"
+
+
+def _build_candidates_cached(client: Any, category_path: str | None) -> list[_CatalogCandidate]:
+    cache_key = _catalog_candidates_cache_key(category_path)
+    cached = get_cached_json(cache_key)
+    if isinstance(cached, list):
+        restored: list[_CatalogCandidate] = []
+        try:
+            for item in cached:
+                if isinstance(item, dict):
+                    restored.append(_CatalogCandidate.model_validate(item))
+            if restored or cached == []:
+                return restored
+        except Exception:
+            logger.warning("catalog_candidates_cache_invalid", exc_info=True)
+
+    built = _build_candidates(client, category_path)
+    try:
+        payload = [row.model_dump(mode="json") for row in built]
+        set_cached_json(cache_key, payload, ttl_seconds=CATALOG_CANDIDATES_CACHE_TTL_SECONDS)
+    except Exception:
+        logger.warning("catalog_candidates_cache_set_failed", exc_info=True)
+    return built
 
 
 def compute_facet_counts(
@@ -1087,7 +1146,7 @@ def build_catalog_candidates(
     category_path: str | None = None,
 ) -> list[_CatalogCandidate]:
     """Public seam for discovery surfaces (home feed, recommendations)."""
-    candidates = _build_candidates(client, category_path)
+    candidates = _build_candidates_cached(client, category_path)
     return [row for row in candidates if not row.listing.wholesale]
 
 
@@ -1095,7 +1154,7 @@ def list_catalog(
     client: Any,
     filters: PlpFilterState,
 ) -> CatalogListResponse:
-    candidates = _build_candidates(client, filters.category_path)
+    candidates = _build_candidates_cached(client, filters.category_path)
     # Wholesale prices live only in the vendor app: wholesale listings never
     # appear in the customer PLP or its facet counts, for any caller.
     candidates = [row for row in candidates if not row.listing.wholesale]
@@ -1124,6 +1183,8 @@ def list_catalog(
 
 @router.get("/listings", response_model=CatalogListResponse)
 async def catalog_listings(
+    request: Request,
+    response: Response,
     supabase: Annotated[Any, Depends(get_supabase_client)],
     category_path: Annotated[str | None, Query(max_length=200)] = None,
     sort: Annotated[CatalogSort, Query()] = "relevance",
@@ -1153,7 +1214,13 @@ async def catalog_listings(
         "limit": str(limit),
     }
     filters = decode_plp_filters(raw_params)
-    return list_catalog(supabase.client, filters)
+    payload = list_catalog(supabase.client, filters)
+    authorization = request.headers.get("Authorization", "")
+    if authorization.startswith("Bearer "):
+        response.headers["Cache-Control"] = "private, no-store"
+    else:
+        response.headers["Cache-Control"] = PUBLIC_CATALOG_LISTINGS_CACHE_CONTROL
+    return payload
 
 
 @router.get("/listings/{listing_id}", response_model=StandaloneListingResponse)
