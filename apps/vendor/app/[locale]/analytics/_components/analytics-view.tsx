@@ -19,23 +19,6 @@ import type { VendorAnalytics } from "../_lib/analytics-client";
 
 const WINDOWS: AnalyticsWindow[] = [7, 30];
 
-type StatCardProps = {
-  label: string;
-  value: string;
-  sparklineLabel: string;
-  series: number[];
-};
-
-function StatCard({ label, value, sparklineLabel, series }: StatCardProps) {
-  return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 lg:p-5">
-      <span className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>
-      <span className="font-mono text-lg font-semibold">{value}</span>
-      <Sparkline label={sparklineLabel} values={series} />
-    </div>
-  );
-}
-
 export function AnalyticsView() {
   const t = useTranslations("vendor");
   const tCommon = useTranslations("common");
@@ -155,21 +138,30 @@ export function AnalyticsView() {
           <VendorGrid cols="stats">
             <StatCard
               label={t("analytics.cards.sales")}
-              series={data.sales_ngwee_by_day}
-              sparklineLabel={t("analytics.sparkline.sales")}
               value={formatK(totals.sales)}
+              sparkline={
+                <Sparkline
+                  label={t("analytics.sparkline.sales")}
+                  values={data.sales_ngwee_by_day}
+                />
+              }
             />
             <StatCard
               label={t("analytics.cards.orders")}
-              series={data.orders_by_day}
-              sparklineLabel={t("analytics.sparkline.orders")}
               value={String(totals.orders)}
+              sparkline={
+                <Sparkline label={t("analytics.sparkline.orders")} values={data.orders_by_day} />
+              }
             />
             <StatCard
               label={t("analytics.cards.views")}
-              series={data.cart_activity_events_by_day}
-              sparklineLabel={t("analytics.sparkline.views")}
               value={String(totals.views)}
+              sparkline={
+                <Sparkline
+                  label={t("analytics.sparkline.views")}
+                  values={data.cart_activity_events_by_day}
+                />
+              }
             />
           </VendorGrid>
 
