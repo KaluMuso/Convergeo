@@ -8,6 +8,7 @@
 - `apps/customer/app/[locale]/(shop)/_components/pdp/gallery.tsx`, `lightbox.tsx`, `gallery-labels.ts`, `pdp-interactive-gallery*` and their tests
 - `apps/customer/app/[locale]/(shop)/_components/pdp/pdp-details-tabs.tsx` (+ test)
 - new files under `apps/customer/app/[locale]/(shop)/_components/pdp/` named `gallery-*`, `zoom-*`, `spec-table*`, `section-nav*`, `bought-together*`, `more-from-seller*`
+- new `variant-swatches*`, `key-attributes*` under the same pdp folder
 - in `apps/customer/app/[locale]/(shop)/p/[slug]/page.tsx`: **only** the JSX that places the gallery, the details tabs and the new sections. Don't touch data fetching, metadata or JSON-LD.
 - `packages/i18n/messages/*/customer.json` (`pdp.gallery.*`, `pdp.specs.*`, `pdp.sectionNav.*`, `pdp.boughtTogether.*`, `pdp.moreFromSeller.*` only)
 
@@ -35,7 +36,12 @@ King (founder) compared our product page with Amazon and Alibaba and wants that 
   - on the right: product title, the selected variant (e.g. "Colour: Black"), and a **grid of all thumbnails** (4 per row);
   - Tabs "Images" (and "Videos" only if video data exists; we have none today, so hide it);
   - prev/next arrows, Esc closes, ←/→ keys move, focus is trapped and returns to the trigger on close.
-- **Variant swatches with images** (where the listing has variants with their own image): small image cards with the price under them. Picking one swaps the gallery to that variant's images. Reuse the existing variant data; if variants have no images, keep today's chips.
+- **Strip position:** use the vertical strip by default. For wide (landscape) main images, Amazon puts a **horizontal strip of ~100 px thumbnails under the main image**, with a "+N" tile and a "Click to see full view" link. Pick the layout by the first image's aspect ratio (wider than 4:3 → horizontal).
+- **Variant pickers (Amazon pattern):**
+  - **Image swatches** for the visual option (colour): a small image card with "from K1,234.00" under it (the lowest price for that option, from existing variant data, via `formatK`). The selected one has a 2 px accent ring. Picking one swaps the gallery to that variant's images and updates the label "Colour: **Grey**".
+  - **Text chips** for the other options (size, capacity), wrapping in rows, label "Size: **3 seats**". A combination that isn't available with the current colour gets a **dashed border** and muted text; it stays clickable and switches to the nearest available combination.
+  - Reuse the existing variant data and selection logic in `pdp-interactive-body.tsx` (read only; if you must change its props, note it on the board). If variants have no images, keep text chips.
+- **Key attributes under the variants:** a compact 2-column table (bold key, value) showing the first 5 attributes, with a "See more" toggle that scrolls to the full Specifications section.
 
 **Mobile (360 px first)**
 
