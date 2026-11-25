@@ -24,11 +24,27 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       run_perf: ${{ steps.scope.outputs.run_perf }}
+      web: ${{ steps.paths.outputs.web == 'true' && 'true' || steps.paths_nonpr.outputs.web }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Path flags (dorny)
+        id: paths
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad
+        with:
+          filters: |
+            web:
+              - 'apps/**'
+              - 'packages/**'
+
+      - name: Path flags (non-PR fail-open)
+        id: paths_nonpr
+        if: github.event_name != 'pull_request'
+        run: echo "web=true" >> "$GITHUB_OUTPUT"
 
       - name: Decide tiers from the changed paths
         id: scope
@@ -37,6 +53,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
+          FILTER_WEB: ${{ steps.paths.outputs.web == 'true' && 'true' || steps.paths_nonpr.outputs.web }}
         run: python3 scripts/ci/detect_ci_scope.py
 
   perf:

@@ -42,12 +42,46 @@ jobs:
       run_db_light: ${{ steps.scope.outputs.run_db_light }}
       run_typegen: ${{ steps.scope.outputs.run_typegen }}
       run_heavy: ${{ steps.scope.outputs.run_heavy }}
+      api: ${{ steps.paths.outputs.api == 'true' && 'true' || steps.paths_nonpr.outputs.api }}
+      db: ${{ steps.paths.outputs.db == 'true' && 'true' || steps.paths_nonpr.outputs.db }}
+      web: ${{ steps.paths.outputs.web == 'true' && 'true' || steps.paths_nonpr.outputs.web }}
+      docs: ${{ steps.paths.outputs.docs == 'true' && 'true' || steps.paths_nonpr.outputs.docs }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           ref: ${{ env.QUALIFICATION_SHA }}
           fetch-depth: 0
+
+      - name: Path flags (dorny)
+        id: paths
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad
+        with:
+          filters: |
+            api:
+              - 'services/api/**'
+              - 'infra/api.Dockerfile'
+            db:
+              - 'supabase/**'
+              - 'packages/types/**'
+              - 'scripts/ci/**'
+            web:
+              - 'apps/**'
+              - 'packages/**'
+            docs:
+              - '**/*.md'
+              - '**/*.mdx'
+              - 'docs/**'
+              - 'prompts/**'
+
+      - name: Path flags (non-PR fail-open)
+        id: paths_nonpr
+        if: github.event_name != 'pull_request'
+        run: |
+          for key in api db web docs; do
+            echo "${key}=true" >> "$GITHUB_OUTPUT"
+          done
 
       - name: Tier selection unit tests
         working-directory: scripts/ci
@@ -60,12 +94,18 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
+          FILTER_API: ${{ steps.paths.outputs.api == 'true' && 'true' || steps.paths_nonpr.outputs.api }}
+          FILTER_DB: ${{ steps.paths.outputs.db == 'true' && 'true' || steps.paths_nonpr.outputs.db }}
+          FILTER_WEB: ${{ steps.paths.outputs.web == 'true' && 'true' || steps.paths_nonpr.outputs.web }}
+          FILTER_DOCS: ${{ steps.paths.outputs.docs == 'true' && 'true' || steps.paths_nonpr.outputs.docs }}
         run: python3 scripts/ci/detect_ci_scope.py
 
   js:
     name: JavaScript / TypeScript
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_js == 'true') }}
+    if: >-
+      ${{ !cancelled() && (needs.changes.result != 'success' ||
+      needs.changes.outputs.run_js == 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -87,12 +127,15 @@ jobs:
         run: pnpm i --frozen-lockfile
 
       - name: Next font loader regression
+        if: needs.changes.outputs.docs_only != 'true'
         run: pnpm test:next-font
 
       - name: Removed vulnerable dependency chains stay absent
+        if: needs.changes.outputs.docs_only != 'true'
         run: node --test scripts/ci/vulnerable-chain-absence.test.mjs
 
       - name: Staged formatter regression tests
+        if: needs.changes.outputs.docs_only != 'true'
         run: pnpm format:staged:test
 
       - name: Resolve Turbo filter
@@ -107,23 +150,33 @@ jobs:
           fi
 
       - name: Lint
-        run: pnpm turbo run lint --filter="${{ steps.turbo.outputs.filter }}"
+        run: |
+          if [ "${{ needs.changes.outputs.docs_only }}" = "true" ]; then
+            pnpm turbo run lint
+          else
+            pnpm turbo run lint --filter="${{ steps.turbo.outputs.filter }}"
+          fi
 
       - name: Typecheck
+        if: needs.changes.outputs.docs_only != 'true'
         run: pnpm turbo run typecheck --filter="${{ steps.turbo.outputs.filter }}"
 
       - name: Test
+        if: needs.changes.outputs.docs_only != 'true'
         run: pnpm turbo run test --filter="${{ steps.turbo.outputs.filter }}"
 
       # RC-2: the shared Zambian national-number helper OTP specs fill their
       # phone inputs with, proven independently of any live OTP send.
       - name: E2E phone national-number helper tests
+        if: needs.changes.outputs.docs_only != 'true'
         run: node --experimental-strip-types --test scripts/qa/self-test/e2e-phone.test.mjs
 
       - name: Cart response drill evidence contract tests
+        if: needs.changes.outputs.docs_only != 'true'
         run: node --test scripts/ci/assert-cart-response-drill.test.mjs
 
       - name: Loopback / wrong-plane guard unit tests
+        if: needs.changes.outputs.docs_only != 'true'
         run: node --test scripts/ci/check-no-loopback-api.test.mjs
 
       - name: Cache Next.js build cache
@@ -137,9 +190,11 @@ jobs:
             nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - name: Build
+        if: needs.changes.outputs.docs_only != 'true'
         run: pnpm turbo run build --filter="${{ steps.turbo.outputs.filter }}"
 
       - name: Fail if frontend bundles ship a loopback or wrong-plane API origin
+        if: needs.changes.outputs.docs_only != 'true'
         run: node scripts/ci/check-no-loopback-api.mjs --require-affected --filter="${{ steps.turbo.outputs.filter }}"
 
   python-shard:
@@ -253,17 +308,24 @@ jobs:
   python:
     # Required check context "Python API" (master ruleset). Aggregates the shards.
     name: Python API
-    needs: python-shard
+    needs: [changes, python-shard]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: All API test shards passed
         run: |
           echo "python-shard result: ${{ needs.python-shard.result }}"
+          if [[ "${{ needs.changes.result }}" = "success" && \
+                "${{ needs.changes.outputs.run_python }}" != "true" ]]; then
+            echo "Python tier not required for this change set"
+            exit 0
+          fi
           test "${{ needs.python-shard.result }}" = "success"
 
   ask-evals:
     name: Ask Vergeo grounding evals
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -320,6 +382,8 @@ jobs:
 
   edge-functions:
     name: Supabase edge functions (Deno)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || (needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_db_light == 'true')) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -339,6 +403,8 @@ jobs:
 
   staging-guards:
     name: Staging plane guards (STG-01)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -463,6 +529,8 @@ jobs:
 
   release-control:
     name: Release control contract (RELCTRL-01)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -625,6 +693,8 @@ jobs:
 
   deps-audit:
     name: Dependency audit
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -659,6 +729,8 @@ jobs:
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Setup Python
         uses: actions/setup-python@v7
@@ -783,7 +855,10 @@ jobs:
   security-gates:
     name: Security gates (headers + authz matrix)
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_security == 'true') }}
+    if: >-
+      ${{ !cancelled() && (needs.changes.result != 'success' ||
+      (needs.changes.outputs.run_security == 'true' &&
+      needs.changes.outputs.docs_only != 'true')) }}
     # Blocking (M15-P05) and the sole owner of the complete route x role matrix.
     # Keep this job name stable: it is a required master-branch check context.
     runs-on: ubuntu-latest
@@ -861,6 +936,8 @@ jobs:
 
   i18n-lint:
     name: i18n hardcoded strings
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -939,6 +1016,9 @@ jobs:
         with:
           ref: ${{ env.QUALIFICATION_SHA }}
           fetch-depth: 0
+
+      - name: Warm pinned PostgreSQL service images
+        run: bash scripts/ci/warm-ci-docker-images.sh
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -1081,6 +1161,9 @@ jobs:
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Warm pinned PostgreSQL / Supabase images
+        run: bash scripts/ci/warm-ci-docker-images.sh
 
       - name: Typegen helper negative controls
         run: |
@@ -1244,6 +1327,9 @@ jobs:
         with:
           ref: ${{ env.QUALIFICATION_SHA }}
           fetch-depth: 0
+
+      - name: Warm pinned PostgreSQL service images
+        run: bash scripts/ci/warm-ci-docker-images.sh
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -1758,6 +1844,8 @@ jobs:
 
   cod-container-smoke:
     name: COD production-container smoke
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
     # Blocking (WP-1B): builds the real infra/api.Dockerfile image and drives ONE
     # Cash-on-Delivery order through the running container against an isolated Postgres,
     # asserting order created + audit entry (transaction-local actor/note context) +
@@ -1787,59 +1875,32 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ env.QUALIFICATION_SHA }}
-          # Full history so the path filter can diff against the PR base sha.
           fetch-depth: 0
 
-      - name: Detect API / Dockerfile changes
-        id: changes
-        run: |
-          # master pushes (and the nightly schedule) always run the container gate.
-          if [ "${{ github.event_name }}" = "push" ] || \
-             [ "${{ github.event_name }}" = "schedule" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          base="${{ github.event.pull_request.base.sha }}"
-          if [ -z "$base" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if git diff --name-only "$base" HEAD | grep -Eq \
-             '^(services/api/|infra/api\.Dockerfile|scripts/ci/migration-replay\.sh|\.github/workflows/ci\.yml)'; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Warm pinned PostgreSQL service images
+        run: bash scripts/ci/warm-ci-docker-images.sh
 
       - name: Install PostgreSQL client
-        # Host-side psql for the schema replay + fixture seed + assertions. The CONTAINER
-        # must never need it — that is precisely what this test guards.
-        if: steps.changes.outputs.run == 'true'
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Setup uv
-        if: steps.changes.outputs.run == 'true'
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
       - name: Setup Python
-        if: steps.changes.outputs.run == 'true'
         uses: actions/setup-python@v7
         with:
           python-version-file: services/api/.python-version
 
       - name: Install API dependencies
-        if: steps.changes.outputs.run == 'true'
         working-directory: services/api
         run: uv sync --dev --frozen
 
       - name: Set up Buildx
-        if: steps.changes.outputs.run == 'true'
         uses: docker/setup-buildx-action@v4
 
       - name: Build the real API runtime image
-        if: steps.changes.outputs.run == 'true'
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -1850,7 +1911,6 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Drive one COD order through the running image
-        if: steps.changes.outputs.run == 'true'
         working-directory: services/api
         run: uv run python tests/container/cod_container_smoke.py
         env:
