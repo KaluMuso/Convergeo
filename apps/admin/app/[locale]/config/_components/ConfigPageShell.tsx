@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getAdminTranslator } from "../../../../lib/admin-translator";
+import { AdminPage } from "../../_components/admin-page";
 
 type ConfigPageShellProps = {
   locale: string;
@@ -37,13 +38,8 @@ export async function ConfigPageShell({
   const t = await getAdminTranslator(locale, "admin.config");
 
   return (
-    <div className="space-y-4">
-      <header className="space-y-1">
-        <h2 className="font-serif text-xl text-text">{t(titleKey)}</h2>
-        <p className="text-sm text-muted">{t(subtitleKey)}</p>
-      </header>
-
-      <nav aria-label={t("title")} className="flex flex-wrap gap-2 border-b border-border pb-3">
+    <AdminPage title={t(titleKey)} subtitle={t(subtitleKey)}>
+      <nav aria-label={t("title")} className="admin-segmented">
         {TABS.map((tab) => {
           const href = `/${locale}/config/${tab.slug}`;
           const isActive = tab.slug === active;
@@ -51,12 +47,8 @@ export async function ConfigPageShell({
             <Link
               key={tab.slug}
               href={href}
-              className={[
-                "inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium",
-                isActive
-                  ? "bg-primary text-white"
-                  : "border border-border bg-bg text-text hover:border-primary",
-              ].join(" ")}
+              aria-current={isActive ? "page" : undefined}
+              className={isActive ? "is-active" : "border border-transparent text-text"}
             >
               {t(`nav.${tab.key}`)}
             </Link>
@@ -65,6 +57,6 @@ export async function ConfigPageShell({
       </nav>
 
       {children}
-    </div>
+    </AdminPage>
   );
 }

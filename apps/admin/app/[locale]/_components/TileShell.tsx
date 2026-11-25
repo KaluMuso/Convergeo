@@ -21,11 +21,13 @@ export function TileShell({ title, subtitle, status, className = "", children }:
 
   return (
     <section
-      className={`rounded-lg border ${borderClass} bg-surface p-4 shadow-sm ${className}`.trim()}
+      className={`card-lift rounded-xl border ${borderClass} bg-surface p-4 shadow-1 ${className}`.trim()}
     >
       <header className="mb-3 space-y-1">
-        <h2 className="font-serif text-base text-text">{title}</h2>
-        {subtitle ? <p className="text-xs text-muted">{subtitle}</p> : null}
+        <h2 className="font-display text-base font-semibold tracking-tight text-display-ink">
+          {title}
+        </h2>
+        {subtitle ? <p className="text-xs text-text-2">{subtitle}</p> : null}
       </header>
       {children}
     </section>

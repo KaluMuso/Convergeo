@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { rolesApi, useAdminPermissions } from "../../../lib/roles-api";
+import { AdminPageClient } from "../_components/admin-page-client";
 
 export type AdminAccount = {
   user_id: string;
@@ -75,17 +76,16 @@ export function AccountsBoard({ locale }: { locale: string }) {
   if (!canManage) return <p role="alert">{t("permissionDenied")}</p>;
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="font-serif text-xl">{t("title")}</h1>
-        <p className="text-sm text-muted">{t("subtitle")}</p>
-        <p className="text-sm text-muted">{t("deactivateHelp")}</p>
-        <p className="text-sm">
-          <a className="underline" href={`/${locale}/roles`}>
-            {t("manageRolesLink")}
-          </a>
-        </p>
-      </header>
+    <AdminPageClient title={t("title")} subtitle={t("subtitle")} className="space-y-6">
+      <p className="text-sm text-text-2">{t("deactivateHelp")}</p>
+      <p className="text-sm">
+        <a
+          className="min-h-11 inline-flex items-center font-medium text-primary underline-offset-2 hover:underline"
+          href={`/${locale}/roles`}
+        >
+          {t("manageRolesLink")}
+        </a>
+      </p>
       {error ? (
         <p role="alert" className="text-error">
           {t(error)}
@@ -152,6 +152,6 @@ export function AccountsBoard({ locale }: { locale: string }) {
           ))}
         </ul>
       )}
-    </div>
+    </AdminPageClient>
   );
 }
