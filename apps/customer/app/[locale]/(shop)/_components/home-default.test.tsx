@@ -266,6 +266,19 @@ describe("HomeHeroBand", () => {
     vi.unstubAllEnvs();
   });
 
+  it("uses the CI perf fixture on slide 1 when the perf harness is active", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "demo");
+    vi.stubEnv("NEXT_PUBLIC_CI_PERF_HARNESS", "1");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "preview");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://10.0.0.1:8000");
+    renderHomeHeroBand({ locale: "en", t, brandName: "Convergeo" });
+    expect(
+      screen.getByTestId("hero-carousel-slide-0").querySelector('[data-testid="cloudinary-image"]'),
+    ).toHaveAttribute("data-public-id", "ci-perf/smartphone-x1");
+    vi.unstubAllEnvs();
+  });
+
   it("falls back to the illustration on every slide when Cloudinary is not configured", () => {
     vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "");
     renderHomeHeroBand({ locale: "en", t, brandName: "Convergeo" });

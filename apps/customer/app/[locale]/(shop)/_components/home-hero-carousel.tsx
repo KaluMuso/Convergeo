@@ -2,6 +2,10 @@
 
 import { buttonBaseClasses, buttonSizeClasses } from "@vergeo/ui/src/button";
 import { LinkButton } from "@vergeo/ui/src/link-button";
+import {
+  CI_PERF_IMAGE_ID,
+  ciPerfPublicEnabled,
+} from "../../../../../../packages/ui/src/media/ci-perf-fixture";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { HeroCarousel } from "@vergeo/ui/src/merch/hero-carousel";
 import Image from "next/image";
@@ -55,7 +59,12 @@ export function HomeHeroCarousel({
     const curated = HOME_HERO_FALLBACK_SLIDES.map((def, index) => {
       const isPrimary = def.primary === true;
       const priority = index === 0;
-      const publicId = hasCloudinary ? def.publicId : undefined;
+      const publicId =
+        isPrimary && ciPerfPublicEnabled()
+          ? CI_PERF_IMAGE_ID
+          : hasCloudinary
+            ? def.publicId
+            : undefined;
 
       return {
         key: def.key,
