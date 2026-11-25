@@ -121,8 +121,26 @@ def test_build_signed_params_upload_params_match_signature() -> None:
         allowed_formats="jpg,png,webp,avif",
         max_bytes=10_485_760,
     )
-    upload_params = {key: value for key, value in signed.items() if key != "signature"}
+    # Cloudinary leaves max_file_size out of its string-to-sign (it is not an
+    # Upload API parameter); signing it caused every upload to fail with 401.
+    upload_params = {
+        key: value for key, value in signed.items() if key not in ("signature", "max_file_size")
+    }
     assert sign_upload_parameters(upload_params, api_secret) == signed["signature"]
+
+
+def test_build_signed_params_does_not_sign_max_file_size() -> None:
+    api_secret = "super-secret"
+    signed = build_signed_params(
+        folder=f"listings/{VENDOR_A}",
+        public_id=None,
+        timestamp=1315060510,
+        api_secret=api_secret,
+        max_bytes=10_485_760,
+    )
+    with_size = {k: v for k, v in signed.items() if k != "signature"}
+    assert sign_upload_parameters(with_size, api_secret) != signed["signature"]
+    assert signed["max_file_size"] == 10_485_760
 
 
 def test_media_sign_returns_vendor_scoped_folder(media_client: TestClient) -> None:
