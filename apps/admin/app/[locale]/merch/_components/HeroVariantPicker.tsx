@@ -1,15 +1,17 @@
 "use client";
 
+import { resolveHeroVariant } from "@vergeo/ui/src/merch/hero-registry";
 import { useTranslations } from "next-intl";
 
-const VARIANT_STYLES: Record<string, { bg: string; accent: string }> = {
-  "editorial-light": { bg: "bg-bg", accent: "border-primary" },
+const VARIANT_STYLES: Record<string, { bg: string; accent: string; label: string }> = {
+  "editorial-light": { bg: "bg-bg", accent: "border-primary", label: "text-text" },
   "gradient-dark": {
     bg: "bg-gradient-to-br from-primary-deep to-primary",
-    accent: "border-border",
+    accent: "border-primary-tint",
+    label: "text-[var(--primary-btn-fg)]",
   },
-  carousel: { bg: "bg-bg-2", accent: "border-danger" },
-  default: { bg: "bg-bg-2", accent: "border-muted" },
+  carousel: { bg: "bg-bg-2", accent: "border-danger", label: "text-text" },
+  default: { bg: "bg-surface", accent: "border-border", label: "text-text" },
 };
 
 type HeroVariantPickerProps = {
@@ -31,6 +33,7 @@ export function HeroVariantPicker({ variants, selected, onSelect }: HeroVariantP
         {variants.map((variant) => {
           const style = VARIANT_STYLES[variant.variant_key] ?? VARIANT_STYLES.default!;
           const isSelected = variant.variant_key === selected;
+          const Preview = resolveHeroVariant(variant.variant_key);
           return (
             <button
               key={variant.variant_key}
@@ -38,25 +41,27 @@ export function HeroVariantPicker({ variants, selected, onSelect }: HeroVariantP
               aria-pressed={isSelected}
               onClick={() => onSelect(variant.variant_key)}
               className={[
-                "flex min-h-24 flex-col gap-2 rounded-lg border-2 p-3 text-left transition",
+                "flex min-h-32 flex-col gap-2 overflow-hidden rounded-lg border-2 p-2 text-left transition",
                 style.bg,
+                style.label,
                 isSelected ? style.accent : "border-transparent hover:border-border",
               ].join(" ")}
             >
-              <span
-                className={[
-                  "h-10 w-full rounded",
-                  variant.variant_key === "gradient-dark" ? "bg-white/20" : "bg-white/60",
-                ].join(" ")}
-              />
-              <span
-                className={[
-                  "text-xs font-medium",
-                  variant.variant_key === "gradient-dark" ? "text-white" : "text-text",
-                ].join(" ")}
-              >
-                {variant.label}
-              </span>
+              <div className="pointer-events-none origin-top-left scale-[0.35] overflow-hidden rounded-md border border-border/50 bg-bg">
+                <div className="w-[280px]">
+                  <Preview
+                    eyebrow={t("previewEyebrow")}
+                    title={t("previewTitle")}
+                    subtitle={t("previewSubtitle")}
+                    primaryCta={
+                      <span className="rounded-pill bg-primary px-2 py-0.5 text-xs">
+                        {t("previewCta")}
+                      </span>
+                    }
+                  />
+                </div>
+              </div>
+              <span className="text-xs font-medium">{variant.label}</span>
             </button>
           );
         })}

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatK } from "@vergeo/i18n";
 import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -203,25 +204,49 @@ export function CatalogControlBoard({ locale }: { locale: string }) {
               className="space-y-2 rounded-md border border-border bg-surface p-3 text-sm"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0 space-y-1">
-                  <p className="font-medium text-text">{entity.label}</p>
-                  <p className="text-xs text-muted">
-                    {t("statusLabel", { status: entity.status })}
-                  </p>
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                      entity.visible ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
-                    }`}
-                  >
-                    {entity.visible ? t("visible") : t("notVisible")}
-                  </span>
-                  {entity.hold ? (
-                    <p className="text-xs text-text-2">
-                      {t("heldBy", { action: entity.hold.action, reason: entity.hold.reason })}
-                    </p>
-                  ) : !entity.visible && entity.status === "active" && tab !== "vendors" ? (
-                    <p className="text-xs text-text-2">{t("vendorSuspendedNote")}</p>
+                <div className="flex min-w-0 flex-1 gap-3">
+                  {entity.thumbnail_url ? (
+                    <img
+                      src={entity.thumbnail_url}
+                      alt=""
+                      className="size-14 shrink-0 rounded-md border border-border object-cover"
+                    />
                   ) : null}
+                  <div className="min-w-0 space-y-1">
+                    <p className="font-medium text-text">{entity.label}</p>
+                    {entity.product_label && entity.product_label !== entity.label ? (
+                      <p className="text-xs text-muted">
+                        {t("productLine", { name: entity.product_label })}
+                      </p>
+                    ) : null}
+                    {entity.vendor_label ? (
+                      <p className="text-xs text-muted">
+                        {t("vendorLine", { name: entity.vendor_label })}
+                      </p>
+                    ) : null}
+                    {typeof entity.price_ngwee === "number" ? (
+                      <p className="text-xs font-medium text-text">
+                        {t("priceLine", { price: formatK(entity.price_ngwee) })}
+                      </p>
+                    ) : null}
+                    <p className="text-xs text-muted">
+                      {t("statusLabel", { status: entity.status })}
+                    </p>
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                        entity.visible ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
+                      }`}
+                    >
+                      {entity.visible ? t("visible") : t("notVisible")}
+                    </span>
+                    {entity.hold ? (
+                      <p className="text-xs text-text-2">
+                        {t("heldBy", { action: entity.hold.action, reason: entity.hold.reason })}
+                      </p>
+                    ) : !entity.visible && entity.status === "active" && tab !== "vendors" ? (
+                      <p className="text-xs text-text-2">{t("vendorSuspendedNote")}</p>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <CopyButton value={entity.id} label={t("copyId")} />
