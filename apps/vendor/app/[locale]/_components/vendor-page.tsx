@@ -1,3 +1,5 @@
+import { PageHeader } from "@vergeo/ui/src/page-header";
+
 import type { ReactNode } from "react";
 
 const WIDTH_CLASSES = {
@@ -34,16 +36,10 @@ export function VendorPage({
 }: VendorPageProps) {
   return (
     <main
-      className={`flex w-full flex-col space-y-4 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 ${WIDTH_CLASSES[width]} ${className}`.trim()}
+      className={`animate-page-in flex w-full flex-col space-y-4 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 ${WIDTH_CLASSES[width]} ${className}`.trim()}
     >
-      {title || subtitle || actions ? (
-        <header className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 space-y-1">
-            {title ? <h1 className="text-lg font-semibold text-text">{title}</h1> : null}
-            {subtitle ? <p className="text-sm text-text-2">{subtitle}</p> : null}
-          </div>
-          {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
-        </header>
+      {title ? (
+        <PageHeader title={title} subtitle={subtitle} actions={actions} className="!pb-4" />
       ) : null}
       {children}
     </main>

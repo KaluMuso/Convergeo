@@ -1165,7 +1165,8 @@
     "needsAction": {
       "heading": "À faire",
       "empty": "Rien à faire — aucune commande ne vous attend.",
-      "emptyTitle": "Tout est fait"
+      "emptyTitle": "Tout est fait",
+      "count": "{count, plural, one {# order needs you} other {# orders need you}}"
     },
     "actions": {
       "openQueue": "Voir les commandes",
@@ -1259,7 +1260,23 @@
           "title": "Complétez le profil de votre boutique",
           "body": "Un logo, des horaires et une courte description aident les acheteurs à vous faire confiance."
         }
-      }
+      },
+      "progress": "{count, plural, one {# step left} other {# steps left}}",
+      "progressComplete": "You're all caught up on setup.",
+      "progressAria": "Setup progress"
+    },
+    "quickActions": {
+      "ariaLabel": "Quick actions",
+      "addProduct": "Add product",
+      "scan": "Scan",
+      "orders": "Orders",
+      "payouts": "Payouts"
+    },
+    "stats": {
+      "live": "Live today",
+      "quiet": "Quiet day",
+      "actionNeeded": "Needs you",
+      "caughtUp": "Caught up"
     }
   },
   "queue": {

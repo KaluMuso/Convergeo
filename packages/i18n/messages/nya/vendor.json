@@ -1209,7 +1209,8 @@
     "needsAction": {
       "heading": "Do this now",
       "empty": "Nothing to do — no orders are waiting for you.",
-      "emptyTitle": "All done"
+      "emptyTitle": "All done",
+      "count": "{count, plural, one {# order needs you} other {# orders need you}}"
     },
     "actions": {
       "openQueue": "Tsegulani order queue",
@@ -1313,7 +1314,23 @@
           "title": "Complete your shop profile",
           "body": "A logo, opening hours and a short description help buyers trust you."
         }
-      }
+      },
+      "progress": "{count, plural, one {# step left} other {# steps left}}",
+      "progressComplete": "You're all caught up on setup.",
+      "progressAria": "Setup progress"
+    },
+    "quickActions": {
+      "ariaLabel": "Quick actions",
+      "addProduct": "Add product",
+      "scan": "Scan",
+      "orders": "Orders",
+      "payouts": "Payouts"
+    },
+    "stats": {
+      "live": "Live today",
+      "quiet": "Quiet day",
+      "actionNeeded": "Needs you",
+      "caughtUp": "Caught up"
     }
   },
   "queue": {

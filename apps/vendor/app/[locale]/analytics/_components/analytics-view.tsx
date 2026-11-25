@@ -2,12 +2,14 @@
 
 import { useSession } from "@vergeo/auth/use-session";
 import { formatK } from "@vergeo/i18n";
+import { StatCard } from "@vergeo/ui/src/stat-card";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Spinner } from "../../../../../../packages/ui/src/spinner";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { VendorGrid } from "../../_components/vendor-page";
+import { VendorRouteHeader } from "../../_components/vendor-route-header";
+import { AnalyticsSkeleton } from "../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { createAnalyticsClient, type AnalyticsWindow } from "../_lib/analytics-client";
 
@@ -97,11 +99,7 @@ export function AnalyticsView() {
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="mb-2 flex flex-col gap-1">
-        <p className="text-sm text-muted">{t("analytics.eyebrow")}</p>
-        <h1 className="text-lg font-semibold text-text">{t("analytics.title")}</h1>
-        <p className="text-sm text-muted">{t("analytics.intro")}</p>
-      </header>
+      <VendorRouteHeader title={t("analytics.title")} subtitle={t("analytics.intro")} />
 
       <div
         aria-label={t("analytics.window.label")}
@@ -142,14 +140,14 @@ export function AnalyticsView() {
         />
       ) : null}
 
-      {loading ? (
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <Spinner label={t("analytics.loading")} />
-        </div>
-      ) : null}
+      {loading ? <AnalyticsSkeleton label={t("analytics.loading")} /> : null}
 
       {!loading && !errorKey && data && isEmpty ? (
-        <VendorEmptyState title={t("analytics.empty.title")} body={t("analytics.empty.body")} />
+        <VendorEmptyState
+          illustration="no-results"
+          title={t("analytics.empty.title")}
+          body={t("analytics.empty.body")}
+        />
       ) : null}
 
       {!loading && !errorKey && data && !isEmpty ? (
