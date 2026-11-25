@@ -28,6 +28,7 @@ vi.mock("./api", () => ({
       },
     ]),
   },
+  prefetchVendorKycDetail: vi.fn(async () => Promise.resolve({})),
 }));
 
 vi.mock("./KycReviewDialog", () => ({ KycReviewDialog: () => null }));
