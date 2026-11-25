@@ -26,6 +26,7 @@ import {
   resolveAdminActiveItem,
 } from "./admin-nav-config";
 import { AdminNotificationBell } from "./admin-notification-bell";
+import { usePendingProductModerationCount } from "./use-pending-product-count";
 
 type AdminShellProps = {
   locale: string;
@@ -135,6 +136,7 @@ export function AdminShell({ locale, children }: AdminShellProps) {
   );
   const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
   const visibleItems = flattenAdminNavItems(navGroups);
+  const pendingProducts = usePendingProductModerationCount(navSource);
 
   const activeKey = resolveAdminActiveItem(rest, visibleItems);
   const activeGroup = resolveAdminActiveGroup(rest, navGroups);
@@ -202,7 +204,21 @@ export function AdminShell({ locale, children }: AdminShellProps) {
                           aria-current={active ? "page" : undefined}
                           className={navLinkClass(active)}
                         >
-                          {t(`nav.${item.key}` as "nav.home")}
+                          <span className="flex w-full items-center justify-between gap-2">
+                            <span>{t(`nav.${item.key}` as "nav.home")}</span>
+                            {item.key === "moderation" &&
+                            typeof pendingProducts === "number" &&
+                            pendingProducts > 0 ? (
+                              <span
+                                className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-[var(--primary-btn-fg)]"
+                                aria-label={t("nav.moderationPendingBadge", {
+                                  count: pendingProducts,
+                                })}
+                              >
+                                {pendingProducts}
+                              </span>
+                            ) : null}
+                          </span>
                         </Link>
                       </li>
                     );
