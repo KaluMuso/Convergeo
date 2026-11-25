@@ -8,6 +8,8 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
+import { ApiUnavailablePanel } from "../_components/api-unavailable";
+import { BrowsePager, parseBrowsePage, sliceBrowsePage } from "../_components/browse-pager";
 import { BackToTop } from "../_components/back-to-top";
 
 import { ServiceGrid, type ServiceBrowseItem } from "./_components/service-grid";
@@ -31,6 +33,7 @@ type PageProps = {
   searchParams: Promise<{
     category?: string;
     area?: string;
+    page?: string;
   }>;
 };
 
@@ -68,7 +71,7 @@ async function getServicesTranslator(locale: string): Promise<ServicesTranslator
 async function fetchServices(params: {
   category: string | null;
   area: string;
-}): Promise<ServicesApiResponse | null> {
+}): Promise<{ kind: "ok"; data: ServicesApiResponse } | { kind: "unavailable" }> {
   const search = new URLSearchParams();
   if (params.category) {
     search.set("category", params.category);
@@ -81,17 +84,17 @@ async function fetchServices(params: {
   try {
     const url = absoluteApiUrl(`/services${suffix}`);
     if (!url) {
-      return null;
+      return { kind: "unavailable" };
     }
     const response = await fetch(url, {
       next: { revalidate, tags: ["services"] },
     });
     if (!response.ok) {
-      return null;
+      return { kind: "unavailable" };
     }
-    return (await response.json()) as ServicesApiResponse;
+    return { kind: "ok", data: (await response.json()) as ServicesApiResponse };
   } catch {
-    return null;
+    return { kind: "unavailable" };
   }
 }
 
@@ -134,9 +137,31 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
   }) as ServicesTranslator;
   const category = parseCategory(query.category);
   const area = query.area ?? "";
-  const data = await fetchServices({ category, area });
-  const items = data?.items ?? [];
-  const verticals = data?.verticals ?? [...SERVICE_VERTICALS];
+  const page = parseBrowsePage(query.page);
+  const fetchResult = await fetchServices({ category, area });
+
+  if (fetchResult.kind === "unavailable") {
+    return (
+      <CustomerRouteShell width="full" className="flex flex-col gap-8 pb-8">
+        <ApiUnavailablePanel
+          retryHref={`/${locale}/services`}
+          labels={{
+            title: t("browse.unavailableTitle"),
+            body: t("browse.unavailableBody"),
+            retry: t("browse.unavailableRetry"),
+          }}
+          testId="services-unavailable"
+        />
+      </CustomerRouteShell>
+    );
+  }
+
+  const data = fetchResult.data;
+  const allItems = data.items;
+  const total = data.total ?? allItems.length;
+  const items = sliceBrowsePage(allItems, page);
+  const verticals = data.verticals ?? [...SERVICE_VERTICALS];
+  const pagerParams = { category: category ?? undefined, area: area || undefined };
 
   const filterLabels = {
     verticalLabel: t("browse.verticalLabel"),
@@ -174,7 +199,7 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
           </Suspense>
         </div>
 
-        {items.length === 0 ? (
+        {allItems.length === 0 ? (
           <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
         ) : (
           <>
@@ -192,6 +217,18 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
                 },
                 preferredBadge: t("browse.preferredBadge"),
                 free: t("detail.free"),
+              }}
+            />
+            <BrowsePager
+              locale={locale}
+              pathname="/services"
+              searchParams={pagerParams}
+              page={page}
+              total={total}
+              labels={{
+                previous: t("browse.pagination.previous"),
+                next: t("browse.pagination.next"),
+                page: t("browse.pagination.page"),
               }}
             />
             <BackToTop label={tCatalog("plp.backToTop")} />
