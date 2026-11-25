@@ -1315,7 +1315,7 @@
           "body": "现在无需操作。我们的团队通常会在 1 个工作日内回复。"
         },
         "payoutMethod": {
-          "title": "Add your MoMo number to get paid",
+          "title": "Add your Mobile Money number to get paid",
           "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
         },
         "ordersWaiting": {
@@ -2966,7 +2966,7 @@
     "disabled": "多店铺功能暂未开放。",
     "primary": "主店",
     "acting": "您正在此店操作",
-    "payoutHold": "在我们的团队核实共用的 MoMo 号码之前，此店铺的提现已暂停。",
+    "payoutHold": "在我们的团队核实共用的移动支付号码之前，此店铺的提现已暂停。",
     "reviewNote": "团队备注：{note}",
     "ownerKycNeeded": "添加店铺前，请先完成店主身份验证（KYC）。",
     "switcher": {
@@ -3054,14 +3054,14 @@
       "whatsapp": "WhatsApp 号码（可选）",
       "email": "电子邮箱（可选）",
       "payout": "收款",
-      "payoutNumber": "MoMo 收款号码",
+      "payoutNumber": "移动支付收款号码",
       "payoutHelp": "不能使用其他企业的号码。您自己的多家店铺共用一个号码需经团队审核。",
       "rail": "运营商",
       "reviewNote": "创建店铺后，请上传店面照片和场所证明，然后提交审核。",
       "priceAddon": "此店铺为付费附加项：套餐每月 {price}。",
       "priceIncluded": "此店铺已包含在您的套餐中。",
       "rails": {
-        "mtn": "MTN MoMo",
+        "mtn": "MTN Mobile Money",
         "airtel": "Airtel Money",
         "zamtel": "Zamtel Kwacha"
       }
@@ -3077,7 +3077,7 @@
       "unregisteredLimit": "未注册商户只能经营一家店铺。请先添加 PACRA 注册信息。",
       "planLimit": "您的套餐已无可用店铺名额。请升级后添加分店。",
       "tooClose": "此店铺距离您的另一家店铺仅 {nearest} 米。分店之间至少相距 {min} 米。",
-      "payoutTaken": "该 MoMo 号码属于其他企业，请使用您自己的号码。",
+      "payoutTaken": "该移动支付号码属于其他企业，请使用您自己的号码。",
       "evidenceRequired": "请先上传店面照片和场所证明。",
       "evidenceLocked": "提交审核后不能再修改证明材料。",
       "evidencePath": "该上传无效，请重新上传。",
