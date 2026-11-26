@@ -1,7 +1,7 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
-import { createApiClient } from "@vergeo/config";
+import { ApiError, createApiClient } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
@@ -49,6 +49,9 @@ export type ContactStepLabels = {
   throttled: string;
   generic: string;
   skippedLoggedIn: string;
+  needPhone: string;
+  savePhone: string;
+  saveFailed: string;
 };
 
 type StepContactProps = {
@@ -78,11 +81,7 @@ export function ContactStepSkeleton({
   showIntro?: boolean;
 }) {
   return (
-    <div
-      className="space-y-4"
-      data-testid="checkout-loading-skeleton"
-      aria-busy="true"
-    >
+    <div className="space-y-4" data-testid="checkout-loading-skeleton" aria-busy="true">
       <p className="sr-only" aria-live="polite">
         {loadingLabel}
       </p>
@@ -107,11 +106,7 @@ export function ContactStepSkeleton({
   );
 }
 
-export function StepContact({
-  labels,
-  onComplete,
-  showIntro = true,
-}: StepContactProps) {
+export function StepContact({ labels, onComplete, showIntro = true }: StepContactProps) {
   const { session, loading: sessionLoading } = useSession();
   const [phase, setPhase] = useState<"phone" | "otp">("phone");
   const [countryCode] = useState(DEFAULT_COUNTRY_CODE);
@@ -120,6 +115,7 @@ export function StepContact({
   const [code, setCode] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [needsPhone, setNeedsPhone] = useState(false);
   const skippedRef = useRef(false);
   const mountedRef = useRef(false);
   useEffect(() => {
@@ -133,10 +129,7 @@ export function StepContact({
   /** Reuse an accepted session on post-auth retries; never resubmit a spent OTP. */
   const acceptedSessionRef = useRef<CustomerSession | null>(null);
 
-  const completeContactStep = async (
-    accessToken: string,
-    contactPhone?: string,
-  ) => {
+  const completeContactStep = async (accessToken: string, contactPhone?: string) => {
     const client = createApiClient({
       baseUrl: getApiBaseUrl(),
       getToken: () => accessToken,
@@ -153,11 +146,17 @@ export function StepContact({
       return;
     }
     skippedRef.current = true;
-    void completeContactStep(session.access_token).catch(() => {
-      setErrorMessage(labels.generic);
-      skippedRef.current = false;
+    void completeContactStep(session.access_token).catch((error: unknown) => {
+      // A signed-in buyer with no phone on the profile (email/Google sign-up)
+      // must add one here; any other failure gets a visible retry. Never leave
+      // the step without a way forward.
+      if (error instanceof ApiError && error.code === "checkout.phone_required") {
+        setNeedsPhone(true);
+      } else {
+        setErrorMessage(labels.saveFailed);
+      }
     });
-  }, [session, sessionLoading, labels.generic, onComplete]);
+  }, [session, sessionLoading, labels.saveFailed, onComplete]);
 
   if (sessionLoading) {
     if (!showIntro) {
@@ -171,16 +170,125 @@ export function StepContact({
   }
 
   if (session?.access_token) {
+    const accessToken = session.access_token;
+    const handleSaveAccountPhone = async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      setErrorMessage(null);
+      if (!nationalNumber.trim()) {
+        setErrorMessage(labels.required);
+        return;
+      }
+      if (!isValidZambianMobile(nationalNumber)) {
+        setErrorMessage(labels.invalidPhone);
+        return;
+      }
+      setLoading(true);
+      try {
+        await completeContactStep(accessToken, formatE164(countryCode, nationalNumber));
+      } catch {
+        if (mountedRef.current) setErrorMessage(labels.saveFailed);
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    };
+    const retryAccountContact = async () => {
+      setErrorMessage(null);
+      setLoading(true);
+      try {
+        await completeContactStep(accessToken);
+      } catch (error: unknown) {
+        if (!mountedRef.current) return;
+        if (error instanceof ApiError && error.code === "checkout.phone_required") {
+          setNeedsPhone(true);
+        } else {
+          setErrorMessage(labels.saveFailed);
+        }
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    };
+
+    if (needsPhone) {
+      return (
+        <div className="space-y-4" data-testid="checkout-contact-add-phone">
+          {showIntro ? <ContactStepIntro labels={labels} /> : null}
+          <p className="font-body text-sm text-text-2">{labels.needPhone}</p>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(event) => void handleSaveAccountPhone(event)}
+          >
+            <FormField
+              label={labels.phoneLabel}
+              helpText={labels.phoneHelp}
+              errorMessage={errorMessage ?? undefined}
+              required
+              requiredMarker="*"
+              asGroup
+            >
+              <div className="flex min-w-0 gap-2">
+                <div className="w-24 shrink-0">
+                  <Input
+                    size="lg"
+                    className="text-center font-mono"
+                    value={countryCode}
+                    readOnly
+                    aria-label={labels.countryCode}
+                  />
+                </div>
+                <Input
+                  size="lg"
+                  className="min-w-0 flex-1 font-mono"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  placeholder={labels.phonePlaceholder}
+                  aria-label={labels.nationalNumber}
+                  aria-required
+                  value={nationalNumber}
+                  error={Boolean(errorMessage)}
+                  onChange={(event) => {
+                    setNationalNumber(normalizeNationalNumber(event.target.value));
+                  }}
+                />
+              </div>
+            </FormField>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              loading={loading}
+              loadingLabel={labels.loading}
+            >
+              {labels.savePhone}
+            </Button>
+          </form>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-2">
         {showIntro ? (
-          <h2 className="font-display text-h2 text-display-ink">
-            {labels.title}
-          </h2>
+          <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
         ) : null}
-        <p className="font-body text-sm text-text-2">
-          {labels.skippedLoggedIn}
-        </p>
+        <p className="font-body text-sm text-text-2">{labels.skippedLoggedIn}</p>
+        {errorMessage ? (
+          <div className="space-y-3">
+            <p role="alert" className="font-body text-sm text-danger">
+              {errorMessage}
+            </p>
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              loading={loading}
+              loadingLabel={labels.loading}
+              onClick={() => void retryAccountContact()}
+            >
+              {labels.savePhone}
+            </Button>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -209,12 +317,7 @@ export function StepContact({
       if (error) {
         const parsed = parseAuthError(error);
         if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-          setErrorMessage(
-            labels.throttled.replace(
-              "{seconds}",
-              String(parsed.retryAfterSeconds),
-            ),
-          );
+          setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
         } else {
           setErrorMessage(labels.sendFailed);
         }
@@ -263,10 +366,7 @@ export function StepContact({
             setErrorMessage(labels.expired);
           } else if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
             setErrorMessage(
-              labels.throttled.replace(
-                "{seconds}",
-                String(parsed.retryAfterSeconds),
-              ),
+              labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)),
             );
           } else {
             setErrorMessage(labels.generic);
@@ -290,10 +390,7 @@ export function StepContact({
         acceptedSessionRef.current = acceptedSession;
       }
 
-      const readySession = await reconcileCustomerSession(
-        acceptedSession,
-        retryReconciliation,
-      );
+      const readySession = await reconcileCustomerSession(acceptedSession, retryReconciliation);
       if (!mountedRef.current) return;
       if (!readySession?.access_token) throw new Error("auth.session_required");
       await completeContactStep(readySession.access_token, phone);
@@ -318,10 +415,7 @@ export function StepContact({
     return (
       <div className="space-y-4">
         {showIntro ? <ContactStepIntro labels={labels} /> : null}
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(event) => void handleSendOtp(event)}
-        >
+        <form className="flex flex-col gap-4" onSubmit={(event) => void handleSendOtp(event)}>
           <FormField
             label={labels.phoneLabel}
             helpText={labels.phoneHelp}
@@ -353,9 +447,7 @@ export function StepContact({
                 value={nationalNumber}
                 error={Boolean(errorMessage)}
                 onChange={(event) => {
-                  setNationalNumber(
-                    normalizeNationalNumber(event.target.value),
-                  );
+                  setNationalNumber(normalizeNationalNumber(event.target.value));
                 }}
               />
             </div>
@@ -387,9 +479,7 @@ export function StepContact({
           disabled={loading}
           ariaLabel={labels.otpAria}
           getDigitAriaLabel={(index) =>
-            labels.otpDigit
-              .replace("{position}", String(index + 1))
-              .replace("{total}", "6")
+            labels.otpDigit.replace("{position}", String(index + 1)).replace("{total}", "6")
           }
         />
         {errorMessage ? (

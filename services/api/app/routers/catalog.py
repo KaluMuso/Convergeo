@@ -1141,12 +1141,15 @@ def _listing_logistics_fields(
 def catalog_item_from_candidate(row: _CatalogCandidate) -> CatalogListingItem:
     """Project an enriched catalogue candidate onto the public wire item."""
     logistics = _listing_logistics_fields(row)
+    vendor = row.vendor if isinstance(row.vendor, dict) else {}
+    display_name = vendor.get("display_name")
+    vendor_slug_raw = vendor.get("slug")
     return CatalogListingItem(
         id=row.listing.id,
         title=row.search_doc.title,
         product_slug=str(row.product["slug"]) if row.product else None,
-        vendor_name=str(row.vendor["display_name"]),
-        vendor_slug=str(row.vendor.get("slug")) if row.vendor.get("slug") else None,
+        vendor_name=str(display_name).strip() if display_name else "Seller",
+        vendor_slug=str(vendor_slug_raw).strip() if vendor_slug_raw else None,
         price_ngwee=row.search_doc.price_min_ngwee or 0,
         compare_at_ngwee=row.listing.compare_at_ngwee,
         condition=row.listing.condition,

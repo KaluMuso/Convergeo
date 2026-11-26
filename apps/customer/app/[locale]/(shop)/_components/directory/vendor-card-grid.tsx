@@ -1,6 +1,10 @@
+import { browseCardGridClass } from "@vergeo/ui/src/browse-grid";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
+
+import { ExternalUrlImage } from "../../../../../lib/media/external-url-image";
+import { categoryDisplayName } from "../category-display-name";
 
 import { vendorTrustForCard, type VendorLadderLabels } from "./vendor-ladder-labels";
 
@@ -42,13 +46,6 @@ type VendorCardGridProps = {
   labels: VendorCardGridLabels;
 };
 
-function categoryLabel(value: string, labels: Record<string, string>): string {
-  if (labels[value]) {
-    return labels[value];
-  }
-  return value.replace(/-/g, " ");
-}
-
 function formatVerifiedYear(createdAt: string | null | undefined): string {
   if (!createdAt) {
     return String(new Date().getFullYear());
@@ -75,22 +72,20 @@ function VendorLogo({ logoUrl }: { logoUrl: string }) {
   }
 
   return (
-    <div
-      aria-hidden
-      className="h-full w-full bg-cover bg-center"
-      style={{ backgroundImage: `url(${logoUrl})` }}
-    />
+    <span aria-hidden className="block h-full w-full">
+      <ExternalUrlImage src={logoUrl} alt="" className="h-full w-full object-cover" />
+    </span>
   );
 }
 
 export function VendorCardGrid({ locale, vendors, labels }: VendorCardGridProps) {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className={`motion-fade ${browseCardGridClass}`}>
       {vendors.map((vendor) => {
         const categoryText =
           vendor.categories.length > 0
             ? vendor.categories
-                .map((value) => categoryLabel(value, labels.categoryLabels))
+                .map((value) => categoryDisplayName(value, labels.categoryLabels))
                 .join(", ")
             : labels.listings;
         const ratingValue =

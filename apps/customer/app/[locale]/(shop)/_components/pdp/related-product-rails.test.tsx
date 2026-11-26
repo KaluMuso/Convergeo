@@ -58,26 +58,16 @@ describe("RelatedProductRails", () => {
         ok: true,
         json: async () => ({
           ...data,
-          same_category: [
-            item("vendor-product"),
-            item("current"),
-            item("category-product"),
-          ],
+          same_category: [item("vendor-product"), item("current"), item("category-product")],
         }),
       }),
     );
     render(<RelatedProductRails {...props} />);
     expect(screen.getByRole("status")).toHaveTextContent(labels.loading);
-    expect(
-      await screen.findByRole("region", { name: "More from Shop" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("region", { name: labels.categoryHeading }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "More from Shop" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: labels.categoryHeading })).toBeInTheDocument();
     expect(screen.getAllByRole("link")).toHaveLength(2);
-    expect(
-      screen.getByRole("link", { name: /vendor-product/ }),
-    ).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /vendor-product/ })).toHaveAttribute(
       "href",
       "/en/p/vendor-product?listing=offer-vendor-product",
     );
@@ -92,9 +82,7 @@ describe("RelatedProductRails", () => {
       }),
     );
     render(<RelatedProductRails {...props} />);
-    await waitFor(() =>
-      expect(screen.queryByRole("status")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
     expect(screen.queryByRole("heading")).not.toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
@@ -116,11 +104,7 @@ describe("RelatedProductRails", () => {
         }),
       );
       render(<RelatedProductRails {...props} />);
-      await waitFor(() =>
-        expect(screen.getByRole("status")).toHaveTextContent(
-          labels.unavailable,
-        ),
-      );
+      await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(labels.unavailable));
       expect(screen.queryByRole("link")).not.toBeInTheDocument();
     },
   );
@@ -150,14 +134,10 @@ describe("RelatedProductRails", () => {
     await act(async () => {
       oldResolve({ ok: true, json: async () => data });
     });
-    expect(
-      screen.queryByRole("heading", { name: "More from Shop" }),
-    ).not.toBeInTheDocument();
-    expect(
-      fetcher.mock.calls.some(([url]) =>
-        String(url).includes("listing_id=second"),
-      ),
-    ).toBe(true);
+    expect(screen.queryByRole("heading", { name: "More from Shop" })).not.toBeInTheDocument();
+    expect(fetcher.mock.calls.some(([url]) => String(url).includes("listing_id=second"))).toBe(
+      true,
+    );
     expect(routed).toHaveBeenCalled();
   });
   it("hides already rendered cards while a new seller request is pending", async () => {
@@ -171,6 +151,42 @@ describe("RelatedProductRails", () => {
     view.rerender(<RelatedProductRails {...props} listingId="second" />);
     expect(screen.getByRole("status")).toHaveTextContent(labels.loading);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("renders category rail when store recommendations fail", async () => {
+    const rec = (title: string) => ({
+      id: `offer-${title}`,
+      title,
+      product_slug: title,
+      vendor_name: "Shop",
+      price_ngwee: 1500,
+      image_public_id: null,
+    });
+    const fetcher = vi.fn(async (url: string) => {
+      if (url.includes("scope=store")) {
+        return { ok: false, status: 500, json: async () => ({}) };
+      }
+      return {
+        ok: true,
+        json: async () => ({ scope: "category", items: [rec("similar-item")] }),
+      };
+    });
+    vi.stubGlobal("fetch", fetcher);
+    render(
+      <RelatedProductRails
+        {...props}
+        labels={{
+          ...labels,
+          storeHeading: "More from this store",
+          similarHeading: "Similar in this category",
+        }}
+      />,
+    );
+    expect(
+      await screen.findByRole("region", { name: "Similar in this category" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "More from this store" })).not.toBeInTheDocument();
+    expect(screen.queryByText(labels.loading)).not.toBeInTheDocument();
   });
 
   it("prefers /recommendations with store and category headings", async () => {
@@ -200,18 +216,12 @@ describe("RelatedProductRails", () => {
         }}
       />,
     );
-    expect(
-      await screen.findByRole("region", { name: "More from this store" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("region", { name: "Similar in this category" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "More from this store" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Similar in this category" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /store-item/ })).toHaveAttribute(
       "href",
       "/en/p/store-item?listing=offer-store-item",
     );
-    expect(
-      fetcher.mock.calls.some(([url]) => String(url).includes("related-rails")),
-    ).toBe(false);
+    expect(fetcher.mock.calls.some(([url]) => String(url).includes("related-rails"))).toBe(false);
   });
 });

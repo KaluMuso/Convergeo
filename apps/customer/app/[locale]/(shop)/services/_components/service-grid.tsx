@@ -1,5 +1,6 @@
 import { formatK } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
+import { browseCardGridClass } from "@vergeo/ui/src/browse-grid";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import Link from "next/link";
 
@@ -35,9 +36,7 @@ type ServiceGridProps = {
   };
 };
 
-function badgeVariant(
-  tier: ServiceBrowseItem["provider"]["response_time_tier"],
-) {
+function badgeVariant(tier: ServiceBrowseItem["provider"]["response_time_tier"]) {
   if (tier === "fast") {
     return "free" as const;
   }
@@ -49,7 +48,7 @@ function badgeVariant(
 
 export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
   return (
-    <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <ul className={`motion-fade list-none p-0 ${browseCardGridClass}`}>
       {items.map((item) => {
         const hero = item.portfolio_images[0];
         const tier = item.provider.response_time_tier;
@@ -77,10 +76,7 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
                     <Badge variant="free" label={labels.free} />
                   ) : null}
                   {tier ? (
-                    <Badge
-                      variant={badgeVariant(tier)}
-                      label={labels.badges[tier] ?? tier}
-                    />
+                    <Badge variant={badgeVariant(tier)} label={labels.badges[tier] ?? tier} />
                   ) : null}
                   {item.provider.preferred_badge ? (
                     <Badge variant="public" label={labels.preferredBadge} />
@@ -120,10 +116,7 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
                     {item.is_free && labels.free
                       ? labels.free
                       : item.from_price_ngwee
-                        ? labels.fromPrice.replace(
-                            "{price}",
-                            formatK(item.from_price_ngwee),
-                          )
+                        ? labels.fromPrice.replace("{price}", formatK(item.from_price_ngwee))
                         : labels.askForQuote}
                   </p>
                   <span className="inline-flex min-h-9 shrink-0 items-center rounded-pill bg-primary-tint px-3 text-sm font-semibold text-primary-deep group-hover:bg-primary group-hover:text-[var(--primary-btn-fg)]">

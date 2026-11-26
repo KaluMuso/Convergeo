@@ -117,7 +117,7 @@ export function CommissionEditor() {
                 <td className="px-2 py-3">
                   <button
                     type="button"
-                    className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm font-medium text-white"
+                    className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm font-medium text-[var(--primary-btn-fg)]"
                     onClick={() => requestSave(row.category_key)}
                   >
                     {t("common.save")}

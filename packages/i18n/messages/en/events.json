@@ -12,7 +12,16 @@
     "verified": "Verified",
     "calendarLabel": "Dates with events this month",
     "hostCta": "Host an event",
-    "hostPitch": "Sell tickets with dynamic QR check-in and get paid securely."
+    "hostPitch": "Sell tickets with dynamic QR check-in and get paid securely.",
+    "unavailableTitle": "We couldn't load events",
+    "unavailableBody": "Check your connection and try again.",
+    "unavailableRetry": "Try again",
+    "onlyFeatured": "More events coming soon.",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {total}"
+    }
   },
   "filters": {
     "tonight": "Tonight",
@@ -93,7 +102,10 @@
     "getTickets": "Get tickets",
     "getTicketsSoon": "Ticket sales coming soon",
     "pastInstance": "Past",
-    "spots": "{sold} / {total} spots"
+    "spots": "{sold} / {total} spots",
+    "stickyCta": {
+      "ariaLabel": "Quick ticket purchase"
+    }
   },
   "organiser": {
     "imageAlt": "Event photo {position}"

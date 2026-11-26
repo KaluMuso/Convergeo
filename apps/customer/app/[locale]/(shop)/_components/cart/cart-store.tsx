@@ -2,11 +2,7 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 
-import type {
-  CartResponse,
-  ChangeNotice,
-  MiniCartLabels,
-} from "./mini-cart-drawer";
+import type { CartResponse, ChangeNotice, MiniCartLabels } from "./mini-cart-drawer";
 
 type CartStoreState = {
   cart: CartResponse | null;
@@ -78,11 +74,7 @@ export function setLastAddedMessage(message: string | null) {
 }
 
 export function useCartStore() {
-  const state = useSyncExternalStore(
-    subscribeStore,
-    getStoreSnapshot,
-    getStoreSnapshot,
-  );
+  const state = useSyncExternalStore(subscribeStore, getStoreSnapshot, getStoreSnapshot);
   return state;
 }
 
@@ -94,12 +86,7 @@ export type CartNavTriggerProps = {
   label?: ReactNode;
 };
 
-export function CartNavTrigger({
-  labels,
-  cartIcon,
-  className,
-  label,
-}: CartNavTriggerProps) {
+export function CartNavTrigger({ labels, cartIcon, className, label }: CartNavTriggerProps) {
   const { cart } = useCartStore();
   const count = getCartItemCount(cart);
   const badge =

@@ -90,11 +90,11 @@
   "home": {
     "meta": {
       "title": "Shop products, services & events in Zambia",
-      "description": "Compare sellers, book services, and find events across Zambia on Convergeo — MoMo, card and escrow, COD up to K500, Lusaka delivery, nationwide pickup."
+      "description": "Compare sellers, book services, and find events across Zambia on Convergeo — Mobile Money, card and escrow, COD up to K500, Lusaka delivery, nationwide pickup."
     },
     "serviceBar": {
       "ariaLabel": "Delivery and pickup information",
-      "message": "MoMo & card escrow · COD up to K500 · Lusaka delivery · Nationwide pickup"
+      "message": "Mobile Money & card escrow · COD up to K500 · Lusaka delivery · Nationwide pickup"
     },
     "merchPreview": {
       "banner": "Draft preview — merchandising changes are not live until you publish in admin."
