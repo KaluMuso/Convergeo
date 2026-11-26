@@ -45,7 +45,7 @@ VENDORS_TABLE: Final = "vendors"
 UNIQUE_VIOLATION: Final = "23505"
 
 DEFAULT_PAGE_SIZE: Final = 20
-MAX_PAGE_SIZE: Final = 50
+MAX_PAGE_SIZE: Final = 100
 
 #: Following is a rare, deliberate human action; 60/hour absorbs any honest
 #: browsing session while making follow-graph scraping-by-probing expensive.

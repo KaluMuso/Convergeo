@@ -14,6 +14,7 @@ from app.core.auth import (
 )
 from app.deps import SupabaseServiceClient, get_supabase_client
 from app.errors import AppError
+from app.services.admin_people import people_by_ids
 from fastapi import APIRouter, Depends
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
@@ -125,9 +126,8 @@ def list_roles(
         .execute()
         .data
     )
-    return {
-        "roles": definitions if isinstance(definitions, list) else [],
-        "assignments": [
+    rows = (
+        [
             row
             for row in assignments
             if isinstance(row, dict)
@@ -137,7 +137,29 @@ def list_roles(
             )
         ]
         if isinstance(assignments, list)
-        else [],
+        else []
+    )
+    people = people_by_ids(service, {str(row.get("user_id")) for row in rows})
+    enriched = []
+    for row in rows:
+        person = people.get(str(row.get("user_id")))
+        enriched.append(
+            {
+                **row,
+                "display_name": person["display_name"] if person else None,
+                "email": person["email"] if person else None,
+            }
+        )
+    enriched.sort(
+        key=lambda row: (
+            str(row.get("role")),
+            0 if row["display_name"] else 1,
+            str(row["display_name"] or row["email"] or "").casefold(),
+        )
+    )
+    return {
+        "roles": definitions if isinstance(definitions, list) else [],
+        "assignments": enriched,
     }
 
 
