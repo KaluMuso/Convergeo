@@ -1499,9 +1499,12 @@
         "airtel": "Airtel",
         "zamtel": "Zamtel"
       },
-      "otpLabel": "Code from your phone",
+      "otpLabel": "Code we sent you",
       "otpPlaceholder": "6 numbers",
-      "otpHelp": "We sent a code to your registered phone. Type it here to confirm this change.",
+      "otpHelp": "We emailed you a 6-digit code. Enter it below to confirm this change.",
+      "sendCode": "Send code",
+      "sendingCode": "Sending…",
+      "resendIn": "Resend in {seconds}s",
       "submit": "Save number",
       "saving": "Saving…",
       "success": "Number saved. We wait 24 hours before sending money to it."
@@ -1511,6 +1514,8 @@
       "statementFailed": "We couldn't download the report. Try again.",
       "methodFailed": "We couldn't save the number. Try again.",
       "otpFailed": "That code is wrong or too old. Ask for a new one.",
+      "otpSendFailed": "We could not send the code. Try again.",
+      "reauthRequired": "Add a verified email to your account before changing payout details.",
       "nameMismatch": "The name on this mobile money number is not your name. Use a number in your name.",
       "kycRequired": "Finish your ID check (KYC) before changing where we send your money.",
       "payoutsPaused": "You changed your number, so money sending is paused for 24 hours.",
