@@ -1,9 +1,10 @@
 "use client";
 
 import { useReportClientError } from "@vergeo/observability";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import { getApiBaseUrl } from "../lib/api-base-url";
+import { reloadOnceForChunkError } from "../lib/chunk-reload";
 import { resolveLocaleFromPathname, resolveMarketingErrorCopy } from "../lib/marketing-error-copy";
 
 import "./globals.css";
@@ -20,6 +21,11 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
     [],
   );
   const copy = resolveMarketingErrorCopy(locale);
+
+  // Stale-deploy chunk 404s: one hard reload loads the current build.
+  useEffect(() => {
+    reloadOnceForChunkError(error);
+  }, [error]);
 
   useReportClientError(
     error,
