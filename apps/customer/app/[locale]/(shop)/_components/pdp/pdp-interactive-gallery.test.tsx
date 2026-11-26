@@ -278,7 +278,7 @@ describe("PdpInteractiveBody gallery (digest 1378788464 regression)", () => {
     renderBody({ listingImages: [], productImages: [] });
 
     expect(screen.getByTestId("pdp-gallery-empty")).toHaveTextContent("No images yet");
-    expect(screen.queryByTestId("gallery-strip")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("gallery-thumb-strip")).not.toBeInTheDocument();
   });
 
   it("localises the indicator via client catalog messages (fr / zh)", () => {

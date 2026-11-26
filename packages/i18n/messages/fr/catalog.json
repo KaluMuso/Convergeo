@@ -313,19 +313,32 @@
       "heading": "Consultés récemment"
     },
     "gallery": {
-      "empty": "Pas encore d'images",
+      "empty": "No images yet",
       "indicator": "Image {current} sur {total}",
-      "previous": "Image précédente",
-      "next": "Image suivante",
-      "zoomOpen": "Agrandir l’image",
-      "zoomClose": "Fermer la visionneuse",
-      "zoomTitle": "Images du produit",
-      "zoomIn": "Zoom avant",
-      "zoomOut": "Ajuster l’image"
+      "previous": "Previous image",
+      "next": "Next image",
+      "zoomOpen": "Enlarge image",
+      "zoomClose": "Close image viewer",
+      "zoomTitle": "Product images",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Fit image",
+      "rolloverZoom": "Roll over image to zoom in",
+      "tapToExpand": "Tap to expand",
+      "openLightbox": "Open full-screen image viewer",
+      "thumbAria": "Image {current} of {total}",
+      "moreImages": "{count, plural, one {# more image} other {# more images}}"
     },
     "specs": {
-      "heading": "Caractéristiques",
-      "empty": "Aucune caractéristique renseignée"
+      "heading": "Specifications",
+      "empty": "No specifications listed",
+      "seeMore": "See more",
+      "seeLess": "See less",
+      "groups": {
+        "features": "Features & specs",
+        "details": "Item details",
+        "measurements": "Measurements",
+        "materials": "Materials & care"
+      }
     },
     "buyBox": {
       "priceLabel": "Prix",
@@ -430,11 +443,23 @@
       }
     },
     "lightbox": {
-      "open": "Afficher l'image en plein écran",
-      "dialog": "Visionneuse d'images",
-      "close": "Fermer la visionneuse",
-      "zoomIn": "Zoom avant",
-      "zoomOut": "Zoom arrière"
+      "open": "View image full screen",
+      "dialog": "Image viewer",
+      "close": "Close image viewer",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "imagesTab": "Images"
+    },
+    "sectionNav": {
+      "top": "Top",
+      "about": "About this item",
+      "specs": "Specifications",
+      "reviews": "Reviews",
+      "similar": "Similar"
+    },
+    "about": {
+      "seeMore": "See more",
+      "seeLess": "See less"
     }
   },
   "returnableBadge": {

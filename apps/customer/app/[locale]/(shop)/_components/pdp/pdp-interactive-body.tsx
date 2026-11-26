@@ -333,6 +333,7 @@ export function PdpInteractiveBody({
       zoomIn: t("pdp.lightbox.zoomIn"),
       zoomOut: t("pdp.lightbox.zoomOut"),
       indicator: t.raw("pdp.gallery.indicator") as string,
+      imagesTab: t("pdp.lightbox.imagesTab"),
     }),
     [galleryLabels.next, galleryLabels.previous, t],
   );

@@ -237,7 +237,12 @@
       "zoomClose": "Isaleni ifithunzi",
       "zoomTitle": "Ifithunzi fya product",
       "zoomIn": "Kukusha icithunzi",
-      "zoomOut": "Bwesheni icithunzi kuti cikwane"
+      "zoomOut": "Bwesheni icithunzi kuti cikwane",
+      "rolloverZoom": "Pitilizani pa cithunzi ukuti mwalishe",
+      "tapToExpand": "Koseni ukufungula",
+      "openLightbox": "Funguleni ifithunzi ifyakwata",
+      "thumbAria": "Picture {current} ya {total}",
+      "moreImages": "{count, plural, one {picture # iyinshi} other {amapictures # ayinshi}}"
     },
     "unavailableTitle": "Icintu tashifikapo",
     "unavailableBody": "Tatwaishibe ukuleta icintu ici nomba. Checkeni connection no wesheni limbi.",
@@ -266,7 +271,15 @@
     },
     "specs": {
       "empty": "Takwaba specifications",
-      "heading": "Ifya specs"
+      "heading": "Ifya specs",
+      "seeMore": "Moneni ukupya",
+      "seeLess": "Moneni ifingi",
+      "groups": {
+        "features": "Ifyakufwaya & ifyakulondolola",
+        "details": "Ifintu fyakulondolola",
+        "measurements": "Ukulinga",
+        "materials": "Ubwali & ukusunga"
+      }
     },
     "tabs": {
       "ariaLabel": "Ifya product",
@@ -379,7 +392,8 @@
       "dialog": "Ukumona amapictures",
       "close": "Isalenipo ukumona amapictures",
       "zoomIn": "Kusheni picture",
-      "zoomOut": "Cefyeni picture"
+      "zoomOut": "Cefyeni picture",
+      "imagesTab": "Amapictures"
     },
     "value": {
       "madeToOrderDays": "Yapangwa muntu, yaba ready mu masiku {days}",
@@ -413,6 +427,17 @@
         "cta": "⚠ Set price alert",
         "subscribed": "⚠ We'll notify you when the price drops"
       }
+    },
+    "sectionNav": {
+      "top": "Pa mulu",
+      "about": "Ifilondolola icintu",
+      "specs": "Ifyakulondolola",
+      "reviews": "Imilandu",
+      "similar": "Ifyafanana"
+    },
+    "about": {
+      "seeMore": "Moneni ukupya",
+      "seeLess": "Moneni ifingi"
     }
   },
   "plp": {

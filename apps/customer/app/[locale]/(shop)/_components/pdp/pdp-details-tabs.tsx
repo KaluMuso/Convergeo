@@ -32,7 +32,7 @@ export function PdpDetailsTabs({
     items.push({
       key: "overview",
       label: labels.overview,
-      panel: overviewPanel,
+      panel: <section id="pdp-about">{overviewPanel}</section>,
     });
   }
 
@@ -40,12 +40,12 @@ export function PdpDetailsTabs({
     {
       key: "specs",
       label: labels.specs,
-      panel: specsPanel,
+      panel: <section id="pdp-specs">{specsPanel}</section>,
     },
     {
       key: "reviews",
       label: labels.reviews,
-      panel: reviewsPanel,
+      panel: <section id="pdp-reviews">{reviewsPanel}</section>,
     },
   );
 
