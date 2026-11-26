@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.privacy.export_purge import (
@@ -36,7 +36,7 @@ async def require_internal_privacy_token(request: Request) -> None:
     """Guard the export-purge tick — machine-to-machine, shared internal token only."""
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal privacy token",

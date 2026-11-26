@@ -392,8 +392,8 @@ def test_me_follows_omits_a_vendor_suspended_after_the_follow(
     assert [item["vendor_id"] for item in body["items"]] == [VENDOR_ACTIVE]
 
 
-def test_me_follows_rejects_limit_above_50(api: TestClient, auth: None) -> None:
-    response = api.get("/me/follows?limit=51", headers=_headers(USER_A))
+def test_me_follows_rejects_limit_above_100(api: TestClient, auth: None) -> None:
+    response = api.get("/me/follows?limit=101", headers=_headers(USER_A))
     assert response.status_code == 422
 
     response = api.get("/me/follows?limit=0", headers=_headers(USER_A))

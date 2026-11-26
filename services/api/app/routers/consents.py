@@ -17,13 +17,17 @@ from datetime import datetime
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/account", tags=["privacy-consents"])
-
+router = APIRouter(
+    prefix="/account",
+    tags=["privacy-consents"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 DELIVERY_PARTNER_PURPOSE: Literal["delivery_partner_share"] = "delivery_partner_share"
 # Bump when the wording of `account.privacy.deliveryConsent.*` / the checkout notice
 # changes materially; older consents then read as "not given for this version".

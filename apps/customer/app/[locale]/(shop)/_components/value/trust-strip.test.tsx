@@ -7,7 +7,11 @@ import { ValueTrustStrip } from "./trust-strip";
 describe("ValueTrustStrip", () => {
   it("renders only provided items", () => {
     render(
-      <ValueTrustStrip ariaLabel="Trust" escrow="Held by Vergeo5" momoCod="MTN or Airtel MoMo" />,
+      <ValueTrustStrip
+        ariaLabel="Trust"
+        escrow="Held by Vergeo5"
+        momoCod="Pay with Mobile Money (MTN or Airtel)"
+      />,
     );
     expect(screen.getByTestId("value-trust-escrow")).toBeInTheDocument();
     expect(screen.getByTestId("value-trust-momo")).toBeInTheDocument();

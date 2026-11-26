@@ -349,7 +349,7 @@
       "title": "请查看您的手机",
       "subtitle": "手机上有一条消息。输入 PIN 支付 {amount}。",
       "amountLabel": "付款金额",
-      "mtnHelp": "查看手机上的 MTN MoMo 消息，输入 PIN 支付 {amount}。",
+      "mtnHelp": "查看手机上的 MTN Mobile Money 消息，输入 PIN 支付 {amount}。",
       "airtelHelp": "查看手机上的 Airtel Money 消息，输入 PIN 支付 {amount}。",
       "genericHelp": "我们已向您的手机发送移动钱包消息。输入 PIN 支付 {amount}。",
       "waiting": "等待您付款…",

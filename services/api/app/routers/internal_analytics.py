@@ -5,7 +5,7 @@ from datetime import date
 from typing import Annotated, Any
 
 from anyio import to_thread
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.errors import AppError
 from app.services.analytics import flags as analytics_flags
 from app.services.analytics.retention import (
@@ -43,7 +43,7 @@ async def require_internal_analytics_token(request: Request) -> None:
     """Guard the retention tick — machine-to-machine, shared internal token only."""
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal analytics token",

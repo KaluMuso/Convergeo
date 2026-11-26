@@ -4,6 +4,7 @@ import logging
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
@@ -27,8 +28,11 @@ from pydantic import Field
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/vendor/orders", tags=["vendor-orders"])
-
+router = APIRouter(
+    prefix="/vendor/orders",
+    tags=["vendor-orders"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 VendorActionName = Literal[
     "confirm", "reject", "pack", "ship", "ready_for_pickup", "ready_for_collection"
 ]
@@ -128,8 +132,9 @@ def _load_vendor_for_owner(
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select("id, owner_user_id, status, archetype, business_archetype")
-        .eq("owner_user_id", owner_user_id))
+            .select("id, owner_user_id, status, archetype, business_archetype")
+            .eq("owner_user_id", owner_user_id)
+        )
         .maybe_single()
         .execute()
     )
