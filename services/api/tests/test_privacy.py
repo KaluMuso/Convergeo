@@ -389,6 +389,56 @@ def test_export_scoped_to_authenticated_user_only(
     assert bundle["profile"]["id"] != USER_A
 
 
+def test_deletion_requires_confirmed_email_for_reauth(
+    privacy_app: FastAPI,
+    privacy_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = _sample_store(USER_A)
+    _override_current_user(privacy_app, USER_A, VALID_TOKEN)
+    _override_service(privacy_app, store)
+    monkeypatch.setattr("app.routers.privacy.bump_rate_counter", lambda **_: (True, 0))
+    monkeypatch.setattr("app.routers.privacy.lookup_confirmed_email", lambda _service, **_: None)
+
+    response = privacy_client.post(
+        "/account/delete",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={
+            "confirmation_phrase": DELETE_CONFIRMATION_PHRASE,
+            "otp": "123456",
+            "channel": "email",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "reauth_required"
+    assert store["profiles"][0]["display_name"] == "Alice"
+
+
+def test_deletion_reauth_rate_limited(
+    privacy_app: FastAPI,
+    privacy_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = _sample_store(USER_A)
+    _override_current_user(privacy_app, USER_A, VALID_TOKEN)
+    _override_service(privacy_app, store)
+    monkeypatch.setattr("app.routers.privacy.bump_rate_counter", lambda **_: (False, 42))
+
+    response = privacy_client.post(
+        "/account/delete",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={
+            "confirmation_phrase": DELETE_CONFIRMATION_PHRASE,
+            "otp": "123456",
+            "channel": "email",
+        },
+    )
+
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == "rate_limited"
+
+
 def test_anonymize_is_idempotent_when_already_deleted() -> None:
     store = _sample_store(USER_A)
     store["profiles"][0]["deleted_at"] = "2026-01-01T00:00:00+00:00"

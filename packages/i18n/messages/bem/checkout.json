@@ -108,6 +108,9 @@
     "codStep1": "⚠ You order",
     "codStep2": "⚠ We deliver",
     "codStep3": "⚠ You pay on arrival",
+    "escrowStep1": "Mwalipila",
+    "escrowStep2": "Yikwata bwino na Convergeo",
+    "escrowStep3": "Yasuminishwa pa kufika",
     "leadTimeWhen": {
       "oneDay": "⚠ within a day",
       "days": "⚠ in about {count} days",
@@ -373,7 +376,7 @@
       "amountLabel": "Amount iyasuminishwa",
       "doNotClose": "Sungileni peji ili open ilyo musuminisha pa phone.",
       "genericHelp": "Mobile money prompt yatuminwa ku phone yenu. Lemeni PIN pakuti musuminishe {amount}.",
-      "mtnHelp": "Isuleni MTN MoMo prompt pa phone yenu no lemeni PIN pakuti musuminishe {amount}.",
+      "mtnHelp": "Isuleni MTN Mobile Money prompt pa phone yenu no lemeni PIN pakuti musuminishe {amount}.",
       "subtitle": "Suminisheni prompt ya {amount} pa phone yenu pakuti mukomplete payment.",
       "title": "Loleni phone yenu",
       "waiting": "Tuletekele approval…"

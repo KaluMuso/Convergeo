@@ -343,8 +343,8 @@ def test_accounts_directory_lists_admins_with_names_and_emails(
         },
     )
     accounts = client.get("/admin/accounts").json()["accounts"]
-    assert [a["user_id"] for a in accounts] == [USER, TARGET]
-    target = accounts[1]
+    assert [a["user_id"] for a in accounts] == [TARGET, USER]
+    target = accounts[0]
     assert target["roles"] == ["admin"] and target["display_name"] == "Chanda"
     assert target["email"] == "b2@example.test"
 

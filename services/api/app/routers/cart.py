@@ -13,6 +13,7 @@ from typing import Annotated, Any, Literal
 import jwt
 from app.core.auth import CurrentUser, get_current_user
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -73,8 +74,11 @@ from supabase import Client
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/cart", tags=["cart"])
-
+router = APIRouter(
+    prefix="/cart",
+    tags=["cart"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 GUEST_CART_COOKIE = "vergeo_guest_cart"
 GUEST_CART_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 _CART_ADD_KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
@@ -480,9 +484,7 @@ def _price_cart_with_tickets(
         views, pricing = _price_cart_offers(line_views, customer_id)
         return views, ticket_lines, pricing
     try:
-        return price_unified(
-            line_views, ticket_lines, service_db_client(), customer_id=customer_id
-        )
+        return price_unified(line_views, ticket_lines, service_db_client(), customer_id=customer_id)
     except Exception:
         logger.warning("cart.offer_pricing_failed", exc_info=True)
         return line_views, ticket_lines, None

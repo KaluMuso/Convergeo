@@ -6,7 +6,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
@@ -42,7 +42,8 @@ def _expected_internal_token() -> str:
 
 
 async def require_internal_event_recurrence_token(request: Request) -> None:
-    if request.headers.get("X-Internal-Token") != _expected_internal_token():
+    provided = request.headers.get("X-Internal-Token")
+    if not tokens_match(provided, _expected_internal_token()):
         raise AppError(
             code="unauthorized",
             message="Invalid internal recurrence token",

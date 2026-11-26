@@ -19,6 +19,7 @@ from __future__ import annotations
 import time
 from typing import Annotated, Any, Final, Protocol
 
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.media.authz import VendorScope, require_vendor_scope
@@ -33,8 +34,11 @@ from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import Field
 
-router = APIRouter(prefix="/clips", tags=["clips"])
-
+router = APIRouter(
+    prefix="/clips",
+    tags=["clips"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 CLIPS_TABLE: Final = "video_clips"
 CATEGORIES_TABLE: Final = "categories"
 

@@ -28,6 +28,7 @@ export type PayoutMethodChangePayload = {
   payout_msisdn: string;
   payout_rail: "mtn" | "airtel" | "zamtel";
   otp: string;
+  channel?: "email" | "sms";
 };
 
 export type PayoutMethodChangeResult = {

@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -73,7 +74,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from supabase import Client
 
-router = APIRouter(prefix="/checkout", tags=["checkout"])
+router = APIRouter(
+    prefix="/checkout",
+    tags=["checkout"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 logger = logging.getLogger(__name__)
 
 LUSAKA_CENTER_LAT = -15.4167

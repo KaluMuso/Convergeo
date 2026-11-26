@@ -1,0 +1,91 @@
+{
+  "name": "Door Payment Poll Tick",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every Two Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/reconciliation/door-poll-tick",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_RECONCILIATION_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "door-poll-tick",
+      "name": "Poll Pay At Door",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Reconciliation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const input = $input.all();\nif (input.length !== 1 || !input[0] || !input[0].json) {\n  throw new Error('Door poll returned unexpected item count');\n}\nconst src = input[0].json;\nif (!Number.isSafeInteger(src.scanned) || src.scanned < 0) {\n  throw new Error('Door poll returned invalid scanned counter');\n}\nreturn [{ json: { scanned: src.scanned } }];"
+      },
+      "id": "assert-door-poll-outcome",
+      "name": "Assert Door Poll Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Every Two Minutes": {
+      "main": [[{ "node": "Poll Pay At Door", "type": "main", "index": 0 }]]
+    },
+    "Poll Pay At Door": {
+      "main": [[{ "node": "Assert Door Poll Outcome", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "m08-door-poll",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "M08",
+      "createdAt": "2026-07-10T00:00:00.000Z",
+      "updatedAt": "2026-07-10T00:00:00.000Z"
+    }
+  ]
+}
