@@ -512,11 +512,11 @@ def test_answer_models_default_to_kimi_with_cheap_fallback(
         monkeypatch.delenv(key, raising=False)
     primary, fallback = answer_models()
     assert primary == "moonshotai/kimi-k2"
-    assert fallback == "google/gemini-2.0-flash-lite-001"
+    assert fallback == "google/gemini-2.5-flash-lite"
 
     monkeypatch.setenv("ASK_MODEL", "custom/model")
     monkeypatch.setenv("ASK_FALLBACK_MODEL", "")
-    assert answer_models() == ("custom/model", "google/gemini-2.0-flash-lite-001")
+    assert answer_models() == ("custom/model", "google/gemini-2.5-flash-lite")
     monkeypatch.setenv("ASK_FALLBACK_MODEL", "none")
     assert answer_models() == ("custom/model", None)
 
