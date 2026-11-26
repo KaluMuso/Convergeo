@@ -23,6 +23,7 @@ def _register_app_error_handler(app: FastAPI) -> None:
     )
     app.add_exception_handler(AppError, handler)
 
+
 SYNTHETIC_PATH = "/synthetic/t52-rate-limit"
 
 
@@ -143,3 +144,78 @@ def test_router_dependency_invokes_bump_before_handler(
     assert calls
     assert blocked.status_code == 429
     assert blocked.json()["error"]["code"] == "rate_limited"
+
+
+def test_routes_in_same_tier_use_separate_buckets(monkeypatch: pytest.MonkeyPatch) -> None:
+    path_a, path_b = "/synthetic/t52-a", "/synthetic/t52-b"
+    monkeypatch.setitem(rp.POLICIES, route_id("POST", path_a), STANDARD_WRITE)
+    monkeypatch.setitem(rp.POLICIES, route_id("POST", path_b), STANDARD_WRITE)
+
+    app = FastAPI()
+    router = APIRouter(dependencies=[Depends(enforce_registered_policy)])
+
+    @router.post(path_a)
+    async def write_a() -> dict[str, str]:
+        return {"ok": "a"}
+
+    @router.post(path_b)
+    async def write_b() -> dict[str, str]:
+        return {"ok": "b"}
+
+    app.include_router(router)
+
+    keys: list[tuple[str, str]] = []
+
+    def fake_bump(**kwargs: Any) -> tuple[bool, int]:
+        keys.append((kwargs["scope"], kwargs["key"]))
+        return True, 0
+
+    monkeypatch.setattr("app.core.ratelimit_policies.bump_rate_counter", fake_bump)
+    client = TestClient(app)
+    client.post(path_a)
+    client.post(path_b)
+    assert len(keys) == 2
+    assert keys[0][0] == keys[1][0]  # same tier scope
+    assert keys[0][1] != keys[1][1]  # but distinct buckets
+    assert path_a in keys[0][1] and path_b in keys[1][1]
+
+
+def test_guest_keyed_by_cart_cookie_else_ip(monkeypatch: pytest.MonkeyPatch) -> None:
+    import jwt
+
+    secret = "test-secret-key-for-guest-cart-cookie-0123456789"
+    monkeypatch.setattr(
+        "app.core.ratelimit_policies.get_settings",
+        lambda: type("S", (), {"supabase_service_role_key": secret})(),
+    )
+    monkeypatch.setitem(rp.POLICIES, route_id("POST", SYNTHETIC_PATH), STANDARD_WRITE)
+
+    app = FastAPI()
+    router = APIRouter(dependencies=[Depends(enforce_registered_policy)])
+
+    @router.post(SYNTHETIC_PATH)
+    async def write() -> dict[str, str]:
+        return {"ok": "1"}
+
+    app.include_router(router)
+    keys: list[str] = []
+
+    def fake_bump(**kwargs: Any) -> tuple[bool, int]:
+        keys.append(kwargs["key"])
+        return True, 0
+
+    monkeypatch.setattr("app.core.ratelimit_policies.bump_rate_counter", fake_bump)
+
+    def cookie(token: str) -> str:
+        return jwt.encode({"gt": token, "typ": "cart_guest"}, secret, algorithm="HS256")
+
+    client = TestClient(app)
+    ip_hdr = {"x-forwarded-for": "198.51.100.7"}
+    client.post(SYNTHETIC_PATH, headers=ip_hdr, cookies={rp.GUEST_CART_COOKIE: cookie("g1")})
+    client.post(SYNTHETIC_PATH, headers=ip_hdr, cookies={rp.GUEST_CART_COOKIE: cookie("g2")})
+    client.post(SYNTHETIC_PATH, headers=ip_hdr, cookies={rp.GUEST_CART_COOKIE: "forged"})
+    client.post(SYNTHETIC_PATH, headers=ip_hdr)
+    assert keys[0] != keys[1]  # same IP, different guest carts -> different buckets
+    assert "gc:" in keys[0] and "198.51.100.7" not in keys[0]
+    assert keys[2].endswith("198.51.100.7")  # forged cookie falls back to IP
+    assert keys[3] == keys[2]

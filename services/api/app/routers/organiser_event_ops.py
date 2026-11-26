@@ -131,8 +131,9 @@ def _load_vendor_for_owner(service_client: ServiceRoleClient, owner_user_id: str
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select("id, owner_user_id")
-        .eq("owner_user_id", owner_user_id))
+            .select("id, owner_user_id")
+            .eq("owner_user_id", owner_user_id)
+        )
         .maybe_single()
         .execute()
     )

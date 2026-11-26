@@ -707,8 +707,9 @@ async def list_rfq_threads(
         vendor_resp = (
             scope_owner_vendor_query(
                 service_client.client.table("vendors")
-            .select("id")
-            .eq("owner_user_id", current_user.id))
+                .select("id")
+                .eq("owner_user_id", current_user.id)
+            )
             .limit(1)
             .execute()
         )

@@ -17,6 +17,8 @@ router = APIRouter(
     tags=["pickup"],
     dependencies=[Depends(enforce_registered_policy)],
 )
+
+
 class _ServiceRoleClient(Protocol):
     @property
     def client(self) -> Any: ...
@@ -60,8 +62,9 @@ def _load_vendor_for_owner(
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select("id, owner_user_id")
-        .eq("owner_user_id", owner_user_id))
+            .select("id, owner_user_id")
+            .eq("owner_user_id", owner_user_id)
+        )
         .maybe_single()
         .execute()
     )

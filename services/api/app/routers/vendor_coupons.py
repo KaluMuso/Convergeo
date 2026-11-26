@@ -35,6 +35,8 @@ router = APIRouter(
     tags=["vendor-coupons"],
     dependencies=[Depends(enforce_registered_policy)],
 )
+
+
 def _vendor_id(service: ServiceRoleClient, user: CurrentUser) -> str:
     response = (
         service.client.table("vendors")

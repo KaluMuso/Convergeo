@@ -18,6 +18,8 @@ router = APIRouter(
     tags=["event-team"],
     dependencies=[Depends(enforce_registered_policy)],
 )
+
+
 class ServiceRoleClient(Protocol):
     @property
     def client(self) -> Any: ...

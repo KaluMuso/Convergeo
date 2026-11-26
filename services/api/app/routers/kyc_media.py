@@ -25,6 +25,8 @@ router = APIRouter(
     tags=["media"],
     dependencies=[Depends(enforce_registered_policy)],
 )
+
+
 class _StorageServiceClient(Protocol):
     """Structural type for the service-role client's storage surface.
 

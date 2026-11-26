@@ -23,6 +23,8 @@ router = APIRouter(
     tags=["privacy"],
     dependencies=[Depends(enforce_registered_policy)],
 )
+
+
 class ServiceRoleClient(Protocol):
     @property
     def client(self) -> Client: ...

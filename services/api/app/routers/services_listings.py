@@ -364,8 +364,9 @@ def _load_vendor_for_owner(
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select("id, owner_user_id, status, slug, display_name, preferred_badge, caps_snapshot")
-        .eq("owner_user_id", owner_user_id))
+            .select("id, owner_user_id, status, slug, display_name, preferred_badge, caps_snapshot")
+            .eq("owner_user_id", owner_user_id)
+        )
         .maybe_single()
         .execute()
     )

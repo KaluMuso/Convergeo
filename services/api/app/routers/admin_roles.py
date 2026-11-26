@@ -24,6 +24,8 @@ router = APIRouter(
     tags=["admin-roles"],
     dependencies=[Depends(enforce_registered_policy)],
 )
+
+
 class RoleInput(BaseModel):
     key: str = Field(pattern=r"^rbac_[a-z][a-z0-9_]{2,39}$")
     name: str = Field(min_length=3, max_length=80)

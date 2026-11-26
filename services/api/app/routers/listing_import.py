@@ -31,6 +31,8 @@ router = APIRouter(
     tags=["listing-import"],
     dependencies=[Depends(enforce_registered_policy)],
 )
+
+
 class ListingImportJsonRequest(StrictModel):
     # Cell validation is shared with CSV/raw_rows and is isolated per row.
     rows: list[dict[str, Any]] = Field(min_length=1, max_length=MAX_CSV_ROWS)
@@ -99,8 +101,9 @@ def _load_vendor_for_owner(
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select("id, owner_user_id, status, kyc_tier")
-        .eq("owner_user_id", owner_user_id))
+            .select("id, owner_user_id, status, kyc_tier")
+            .eq("owner_user_id", owner_user_id)
+        )
         .maybe_single()
         .execute()
     )

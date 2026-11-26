@@ -484,9 +484,7 @@ def _price_cart_with_tickets(
         views, pricing = _price_cart_offers(line_views, customer_id)
         return views, ticket_lines, pricing
     try:
-        return price_unified(
-            line_views, ticket_lines, service_db_client(), customer_id=customer_id
-        )
+        return price_unified(line_views, ticket_lines, service_db_client(), customer_id=customer_id)
     except Exception:
         logger.warning("cart.offer_pricing_failed", exc_info=True)
         return line_views, ticket_lines, None

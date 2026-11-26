@@ -236,11 +236,12 @@ def _find_vendor_for_owner(
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select(
-            "id, owner_user_id, status, kyc_tier, preferred_badge, archetype, "
-            "business_archetype, display_name, slug"
+            .select(
+                "id, owner_user_id, status, kyc_tier, preferred_badge, archetype, "
+                "business_archetype, display_name, slug"
+            )
+            .eq("owner_user_id", owner_user_id)
         )
-        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )

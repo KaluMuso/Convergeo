@@ -27,6 +27,8 @@ router = APIRouter(
     tags=["admin-coupons"],
     dependencies=[Depends(enforce_registered_policy)],
 )
+
+
 @router.get("", response_model=CouponListResponse)
 def admin_list_coupons(
     _user: Annotated[CurrentUser, Depends(require_role("admin"))],

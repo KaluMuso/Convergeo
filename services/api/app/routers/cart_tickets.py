@@ -34,6 +34,8 @@ router = APIRouter(
     tags=["cart"],
     dependencies=[Depends(enforce_registered_policy)],
 )
+
+
 class CartTicketInput(BaseModel):
     instance_id: str = Field(min_length=36, max_length=36)
     ticket_type_id: str = Field(min_length=36, max_length=36)
