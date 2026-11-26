@@ -78,7 +78,7 @@ export function ConfirmDiffDialog({
           </button>
           <button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)] disabled:opacity-60"
             disabled={pending}
             onClick={async () => {
               setPending(true);
