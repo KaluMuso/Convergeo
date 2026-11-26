@@ -20,6 +20,7 @@ import { buildCategoryTree, categoryDisplayName } from "../../_components/catego
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { attachOfferBadges } from "../../_components/offers/attach-offer-badges";
 import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
+import { buildCatalogQuery } from "../../_components/plp/catalog-query";
 import { ChildCategoryNav } from "../../_components/plp/child-category-nav";
 import {
   catalogDeliveryLabels,
@@ -115,29 +116,6 @@ function slugToCategoryPath(slug: string[]): string | undefined {
     return undefined;
   }
   return slug.join("/");
-}
-
-function buildCatalogQuery(
-  categoryPath: string | undefined,
-  searchParams: Record<string, string | string[] | undefined>,
-): string {
-  const params = new URLSearchParams();
-  if (categoryPath) {
-    params.set("category_path", categoryPath);
-  }
-  for (const [key, value] of Object.entries(searchParams)) {
-    if (value === undefined || key === "slug") {
-      continue;
-    }
-    if (Array.isArray(value)) {
-      if (value[0]) {
-        params.set(key, value[0]);
-      }
-    } else {
-      params.set(key, value);
-    }
-  }
-  return params.toString();
 }
 
 async function fetchCatalog(queryString: string): Promise<CatalogApiResponse | null> {

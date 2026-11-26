@@ -34,7 +34,7 @@ vi.mock("@vergeo/auth/browser-client", () => ({
   createBrowserClient: () => ({
     auth: {
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-      getUser: vi.fn().mockResolvedValue({ data: { user: { phone: "260971234567" } } }),
+      getUser: vi.fn().mockResolvedValue({ data: { user: { email: "buyer@example.com" } } }),
       signInWithOtp: vi.fn().mockResolvedValue({ error: null }),
       signOut: vi.fn().mockResolvedValue({ error: null }),
     },
@@ -102,7 +102,7 @@ describe("account privacy (DPA) page i18n", () => {
     expect(screen.getByLabelText("Digit 6 of 6")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: privacy.delete.submit })).toBeDisabled();
 
-    // Verified phone loads async; the send-code button then becomes enabled.
+    // Account email loads async (delete step-up is email OTP); the send-code button then becomes enabled.
     await waitFor(() =>
       expect(screen.getByRole("button", { name: privacy.delete.sendOtp })).toBeEnabled(),
     );

@@ -625,3 +625,41 @@ class TestAutoReleaseJobMocked:
         assert second.json()["released"] == 0
         assert second.json()["already_released"] == 1
         assert release_calls == 2
+
+
+class TestOrderJobsDatabaseFailures:
+    def test_auto_confirm_returns_503_when_sql_fails(
+        self,
+        jobs_client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from app.services.db import SqlResult
+
+        monkeypatch.setattr(
+            "app.routers.internal_order_jobs.run_sql_script",
+            lambda _script: SqlResult(ok=False, rows=[], error="connection reset"),
+        )
+        response = jobs_client.post(AUTO_CONFIRM_PATH, json={"limit": 1}, headers=_auth_headers())
+        assert response.status_code == 503
+        assert response.json()["error"]["code"] == "database_unavailable"
+
+    def test_cancel_unpaid_returns_503_when_sql_fails(
+        self,
+        jobs_client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from app.services.db import SqlResult
+
+        def fail_second_call(script: str) -> SqlResult:
+            if "unpaid_order_cancel_hours" in script:
+                return SqlResult(ok=True, rows=['"12"'], error=None)
+            return SqlResult(ok=False, rows=[], error="timeout")
+
+        monkeypatch.setattr("app.routers.internal_order_jobs.run_sql_script", fail_second_call)
+        response = jobs_client.post(
+            "/internal/order-jobs/cancel-unpaid",
+            json={"limit": 1},
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 503
+        assert response.json()["error"]["code"] == "database_unavailable"

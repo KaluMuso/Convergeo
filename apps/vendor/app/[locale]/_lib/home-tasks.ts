@@ -1,3 +1,5 @@
+import { shouldPromptVendorPayoutMethodOnHome } from "../../../lib/payouts-availability";
+
 import type { DispatchCutoffState } from "./dispatch-cutoff";
 
 /**
@@ -10,6 +12,7 @@ export type HomeTaskKey =
   | "kycFinish"
   | "kycPending"
   | "payoutMethod"
+  | "payoutsPilot"
   | "ordersWaiting"
   | "ordersWaitingUrgent"
   | "ordersWaitingAfterCutoff"
@@ -56,7 +59,11 @@ export function buildHomeTasks(input: HomeTaskInput): HomeTask[] {
 
   const payoutMissing = input.payoutMissing ?? null;
   if (payoutMissing === true && input.kycOverall !== "needs_fix") {
-    tasks.push({ key: "payoutMethod", href: "/payouts/method", tone: "warning" });
+    if (shouldPromptVendorPayoutMethodOnHome(payoutMissing)) {
+      tasks.push({ key: "payoutMethod", href: "/payouts/method", tone: "warning" });
+    } else {
+      tasks.push({ key: "payoutsPilot", href: "/payouts", tone: "info" });
+    }
   }
 
   if (input.needsActionCount > 0) {

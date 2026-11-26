@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.events.refund_jobs import sweep_event_refund_jobs
@@ -57,7 +57,7 @@ async def require_internal_event_refund_jobs_token(request: Request) -> None:
     """Guard cron ticks — not publicly callable without the shared internal token."""
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal event refund jobs token",
