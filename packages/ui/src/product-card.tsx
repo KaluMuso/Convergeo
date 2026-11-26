@@ -192,7 +192,7 @@ export function ProductCard({
           </button>
         ) : null}
       </div>
-      <div className="flex min-w-0 flex-col gap-0.5 p-3">
+      <div className="flex min-w-0 flex-col gap-0.5 p-[var(--card-pad,var(--sp-2))]">
         <h3 className={cx("v-card__title m-0 line-clamp-2", compact && "v-card__title--compact")}>
           {title}
         </h3>
