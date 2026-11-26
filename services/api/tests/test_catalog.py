@@ -141,6 +141,26 @@ def _made_to_order_listing() -> dict[str, Any]:
 
 
 SEED_STORE: dict[str, list[dict[str, Any]]] = {
+    "categories": [
+        {
+            "id": "cat-electronics",
+            "name": "Electronics",
+            "slug": "electronics",
+            "path": "electronics",
+            "position": 1,
+            "parent_id": None,
+            "prohibited": False,
+        },
+        {
+            "id": "cat-fashion",
+            "name": "Fashion",
+            "slug": "fashion-beauty",
+            "path": "fashion-beauty",
+            "position": 2,
+            "parent_id": None,
+            "prohibited": False,
+        },
+    ],
     "search_documents": [
         _search_doc(
             PHONE_LISTING_ID,
@@ -751,6 +771,80 @@ def test_catalog_endpoint_returns_facets(catalog_client: TestClient) -> None:
     assert len(body["items"]) == 2
     assert "Cache-Control" in response.headers
     assert "s-maxage=30" in response.headers["Cache-Control"]
+    assert response.headers.get("Vary") == "Authorization"
+
+
+def test_catalog_endpoint_bearer_is_no_store(catalog_client: TestClient) -> None:
+    response = catalog_client.get(
+        "/catalog/listings",
+        params={"category_path": "electronics"},
+        headers={"Authorization": "Bearer guest-token"},
+    )
+    assert response.status_code == 200
+    assert response.headers.get("Cache-Control") == "private, no-store"
+    assert response.headers.get("Vary") == "Authorization"
+
+
+def test_fetch_search_documents_orders_and_pages(fake_client: FakeSupabaseClient) -> None:
+    docs = [
+        _search_doc(
+            f"00000000-0000-4000-8000-{index:012x}",
+            title=f"Item {index}",
+            category_path="electronics",
+            price=10_000 + index,
+            lat=LUSAKA_CBD[0],
+            lng=LUSAKA_CBD[1],
+        )
+        for index in range(1_050)
+    ]
+    store = dict(SEED_STORE)
+    store["search_documents"] = docs
+    client = FakeSupabaseClient(store)
+    fetched = catalog_module._fetch_search_documents(client, "electronics")
+    assert len(fetched) == 1_050
+
+
+def test_catalog_candidates_cache_key_isolates_unknown_paths(
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clear_ttl_cache_store()
+    build_calls = 0
+    original_build = catalog_module._build_candidates
+
+    def counting_build(client: Any, category_path: str | None) -> list[_CatalogCandidate]:
+        nonlocal build_calls
+        build_calls += 1
+        return original_build(client, category_path)
+
+    monkeypatch.setattr(catalog_module, "_build_candidates", counting_build)
+    unknown = "totally-unknown/user-supplied"
+    list_catalog(fake_client, PlpFilterState(category_path=unknown))
+    list_catalog(fake_client, PlpFilterState(category_path=unknown))
+    assert build_calls == 2
+
+
+def test_catalog_candidates_invalid_cache_payload_rebuilds(
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.ttl_cache import set_cached_json
+
+    clear_ttl_cache_store()
+    cache_key = catalog_module._catalog_candidates_cache_key(fake_client, None)
+    assert cache_key is not None
+    set_cached_json(cache_key, [{"not": "a candidate"}], ttl_seconds=60)
+    build_calls = 0
+    original_build = catalog_module._build_candidates
+
+    def counting_build(client: Any, category_path: str | None) -> list[_CatalogCandidate]:
+        nonlocal build_calls
+        build_calls += 1
+        return original_build(client, category_path)
+
+    monkeypatch.setattr(catalog_module, "_build_candidates", counting_build)
+    list_catalog(fake_client, PlpFilterState())
+    assert build_calls == 1
 
 
 def test_catalog_endpoint_distance_sort(catalog_client: TestClient) -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import logging
 import math
 from typing import Annotated, Any, Literal, cast
@@ -11,6 +12,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.comparison import is_lusaka_delivery_available
 from app.schemas.offers import OfferBadgeOut
+from app.services.categories.public import list_public_categories
 from app.services.db_chunk import POSTGREST_PAGE_SIZE, chunked_in_query
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import fetch_demo_listing_ids
@@ -390,6 +392,7 @@ def _fetch_search_documents(client: Any, category_path: str | None) -> list[_Sea
     while True:
         response = (
             _search_documents_base_query(client, category_path)
+            .order("entity_id")
             .range(offset, offset + POSTGREST_PAGE_SIZE - 1)
             .execute()
         )
@@ -871,14 +874,39 @@ def _build_candidates(client: Any, category_path: str | None) -> list[_CatalogCa
     return candidates
 
 
-def _catalog_candidates_cache_key(category_path: str | None) -> str:
-    normalized = category_path if category_path else "__all__"
-    return f"{CATALOG_CANDIDATES_CACHE_PREFIX}{normalized}"
+def _is_cacheable_category_path(client: Any, category_path: str | None) -> bool:
+    if category_path is None:
+        return True
+    normalized = category_path.strip().strip("/")
+    if not normalized:
+        return True
+    try:
+        categories = list_public_categories(client, use_cache=True)
+    except Exception:
+        logger.warning("catalog_category_lookup_failed", exc_info=True)
+        return False
+    for category in categories:
+        path = category.path.strip("/")
+        if (
+            path == normalized
+            or path.startswith(f"{normalized}/")
+            or normalized.startswith(f"{path}/")
+        ):
+            return True
+    return False
+
+
+def _catalog_candidates_cache_key(client: Any, category_path: str | None) -> str | None:
+    if not _is_cacheable_category_path(client, category_path):
+        return None
+    normalized = (category_path or "__all__").strip().strip("/") or "__all__"
+    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:24]
+    return f"{CATALOG_CANDIDATES_CACHE_PREFIX}{digest}"
 
 
 def _build_candidates_cached(client: Any, category_path: str | None) -> list[_CatalogCandidate]:
-    cache_key = _catalog_candidates_cache_key(category_path)
-    cached = get_cached_json(cache_key)
+    cache_key = _catalog_candidates_cache_key(client, category_path)
+    cached = get_cached_json(cache_key) if cache_key else None
     if isinstance(cached, list):
         restored: list[_CatalogCandidate] = []
         try:
@@ -891,11 +919,12 @@ def _build_candidates_cached(client: Any, category_path: str | None) -> list[_Ca
             logger.warning("catalog_candidates_cache_invalid", exc_info=True)
 
     built = _build_candidates(client, category_path)
-    try:
-        payload = [row.model_dump(mode="json") for row in built]
-        set_cached_json(cache_key, payload, ttl_seconds=CATALOG_CANDIDATES_CACHE_TTL_SECONDS)
-    except Exception:
-        logger.warning("catalog_candidates_cache_set_failed", exc_info=True)
+    if cache_key:
+        try:
+            payload = [row.model_dump(mode="json") for row in built]
+            set_cached_json(cache_key, payload, ttl_seconds=CATALOG_CANDIDATES_CACHE_TTL_SECONDS)
+        except Exception:
+            logger.warning("catalog_candidates_cache_set_failed", exc_info=True)
     return built
 
 
@@ -1215,6 +1244,7 @@ async def catalog_listings(
     }
     filters = decode_plp_filters(raw_params)
     payload = list_catalog(supabase.client, filters)
+    response.headers["Vary"] = "Authorization"
     authorization = request.headers.get("Authorization", "")
     if authorization.startswith("Bearer "):
         response.headers["Cache-Control"] = "private, no-store"
