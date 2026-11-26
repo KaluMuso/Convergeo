@@ -1,11 +1,11 @@
 "use client";
 
 import { useSession } from "@vergeo/auth/use-session";
+import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { VendorGrid } from "../../_components/vendor-page";
 import { VendorRouteHeader } from "../../_components/vendor-route-header";
