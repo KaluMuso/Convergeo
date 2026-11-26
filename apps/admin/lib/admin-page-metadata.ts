@@ -1,12 +1,9 @@
-import type { Metadata } from "next";
-
 import { getAdminTranslator } from "./admin-translator";
 
+import type { Metadata } from "next";
+
 /** Document title from `admin.nav.*` (matches sidebar labels). */
-export async function adminNavPageMetadata(
-  locale: string,
-  navKey: string,
-): Promise<Metadata> {
+export async function adminNavPageMetadata(locale: string, navKey: string): Promise<Metadata> {
   const t = await getAdminTranslator(locale, "admin.nav");
   return { title: t(navKey) };
 }
