@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, cast
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_dashboards import (
@@ -83,7 +83,7 @@ async def require_internal_digest_token(request: Request) -> None:
     """Guard the digest tick — not publicly callable without the shared internal token."""
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal digest token",

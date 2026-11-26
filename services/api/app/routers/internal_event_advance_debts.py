@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.events.advance_policy import enforce_overdue_advance_debts
@@ -31,7 +31,7 @@ def _expected_internal_token() -> str:
 async def require_internal_event_advance_debts_token(request: Request) -> None:
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal event advance debts token",

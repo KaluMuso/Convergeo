@@ -3,11 +3,27 @@
 from __future__ import annotations
 
 import pytest
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import (
+    InternalTokenMisconfigured,
+    resolve_internal_token,
+    tokens_match,
+)
 from fastapi.testclient import TestClient
 
 ENV_VAR = "INTERNAL_PAYOUTS_TOKEN"
 DEV_DEFAULT = "dev-internal-payouts"
+
+
+class TestTokensMatch:
+    def test_empty_provided_is_false(self) -> None:
+        assert tokens_match(None, "secret") is False
+        assert tokens_match("", "secret") is False
+
+    def test_mismatch_is_false(self) -> None:
+        assert tokens_match("wrong", "secret") is False
+
+    def test_match_is_true(self) -> None:
+        assert tokens_match("secret", "secret") is True
 
 
 class TestResolveInternalToken:
