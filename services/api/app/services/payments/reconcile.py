@@ -20,6 +20,7 @@ from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.lenco.config import get_api_token, get_base_url
 from app.services.payments.lenco.reconciliation import LencoReconciliationAdapter
 from app.services.payments.money import major_str_to_ngwee
+from app.services.payments.ops_alerts import alert_stale_initiated_not_found
 from app.services.payments.reconciliation_matcher import (
     collect_provider_pages,
     match_movements,
@@ -32,6 +33,7 @@ from app.services.payments.state import (
     PaymentTransitionError,
     apply_payment_status,
     collection_observation_from_query,
+    get_payment_ttl_minutes,
     lenco_collection_status_to_payment_status,
     process_webhook_event,
     validate_query_collection_observation,
@@ -372,12 +374,25 @@ def _fetch_non_terminal_payments(
     cutoff = datetime.now(UTC) - timedelta(minutes=older_than_minutes)
     response = (
         service_client.client.table("payments")
-        .select("id, status, lenco_reference, updated_at")
+        .select("id, checkout_group_id, status, lenco_reference, amount_ngwee, updated_at")
         .in_("status", list(NON_TERMINAL_POLL_STATUSES))
         .lt("updated_at", cutoff.isoformat())
         .execute()
     )
     return _rows(response)
+
+
+def _initiated_stale(payment: dict[str, Any], *, ttl_minutes: int) -> bool:
+    raw = payment.get("updated_at") or payment.get("created_at")
+    if not isinstance(raw, str):
+        return False
+    try:
+        updated = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if updated.tzinfo is None:
+        updated = updated.replace(tzinfo=UTC)
+    return datetime.now(UTC) - updated >= timedelta(minutes=ttl_minutes)
 
 
 async def poll_non_terminal_payments(
@@ -417,6 +432,19 @@ async def poll_non_terminal_payments(
                 continue
 
             if query_result.outcome == ProviderOutcome.NOT_FOUND:
+                if current_status == PaymentStatus.INITIATED and _initiated_stale(
+                    payment, ttl_minutes=get_payment_ttl_minutes(service_client)
+                ):
+                    # NOT_FOUND is NOT proof that a timed-out initiate cannot still
+                    # create a collection at Lenco (sweep_stale_payments invariant).
+                    # Never set terminal_provider_failure here: that is what lets a
+                    # second claim open a second live collection. Keep the payment
+                    # in flight and surface it to ops instead.
+                    alert_stale_initiated_not_found(
+                        service_client.client, payment=payment, actor_id=SYSTEM_ACTOR_ID
+                    )
+                    unchanged += 1
+                    continue
                 logger.warning(
                     "reconciliation poll: provider has no collection for payment %s "
                     "(requested_reference=%s)",

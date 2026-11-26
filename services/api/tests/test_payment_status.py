@@ -339,6 +339,15 @@ class TestPaymentStatusPoll:
         assert response.json()["status"] == status
 
 
+@pytest.fixture(autouse=True)
+def _allow_retry_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Never hit the real limiter RPC from unit tests (429/fail-open tests override)."""
+    monkeypatch.setattr(
+        "app.routers.payment_status.bump_rate_counter",
+        lambda **_kwargs: (True, 0),
+    )
+
+
 class TestPaymentRetry:
     @pytest.mark.asyncio
     async def test_retry_creates_new_payment_same_order_count(
@@ -414,3 +423,65 @@ class TestPaymentRetry:
                 json={"checkout_group_id": CHECKOUT_GROUP_ID},
             )
         assert response.status_code == 403
+
+
+class TestPaymentRetryHardening:
+    def _setup(self, monkeypatch: pytest.MonkeyPatch, fake_client: FakeSupabaseClient) -> MagicMock:
+        _mock_auth(monkeypatch, CUSTOMER_A_ID)
+        _seed_group(fake_client)
+        _seed_order(fake_client)
+        _seed_payment(fake_client, status="expired")
+        return _mock_supabase(monkeypatch, fake_client)
+
+    def _post(self, service_wrapper: MagicMock, body: dict[str, Any]) -> Any:
+        app = create_app()
+        app.dependency_overrides[get_supabase_client] = lambda: service_wrapper
+        with TestClient(app, raise_server_exceptions=False) as client:
+            return client.post("/payments/retry", headers=_auth_headers(), json=body)
+
+    def test_retry_rate_limited_returns_429(
+        self, monkeypatch: pytest.MonkeyPatch, fake_client: FakeSupabaseClient
+    ) -> None:
+        service_wrapper = self._setup(monkeypatch, fake_client)
+        monkeypatch.setattr(
+            "app.routers.payment_status.bump_rate_counter",
+            lambda **_kwargs: (False, 30),
+        )
+        response = self._post(service_wrapper, {"checkout_group_id": CHECKOUT_GROUP_ID})
+        assert response.status_code == 429
+        assert response.json()["error"]["code"] == "rate_limited"
+        # Rejected before any payment attempt is created.
+        assert len(fake_client.tables["payments"].rows) == 1
+
+    def test_retry_limiter_outage_fails_open(
+        self, monkeypatch: pytest.MonkeyPatch, fake_client: FakeSupabaseClient
+    ) -> None:
+        service_wrapper = self._setup(monkeypatch, fake_client)
+
+        def boom(**_kwargs: Any) -> tuple[bool, int]:
+            raise RuntimeError("limiter db down")
+
+        monkeypatch.setattr("app.routers.payment_status.bump_rate_counter", boom)
+        strategy = MagicMock()
+        strategy.initiate_collection = AsyncMock(
+            return_value=InitiateCollectionResult(
+                provider_reference="240730100",
+                status=CollectionStatus.PENDING,
+                amount_major="250.00",
+            )
+        )
+        monkeypatch.setattr("app.services.payments.initiate.get", lambda _provider: strategy)
+        response = self._post(service_wrapper, {"checkout_group_id": CHECKOUT_GROUP_ID})
+        assert response.status_code == 200
+
+    def test_retry_invalid_payer_number_returns_422(
+        self, monkeypatch: pytest.MonkeyPatch, fake_client: FakeSupabaseClient
+    ) -> None:
+        service_wrapper = self._setup(monkeypatch, fake_client)
+        response = self._post(
+            service_wrapper,
+            {"checkout_group_id": CHECKOUT_GROUP_ID, "payer_number": "12345"},
+        )
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "checkout.invalid_payer_number"
+        assert len(fake_client.tables["payments"].rows) == 1
