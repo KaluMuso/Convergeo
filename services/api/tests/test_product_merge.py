@@ -193,6 +193,7 @@ class FakeSupabaseClient:
             "vendor_listings": FakeTable(),
             "product_relations": FakeTable(),
             "audit_log": FakeTable(),
+            "categories": FakeTable(),
         }
 
     @property
