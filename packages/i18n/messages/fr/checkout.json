@@ -105,6 +105,9 @@
     "codStep1": "Vous commandez",
     "codStep2": "Nous livrons",
     "codStep3": "Vous payez à l'arrivée",
+    "escrowStep1": "Vous payez",
+    "escrowStep2": "Nous le gardons",
+    "escrowStep3": "Le vendeur le reçoit après la livraison",
     "leadTimeWhen": {
       "oneDay": "sous 24 heures",
       "days": "dans environ {count} jours",

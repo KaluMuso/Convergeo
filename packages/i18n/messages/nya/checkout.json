@@ -108,6 +108,9 @@
     "codStep1": "⚠ You order",
     "codStep2": "⚠ We deliver",
     "codStep3": "⚠ You pay on arrival",
+    "escrowStep1": "Mwalipira",
+    "escrowStep2": "Ikusungidwa ndi Convergeo",
+    "escrowStep3": "Yatsimikizidwa pa kutumiza",
     "leadTimeWhen": {
       "oneDay": "⚠ within a day",
       "days": "⚠ in about {count} days",
