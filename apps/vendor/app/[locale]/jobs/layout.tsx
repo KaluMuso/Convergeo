@@ -1,4 +1,5 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
+
 import type { Metadata } from "next";
 
 type LayoutProps = { children: React.ReactNode; params: Promise<{ locale: string }> };

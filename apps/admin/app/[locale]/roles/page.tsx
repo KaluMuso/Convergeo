@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
-
 import { adminNavPageMetadata } from "../../../lib/admin-page-metadata";
 
 import { RolesBoard } from "./roles-board";
+
+import type { Metadata } from "next";
 
 type PageProps = { params: Promise<{ locale: string }> };
 

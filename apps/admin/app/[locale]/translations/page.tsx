@@ -1,12 +1,12 @@
 import { LOCALES } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
-import type { Metadata } from "next";
-
 import { adminNavPageMetadata } from "../../../lib/admin-page-metadata";
 
 import { TranslatorView } from "./_components/TranslatorView";
 import { buildTranslationCatalog } from "./_lib/catalog";
+
+import type { Metadata } from "next";
 
 type PageProps = {
   params: Promise<{ locale: string }>;

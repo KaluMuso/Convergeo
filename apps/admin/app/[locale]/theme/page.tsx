@@ -5,12 +5,13 @@ import {
   THEME_PRESET_LIST,
   DEFAULT_SEASONAL_PRESET,
 } from "@vergeo/ui/src/theme-presets";
-import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 
 import { adminNavPageMetadata } from "../../../lib/admin-page-metadata";
 import { getAdminTranslator } from "../../../lib/admin-translator";
 import { AdminPage } from "../_components/admin-page";
+
+import type { Metadata } from "next";
 
 type PageProps = {
   params: Promise<{ locale: string }>;

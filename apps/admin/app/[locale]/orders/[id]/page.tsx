@@ -1,9 +1,5 @@
 import { setRequestLocale } from "next-intl/server";
 
-import type { Metadata } from "next";
-
-import { adminNavPageMetadata } from "../../../../lib/admin-page-metadata";
-
 import { OrderDetailView } from "../_components/OrderDetailView";
 
 export const dynamic = "force-dynamic";

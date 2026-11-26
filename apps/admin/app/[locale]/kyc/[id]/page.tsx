@@ -1,9 +1,5 @@
 import { setRequestLocale } from "next-intl/server";
 
-import type { Metadata } from "next";
-
-import { adminNavPageMetadata } from "../../../../lib/admin-page-metadata";
-
 import { KycReviewDetail } from "../_components/KycReviewDetail";
 
 export const dynamic = "force-dynamic";

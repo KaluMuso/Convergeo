@@ -1,6 +1,6 @@
-import type { Metadata } from "next";
-
 import { adminNavPageMetadata } from "../../../lib/admin-page-metadata";
+
+import type { Metadata } from "next";
 
 type LayoutProps = { children: React.ReactNode; params: Promise<{ locale: string }> };
 
