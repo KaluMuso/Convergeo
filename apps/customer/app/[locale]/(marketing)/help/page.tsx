@@ -1,6 +1,8 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import { PageHeader } from "@vergeo/ui/src/page-header";
+import { buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import { buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
 import Link from "next/link";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -46,10 +48,19 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getMarketingTranslator(locale);
+  const title = t("meta.title");
+  const description = t("meta.description");
+  const canonicalPath = buildLocaleCanonical(locale, "help");
   return {
-    title: t("meta.title"),
-    description: t("meta.description"),
-    alternates: { canonical: `/${locale}/help` },
+    title,
+    description,
+    alternates: { canonical: canonicalPath },
+    ...buildSocialMetadata({
+      title,
+      description,
+      locale,
+      url: canonicalPath,
+    }),
   };
 }
 

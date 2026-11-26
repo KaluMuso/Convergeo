@@ -19,7 +19,6 @@ import { catalogDeliveryLabels } from "../plp/delivery-labels";
 import { catalogLogisticsLabels } from "../plp/logistics-pills";
 
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
-import { BuyerTrustPanel } from "./buyer-trust-panel";
 import { shouldShowComparison } from "./comparison-visibility";
 import { PdpGallery } from "./gallery";
 import { buildOfferPriceContext } from "./offer-price-context";
@@ -34,7 +33,6 @@ import {
   type VariantOptionGroup,
   type VariantSelection,
 } from "./variant-selection";
-import { VendorBlock } from "./vendor-block";
 
 import type { ComparisonLabels, ComparisonListing } from "./comparison";
 import type { ListingCondition } from "./condition-badge";
@@ -67,6 +65,16 @@ const RequestQuoteButton = dynamic(
 
 const ReportListing = dynamic(() => import("./report-listing").then((mod) => mod.ReportListing), {
   ssr: false,
+});
+
+const BuyerTrustPanel = dynamic(
+  () => import("./buyer-trust-panel").then((mod) => mod.BuyerTrustPanel),
+  { ssr: false, loading: () => null },
+);
+
+const VendorBlock = dynamic(() => import("./vendor-block").then((mod) => mod.VendorBlock), {
+  ssr: false,
+  loading: () => <div aria-hidden className="min-h-32" />,
 });
 
 const RelatedProductRails = lazy(() =>
