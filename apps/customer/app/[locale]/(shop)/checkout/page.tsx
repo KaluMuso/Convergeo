@@ -111,6 +111,9 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       throttledTemplate: String(t.raw("checkout.contact.throttled")),
       generic: t("checkout.contact.generic"),
       skippedLoggedIn: t("checkout.contact.skippedLoggedIn"),
+      needPhone: t("checkout.contact.needPhone"),
+      savePhone: t("checkout.contact.savePhone"),
+      saveFailed: t("checkout.contact.saveFailed"),
     },
     fulfilment: {
       title: t("checkout.fulfilment.title"),

@@ -1,4 +1,4 @@
-import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { formatK, loadNamespace, type Locale } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
@@ -147,7 +147,7 @@ function badgeVariant(tier: ServiceDetail["provider"]["response_time_tier"]) {
 }
 
 export function generateStaticParams() {
-  return LOCALES.map((locale) => ({ locale, slug: "placeholder" }));
+  return [];
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

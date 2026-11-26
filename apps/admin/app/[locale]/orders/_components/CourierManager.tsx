@@ -248,7 +248,7 @@ export function CourierManager({ couriers, zones, onChanged }: CourierManagerPro
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
-              className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
+              className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)] disabled:opacity-60"
               disabled={saving}
             >
               {saving ? t("saving") : t("save")}

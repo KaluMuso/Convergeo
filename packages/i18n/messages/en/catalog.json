@@ -90,11 +90,11 @@
   "home": {
     "meta": {
       "title": "Shop products, services & events in Zambia",
-      "description": "Compare sellers, book services, and find events across Zambia on Convergeo — MoMo, card and escrow, COD up to K500, Lusaka delivery, nationwide pickup."
+      "description": "Compare sellers, book services, and find events across Zambia on Convergeo — Mobile Money, card and escrow, COD up to K500, Lusaka delivery, nationwide pickup."
     },
     "serviceBar": {
       "ariaLabel": "Delivery and pickup information",
-      "message": "MoMo & card escrow · COD up to K500 · Lusaka delivery · Nationwide pickup"
+      "message": "Mobile Money & card escrow · COD up to K500 · Lusaka delivery · Nationwide pickup"
     },
     "merchPreview": {
       "banner": "Draft preview — merchandising changes are not live until you publish in admin."
@@ -109,7 +109,7 @@
         "title": "Welcome to Convergeo",
         "subtitle": "Your config-driven storefront will appear here as merchandising slots go live."
       },
-      "escrowLine": "Pay with MTN/Airtel MoMo or card — we hold the money until you confirm delivery. Cash on delivery for orders under K500.",
+      "escrowLine": "Pay with MTN or Airtel Mobile Money or card — we hold the money until you confirm delivery. Cash on delivery for orders under K500.",
       "escrowStep1": "You pay",
       "escrowStep2": "Held by Convergeo",
       "escrowStep3": "Released after delivery",
@@ -143,7 +143,7 @@
       "sellers": "Every shop has its own page. See who you buy from.",
       "fulfillment": "Delivery in Lusaka. Pickup across Zambia.",
       "returns": "Broken or wrong item? Return it within 48 hours.",
-      "escrow": "MoMo or card with escrow, or cash on delivery up to K500"
+      "escrow": "Mobile Money or card with escrow, or cash on delivery up to K500"
     },
     "demo": {
       "sampleListing": "Sample listing"
@@ -460,7 +460,7 @@
       "delivery": "Delivery available for this seller",
       "pickup": "Pickup available for this seller",
       "returns": "Returns & refunds",
-      "escrow": "Pay with MTN/Airtel MoMo or card — we hold the money until you confirm delivery. Cash on delivery for orders under K500."
+      "escrow": "Pay with MTN or Airtel Mobile Money or card — we hold the money until you confirm delivery. Cash on delivery for orders under K500."
     },
     "condition": {
       "new": "New",
