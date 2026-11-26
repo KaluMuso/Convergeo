@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { VendorErrorState } from "../../_components/async-state";
 import { OrderDetailSkeleton } from "../../_components/vendor-skeletons";
+import { formatOrderCode } from "../../_lib/order-code";
 import { Badge, Button, FormField, Input, PriceBlock } from "../../listings/new/_lib/ui";
 
 import {
@@ -472,7 +473,9 @@ export function OrderDetailView({ orderId, locale = "en" }: OrderDetailViewProps
           </h1>
           <Badge variant="public" label={fulfilmentLabel} />
         </div>
-        <p className="text-xs text-text-3">{order.id}</p>
+        <p className="text-sm text-text-2">
+          {t("orders.detail.orderCode", { code: formatOrderCode(order.id) })}
+        </p>
       </header>
 
       {success ? (

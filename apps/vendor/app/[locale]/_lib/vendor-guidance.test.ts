@@ -345,6 +345,19 @@ describe("buildHomeTasks", () => {
     ).not.toContain("payoutMethod");
   });
 
+  it("skips payout setup on home when payouts are disabled for the pilot", () => {
+    const tasks = buildHomeTasks({
+      kycOverall: "approved",
+      payoutMissing: true,
+      payoutsEnabled: false,
+      needsActionCount: 0,
+      hasDeliveryWaiting: false,
+      cutoff: before,
+      sellerKind: "products",
+    });
+    expect(tasks.map((t) => t.key)).not.toContain("payoutMethod");
+  });
+
   it("does not show payout setup while ID verification needs a fix", () => {
     const tasks = buildHomeTasks({
       kycOverall: "needs_fix",

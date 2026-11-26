@@ -3,13 +3,17 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 
+import { formatOrderCode } from "../../_lib/order-code";
 import { Button, FormField, Input } from "../../listings/new/_lib/ui";
 
+import type { PickupReadyOrder } from "../_lib/pickup-client";
 import type { FormEvent } from "react";
 
 type PinFallbackProps = {
   disabled: boolean;
   isSubmitting: boolean;
+  readyOrders: PickupReadyOrder[];
+  readyOrdersLoading: boolean;
   onSubmit: (orderId: string, pin: string) => void;
   onUseCamera?: () => void;
   showCameraOption: boolean;
@@ -18,6 +22,8 @@ type PinFallbackProps = {
 export function PinFallback({
   disabled,
   isSubmitting,
+  readyOrders,
+  readyOrdersLoading,
   onSubmit,
   onUseCamera,
   showCameraOption,
@@ -25,19 +31,22 @@ export function PinFallback({
   const t = useTranslations("vendor");
   const [orderId, setOrderId] = useState("");
   const [pin, setPin] = useState("");
+  const [selectedId, setSelectedId] = useState("");
 
   const handleSubmit = useCallback(
     (event: FormEvent) => {
       event.preventDefault();
-      const trimmedOrderId = orderId.trim();
+      const trimmedOrderId = (selectedId || orderId).trim();
       const trimmedPin = pin.trim();
       if (!trimmedOrderId || trimmedPin.length !== 6) {
         return;
       }
       onSubmit(trimmedOrderId, trimmedPin);
     },
-    [onSubmit, orderId, pin],
+    [onSubmit, orderId, pin, selectedId],
   );
+
+  const pickupReady = readyOrders.filter((row) => row.fulfilment === "pickup");
 
   return (
     <form
@@ -54,14 +63,58 @@ export function PinFallback({
         </p>
       </div>
 
+      {pickupReady.length > 0 ? (
+        <FormField id="pickup-order-pick" label={t("scan.pin.pickOrderLabel")}>
+          <select
+            id="pickup-order-pick"
+            value={selectedId}
+            onChange={(event) => {
+              setSelectedId(event.target.value);
+              if (event.target.value) {
+                setOrderId("");
+              }
+            }}
+            disabled={disabled || isSubmitting}
+            style={{
+              minHeight: "2.75rem",
+              width: "100%",
+              borderRadius: "var(--r)",
+              border: "1px solid var(--border)",
+              padding: "0 var(--sp-3)",
+              fontSize: "var(--fs-body)",
+              background: "var(--surface)",
+            }}
+          >
+            <option value="">{t("scan.pin.pickOrderPlaceholder")}</option>
+            {pickupReady.map((row) => (
+              <option key={row.id} value={row.id}>
+                {t("scan.pin.pickOrderOption", {
+                  code: formatOrderCode(row.id),
+                  title: row.preview_title,
+                })}
+              </option>
+            ))}
+          </select>
+        </FormField>
+      ) : readyOrdersLoading ? (
+        <p style={{ margin: 0, fontSize: "var(--fs-small)", color: "var(--text-3)" }}>
+          {t("scan.pin.loadingReady")}
+        </p>
+      ) : null}
+
       <FormField id="pickup-order-id" label={t("scan.pin.orderIdLabel")}>
         <Input
           id="pickup-order-id"
           value={orderId}
-          onChange={(event) => setOrderId(event.target.value)}
+          onChange={(event) => {
+            setOrderId(event.target.value);
+            if (event.target.value.trim()) {
+              setSelectedId("");
+            }
+          }}
           placeholder={t("scan.pin.orderIdPlaceholder")}
           autoComplete="off"
-          disabled={disabled || isSubmitting}
+          disabled={disabled || isSubmitting || Boolean(selectedId)}
           inputMode="text"
         />
       </FormField>
@@ -84,7 +137,7 @@ export function PinFallback({
         type="submit"
         loading={isSubmitting}
         loadingLabel={t("scan.pin.submitting")}
-        disabled={disabled || !orderId.trim() || pin.length !== 6}
+        disabled={disabled || pin.length !== 6 || (!orderId.trim() && !selectedId)}
       >
         {t("scan.pin.submit")}
       </Button>

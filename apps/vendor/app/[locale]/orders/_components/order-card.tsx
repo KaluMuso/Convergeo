@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { isVendorPayoutsEnabled } from "../../../../lib/payouts-availability";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { HomeTaskList } from "../../_components/home-tasks";
 import { VendorGrid } from "../../_components/vendor-page";
@@ -24,6 +25,7 @@ import { VendorShopStatusCard } from "../../_components/vendor-shop-status";
 import { DashboardSkeleton, ListSkeleton } from "../../_components/vendor-skeletons";
 import { buildHomeTasks } from "../../_lib/home-tasks";
 import { isAuditableApproved } from "../../_lib/kyc-integrity";
+import { hasApprovedLiveListing } from "../../_lib/order-code";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import {
   createAnalyticsClient,
@@ -637,6 +639,9 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
   const [kycApp, setKycApp] = useState<KycApplication | null>(null);
   const [payoutMissing, setPayoutMissing] = useState<boolean | null>(null);
   const [productsInReviewCount, setProductsInReviewCount] = useState(0);
+  const [hasLiveListing, setHasLiveListing] = useState(false);
+  const [analyticsUnavailable, setAnalyticsUnavailable] = useState(false);
+  const payoutsEnabled = isVendorPayoutsEnabled();
   const cutoff = useDispatchCutoff();
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
@@ -661,6 +666,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
       setDashboard(data);
       setKycApp(kyc);
       setAnalyticsSummary(summary);
+      setAnalyticsUnavailable(summary === null);
       setError(null);
       setOffline(false);
       writeQueueCache({
@@ -744,10 +750,12 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
             (row) => row.status === "active" && row.product_status === "pending_moderation",
           ).length,
         );
+        setHasLiveListing(hasApprovedLiveListing(rows));
       })
       .catch(() => {
         if (!cancelled) {
           setProductsInReviewCount(0);
+          setHasLiveListing(false);
         }
       });
     return () => {
@@ -857,10 +865,11 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
     cutoff,
     sellerKind: isServicesVendor ? "services" : isEventOrganiser ? "events" : "products",
     payoutMissing,
+    payoutsEnabled,
     productsInReviewCount,
   });
 
-  const shopLive = kycApproved;
+  const shopLive = kycApproved && (isServicesVendor || isEventOrganiser || hasLiveListing);
 
   return (
     <div className="flex flex-col gap-4 pb-4">
@@ -872,6 +881,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         shopLive={shopLive}
         idVerified={kycApproved}
         payoutSet={payoutMissing === null ? null : !payoutMissing}
+        payoutsEnabled={payoutsEnabled}
       />
 
       <VendorGrid cols="stats">
@@ -880,11 +890,6 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
           value={formatK(takings)}
           icon={<LcTrendingUp className="size-5" duotone aria-hidden />}
           iconHue="teal"
-          delta={
-            takings > 0
-              ? { text: t("home.stats.live"), trend: "up" }
-              : { text: t("home.stats.quiet"), trend: "neutral" }
-          }
           data-testid="vendor-home-stat-takings"
         />
         <StatCard
@@ -892,11 +897,6 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
           value={String(needsCount)}
           icon={<LcClipboardList className="size-5" duotone aria-hidden />}
           iconHue="orange"
-          delta={
-            needsCount > 0
-              ? { text: t("home.stats.actionNeeded"), trend: "down" }
-              : { text: t("home.stats.caughtUp"), trend: "up" }
-          }
         />
         {analyticsSummary ? (
           <>
@@ -930,6 +930,12 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
           </>
         )}
       </VendorGrid>
+
+      {analyticsUnavailable ? (
+        <p className="text-sm text-text-2" role="status">
+          {t("home.analytics.unavailable")}
+        </p>
+      ) : null}
 
       {offline ? (
         <p className="rounded-md bg-warning/10 px-3 py-2 text-sm text-text" role="status">

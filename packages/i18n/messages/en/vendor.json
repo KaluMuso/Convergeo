@@ -1067,6 +1067,9 @@
     "title": "Order",
     "loading": "Loading order…",
     "back": "Back to orders",
+    "detail": {
+      "orderCode": "Order {code}"
+    },
     "status": {
       "placed": "Placed",
       "confirmed": "Confirmed",
@@ -1236,7 +1239,8 @@
       "orders": "Orders",
       "ordersCaption": "30 days",
       "gmv": "Sales",
-      "gmvCaption": "30 days"
+      "gmvCaption": "30 days",
+      "unavailable": "We couldn't load shop stats. Check your connection and pull to refresh."
     },
     "needsAction": {
       "heading": "Do this now",
@@ -1315,7 +1319,7 @@
           "body": "Nothing to do now. Our team usually replies within 1 working day."
         },
         "payoutMethod": {
-          "title": "Add your MoMo number to get paid",
+          "title": "Add your Mobile Money number to get paid",
           "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
         },
         "ordersWaiting": {
@@ -1360,6 +1364,7 @@
       "shopLive": "Shop live",
       "idVerified": "ID verified",
       "payoutSet": "Payout number set",
+      "payoutsStartSoon": "Payouts start soon",
       "yes": "Yes",
       "notYet": "Not yet"
     },
@@ -1545,7 +1550,7 @@
     },
     "eyebrow": "Pickup",
     "title": "Scan pickup",
-    "intro": "Scan the customer's QR or enter their order ID and PIN. Verification needs an internet connection.",
+    "intro": "Scan the customer's QR or enter their order code and PIN. Verification needs an internet connection.",
     "verifying": "Verifying pickup…",
     "offline": {
       "title": "You're offline",
@@ -1562,9 +1567,13 @@
     },
     "pin": {
       "heading": "Enter pickup PIN",
-      "intro": "The customer received a 6-digit PIN on WhatsApp. Enter their order ID and PIN.",
-      "orderIdLabel": "Order ID",
-      "orderIdPlaceholder": "Paste or type order ID",
+      "intro": "The customer received a 6-digit PIN on WhatsApp. Enter their 8-character order code (or pick an order below) and the PIN.",
+      "pickOrderLabel": "Orders ready for pickup",
+      "pickOrderPlaceholder": "Choose an order (optional)",
+      "pickOrderOption": "{code} — {title}",
+      "loadingReady": "Loading orders ready for pickup…",
+      "orderIdLabel": "Order code",
+      "orderIdPlaceholder": "8-character code or full order ID",
       "pinLabel": "6-digit PIN",
       "pinPlaceholder": "000000",
       "submit": "Verify pickup",
@@ -2241,7 +2250,27 @@
       "order": "Order {id}",
       "refund": "Refund if accepted: {amount}",
       "evidence": "{count, plural, one {# photo attached} other {# photos attached}}",
+      "evidenceThumb": "Photo {n}",
+      "noEvidence": "No photos attached",
+      "reasonLane1": "The customer says the item is faulty or not what they ordered.",
+      "reasonLane2": "The customer wants to return an unused item under the change-of-mind policy.",
+      "reasonGeneric": "The customer asked to return this item.",
+      "status": "Status: {status}",
+      "lane": "Lane {lane}",
       "viewOrder": "View order"
+    },
+    "confirm": {
+      "acceptTitle": "Accept this return?",
+      "acceptBody": "You will refund {amount} for {title}. This cannot be undone.",
+      "acceptCta": "Yes, refund buyer",
+      "contestTitle": "Contest this return?",
+      "contestBody": "Convergeo will review {title} with your evidence and the buyer's photos.",
+      "contestCta": "Send to admin review",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "accepted": "Refund of {amount} is on its way to the buyer.",
+      "contested": "Return sent for admin review."
     },
     "actions": {
       "accept": "Accept return",
@@ -2966,7 +2995,7 @@
     "disabled": "Multiple shops are not available yet.",
     "primary": "Main shop",
     "acting": "You are working here",
-    "payoutHold": "Payouts for this shop are on hold until our team checks the shared MoMo number.",
+    "payoutHold": "Payouts for this shop are on hold until our team checks the shared Mobile Money number.",
     "reviewNote": "Note from our team: {note}",
     "ownerKycNeeded": "Finish your owner verification (KYC) before adding shops.",
     "switcher": {
@@ -3054,14 +3083,14 @@
       "whatsapp": "WhatsApp number (optional)",
       "email": "Email (optional)",
       "payout": "Payout",
-      "payoutNumber": "MoMo payout number",
+      "payoutNumber": "Mobile Money payout number",
       "payoutHelp": "A number used by another business is not allowed. Sharing a number between your own shops needs a check by our team.",
       "rail": "Network",
       "reviewNote": "After creating the shop, add the shopfront photo and proof of premises, then send it for review.",
       "priceAddon": "This shop is a paid add-on: {price}/month on your plan.",
       "priceIncluded": "This shop is included in your plan.",
       "rails": {
-        "mtn": "MTN MoMo",
+        "mtn": "MTN Mobile Money",
         "airtel": "Airtel Money",
         "zamtel": "Zamtel Kwacha"
       }
@@ -3077,7 +3106,7 @@
       "unregisteredLimit": "Unregistered traders can run one shop. Add your PACRA registration first.",
       "planLimit": "Your plan has no more shops. Upgrade to add a branch.",
       "tooClose": "This shop is {nearest} m from another of your shops. Branches must be at least {min} m apart.",
-      "payoutTaken": "That MoMo number belongs to another business. Use your own number.",
+      "payoutTaken": "That Mobile Money number belongs to another business. Use your own number.",
       "evidenceRequired": "Add the shopfront photo and proof of premises first.",
       "evidenceLocked": "Evidence can only change before review.",
       "evidencePath": "That upload is not valid. Please upload again.",

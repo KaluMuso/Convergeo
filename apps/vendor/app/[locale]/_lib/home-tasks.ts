@@ -39,6 +39,8 @@ export type HomeTaskInput = {
   sellerKind: "products" | "services" | "events";
   /** true = no payout number on file; false = set; null/omitted = unknown (hide task). */
   payoutMissing?: boolean | null;
+  /** When false (pilot), never prompt to add a payout number on home. */
+  payoutsEnabled?: boolean;
   /** Live listings whose canonical product is still pending_moderation. */
   productsInReviewCount?: number;
 };
@@ -54,8 +56,9 @@ export function buildHomeTasks(input: HomeTaskInput): HomeTask[] {
     tasks.push({ key: "kycFinish", href: "/onboarding", tone: "warning" });
   }
 
+  const payoutsEnabled = input.payoutsEnabled ?? true;
   const payoutMissing = input.payoutMissing ?? null;
-  if (payoutMissing === true && input.kycOverall !== "needs_fix") {
+  if (payoutsEnabled && payoutMissing === true && input.kycOverall !== "needs_fix") {
     tasks.push({ key: "payoutMethod", href: "/payouts/method", tone: "warning" });
   }
 
