@@ -4,7 +4,7 @@ from datetime import timedelta
 from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, get_current_user
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -82,7 +82,7 @@ def _expected_internal_token() -> str:
 async def require_internal_tickets_token(request: Request) -> None:
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal tickets token",

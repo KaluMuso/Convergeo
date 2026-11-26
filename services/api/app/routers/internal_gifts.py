@@ -8,9 +8,7 @@ order history still reads "Gift for Mary". Idempotent: redacted rows are skipped
 
 from __future__ import annotations
 
-import secrets
-
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.errors import AppError
 from app.services.orders.audit import run_sql_script
 from fastapi import APIRouter, Depends, Request
@@ -56,7 +54,7 @@ async def require_internal_gift_token(request: Request) -> None:
     except InternalTokenMisconfigured as exc:
         raise AppError(code="configuration_error", message=str(exc), http_status=503) from exc
     provided = request.headers.get("X-Internal-Token")
-    if not provided or not secrets.compare_digest(provided, expected):
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized", message="Invalid or missing internal token", http_status=401
         )
