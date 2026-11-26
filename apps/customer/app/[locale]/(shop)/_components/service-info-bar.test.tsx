@@ -32,12 +32,12 @@ describe("ServiceInfoBar", () => {
     );
     const bar = screen.getByTestId("service-info-bar");
     expect(bar).toHaveTextContent(/Lusaka delivery/i);
-    expect(bar).toHaveTextContent(/cash on delivery/i);
-    expect(bar).not.toHaveTextContent(/MoMo checkout is live/i);
+    expect(bar).toHaveTextContent(/MoMo|COD/i);
+    expect(bar).not.toHaveTextContent(/coming soon/i);
   });
 });
 
-describe("site-wide payment trust copy (COD-only pilot)", () => {
+describe("site-wide payment trust copy (live MoMo/card)", () => {
   const locales = {
     en: { catalog: enCatalog, common: enCommon },
     bem: { catalog: bemCatalog, common: bemCommon },
@@ -45,12 +45,10 @@ describe("site-wide payment trust copy (COD-only pilot)", () => {
     fr: { catalog: frCatalog, common: frCommon },
     zh: { catalog: zhCatalog, common: zhCommon },
   };
-  // Escrow only exists for online payments, which are not live in the pilot.
-  const escrowClaim =
-    /escrow|séquestre|托管|held by|conservé par|ikusungidwa|yikwata/i;
+  const pilotStale = /coming soon|not open yet|nothing is charged online|during the pilot/i;
 
   it.each(Object.entries(locales))(
-    "%s header strip and footer never promise escrow and keep placeholders out",
+    "%s header strip and footer avoid stale pilot-only copy and placeholders",
     (_locale, messages) => {
       const strings = [
         messages.catalog.home.serviceBar.message,
@@ -59,18 +57,16 @@ describe("site-wide payment trust copy (COD-only pilot)", () => {
       ];
       for (const value of strings) {
         expect(value.trim()).not.toBe("");
-        expect(value).not.toMatch(escrowClaim);
+        expect(value).not.toMatch(pilotStale);
         expect(value).not.toMatch(/[{}]/);
       }
     },
   );
 
-  it("English header/footer lead with cash on delivery and mark online payment as coming", () => {
-    expect(enCatalog.home.serviceBar.message).toMatch(/^Cash on delivery/);
-    expect(enCommon.paymentTrust.footerPaymentNote).toMatch(/coming soon/i);
-    expect(enCommon.paymentTrust.footerPaymentNote).not.toMatch(
-      /MoMo|Airtel|Zamtel|Card/,
-    );
-    expect(enNav.shop.featuredPromo).not.toMatch(/escrow/i);
+  it("English header/footer describe live MoMo, card and COD cap", () => {
+    expect(enCommon.paymentTrust.footerPaymentNote).toMatch(/MoMo|MTN|Airtel/i);
+    expect(enCommon.paymentTrust.footerPaymentNote).toMatch(/K500|escrow/i);
+    expect(enCommon.paymentTrust.footerPaymentNote).not.toMatch(/coming soon/i);
+    expect(enNav.shop.featuredPromo).not.toMatch(/coming soon/i);
   });
 });

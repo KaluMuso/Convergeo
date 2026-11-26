@@ -11,7 +11,7 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.notifications.dedupe import enqueue_outbox_row
@@ -57,7 +57,7 @@ async def require_internal_n8n_token(request: Request) -> None:
     """Guard n8n-facing endpoints — not publicly callable without the shared token."""
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal n8n token",

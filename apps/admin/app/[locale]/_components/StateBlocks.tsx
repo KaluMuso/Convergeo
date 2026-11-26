@@ -1,41 +1,48 @@
 "use client";
 
+import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { Skeleton } from "@vergeo/ui/src/skeleton";
+
 import type { ReactNode } from "react";
 
 /** Shared loading placeholder: polite status + skeleton rows (no layout jump). */
-export function LoadingBlock({ label, rows = 3 }: { label: string; rows?: number }) {
+export function LoadingBlock({ label, rows = 4 }: { label: string; rows?: number }) {
   return (
-    <div role="status" aria-live="polite" className="space-y-2" data-testid="admin-loading">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      className="space-y-3"
+      data-testid="admin-loading"
+    >
       <span className="sr-only">{label}</span>
+      <Skeleton shape="line" height="0.75rem" width="40%" />
       {Array.from({ length: rows }, (_, index) => (
-        <div
-          key={index}
-          aria-hidden="true"
-          className="h-12 animate-pulse rounded-md border border-border bg-bg-2"
-        />
+        <Skeleton key={index} shape="block" height="3rem" data-testid="admin-loading-row" />
       ))}
     </div>
   );
 }
 
-/** Shared empty state: says why it is empty and what to do next. */
+/** Shared empty state with optional illustration. */
 export function EmptyBlock({
   title,
   body,
   action,
+  illustration,
 }: {
   title: string;
   body?: string;
   action?: ReactNode;
+  illustration?: import("@vergeo/ui/src/spot-illustrations").SpotIllustrationId;
 }) {
   return (
-    <div
-      className="space-y-1 rounded-md border border-dashed border-border bg-surface p-6 text-center"
+    <EmptyState
+      illustration={illustration ?? "no-results"}
+      title={title}
+      body={body}
+      action={action}
       data-testid="admin-empty"
-    >
-      <p className="text-sm font-medium text-text">{title}</p>
-      {body ? <p className="text-xs text-muted">{body}</p> : null}
-      {action ? <div className="pt-2">{action}</div> : null}
-    </div>
+    />
   );
 }

@@ -12,14 +12,18 @@ from typing import Annotated, Any
 
 from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.schemas.base import StrictModel
 from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends, Query, Response
 from pydantic import Field
 
-router = APIRouter(prefix="/admin/translations", tags=["admin-translations"])
-
+router = APIRouter(
+    prefix="/admin/translations",
+    tags=["admin-translations"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 _LOCALE = Field(min_length=2, max_length=16)
 _NAMESPACE = Field(min_length=1, max_length=64)
 _MESSAGE_KEY = Field(min_length=1, max_length=200)

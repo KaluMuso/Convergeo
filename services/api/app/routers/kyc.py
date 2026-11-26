@@ -5,6 +5,7 @@ import uuid
 from typing import Annotated, Any, Literal
 
 from app.core.auth import CurrentUser, get_current_user
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.branches.context import scope_owner_vendor_query
@@ -22,8 +23,11 @@ from app.services.vendors.slug import is_placeholder_slug, unique_vendor_slug
 from fastapi import APIRouter, Body, Depends
 from pydantic import BaseModel, Field, field_validator
 
-router = APIRouter(prefix="/kyc", tags=["kyc"])
-
+router = APIRouter(
+    prefix="/kyc",
+    tags=["kyc"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 # Merchandise categories persisted onto the vendor (legacy API field name:
 # archetype). These must match vendors_archetype_check in migration 0037.
 VENDOR_ARCHETYPES = frozenset(
@@ -232,11 +236,12 @@ def _find_vendor_for_owner(
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select(
-            "id, owner_user_id, status, kyc_tier, preferred_badge, archetype, "
-            "business_archetype, display_name, slug"
+            .select(
+                "id, owner_user_id, status, kyc_tier, preferred_badge, archetype, "
+                "business_archetype, display_name, slug"
+            )
+            .eq("owner_user_id", owner_user_id)
         )
-        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )

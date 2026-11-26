@@ -32,7 +32,7 @@ export default async function VendorDisputesPage({ params }: PageProps) {
 
   return (
     <VendorPage width="full">
-      <VendorDisputesListView />
+      <VendorDisputesListView locale={locale} />
     </VendorPage>
   );
 }

@@ -21,6 +21,8 @@ export type OrderSearchItem = {
   vendor_slug: string;
   customer_id: string;
   customer_phone: string | null;
+  customer_display_name?: string | null;
+  total_ngwee?: number;
   created_at: string;
 };
 

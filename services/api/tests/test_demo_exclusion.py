@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+from app.core.ttl_cache import clear_ttl_cache_store
 from app.errors import AppError
 from app.routers.catalog import PlpFilterState, list_catalog
 from app.routers.comparison import build_comparison
@@ -72,6 +73,7 @@ class _Query:
         self._filters: list[tuple[str, str, Any]] = []
         self._maybe_single = False
         self._orders: list[tuple[str, bool]] = []
+        self._range: tuple[int, int] | None = None
 
     def select(self, *_a: Any, **_k: Any) -> _Query:
         return self
@@ -94,6 +96,10 @@ class _Query:
 
     def maybe_single(self) -> _Query:
         self._maybe_single = True
+        return self
+
+    def range(self, start: int, end: int) -> _Query:
+        self._range = (start, end)
         return self
 
     def execute(self) -> _Resp:
@@ -126,6 +132,9 @@ class _Query:
                 key=lambda row: (row.get(column), row.get("id", "")),
                 reverse=desc,
             )
+        if self._range is not None:
+            start, end = self._range
+            rows = rows[start : end + 1]
         if self._maybe_single:
             return _Resp(rows[0] if rows else None)
         return _Resp(rows)
@@ -468,6 +477,7 @@ def test_fetch_demo_listing_ids_batch() -> None:
 
 
 def test_catalog_excludes_demo_keeps_real_and_consistent_total() -> None:
+    clear_ttl_cache_store()
     store = _Store()
     _seed_catalog_mix(store)
     response = list_catalog(store, PlpFilterState(category_path="electronics"))
@@ -483,6 +493,7 @@ def test_catalog_excludes_demo_keeps_real_and_consistent_total() -> None:
 
 
 def test_catalog_empty_public_results_are_honest_empty() -> None:
+    clear_ttl_cache_store()
     store = _Store()
     store.search_documents = [
         {
