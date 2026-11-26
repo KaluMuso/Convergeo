@@ -12,7 +12,16 @@
     "verified": "已认证",
     "calendarLabel": "本月有活动的日期",
     "hostCta": "举办活动",
-    "hostPitch": "通过动态二维码检票销售门票，并安全收款。"
+    "hostPitch": "通过动态二维码检票销售门票，并安全收款。",
+    "unavailableTitle": "We couldn't load events",
+    "unavailableBody": "Check your connection and try again.",
+    "unavailableRetry": "Try again",
+    "onlyFeatured": "More events coming soon.",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {total}"
+    }
   },
   "filters": {
     "tonight": "今晚",
@@ -93,7 +102,10 @@
     "getTickets": "购买门票",
     "getTicketsSoon": "门票即将开售",
     "pastInstance": "已结束",
-    "spots": "{sold} / {total} 个名额"
+    "spots": "{sold} / {total} 个名额",
+    "stickyCta": {
+      "ariaLabel": "Quick ticket purchase"
+    }
   },
   "organiser": {
     "imageAlt": "活动照片 {position}"
