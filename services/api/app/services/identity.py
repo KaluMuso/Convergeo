@@ -23,6 +23,24 @@ class ServiceRoleClient(Protocol):
     def client(self) -> Any: ...
 
 
+def lookup_confirmed_email(service_client: ServiceRoleClient, *, user_id: str) -> str | None:
+    """Return ``auth.users`` email only when ``email_confirmed_at`` is set."""
+    if not user_id:
+        return None
+    try:
+        response = service_client.client.auth.admin.get_user_by_id(user_id)
+    except Exception:
+        logger.exception("auth.users confirmed-email lookup failed for user %s", user_id)
+        return None
+    user = getattr(response, "user", None)
+    if getattr(user, "email_confirmed_at", None) is None:
+        return None
+    email = getattr(user, "email", None)
+    if isinstance(email, str) and email.strip():
+        return email.strip()
+    return None
+
+
 def lookup_user_email(service_client: ServiceRoleClient, *, user_id: str) -> str | None:
     """Return the user's ``auth.users`` email, or ``None`` if absent/unavailable.
 

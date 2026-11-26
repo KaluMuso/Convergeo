@@ -376,7 +376,7 @@
       "amountLabel": "Amount yotsimikizira",
       "doNotClose": "Sungani peji iyi ili open pamene mukutsimikiza pa phone.",
       "genericHelp": "Mobile money prompt yatumizidwa ku phone yanu. Lembani PIN kuti mutsimikize {amount}.",
-      "mtnHelp": "Tsekulani MTN MoMo prompt pa phone yanu ndi lembani PIN kuti mutsimikize {amount}.",
+      "mtnHelp": "Tsekulani MTN Mobile Money prompt pa phone yanu ndi lembani PIN kuti mutsimikize {amount}.",
       "subtitle": "Tsimikizani prompt ya {amount} pa phone yanu kuti mumalize payment.",
       "title": "Onani phone yanu",
       "waiting": "Tikudikira approval…"

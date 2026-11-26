@@ -325,7 +325,9 @@
         "amountInvalid": "请输入最多两位小数的正克瓦查金额。",
         "referenceInvalid": "参考号须为 3–80 个字母、数字、点、短横线或下划线。",
         "useOrganiser": "为该主办方登记还款"
-      }
+      },
+      "unknownOrganiser": "未命名主办方",
+      "copyOrganiserId": "复制主办方 {name} 的 ID"
     }
   },
   "kyc": {
@@ -367,7 +369,7 @@
       "momoPhone": "电话号码",
       "momoOperator": "运营商",
       "legalName": "法定姓名",
-      "resolvedName": "MoMo 注册姓名",
+      "resolvedName": "移动支付注册姓名",
       "matchScore": "匹配分数",
       "matchResult": "结果",
       "matched": "已匹配",
@@ -411,7 +413,7 @@
     },
     "reasons": {
       "blurry_document": "文件模糊或无法辨认",
-      "name_mismatch": "姓名与 MoMo 注册信息不符",
+      "name_mismatch": "姓名与 移动支付注册信息不符",
       "expired_id": "身份证件似乎已过期",
       "incomplete_submission": "提交材料不完整",
       "other": "其他（请在下方说明）"
@@ -644,15 +646,16 @@
       "statusAny": "任意状态",
       "submit": "搜索订单",
       "searching": "搜索中…",
-      "needFilter": "请至少输入一个筛选条件。",
       "error": "无法搜索订单。",
       "empty": "没有符合筛选条件的订单。",
       "open": "打开",
       "columns": {
         "order": "订单",
         "vendor": "商家",
-        "phone": "电话",
-        "status": "状态"
+        "status": "状态",
+        "customer": "客户",
+        "total": "总额",
+        "date": "下单时间"
       },
       "statuses": {
         "placed": "已下单",
@@ -663,7 +666,12 @@
         "delivered": "已送达",
         "completed": "已完成",
         "cancelled": "已取消"
-      }
+      },
+      "unknownCustomer": "未知客户",
+      "showRecent": "显示最近订单",
+      "recentHeading": "最近订单",
+      "resultsHeading": "{count, plural, other {找到 # 个订单}}",
+      "loadMore": "加载更多"
     },
     "detail": {
       "back": "返回搜索",
@@ -957,8 +965,8 @@
         "partialRefund": "部分退款（ngwee）+ 释放剩余金额",
         "release": "释放给商家",
         "partialAmount": "部分退款（ngwee，最高 {max}）",
-        "customerMomo": "客户 MoMo 号码",
-        "customerRail": "MoMo 通道",
+        "customerMomo": "客户移动支付号码",
+        "customerRail": "移动支付通道",
         "rails": {
           "mtn": "MTN",
           "airtel": "Airtel",
@@ -968,7 +976,7 @@
         "noteRequired": "决定备注为必填项。",
         "partialRequired": "请输入有效的部分退款金额。",
         "partialTooHigh": "部分退款金额不能超过 {max}。",
-        "momoRequired": "客户 MoMo 号码为必填项。",
+        "momoRequired": "客户移动支付号码为必填项。",
         "submit": "记录决定",
         "submitting": "处理中…",
         "success": "决定已记录——各方将收到通知。",
@@ -1258,7 +1266,7 @@
     "subtitle": "所有已记录的管理操作，最新的在前。只读：条目不能修改或删除。",
     "permissionDenied": "需要 audit.read 权限才能查看审计日志。",
     "filters": "审计日志筛选",
-    "actor": "操作者账户 ID",
+    "actor": "操作人（姓名、邮箱或账户 ID）",
     "action": "操作（以点结尾表示一类，例如 admin.orders.）",
     "resource": "资源类型",
     "resourceId": "资源 ID",
@@ -1275,16 +1283,27 @@
     "loading": "正在加载审计条目…",
     "empty": "没有符合筛选条件的条目。",
     "loadFailed": "无法加载审计日志。",
-    "invalid": "请检查筛选条件：ID 必须完整。",
-    "when": "时间：{at}",
-    "who": "操作者：{actor}（{roles}）",
+    "invalid": "请检查筛选条件：姓名至少 2 个字符，资源 ID 必须完整。",
     "system": "系统",
     "noRoles": "无角色记录",
-    "what": "对象：{resource} {id}",
     "reason": "原因：{reason}",
     "requestId": "请求 {id}",
-    "details": "变更前后",
-    "more": "加载更早的条目"
+    "more": "加载更早的条目",
+    "actorPlaceholder": "例如 Chanda 或 chanda@…",
+    "colWhen": "时间",
+    "colWho": "操作人",
+    "colAction": "操作",
+    "colResource": "资源",
+    "unknownActor": "未知账户",
+    "shortId": "ID {id}…",
+    "changes": "{count, plural, =0 {没有字段变更} other {# 个字段已变更}}",
+    "noChanges": "前后没有变化。",
+    "diffField": "字段",
+    "diffBefore": "之前",
+    "diffAfter": "之后",
+    "raw": "显示原始数据",
+    "copyActorId": "复制操作人 ID",
+    "copyResourceId": "复制资源 ID"
   },
   "accountsUi": {
     "title": "管理员账户",
@@ -1300,11 +1319,22 @@
     "empty": "没有账户持有管理员角色。",
     "noName": "资料中无姓名",
     "noEmail": "无邮箱记录",
-    "roles": "角色：{roles}",
     "selfNote": "这是您的账户。",
     "reason": "停用原因（必填）",
     "deactivate": "停用",
-    "confirmDeactivate": "停用 {name}？将撤销以下角色：{roles}。"
+    "confirmDeactivate": "停用 {name}？将撤销以下角色：{roles}。",
+    "search": "搜索账户",
+    "searchPlaceholder": "姓名、邮箱或角色",
+    "showing": "显示 {shown} / {total}",
+    "noMatchTitle": "没有匹配的账户",
+    "noMatchBody": "没有管理员与该姓名、邮箱或角色匹配。",
+    "colName": "姓名",
+    "colEmail": "邮箱",
+    "colRoles": "角色",
+    "colActions": "操作",
+    "copyId": "复制 {name} 的账户 ID",
+    "more": "加载更多",
+    "deactivateTitle": "停用管理员"
   },
   "analytics": {
     "title": "数据分析",

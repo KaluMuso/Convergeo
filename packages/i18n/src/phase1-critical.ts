@@ -117,7 +117,6 @@ export const PHASE1_ENGLISH_ALLOWLIST = new Set([
   "QR",
   "COD",
   "USSD",
-  "MoMo",
   "Offline",
   "404",
   "500",

@@ -352,7 +352,7 @@
       "title": "Vérifiez votre téléphone",
       "subtitle": "Un message est sur votre téléphone. Entrez votre PIN pour payer {amount}.",
       "amountLabel": "Montant à payer",
-      "mtnHelp": "Regardez le message MTN MoMo sur votre téléphone. Entrez votre PIN pour payer {amount}.",
+      "mtnHelp": "Regardez le message MTN Mobile Money sur votre téléphone. Entrez votre PIN pour payer {amount}.",
       "airtelHelp": "Regardez le message Airtel Money sur votre téléphone. Entrez votre PIN pour payer {amount}.",
       "genericHelp": "Nous avons envoyé un message mobile money sur votre téléphone. Entrez votre PIN pour payer {amount}.",
       "waiting": "En attente de votre paiement…",

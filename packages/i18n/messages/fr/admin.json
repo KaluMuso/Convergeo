@@ -325,7 +325,9 @@
         "amountInvalid": "Saisissez un montant positif en kwacha avec au plus 2 décimales.",
         "referenceInvalid": "La référence doit contenir 3 à 80 lettres, chiffres, points, tirets ou traits de soulignement.",
         "useOrganiser": "Enregistrer un remboursement pour cet organisateur"
-      }
+      },
+      "unknownOrganiser": "Organisateur sans nom",
+      "copyOrganiserId": "Copier l’ID de l’organisateur {name}"
     }
   },
   "kyc": {
@@ -367,7 +369,7 @@
       "momoPhone": "Téléphone",
       "momoOperator": "Opérateur",
       "legalName": "Nom légal",
-      "resolvedName": "Nom MoMo enregistré",
+      "resolvedName": "Nom mobile money enregistré",
       "matchScore": "Score de correspondance",
       "matchResult": "Résultat",
       "matched": "Concordant",
@@ -411,7 +413,7 @@
     },
     "reasons": {
       "blurry_document": "Le document est flou ou illisible",
-      "name_mismatch": "Le nom ne correspond pas à l'enregistrement MoMo",
+      "name_mismatch": "Le nom ne correspond pas à l'enregistrement mobile money",
       "expired_id": "La pièce d'identité semble expirée",
       "incomplete_submission": "La soumission est incomplète",
       "other": "Autre (précisez ci-dessous)"
@@ -644,15 +646,16 @@
       "statusAny": "Tous les statuts",
       "submit": "Rechercher des commandes",
       "searching": "Recherche…",
-      "needFilter": "Saisissez au moins un filtre.",
       "error": "Impossible de rechercher les commandes.",
       "empty": "Aucune commande ne correspond à vos filtres.",
       "open": "Ouvrir",
       "columns": {
         "order": "Commande",
         "vendor": "Vendeur",
-        "phone": "Téléphone",
-        "status": "Statut"
+        "status": "Statut",
+        "customer": "Client",
+        "total": "Total",
+        "date": "Passée le"
       },
       "statuses": {
         "placed": "Passée",
@@ -663,7 +666,12 @@
         "delivered": "Livrée",
         "completed": "Terminée",
         "cancelled": "Annulée"
-      }
+      },
+      "unknownCustomer": "Client inconnu",
+      "showRecent": "Afficher les commandes récentes",
+      "recentHeading": "Commandes récentes",
+      "resultsHeading": "{count, plural, one {# commande trouvée} other {# commandes trouvées}}",
+      "loadMore": "Charger plus"
     },
     "detail": {
       "back": "Retour à la recherche",
@@ -957,8 +965,8 @@
         "partialRefund": "Remboursement partiel (ngwee) + libération du solde",
         "release": "Libérer au vendeur",
         "partialAmount": "Remboursement partiel (ngwee, max {max})",
-        "customerMomo": "Numéro MoMo du client",
-        "customerRail": "Réseau MoMo",
+        "customerMomo": "Numéro mobile money du client",
+        "customerRail": "Réseau mobile money",
         "rails": {
           "mtn": "MTN",
           "airtel": "Airtel",
@@ -968,7 +976,7 @@
         "noteRequired": "Une note de décision est requise.",
         "partialRequired": "Saisissez un montant de remboursement partiel valide.",
         "partialTooHigh": "Le remboursement partiel ne peut pas dépasser {max}.",
-        "momoRequired": "Le numéro MoMo du client est requis.",
+        "momoRequired": "Le numéro mobile money du client est requis.",
         "submit": "Enregistrer la décision",
         "submitting": "Traitement…",
         "success": "Décision enregistrée — les parties seront notifiées.",
@@ -1258,7 +1266,7 @@
     "subtitle": "Chaque action admin enregistrée, la plus récente en premier. Lecture seule : rien ne peut être modifié ni supprimé.",
     "permissionDenied": "La permission audit.read est requise pour lire le journal d'audit.",
     "filters": "Filtres du journal d'audit",
-    "actor": "ID du compte auteur",
+    "actor": "Qui (nom, e-mail ou ID de compte)",
     "action": "Action (terminez par un point pour une famille, ex. admin.orders.)",
     "resource": "Type de ressource",
     "resourceId": "ID de la ressource",
@@ -1275,16 +1283,27 @@
     "loading": "Chargement du journal…",
     "empty": "Aucune entrée ne correspond à ces filtres.",
     "loadFailed": "Le journal d'audit n'a pas pu être chargé.",
-    "invalid": "Vérifiez les filtres : les ID doivent être complets.",
-    "when": "Quand : {at}",
-    "who": "Qui : {actor} ({roles})",
+    "invalid": "Vérifiez les filtres : un nom doit compter au moins 2 caractères et les ID de ressource doivent être complets.",
     "system": "système",
     "noRoles": "aucun rôle enregistré",
-    "what": "Quoi : {resource} {id}",
     "reason": "Motif : {reason}",
     "requestId": "Requête {id}",
-    "details": "Avant et après",
-    "more": "Entrées plus anciennes"
+    "more": "Entrées plus anciennes",
+    "actorPlaceholder": "p. ex. Chanda ou chanda@…",
+    "colWhen": "Quand",
+    "colWho": "Qui",
+    "colAction": "Action",
+    "colResource": "Ressource",
+    "unknownActor": "Compte inconnu",
+    "shortId": "ID {id}…",
+    "changes": "{count, plural, =0 {Aucun champ modifié} one {# champ modifié} other {# champs modifiés}}",
+    "noChanges": "Rien n’a changé entre avant et après.",
+    "diffField": "Champ",
+    "diffBefore": "Avant",
+    "diffAfter": "Après",
+    "raw": "Afficher les données brutes",
+    "copyActorId": "Copier l’ID de l’auteur",
+    "copyResourceId": "Copier l’ID de la ressource"
   },
   "accountsUi": {
     "title": "Comptes admin",
@@ -1300,11 +1319,22 @@
     "empty": "Aucun compte n'a de rôle admin.",
     "noName": "Pas de nom sur le profil",
     "noEmail": "Pas d'e-mail enregistré",
-    "roles": "Rôles : {roles}",
     "selfNote": "C'est votre compte.",
     "reason": "Motif de la désactivation (obligatoire)",
     "deactivate": "Désactiver",
-    "confirmDeactivate": "Désactiver {name} ? Ces rôles seront retirés : {roles}."
+    "confirmDeactivate": "Désactiver {name} ? Ces rôles seront retirés : {roles}.",
+    "search": "Rechercher des comptes",
+    "searchPlaceholder": "Nom, e-mail ou rôle",
+    "showing": "{shown} sur {total}",
+    "noMatchTitle": "Aucun compte correspondant",
+    "noMatchBody": "Aucun administrateur ne correspond à ce nom, cet e-mail ou ce rôle.",
+    "colName": "Nom",
+    "colEmail": "E-mail",
+    "colRoles": "Rôles",
+    "colActions": "Actions",
+    "copyId": "Copier l’ID du compte de {name}",
+    "more": "Charger plus",
+    "deactivateTitle": "Désactiver l’administrateur"
   },
   "analytics": {
     "title": "Analytique",

@@ -356,7 +356,7 @@
       "title": "Check your phone",
       "subtitle": "A message is on your phone. Enter your PIN to pay {amount}.",
       "amountLabel": "Amount to pay",
-      "mtnHelp": "Look at your phone for the MTN MoMo message. Enter your PIN to pay {amount}.",
+      "mtnHelp": "Look at your phone for the MTN Mobile Money message. Enter your PIN to pay {amount}.",
       "airtelHelp": "Look at your phone for the Airtel Money message. Enter your PIN to pay {amount}.",
       "genericHelp": "We sent a mobile money message to your phone. Enter your PIN to pay {amount}.",
       "waiting": "Waiting for you to pay…",

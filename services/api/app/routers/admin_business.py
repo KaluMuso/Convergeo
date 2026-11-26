@@ -9,6 +9,7 @@ from app.core.admin_audit import (
     get_admin_audit_recorder,
 )
 from app.core.auth import require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.services.business.access import ServiceRoleClient
 from app.services.business.store import load_by_id, set_decision
@@ -22,7 +23,7 @@ router = APIRouter(
     prefix="/admin/business",
     tags=["admin-business"],
     route_class=AdminAuditedRoute,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("admin")), Depends(enforce_registered_policy)],
 )
 
 
