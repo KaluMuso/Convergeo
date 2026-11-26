@@ -3,6 +3,7 @@
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -271,6 +272,12 @@ export default function VendorJobsPage({ params }: PageProps) {
                     )}
                   </div>
                   <p className="text-sm font-medium text-display-ink">{job.description}</p>
+                  <Link
+                    href={`/${locale}/jobs/${job.id}`}
+                    className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline"
+                  >
+                    {t("viewJob")}
+                  </Link>
                   <p className="text-sm text-text-2">{formatBudgetLine(job, tR)}</p>
                   {job.preferred_date ? (
                     <p className="text-sm text-text-2">

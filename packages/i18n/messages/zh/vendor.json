@@ -1746,6 +1746,10 @@
       "empty": "暂无活动。",
       "createCta": "创建活动",
       "editCta": "编辑活动",
+      "ticketsCta": "Tickets",
+      "scanCta": "Door scan",
+      "salesCta": "Sales",
+      "rosterCta": "Roster",
       "noVenue": "场地待定",
       "ticketsSold": "{count, plural, one {已售 # 张门票} other {已售 # 张门票}}"
     },
@@ -2293,6 +2297,7 @@
     "loading": "加载任务中…",
     "authRequired": "请登录以查看匹配的任务。",
     "empty": "目前没有与您服务匹配的开放任务。",
+    "viewJob": "View job",
     "posted": "发布于 {date}",
     "yourQuote": "您的报价：{amount}",
     "status": {
@@ -2940,6 +2945,7 @@
     "keepSelling": "我们不会删除任何内容：您的商品保持上架，仍可编辑和补充库存。如需添加新商品，请升级套餐。",
     "option": "{name}：{max} 个商品，{price}/月",
     "optionUnlimited": "{name}：商品数量不限，{price}/月",
+    "seePlans": "See plans",
     "howToUpgrade": "如需升级，请联系我们的团队。不会自动扣费。",
     "limitReachedShort": "您已达到商品数量上限。现有商品保持上架；请查看上方套餐进行升级。",
     "limitReached": "您已达到套餐的商品数量上限。现有商品保持上架；升级后可添加更多。",

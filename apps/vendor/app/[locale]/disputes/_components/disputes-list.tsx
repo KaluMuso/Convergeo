@@ -90,7 +90,7 @@ export function VendorDisputesListView({ locale = "en" }: VendorDisputesListView
           {disputes.map((dispute) => (
             <li key={dispute.id}>
               <Link
-                href={`disputes/${dispute.id}`}
+                href={`/${locale}/disputes/${dispute.id}`}
                 className="flex min-h-11 flex-col justify-center rounded border border-border bg-surface px-4 py-3"
               >
                 <span className="text-sm font-medium text-display-ink">

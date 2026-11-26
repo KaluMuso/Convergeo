@@ -25,6 +25,7 @@ import {
 import { isNotOrganiserError } from "../_lib/organiser-gate";
 import { Button, FormField, Input, Select, Spinner } from "../_lib/ui";
 
+import { EventToolLinks } from "./event-tool-links";
 import { EventImagePicker } from "./image-picker";
 import {
   draftToPayload,
@@ -296,6 +297,9 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
             {t(`events.status.${status}`)}
             {ticketsSold > 0 ? ` · ${t("events.form.ticketsSold", { count: ticketsSold })}` : ""}
           </p>
+        ) : null}
+        {mode === "edit" && eventId ? (
+          <EventToolLinks locale={locale} eventId={eventId} t={t} />
         ) : null}
       </header>
 

@@ -10,6 +10,7 @@ import { isNotOrganiserError } from "../_lib/organiser-gate";
 import { Badge, Spinner } from "../_lib/ui";
 import { createCollabClient, type CollabFlagStatus } from "../collaborate/_lib/collab-client";
 
+import { EventToolLinks } from "./event-tool-links";
 import { OrganiserGate } from "./organiser-gate";
 
 type EventsManageListProps = {
@@ -175,6 +176,7 @@ export function EventsManageList({ locale }: EventsManageListProps) {
               >
                 {t("events.list.editCta")}
               </Link>
+              <EventToolLinks locale={locale} eventId={event.id} t={t} />
             </li>
           ))}
         </ul>

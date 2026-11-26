@@ -1751,6 +1751,10 @@
       "empty": "No events yet.",
       "createCta": "Create event",
       "editCta": "Edit event",
+      "ticketsCta": "Tickets",
+      "scanCta": "Door scan",
+      "salesCta": "Sales",
+      "rosterCta": "Roster",
       "noVenue": "Venue TBD",
       "ticketsSold": "{count, plural, one {# ticket sold} other {# tickets sold}}"
     },
@@ -2298,6 +2302,7 @@
     "loading": "Ilelodisha jobs…",
     "authRequired": "Ingilani ukulolesha matched jobs.",
     "empty": "No open jobs match your services right now.",
+    "viewJob": "View job",
     "posted": "Posted {date}",
     "yourQuote": "⚠ Your quote: {amount}",
     "status": {
@@ -2945,6 +2950,7 @@
     "keepSelling": "Nothing has been removed: your listings stay live, and you can keep editing them and adding stock. To add new products, upgrade your plan.",
     "option": "{name}: {max} listings for {price}/month",
     "optionUnlimited": "{name}: unlimited listings for {price}/month",
+    "seePlans": "See plans",
     "howToUpgrade": "To upgrade, message our team. Nothing is charged automatically.",
     "limitReachedShort": "You've reached your listing limit. Your existing listings stay live; see your plan above to upgrade.",
     "limitReached": "You've reached your plan's listing limit. Your listings stay live; upgrade to add more.",

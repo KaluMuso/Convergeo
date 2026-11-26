@@ -12,6 +12,7 @@ vi.mock("@vergeo/config", () => ({
 }));
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "en",
   useTranslations: () => (key: string, values?: Record<string, unknown>) =>
     values ? `${key}:${JSON.stringify(values)}` : key,
 }));
@@ -104,6 +105,7 @@ describe("PlanUsageCard", () => {
     expect(prompt.textContent).toContain("plans.keepSelling");
     expect(prompt.textContent).toContain('"price":"K49.00"');
     expect(prompt.textContent).toContain("plans.optionUnlimited");
+    expect(screen.getByText("plans.seePlans").closest("a")?.getAttribute("href")).toBe("/en/plan");
   });
 
   it("explains a KYC cap without offering paid upgrades", async () => {

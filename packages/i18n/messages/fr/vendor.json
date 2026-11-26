@@ -1746,6 +1746,10 @@
       "empty": "Aucun événement pour le moment.",
       "createCta": "Créer un événement",
       "editCta": "Modifier l'événement",
+      "ticketsCta": "Tickets",
+      "scanCta": "Door scan",
+      "salesCta": "Sales",
+      "rosterCta": "Roster",
       "noVenue": "Lieu à confirmer",
       "ticketsSold": "{count, plural, one {# billet vendu} other {# billets vendus}}"
     },
@@ -2293,6 +2297,7 @@
     "loading": "Chargement des missions…",
     "authRequired": "Connectez-vous pour voir les missions correspondantes.",
     "empty": "Aucune mission ouverte ne correspond à vos services pour le moment.",
+    "viewJob": "View job",
     "posted": "Publié le {date}",
     "yourQuote": "Votre devis : {amount}",
     "status": {
@@ -2940,6 +2945,7 @@
     "keepSelling": "Rien n'a été supprimé : vos annonces restent en ligne, et vous pouvez continuer à les modifier et à ajouter du stock. Pour ajouter de nouveaux produits, passez à une formule supérieure.",
     "option": "{name} : {max} annonces pour {price}/mois",
     "optionUnlimited": "{name} : annonces illimitées pour {price}/mois",
+    "seePlans": "See plans",
     "howToUpgrade": "Pour changer de formule, écrivez à notre équipe. Aucun prélèvement automatique.",
     "limitReachedShort": "Vous avez atteint votre limite d'annonces. Vos annonces existantes restent en ligne ; consultez votre formule ci-dessus pour évoluer.",
     "limitReached": "Vous avez atteint la limite d'annonces de votre formule. Vos annonces restent en ligne ; passez à une formule supérieure pour en ajouter.",

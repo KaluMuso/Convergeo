@@ -3,7 +3,8 @@
 import { useSession } from "@vergeo/auth/use-session";
 import { createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
-import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
@@ -51,6 +52,7 @@ type PlanUsageCardProps = {
  */
 export function PlanUsageCard({ refreshKey = 0 }: PlanUsageCardProps) {
   const t = useTranslations("vendor");
+  const locale = useLocale();
   const { session } = useSession();
   const [status, setStatus] = useState<VendorPlanStatus | null>(null);
   const token = session?.access_token ?? null;
@@ -134,6 +136,12 @@ export function PlanUsageCard({ refreshKey = 0 }: PlanUsageCardProps) {
             </ul>
           ) : null}
           <p className="text-sm text-text-2">{t("plans.howToUpgrade")}</p>
+          <Link
+            href={`/${locale}/plan`}
+            className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline"
+          >
+            {t("plans.seePlans")}
+          </Link>
         </div>
       ) : null}
     </section>
