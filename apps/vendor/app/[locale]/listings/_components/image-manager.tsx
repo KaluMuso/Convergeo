@@ -554,9 +554,6 @@ export function ImageManager({
                     ? t("listings.images.cover_badge")
                     : t("listings.images.position_label", { position: image.position })}
                 </span>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.875rem" }}>
-                  {image.cloudinary_public_id}
-                </span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)" }}>
                 <button

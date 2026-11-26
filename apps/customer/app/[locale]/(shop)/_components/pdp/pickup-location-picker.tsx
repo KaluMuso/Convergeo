@@ -48,11 +48,7 @@ export function PickupLocationPicker({
 
   if (loadError) {
     return (
-      <p
-        className="text-sm text-danger"
-        role="alert"
-        data-testid="pdp-pickup-location-load-error"
-      >
+      <p className="text-sm text-danger" role="alert" data-testid="pdp-pickup-location-load-error">
         {labels.loadError}
       </p>
     );
@@ -61,7 +57,8 @@ export function PickupLocationPicker({
   if (locations.length === 0) {
     return (
       <p
-        className="text-sm text-danger"
+        className="text-sm text-text-2"
+        role="status"
         data-testid="pdp-pickup-location-unavailable"
       >
         {labels.unavailable}
@@ -71,10 +68,7 @@ export function PickupLocationPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <label
-        className="text-sm font-medium text-text"
-        htmlFor="pdp-pickup-location"
-      >
+      <label className="text-sm font-medium text-text" htmlFor="pdp-pickup-location">
         {labels.heading}
       </label>
       <select

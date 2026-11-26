@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 
 export type PickupLocation = {
   id: string;
@@ -21,13 +21,14 @@ export type PickupLocationsResult = {
  * picker even renders, so a false negative would let a real branch-tracked
  * add-to-cart through with no pickup_location_id).
  */
-export async function fetchPickupLocations(
-  listingId: string,
-): Promise<PickupLocationsResult> {
-  const response = await fetch(
-    `${getApiBaseUrl().replace(/\/$/, "")}/products/listings/${encodeURIComponent(listingId)}/pickup-locations`,
-    { credentials: "include" },
+export async function fetchPickupLocations(listingId: string): Promise<PickupLocationsResult> {
+  const url = absoluteApiUrl(
+    `/products/listings/${encodeURIComponent(listingId)}/pickup-locations`,
   );
+  if (!url) {
+    throw new Error("pickup-locations API unavailable");
+  }
+  const response = await fetch(url, { credentials: "include" });
   if (!response.ok) {
     throw new Error(`pickup-locations request failed (${response.status})`);
   }

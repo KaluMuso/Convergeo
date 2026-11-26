@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { AnalyticsExportError, downloadAnalyticsCsv } from "../../../../lib/analytics-export";
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { useAdminPermissions } from "../../../../lib/roles-api";
 import { AdminPageClient } from "../../_components/admin-page-client";
 import { classifyAdminRequestError } from "../../_components/admin-request";
@@ -68,6 +69,10 @@ export function DashboardsView({ locale, tab }: { locale: string; tab: Dashboard
   const load = useCallback(async () => {
     if (!allowed) {
       setState({ kind: "permission" });
+      return;
+    }
+    if (!getApiBaseUrl()) {
+      setState({ kind: "error" });
       return;
     }
     if (query === null) {

@@ -135,12 +135,7 @@ export function ProductCard({
           </div>
         )}
         {badge || discountLabel ? (
-          <div
-            className={cx(
-              "absolute z-[1] flex flex-col items-start gap-1",
-              "left-1.5 top-1.5",
-            )}
-          >
+          <div className={cx("absolute z-[1] flex flex-col items-start gap-1", "left-1.5 top-1.5")}>
             {discountLabel ? (
               <span className="v-card__discount" data-testid="product-card-discount">
                 {discountLabel}

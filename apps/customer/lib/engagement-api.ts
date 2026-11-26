@@ -144,7 +144,7 @@ export async function isFollowingVendor(vendorId: string): Promise<boolean | nul
   if (!token) {
     return null;
   }
-  const data = await apiRequest<FollowListResponse>("/me/follows?limit=100", {
+  const data = await apiRequest<FollowListResponse>("/me/follows?limit=50", {
     method: "GET",
     token,
   });
