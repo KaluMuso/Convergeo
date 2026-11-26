@@ -14,6 +14,7 @@ from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -42,8 +43,11 @@ from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-router = APIRouter(prefix="/checkout", tags=["checkout"])
-
+router = APIRouter(
+    prefix="/checkout",
+    tags=["checkout"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 #: Code guessing guard: per user and per IP, short window.
 COUPON_ATTEMPT_LIMIT = 10
 COUPON_ATTEMPT_WINDOW = timedelta(minutes=10)

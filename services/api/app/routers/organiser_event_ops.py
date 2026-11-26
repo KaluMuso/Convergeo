@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal, cast
 from uuid import uuid4
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
@@ -24,8 +25,11 @@ from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends
 from pydantic import Field, model_validator
 
-router = APIRouter(prefix="/organiser/events", tags=["organiser-event-ops"])
-
+router = APIRouter(
+    prefix="/organiser/events",
+    tags=["organiser-event-ops"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 TeamRole = Literal["owner", "manager", "door"]
 DiscountKind = Literal["percent", "fixed"]
 

@@ -8,6 +8,7 @@ from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
@@ -29,8 +30,11 @@ from pydantic import Field, field_validator
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/organiser/events", tags=["organiser-events"])
-
+router = APIRouter(
+    prefix="/organiser/events",
+    tags=["organiser-events"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 EVENT_CATEGORIES = (
     "workshops",
     "comedy-theatre",

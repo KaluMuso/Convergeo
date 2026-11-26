@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, get_current_user
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -28,9 +29,11 @@ from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
-router = APIRouter(prefix="/cart", tags=["cart"])
-
-
+router = APIRouter(
+    prefix="/cart",
+    tags=["cart"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 class CartTicketInput(BaseModel):
     instance_id: str = Field(min_length=36, max_length=36)
     ticket_type_id: str = Field(min_length=36, max_length=36)

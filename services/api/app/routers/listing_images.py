@@ -4,6 +4,7 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.branches.context import scope_owner_vendor_query
@@ -13,8 +14,11 @@ from app.services.vendor_plans.resolver import resolve_effective_plan, shared_ph
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field, field_validator
 
-router = APIRouter(prefix="/vendor/listings", tags=["listing-images"])
-
+router = APIRouter(
+    prefix="/vendor/listings",
+    tags=["listing-images"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 MAX_IMAGES_PER_LISTING = 8
 EDITABLE_LISTING_STATUSES = frozenset({"draft", "active", "paused"})
 

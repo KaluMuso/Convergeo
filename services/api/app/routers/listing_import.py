@@ -4,6 +4,7 @@ import json
 from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
@@ -25,9 +26,11 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import PlainTextResponse
 from pydantic import Field
 
-router = APIRouter(prefix="/listings", tags=["listing-import"])
-
-
+router = APIRouter(
+    prefix="/listings",
+    tags=["listing-import"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 class ListingImportJsonRequest(StrictModel):
     # Cell validation is shared with CSV/raw_rows and is isolated per row.
     rows: list[dict[str, Any]] = Field(min_length=1, max_length=MAX_CSV_ROWS)

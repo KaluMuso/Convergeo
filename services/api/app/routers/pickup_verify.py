@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated, Any, Protocol
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
@@ -11,9 +12,11 @@ from app.services.pickup.verify import PickupVerifyResult, verify_pickup_by_pin,
 from fastapi import APIRouter, Depends
 from pydantic import Field, model_validator
 
-router = APIRouter(prefix="/vendor/pickup", tags=["pickup"])
-
-
+router = APIRouter(
+    prefix="/vendor/pickup",
+    tags=["pickup"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 class _ServiceRoleClient(Protocol):
     @property
     def client(self) -> Any: ...

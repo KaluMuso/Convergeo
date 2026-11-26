@@ -12,6 +12,7 @@ from __future__ import annotations
 import time
 from typing import Annotated, Any, Literal, Protocol
 
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.media.authz import VendorScope, require_vendor_scope
@@ -19,9 +20,11 @@ from app.services.kyc.document_evidence import KYC_DOCS_BUCKET
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/media", tags=["media"])
-
-
+router = APIRouter(
+    prefix="/media",
+    tags=["media"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 class _StorageServiceClient(Protocol):
     """Structural type for the service-role client's storage surface.
 

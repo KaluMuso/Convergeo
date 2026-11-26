@@ -6,15 +6,18 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.events.teams import digest_invite_token
 from fastapi import APIRouter, Depends
 
-router = APIRouter(prefix="/account/event-team", tags=["event-team"])
-
-
+router = APIRouter(
+    prefix="/account/event-team",
+    tags=["event-team"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 class ServiceRoleClient(Protocol):
     @property
     def client(self) -> Any: ...

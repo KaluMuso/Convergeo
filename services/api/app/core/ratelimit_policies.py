@@ -13,19 +13,28 @@ enforcement. Instead it provides:
    ``EXEMPT_ROUTE_IDS``), and raises if any mutating route is not registered.
    A new unregistered mutating route therefore fails CI immediately.
 
-The registry is the single declarative source of truth; existing per-route
-enforcement continues to call the ``ratelimit`` primitive. :func:`policy_for`
-lets a future shared dependency/middleware look a policy up by method + path
-without editing individual routers.
+The registry is the single declarative source of truth; routers that do not
+bump inline mount :func:`enforce_registered_policy` on their
+``APIRouter(dependencies=...)``. Existing bespoke per-route enforcement
+continues to call the ``ratelimit`` primitive. :func:`policy_for` remains the
+lookup helper for method + path.
 """
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import timedelta
 
+from fastapi import Request
 from starlette.routing import Route
+
+from app.core.auth import get_current_user
+from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
+from app.settings import get_settings
+
+logger = logging.getLogger(__name__)
 
 MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
@@ -596,6 +605,71 @@ def policy_for(method: str, path: str) -> RateLimitPolicy | None:
     read the declarative registry instead of editing each router.
     """
     return POLICIES.get(route_id(method, path))
+
+
+def _route_template(request: Request) -> str:
+    route = request.scope.get("route")
+    return str(getattr(route, "path", "") or "")
+
+
+async def _rate_limit_actor_key(request: Request) -> str:
+    """Counter key: authenticated user id when available, otherwise client IP."""
+    authorization = request.headers.get("Authorization")
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            user = await get_current_user(request, get_settings())
+            return user.id
+        except Exception:  # noqa: BLE001 — invalid token falls back to IP for the cap.
+            pass
+    return get_client_ip(request)
+
+
+async def enforce_registered_policy(request: Request) -> None:
+    """Enforce the :data:`POLICIES` entry for the matched mutating route.
+
+    Mounted as ``APIRouter(dependencies=[Depends(enforce_registered_policy)])`` on
+    routers that declare policies in the registry but do not bump inline. Limits
+    are keyed per user id (when a bearer token verifies) else per IP. Fail-open when
+    the limiter backend is unavailable so a DB outage does not block writes.
+    """
+    if request.method not in MUTATING_METHODS:
+        return
+
+    path_template = _route_template(request)
+    if not path_template:
+        return
+
+    rid = route_id(request.method, path_template)
+    if rid in EXEMPT_ROUTE_IDS:
+        return
+
+    policy = POLICIES.get(rid)
+    if policy is None:
+        logger.warning("Mutating route %s has no registered rate-limit policy", rid)
+        return
+
+    key = await _rate_limit_actor_key(request)
+    try:
+        allowed, retry_after = bump_rate_counter(
+            scope=policy.scope,
+            key=key,
+            window=policy.window,
+            limit=policy.limit,
+        )
+    except Exception:  # noqa: BLE001 — fail-open on limiter outage.
+        logger.debug(
+            "registered policy rate-limit check failed for %s (allowing)",
+            rid,
+            exc_info=True,
+        )
+        return
+
+    if not allowed:
+        raise_rate_limited(
+            retry_after=retry_after,
+            message_key="auth.errors.rate_limited",
+            message="Too many requests",
+        )
 
 
 def assert_all_mutating_routes_covered(app: object) -> None:

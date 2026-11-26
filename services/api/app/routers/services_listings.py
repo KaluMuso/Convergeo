@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, Protocol, cast
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
@@ -19,8 +20,10 @@ from app.services.service_packages import state as package_state
 from fastapi import APIRouter, Depends, Query
 from pydantic import Field, field_validator, model_validator
 
-router = APIRouter(tags=["services-listings"])
-
+router = APIRouter(
+    tags=["services-listings"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 SERVICE_VERTICALS = (
     "beauty",
     "food-catering",

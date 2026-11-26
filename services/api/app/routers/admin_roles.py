@@ -12,15 +12,18 @@ from app.core.auth import (
     load_admin_permissions,
     require_role,
 )
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import SupabaseServiceClient, get_supabase_client
 from app.errors import AppError
 from fastapi import APIRouter, Depends
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/admin", tags=["admin-roles"])
-
-
+router = APIRouter(
+    prefix="/admin",
+    tags=["admin-roles"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 class RoleInput(BaseModel):
     key: str = Field(pattern=r"^rbac_[a-z][a-z0-9_]{2,39}$")
     name: str = Field(min_length=3, max_length=80)
