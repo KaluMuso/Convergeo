@@ -56,6 +56,7 @@ export function ServiceStickyCta({
   const { session } = useSession();
   const [sidebarOutOfView, setSidebarOutOfView] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const idempotencyKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -78,20 +79,28 @@ export function ServiceStickyCta({
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
 
+  const loginNext = useCallback(() => {
+    if (typeof window === "undefined") return;
+    router.push(
+      `/${locale}/login?next=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`,
+    );
+  }, [locale, router]);
+
   const postStickyAction = useCallback(
     async (path: string) => {
       if (!session) {
+        setErrorMessage(labels.errors.authRequired);
+        loginNext();
         return;
       }
       setSubmitting(true);
+      setErrorMessage(null);
       idempotencyKeyRef.current ??= crypto.randomUUID();
       try {
         const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
         const result = await client.request<{ checkout_group_id?: string }>(path, {
           method: "POST",
-          body: JSON.stringify({
-            idempotency_key: idempotencyKeyRef.current,
-          }),
+          body: JSON.stringify({ idempotency_key: idempotencyKeyRef.current }),
         });
         if (result.checkout_group_id) {
           router.push(
@@ -100,13 +109,16 @@ export function ServiceStickyCta({
         }
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
-          void err;
+          setErrorMessage(labels.errors.authRequired);
+          loginNext();
+        } else {
+          setErrorMessage(labels.errors.generic);
         }
       } finally {
         setSubmitting(false);
       }
     },
-    [getToken, locale, router, session],
+    [getToken, labels.errors, locale, loginNext, router, session],
   );
 
   if (!sidebarOutOfView) {
@@ -117,7 +129,8 @@ export function ServiceStickyCta({
     <aside
       data-testid="service-sticky-cta"
       aria-label={labels.ariaLabel}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 p-3 shadow-2 backdrop-blur lg:hidden"
+      className="fixed inset-x-0 z-40 border-t border-border bg-surface/95 p-3 shadow-2 backdrop-blur lg:hidden"
+      style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom, 0px))" }}
     >
       <div className="mx-auto flex w-full max-w-[1400px] items-center gap-3">
         <p className="min-w-0 flex-1 truncate text-sm font-semibold text-text">{priceLine}</p>
@@ -129,7 +142,7 @@ export function ServiceStickyCta({
               className="min-h-11 rounded-md px-4 text-sm font-semibold"
               loading={submitting}
               loadingLabel={labels.freeSubmitting}
-              disabled={!session || submitting}
+              disabled={submitting}
               onClick={() => void postStickyAction(`/services/${serviceId}/request-free`)}
             >
               {labels.freeCta}
@@ -142,7 +155,7 @@ export function ServiceStickyCta({
               className="min-h-11 rounded-md px-4 text-sm font-semibold"
               loading={submitting}
               loadingLabel={labels.bookSubmitting}
-              disabled={!session || submitting}
+              disabled={submitting}
               onClick={() => void postStickyAction(`/services/${serviceId}/book`)}
             >
               {labels.bookCta}
@@ -170,6 +183,15 @@ export function ServiceStickyCta({
           ) : null}
         </div>
       </div>
+      {errorMessage ? (
+        <p
+          role="alert"
+          aria-live="polite"
+          className="mx-auto mt-2 max-w-[1400px] text-sm text-danger"
+        >
+          {errorMessage}
+        </p>
+      ) : null}
     </aside>
   );
 }

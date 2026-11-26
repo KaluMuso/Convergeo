@@ -9,13 +9,15 @@ import {
 import dynamic from "next/dynamic";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
-import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 import { eventAccessCookieName } from "../../../../../lib/event-access";
 import { ExternalUrlImage } from "../../../../../lib/media/external-url-image";
+import { ApiUnavailablePanel } from "../../_components/api-unavailable";
+import { fetchEventDetail } from "../../_components/detail-fetch/fetch-event";
 import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 
 import { EventCalendarLinks } from "./_components/event-calendar-links";
@@ -28,6 +30,11 @@ import { isPastEventInstance } from "./_lib/instance-time";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
+
+const EventPageSticky = dynamic(
+  () => import("./_components/event-page-sticky").then((m) => m.EventPageSticky),
+  { loading: () => null },
+);
 
 const TicketPicker = dynamic(
   () => import("./_components/ticket-picker").then((mod) => mod.TicketPicker),
@@ -100,6 +107,7 @@ type EventDetail = {
 
 type PageProps = {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<{ private?: string }>;
 };
 
 type EventsTranslator = {
@@ -121,36 +129,22 @@ async function getEventsTranslator(locale: string): Promise<EventsTranslator> {
   }) as unknown as EventsTranslator;
 }
 
+async function getCatalogTranslator(locale: string) {
+  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
+  return createTranslator({
+    locale,
+    messages: { catalog: catalogMessages },
+    namespace: "catalog",
+  }) as EventsTranslator;
+}
+
+async function loadEvent(slug: string, privateGate: boolean, accessProof: string | null) {
+  return fetchEventDetail(slug, { accessProof, privateGate });
+}
+
 async function eventAccessProofFor(slug: string): Promise<string | null> {
   const cookieStore = await cookies();
   return cookieStore.get(eventAccessCookieName(slug))?.value ?? null;
-}
-
-async function fetchEvent(slug: string, accessProof?: string | null): Promise<EventDetail | null> {
-  const url = absoluteApiUrl(`/events/${encodeURIComponent(slug)}`);
-  if (!url) {
-    return null;
-  }
-  try {
-    const response = await fetch(
-      url,
-      accessProof
-        ? {
-            cache: "no-store",
-            headers: { "X-Event-Access": accessProof },
-          }
-        : { next: { revalidate, tags: [`event:${slug}`, "events"] } },
-    );
-    if (response.status === 404) {
-      return null;
-    }
-    if (!response.ok) {
-      return null;
-    }
-    return (await response.json()) as EventDetail;
-  } catch {
-    return null;
-  }
 }
 
 function formatInstanceDate(iso: string, locale: string): string {
@@ -226,18 +220,22 @@ function toEventJsonLdInput(event: EventDetail, locale: string): EventJsonLdInpu
   };
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
-  const event = await fetchEvent(slug, await eventAccessProofFor(slug));
+  const query = await searchParams;
+  const privateGate =
+    query.private === "1" || Boolean((await cookies()).get(eventAccessCookieName(slug)));
+  const eventResult = await loadEvent(slug, privateGate, await eventAccessProofFor(slug));
   const t = await getEventsTranslator(locale);
 
-  if (!event) {
+  if (eventResult.kind !== "event") {
     return {
       title: t("browse.title"),
       robots: { index: false, follow: false },
     };
   }
 
+  const event = eventResult.data as EventDetail;
   const description = t("detail.metaDescription", {
     title: event.title,
     venue: event.venue ?? event.organiser.display_name,
@@ -282,17 +280,40 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function EventDetailPage({ params }: PageProps) {
+export default async function EventDetailPage({ params, searchParams }: PageProps) {
   const { locale, slug } = await params;
+  const query = await searchParams;
   setRequestLocale(locale);
-
-  const t = await getEventsTranslator(locale);
-  const eventAccessProof = await eventAccessProofFor(slug);
-  const event = await fetchEvent(slug, eventAccessProof);
-
-  if (!event) {
-    return <PrivateEventAccess slug={slug} />;
+  const cookieStore = await cookies();
+  const privateGate =
+    query.private === "1" || Boolean(cookieStore.get(eventAccessCookieName(slug)));
+  const [t, tCatalog, eventAccessProof] = await Promise.all([
+    getEventsTranslator(locale),
+    getCatalogTranslator(locale),
+    eventAccessProofFor(slug),
+  ]);
+  const eventResult = await loadEvent(slug, privateGate, eventAccessProof);
+  if (eventResult.kind === "private_access") return <PrivateEventAccess slug={slug} />;
+  if (eventResult.kind === "not_found") notFound();
+  if (eventResult.kind === "unavailable") {
+    return (
+      <ApiUnavailablePanel
+        retryHref={`/${locale}/e/${encodeURIComponent(slug)}`}
+        labels={{
+          title: tCatalog("pdp.unavailableTitle"),
+          body: tCatalog("pdp.unavailableBody"),
+          retry: tCatalog("pdp.unavailableRetry"),
+        }}
+        testId="event-unavailable"
+      />
+    );
   }
+  const event = eventResult.data as EventDetail;
+  const stickyPriceLine = event.is_free
+    ? t("detail.free")
+    : event.min_price_ngwee
+      ? t("detail.fromPrice", { price: formatK(event.min_price_ngwee) })
+      : t("detail.getTickets");
 
   const heroImage = event.images[0];
   const featuredInstance =
@@ -300,7 +321,7 @@ export default async function EventDetailPage({ params }: PageProps) {
     event.instances[event.instances.length - 1];
 
   return (
-    <article className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 pb-10">
+    <article className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 pb-28 lg:pb-10">
       <EventJsonLd event={toEventJsonLdInput(event, locale)} />
 
       <Link
@@ -457,7 +478,7 @@ export default async function EventDetailPage({ params }: PageProps) {
           ) : null}
         </div>
 
-        <aside className="flex flex-col gap-4 lg:sticky lg:top-24 lg:h-fit">
+        <aside className="order-first flex flex-col gap-4 lg:order-none lg:sticky lg:top-24 lg:h-fit">
           <EventRefundPolicy
             refundPolicyKey={event.refund_policy_key}
             labels={{
@@ -523,6 +544,17 @@ export default async function EventDetailPage({ params }: PageProps) {
           />
         </Suspense>
       ) : null}
+      <EventPageSticky
+        priceLine={stickyPriceLine}
+        isSoldOut={event.is_sold_out}
+        isFree={event.is_free}
+        labels={{
+          ariaLabel: t("detail.stickyCta.ariaLabel"),
+          cta: t("detail.getTickets"),
+          free: t("detail.free"),
+          soldOut: t("detail.soldOut"),
+        }}
+      />
     </article>
   );
 }
