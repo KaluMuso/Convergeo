@@ -69,43 +69,22 @@ const PERMISSIONS = new Set([
   "audit.read",
 ]);
 
-let inflightPermissions: Promise<AdminPermissions> | null = null;
-
-function parseAdminPermissions(value: unknown): AdminPermissions {
+export async function loadAdminPermissions(): Promise<AdminPermissions> {
+  const value = await rolesApi.request<AdminPermissions>("/admin/me/permissions", {
+    cache: "no-store",
+  });
   if (
     !value ||
-    typeof value !== "object" ||
-    !Array.isArray((value as AdminPermissions).permissions) ||
-    !(value as AdminPermissions).permissions.every(
+    !Array.isArray(value.permissions) ||
+    !value.permissions.every(
       (permission) => typeof permission === "string" && PERMISSIONS.has(permission),
     ) ||
-    typeof (value as AdminPermissions).unrestricted !== "boolean" ||
-    typeof (value as AdminPermissions).can_manage_roles !== "boolean"
+    typeof value.unrestricted !== "boolean" ||
+    typeof value.can_manage_roles !== "boolean"
   ) {
     throw new Error("Invalid admin permissions response");
   }
-  return value as AdminPermissions;
-}
-
-/** Coalesce parallel permission loads (layout shell + gated pages on first paint). */
-export async function loadAdminPermissions(): Promise<AdminPermissions> {
-  if (inflightPermissions) {
-    return inflightPermissions;
-  }
-  inflightPermissions = rolesApi
-    .request<AdminPermissions>("/admin/me/permissions", {
-      cache: "no-store",
-    })
-    .then((value) => {
-      const grants = parseAdminPermissions(value);
-      inflightPermissions = null;
-      return grants;
-    })
-    .catch((error: unknown) => {
-      inflightPermissions = null;
-      throw error;
-    });
-  return inflightPermissions;
+  return value;
 }
 
 // Presentation only. The API remains authoritative for every privileged request.
