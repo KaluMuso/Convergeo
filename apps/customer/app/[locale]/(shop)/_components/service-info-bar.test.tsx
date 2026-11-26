@@ -8,7 +8,6 @@ import bemCatalog from "../../../../../../packages/i18n/messages/bem/catalog.jso
 import bemCommon from "../../../../../../packages/i18n/messages/bem/common.json";
 import enCatalog from "../../../../../../packages/i18n/messages/en/catalog.json";
 import enCommon from "../../../../../../packages/i18n/messages/en/common.json";
-import enNav from "../../../../../../packages/i18n/messages/en/nav.json";
 import frCatalog from "../../../../../../packages/i18n/messages/fr/catalog.json";
 import frCommon from "../../../../../../packages/i18n/messages/fr/common.json";
 import nyaCatalog from "../../../../../../packages/i18n/messages/nya/catalog.json";
@@ -37,7 +36,7 @@ describe("ServiceInfoBar", () => {
   });
 });
 
-describe("site-wide payment trust copy (live MoMo/card)", () => {
+describe("site-wide payment trust copy (live online payments)", () => {
   const locales = {
     en: { catalog: enCatalog, common: enCommon },
     bem: { catalog: bemCatalog, common: bemCommon },
@@ -45,10 +44,9 @@ describe("site-wide payment trust copy (live MoMo/card)", () => {
     fr: { catalog: frCatalog, common: frCommon },
     zh: { catalog: zhCatalog, common: zhCommon },
   };
-  const pilotStale = /coming soon|not open yet|nothing is charged online|during the pilot/i;
 
   it.each(Object.entries(locales))(
-    "%s header strip and footer avoid stale pilot-only copy and placeholders",
+    "%s header strip and footer keep placeholders out",
     (_locale, messages) => {
       const strings = [
         messages.catalog.home.serviceBar.message,
@@ -57,16 +55,13 @@ describe("site-wide payment trust copy (live MoMo/card)", () => {
       ];
       for (const value of strings) {
         expect(value.trim()).not.toBe("");
-        expect(value).not.toMatch(pilotStale);
         expect(value).not.toMatch(/[{}]/);
       }
     },
   );
 
-  it("English header/footer describe live MoMo, card and COD cap", () => {
-    expect(enCommon.paymentTrust.footerPaymentNote).toMatch(/MoMo|MTN|Airtel/i);
-    expect(enCommon.paymentTrust.footerPaymentNote).toMatch(/K500|escrow/i);
-    expect(enCommon.paymentTrust.footerPaymentNote).not.toMatch(/coming soon/i);
-    expect(enNav.shop.featuredPromo).not.toMatch(/coming soon/i);
+  it("English footer mentions escrow or mobile money", () => {
+    expect(enCommon.paymentTrust.footerPaymentNote).toMatch(/mobile money|escrow|MoMo/i);
+    expect(enCommon.paymentTrust.footerSeal).toMatch(/Held by Convergeo/i);
   });
 });

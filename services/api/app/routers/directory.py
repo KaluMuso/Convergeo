@@ -15,8 +15,10 @@ from app.services.brand_theme import read_brand_theme
 from app.services.db_chunk import chunked_in_query
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import (
+    fetch_demo_event_ids,
     fetch_demo_listing_ids,
     fetch_demo_only_vendor_ids,
+    fetch_demo_service_ids,
 )
 from app.services.offers.badges import vendor_listing_badges
 from app.services.vendors.hours import (
@@ -1370,9 +1372,14 @@ def _elsewhere_products(
         and isinstance(r.get("price_ngwee"), int)
     ]
     demo = fetch_demo_listing_ids(client, [str(r["id"]) for r in rows if r.get("id")])
+    demo_vendors = fetch_demo_only_vendor_ids(
+        client, [str(r["vendor_id"]) for r in rows if r.get("vendor_id")]
+    )
     cheapest: dict[str, dict[str, Any]] = {}
     for r in rows:
         if str(r.get("id") or "") in demo:
+            continue
+        if str(r.get("vendor_id") or "") in demo_vendors:
             continue
         pid = str(r["product_id"])
         if pid not in cheapest or r["price_ngwee"] < cheapest[pid]["price_ngwee"]:
@@ -1447,9 +1454,13 @@ def _elsewhere_services(
         .limit(40)
         .execute()
     ).data or []
+    service_ids = [str(r["id"]) for r in rows if isinstance(r, dict) and r.get("id")]
+    demo_services = fetch_demo_service_ids(client, service_ids)
     out: list[ElsewhereService] = []
     for r in rows:
         if not isinstance(r, dict) or str(r.get("vendor_id") or "") == vendor_id:
+            continue
+        if str(r.get("id") or "") in demo_services:
             continue
         vendor = _other_vendor(r)
         if vendor is None:
@@ -1487,9 +1498,13 @@ def _elsewhere_events(client: Any, vendor_id: str) -> list[ElsewhereEvent]:
         .limit(40)
         .execute()
     ).data or []
+    event_ids = [str(r["id"]) for r in rows if isinstance(r, dict) and r.get("id")]
+    demo_events = fetch_demo_event_ids(client, event_ids)
     candidates: list[tuple[VendorEventItem, dict[str, Any]]] = []
     for r in rows:
         if not isinstance(r, dict) or str(r.get("organiser_vendor_id") or "") == vendor_id:
+            continue
+        if str(r.get("id") or "") in demo_events:
             continue
         vendor = _other_vendor(r)
         if vendor is None or not r.get("id"):

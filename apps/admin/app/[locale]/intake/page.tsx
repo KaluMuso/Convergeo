@@ -1,14 +1,22 @@
 import { LOCALES } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { adminNavPageMetadata } from "../../../lib/admin-page-metadata";
 import { getAdminTranslator } from "../../../lib/admin-translator";
 import { AdminPage } from "../_components/admin-page";
 
 import { IntakeQueue } from "./_components/IntakeQueue";
 
+import type { Metadata } from "next";
+
 type PageProps = {
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  return adminNavPageMetadata(locale, "intake");
+}
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));

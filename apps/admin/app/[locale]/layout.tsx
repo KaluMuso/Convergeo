@@ -16,7 +16,10 @@ import type { Metadata, Viewport } from "next";
 import "../globals.css";
 
 export const metadata: Metadata = {
-  title: "Convergeo Admin",
+  title: {
+    template: "%s · Convergeo Admin",
+    default: "Convergeo Admin",
+  },
   robots: {
     index: false,
     follow: false,

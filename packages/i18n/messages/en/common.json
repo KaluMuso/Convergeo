@@ -116,8 +116,8 @@
     "hideFooter": "Hide site links"
   },
   "paymentTrust": {
-    "footerSeal": "Pay cash when your order arrives",
-    "footerPaymentNote": "MTN or Airtel Mobile Money & card · Escrow until delivery · COD up to K500"
+    "footerSeal": "You pay → Held by Convergeo → Released",
+    "footerPaymentNote": "Mobile money & cards with escrow · Cash on delivery on eligible orders"
   },
   "codTrust": {
     "line": "You pay on delivery → We deliver → You confirm"

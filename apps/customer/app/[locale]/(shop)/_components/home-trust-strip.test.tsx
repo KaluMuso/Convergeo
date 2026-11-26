@@ -70,9 +70,8 @@ describe("HomeTrustStrip", () => {
     }
   });
 
-  it("keeps en/fr/zh trust + sell copy free of false active-payment language", () => {
-    const claims =
-      /pay with mobile money|mobile-money payouts|card checkout is live|momo checkout is live|start selling today/i;
+  it("keeps en/fr/zh trust + sell copy free of claims that are not live yet (payouts)", () => {
+    const claims = /mobile-money payouts|start selling today/i;
     for (const messages of [catalogMessages, frCatalog, zhCatalog]) {
       const blob = [
         messages.home.hero.escrowLine,

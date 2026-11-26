@@ -2,13 +2,21 @@ import { LOCALES } from "@vergeo/i18n";
 import Link from "next/link";
 import { setRequestLocale } from "next-intl/server";
 
+import { adminNavPageMetadata } from "../../../lib/admin-page-metadata";
 import { getAdminTranslator } from "../../../lib/admin-translator";
 
 import { ClipQueue } from "./_components/ClipQueue";
 
+import type { Metadata } from "next";
+
 type PageProps = {
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  return adminNavPageMetadata(locale, "clips");
+}
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
