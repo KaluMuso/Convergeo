@@ -153,7 +153,10 @@
       "expired": "This code is too old. Tap Send a new code.",
       "throttled": "Too many tries. Wait {seconds}s, then try again.",
       "generic": "That didn't work. Check the code and try again.",
-      "skippedLoggedIn": "Using your account phone number"
+      "skippedLoggedIn": "Using your account phone number",
+      "needPhone": "Add your phone number so we can send you order updates on WhatsApp or SMS.",
+      "savePhone": "Save number and continue",
+      "saveFailed": "We couldn't continue. Check your network and try again."
     },
     "fulfilment": {
       "title": "Delivery or pickup?",

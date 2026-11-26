@@ -150,7 +150,10 @@
       "expired": "验证码已过期。请点“重新发送验证码”。",
       "throttled": "尝试次数太多。请等 {seconds} 秒后再试。",
       "generic": "没有成功。请核对验证码后重试。",
-      "skippedLoggedIn": "使用您账户的电话号码"
+      "skippedLoggedIn": "使用您账户的电话号码",
+      "needPhone": "Add your phone number so we can send you order updates on WhatsApp or SMS.",
+      "savePhone": "Save number and continue",
+      "saveFailed": "We couldn't continue. Check your network and try again."
     },
     "fulfilment": {
       "title": "送货还是自取？",

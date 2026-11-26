@@ -171,7 +171,10 @@
       "expired": "Code yafwile — pepeni code yambi",
       "throttled": "Mwashesha ukucita — lindilileni {seconds}s",
       "generic": "Ukusuminisha kwafilwa. Wesheni limbi.",
-      "skippedLoggedIn": "Tulelanda nambala ya phone ya account yenu"
+      "skippedLoggedIn": "Tulelanda nambala ya phone ya account yenu",
+      "needPhone": "Add your phone number so we can send you order updates on WhatsApp or SMS.",
+      "savePhone": "Save number and continue",
+      "saveFailed": "We couldn't continue. Check your network and try again."
     },
     "fulfilment": {
       "title": "Mufwaya ukufika shani?",
