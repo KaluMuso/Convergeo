@@ -31,7 +31,7 @@ describe("audit log query builder", () => {
         from: "2026-11-01",
         to: "2026-11-13",
       },
-      "2026-11-12T10:00:00.000Z",
+      { before: "2026-11-12T10:00:00.000Z", beforeId: "00000000-0000-0000-0000-0000000000b2" },
     );
     expect("query" in built && new URLSearchParams(built.query).get("action")).toBe(
       "admin.orders.",
@@ -42,6 +42,9 @@ describe("audit log query builder", () => {
     );
     expect("query" in built && new URLSearchParams(built.query).get("before")).toBe(
       "2026-11-12T10:00:00.000Z",
+    );
+    expect("query" in built && new URLSearchParams(built.query).get("before_id")).toBe(
+      "00000000-0000-0000-0000-0000000000b2",
     );
   });
 
