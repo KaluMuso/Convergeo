@@ -1499,9 +1499,9 @@
         "airtel": "Airtel",
         "zamtel": "Zamtel"
       },
-      "otpLabel": "Code from your phone",
+      "otpLabel": "Code we sent you",
       "otpPlaceholder": "6 numbers",
-      "otpHelp": "We sent a code to your registered phone. Type it here to confirm this change.",
+      "otpHelp": "We emailed you a 6-digit code. Enter it below to confirm this change.",
       "sendCode": "⚠ Send code",
       "sendingCode": "Sending…",
       "resendIn": "Resend in {seconds}s",

@@ -12,7 +12,7 @@ from app.core.auth import CurrentUser, require_role
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.routers.privacy import verify_reauth_otp
+from app.routers.privacy import ReauthChannel, verify_reauth_otp
 from app.routers.vendor_orders import _load_vendor_for_owner
 from app.schemas.base import StrictModel
 from app.services.kyc.name_match import MomoOperator, resolve_and_score_momo_name
@@ -69,6 +69,7 @@ class PayoutMethodChangeRequest(StrictModel):
     payout_msisdn: str = Field(min_length=9, max_length=20)
     payout_rail: MomoOperator
     otp: str = Field(min_length=6, max_length=6)
+    channel: ReauthChannel = "email"
 
     @field_validator("otp")
     @classmethod
@@ -539,12 +540,13 @@ async def change_payout_method(
             http_status=400,
         )
 
-    phone = _owner_phone(service_client, owner_user_id)
+    phone = _owner_phone(service_client, owner_user_id) if body.channel == "sms" else None
     verify_reauth_otp(
         user_id=current_user.id,
         token=current_user.token,
         phone=phone,
         otp=body.otp,
+        channel=body.channel,
         settings=settings,
         service=service_client,
     )

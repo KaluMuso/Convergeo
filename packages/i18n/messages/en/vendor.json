@@ -1499,7 +1499,7 @@
         "airtel": "Airtel",
         "zamtel": "Zamtel"
       },
-      "otpLabel": "Code from your phone",
+      "otpLabel": "Code we sent you",
       "otpPlaceholder": "6 numbers",
       "otpHelp": "We emailed you a 6-digit code. Enter it below to confirm this change.",
       "sendCode": "Send code",

@@ -4,13 +4,14 @@ import json
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Annotated, Any, Protocol
+from typing import Annotated, Any, Literal, Protocol
 
-from app.core.auth import CurrentUser, get_current_user, verify_supabase_jwt
+from app.core.auth import CurrentUser, get_current_user
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.identity import lookup_confirmed_email
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
@@ -73,9 +74,13 @@ class ExportResponse(BaseModel):
     expires_in_seconds: int
 
 
+ReauthChannel = Literal["email", "sms"]
+
+
 class DeleteAccountRequest(BaseModel):
     confirmation_phrase: str = Field(min_length=1)
     otp: str = Field(min_length=6, max_length=6)
+    channel: ReauthChannel = "email"
 
     @field_validator("otp")
     @classmethod
@@ -268,15 +273,33 @@ def upload_export_bundle(
     return export_id, download_url
 
 
-def _email_from_jwt(token: str, settings: Settings) -> str | None:
+def _phone_confirmed_for_user(service: ServiceRoleClient, user_id: str) -> bool:
     try:
-        claims = verify_supabase_jwt(token, settings)
+        response = service.client.auth.admin.get_user_by_id(user_id)
     except Exception:
-        return None
-    email = claims.get("email")
-    if isinstance(email, str) and email.strip():
-        return email.strip()
-    return None
+        logger.warning("reauth.auth_phone_lookup_failed", exc_info=True, extra={"user_id": user_id})
+        return False
+    user = getattr(response, "user", None)
+    return getattr(user, "phone_confirmed_at", None) is not None
+
+
+def _assert_otp_session_user(*, response: Any, expected_user_id: str) -> None:
+    if getattr(response, "session", None) is None and getattr(response, "user", None) is None:
+        raise AppError(
+            code="reauth_failed",
+            message="Invalid or expired OTP",
+            http_status=403,
+        )
+    user = getattr(response, "user", None)
+    if user is None:
+        return
+    verified_id = getattr(user, "id", None)
+    if verified_id is not None and str(verified_id) != str(expected_user_id):
+        raise AppError(
+            code="reauth_failed",
+            message="OTP verification failed",
+            http_status=403,
+        )
 
 
 def verify_reauth_otp(
@@ -285,9 +308,11 @@ def verify_reauth_otp(
     token: str,
     phone: str | None,
     otp: str,
+    channel: ReauthChannel = "email",
     settings: Settings,
     service: ServiceRoleClient,
 ) -> None:
+    _ = token
     allowed, retry_after = bump_rate_counter(
         scope="reauth_otp_verify",
         key=user_id,
@@ -302,31 +327,43 @@ def verify_reauth_otp(
             message="Too many verification attempts",
         )
 
-    email = _email_from_jwt(token, settings)
-    if not phone and not email:
-        raise AppError(
-            code="reauth_required",
-            message="Step-up verification requires a verified phone or email on your account",
-            http_status=403,
-        )
-
     auth_client = create_client(settings.supabase_url, settings.supabase_anon_key)
     try:
-        if phone:
-            mobile_payload: VerifyMobileOtpParams = {
-                "phone": _normalize_phone(phone),
-                "token": otp,
-                "type": "sms",
-            }
-            response = auth_client.auth.verify_otp(mobile_payload)
-        else:
-            assert email is not None
+        if channel == "email":
+            email = lookup_confirmed_email(service, user_id=user_id)
+            if not email:
+                raise AppError(
+                    code="reauth_required",
+                    message="Step-up verification requires a verified email on your account",
+                    http_status=403,
+                )
             email_payload: VerifyEmailOtpParams = {
                 "email": email,
                 "token": otp,
                 "type": "email",
             }
             response = auth_client.auth.verify_otp(email_payload)
+        else:
+            if not phone:
+                raise AppError(
+                    code="reauth_required",
+                    message="Step-up verification requires a verified phone on your account",
+                    http_status=403,
+                )
+            if not _phone_confirmed_for_user(service, user_id):
+                raise AppError(
+                    code="reauth_required",
+                    message="Step-up verification requires a verified phone on your account",
+                    http_status=403,
+                )
+            mobile_payload: VerifyMobileOtpParams = {
+                "phone": _normalize_phone(phone),
+                "token": otp,
+                "type": "sms",
+            }
+            response = auth_client.auth.verify_otp(mobile_payload)
+    except AppError:
+        raise
     except Exception as exc:
         raise AppError(
             code="reauth_failed",
@@ -335,12 +372,7 @@ def verify_reauth_otp(
             details={"reason": exc.__class__.__name__},
         ) from exc
 
-    if getattr(response, "session", None) is None and getattr(response, "user", None) is None:
-        raise AppError(
-            code="reauth_failed",
-            message="Invalid or expired OTP",
-            http_status=403,
-        )
+    _assert_otp_session_user(response=response, expected_user_id=user_id)
 
 
 def anonymize_and_delete_account(
@@ -513,6 +545,7 @@ async def delete_account(
         token=current_user.token,
         phone=phone,
         otp=body.otp,
+        channel=body.channel,
         settings=settings,
         service=service,
     )

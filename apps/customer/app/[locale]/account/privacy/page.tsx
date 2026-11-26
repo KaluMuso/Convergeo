@@ -278,7 +278,7 @@ function DeleteSection({ locale }: { locale: string }) {
   const t = useTranslations("account.privacy.delete");
   const [phrase, setPhrase] = useState("");
   const [otp, setOtp] = useState("");
-  const [phone, setPhone] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
@@ -299,25 +299,28 @@ function DeleteSection({ locale }: { locale: string }) {
   );
 
   useEffect(() => {
-    const loadPhone = async () => {
+    const loadEmail = async () => {
       const supabase = await getBrowserClient();
       const { data } = await supabase.auth.getUser();
-      const userPhone = data.user?.phone;
-      setPhone(typeof userPhone === "string" ? userPhone : null);
+      const userEmail = data.user?.email;
+      setEmail(typeof userEmail === "string" ? userEmail : null);
     };
-    void loadPhone();
+    void loadEmail();
   }, []);
 
   const handleSendOtp = async () => {
-    if (!phone) {
-      setError(t("phoneRequired"));
+    if (!email) {
+      setError(t("emailRequired"));
       return;
     }
     setOtpLoading(true);
     setError(null);
     try {
       const supabase = await getBrowserClient();
-      const { error: otpError } = await supabase.auth.signInWithOtp({ phone });
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false },
+      });
       if (otpError) {
         setError(t("otpSendFailed"));
         return;
@@ -339,7 +342,11 @@ function DeleteSection({ locale }: { locale: string }) {
     try {
       await api.request("/account/delete", {
         method: "POST",
-        body: JSON.stringify({ confirmation_phrase: phrase.trim(), otp }),
+        body: JSON.stringify({
+          confirmation_phrase: phrase.trim(),
+          otp,
+          channel: "email",
+        }),
       });
       setDone(true);
       const supabase = await getBrowserClient();
@@ -388,7 +395,7 @@ function DeleteSection({ locale }: { locale: string }) {
           <span className="text-sm font-medium">{t("otpLabel")}</span>
           <Button
             className="min-h-11"
-            disabled={otpLoading || !phone || done}
+            disabled={otpLoading || !email || done}
             loading={otpLoading}
             loadingLabel={t("otpSending")}
             onClick={handleSendOtp}

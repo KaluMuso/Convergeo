@@ -77,6 +77,7 @@ export function PayoutMethodForm({ locale }: PayoutMethodFormProps) {
         payout_msisdn: msisdn.trim(),
         payout_rail: rail,
         otp: otp.trim(),
+        channel: "email",
       });
       setSuccess(t("payouts.method.success"));
       setOtp("");

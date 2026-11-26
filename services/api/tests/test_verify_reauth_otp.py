@@ -22,12 +22,15 @@ def _settings() -> Any:
 def test_verify_reauth_email_path(monkeypatch: pytest.MonkeyPatch) -> None:
     service = MagicMock()
     auth_client = MagicMock()
-    auth_client.auth.verify_otp.return_value = MagicMock(session={"ok": True}, user=None)
+    auth_client.auth.verify_otp.return_value = MagicMock(
+        session={"ok": True},
+        user=MagicMock(id="user-1"),
+    )
 
     monkeypatch.setattr("app.routers.privacy.bump_rate_counter", lambda **_: (True, 0))
     monkeypatch.setattr(
-        "app.routers.privacy.verify_supabase_jwt",
-        lambda _token, _settings: {"email": "vendor@example.com"},
+        "app.routers.privacy.lookup_confirmed_email",
+        lambda _service, **_: "vendor@example.com",
     )
     monkeypatch.setattr("app.routers.privacy.create_client", lambda *_, **__: auth_client)
 
@@ -36,6 +39,7 @@ def test_verify_reauth_email_path(monkeypatch: pytest.MonkeyPatch) -> None:
         token="jwt",
         phone=None,
         otp="123456",
+        channel="email",
         settings=_settings(),
         service=service,
     )
@@ -44,15 +48,19 @@ def test_verify_reauth_email_path(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def test_verify_reauth_sms_path_when_phone_present(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_verify_reauth_email_when_profile_has_phone(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Email channel must be used even when profiles.phone is set (payout form sends email OTP)."""
     service = MagicMock()
     auth_client = MagicMock()
-    auth_client.auth.verify_otp.return_value = MagicMock(session={"ok": True}, user=None)
+    auth_client.auth.verify_otp.return_value = MagicMock(
+        session={"ok": True},
+        user=MagicMock(id="user-1"),
+    )
 
     monkeypatch.setattr("app.routers.privacy.bump_rate_counter", lambda **_: (True, 0))
     monkeypatch.setattr(
-        "app.routers.privacy.verify_supabase_jwt",
-        lambda _token, _settings: {"email": "vendor@example.com"},
+        "app.routers.privacy.lookup_confirmed_email",
+        lambda _service, **_: "vendor@example.com",
     )
     monkeypatch.setattr("app.routers.privacy.create_client", lambda *_, **__: auth_client)
 
@@ -60,7 +68,34 @@ def test_verify_reauth_sms_path_when_phone_present(monkeypatch: pytest.MonkeyPat
         user_id="user-1",
         token="jwt",
         phone="+260971234567",
+        otp="123456",
+        channel="email",
+        settings=_settings(),
+        service=service,
+    )
+    auth_client.auth.verify_otp.assert_called_once_with(
+        {"email": "vendor@example.com", "token": "123456", "type": "email"},
+    )
+
+
+def test_verify_reauth_sms_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    service = MagicMock()
+    auth_client = MagicMock()
+    auth_client.auth.verify_otp.return_value = MagicMock(
+        session={"ok": True},
+        user=MagicMock(id="user-1"),
+    )
+
+    monkeypatch.setattr("app.routers.privacy.bump_rate_counter", lambda **_: (True, 0))
+    monkeypatch.setattr("app.routers.privacy._phone_confirmed_for_user", lambda *_args, **_kw: True)
+    monkeypatch.setattr("app.routers.privacy.create_client", lambda *_, **__: auth_client)
+
+    verify_reauth_otp(
+        user_id="user-1",
+        token="jwt",
+        phone="+260971234567",
         otp="654321",
+        channel="sms",
         settings=_settings(),
         service=service,
     )
@@ -69,10 +104,10 @@ def test_verify_reauth_sms_path_when_phone_present(monkeypatch: pytest.MonkeyPat
     )
 
 
-def test_verify_reauth_requires_contact_channel(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_verify_reauth_requires_confirmed_email(monkeypatch: pytest.MonkeyPatch) -> None:
     service = MagicMock()
     monkeypatch.setattr("app.routers.privacy.bump_rate_counter", lambda **_: (True, 0))
-    monkeypatch.setattr("app.routers.privacy.verify_supabase_jwt", lambda *_: {})
+    monkeypatch.setattr("app.routers.privacy.lookup_confirmed_email", lambda _service, **_: None)
 
     with pytest.raises(AppError) as exc:
         verify_reauth_otp(
@@ -80,6 +115,7 @@ def test_verify_reauth_requires_contact_channel(monkeypatch: pytest.MonkeyPatch)
             token="jwt",
             phone=None,
             otp="123456",
+            channel="email",
             settings=_settings(),
             service=service,
         )
@@ -93,8 +129,8 @@ def test_verify_reauth_wrong_code(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr("app.routers.privacy.bump_rate_counter", lambda **_: (True, 0))
     monkeypatch.setattr(
-        "app.routers.privacy.verify_supabase_jwt",
-        lambda _token, _settings: {"email": "vendor@example.com"},
+        "app.routers.privacy.lookup_confirmed_email",
+        lambda _service, **_: "vendor@example.com",
     )
     monkeypatch.setattr("app.routers.privacy.create_client", lambda *_, **__: auth_client)
 
@@ -104,7 +140,53 @@ def test_verify_reauth_wrong_code(monkeypatch: pytest.MonkeyPatch) -> None:
             token="jwt",
             phone=None,
             otp="000000",
+            channel="email",
             settings=_settings(),
             service=service,
         )
     assert exc.value.code == "reauth_failed"
+
+
+def test_verify_reauth_user_id_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    service = MagicMock()
+    auth_client = MagicMock()
+    auth_client.auth.verify_otp.return_value = MagicMock(
+        session={"ok": True},
+        user=MagicMock(id="other-user"),
+    )
+
+    monkeypatch.setattr("app.routers.privacy.bump_rate_counter", lambda **_: (True, 0))
+    monkeypatch.setattr(
+        "app.routers.privacy.lookup_confirmed_email",
+        lambda _service, **_: "vendor@example.com",
+    )
+    monkeypatch.setattr("app.routers.privacy.create_client", lambda *_, **__: auth_client)
+
+    with pytest.raises(AppError) as exc:
+        verify_reauth_otp(
+            user_id="user-1",
+            token="jwt",
+            phone=None,
+            otp="123456",
+            channel="email",
+            settings=_settings(),
+            service=service,
+        )
+    assert exc.value.code == "reauth_failed"
+
+
+def test_verify_reauth_rate_limited(monkeypatch: pytest.MonkeyPatch) -> None:
+    service = MagicMock()
+    monkeypatch.setattr("app.routers.privacy.bump_rate_counter", lambda **_: (False, 30))
+
+    with pytest.raises(AppError) as exc:
+        verify_reauth_otp(
+            user_id="user-1",
+            token="jwt",
+            phone=None,
+            otp="123456",
+            channel="email",
+            settings=_settings(),
+            service=service,
+        )
+    assert exc.value.code == "rate_limited"
