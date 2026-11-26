@@ -42,9 +42,7 @@ export function PlatformEditor() {
     setLoading(true);
     setError(null);
     try {
-      const data = await configApi.request<PlatformConfigEntry[]>(
-        "/admin/config/platform",
-      );
+      const data = await configApi.request<PlatformConfigEntry[]>("/admin/config/platform");
       setRows(data);
       setDrafts(Object.fromEntries(data.map((row) => [row.key, row.value])));
     } catch {
@@ -134,7 +132,7 @@ export function PlatformEditor() {
               />
               <button
                 type="button"
-                className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm font-medium text-white"
+                className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm font-medium text-[var(--primary-btn-fg)]"
                 onClick={() => requestSave(row.key)}
               >
                 {t("common.save")}

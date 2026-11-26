@@ -14,8 +14,10 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import { waMeLinkFromRaw } from "../../../../../lib/social/phone";
 import { ShareLinkButton } from "../../../_components/share-link-button";
+import { ApiUnavailablePanel } from "../../_components/api-unavailable";
+import { fetchVendorProfile } from "../../_components/detail-fetch/fetch-vendor";
 import { buildStorefrontCompare } from "../../_components/directory/business-home/compare-other-shops";
 import {
   ClipsRow,
@@ -102,6 +104,8 @@ type VendorProfileApiResponse = {
     pickup_available?: boolean;
     other_offers_count?: number;
     other_min_price_ngwee?: number | null;
+    rating_avg?: number | null;
+    rating_count?: number;
     /** W8 live offer (flag `bundles`), attached server-side by the API. */
     offer_badge?: OfferBadge | null;
   }>;
@@ -178,30 +182,6 @@ async function getCatalogTranslator(locale: string): Promise<DirectoryTranslator
     messages,
     namespace: "catalog",
   }) as unknown as DirectoryTranslator;
-}
-
-async function fetchVendorProfile(slug: string): Promise<VendorProfileApiResponse | null> {
-  try {
-    const url = absoluteApiUrl(`/directory/${encodeURIComponent(slug)}`);
-    if (!url) {
-      return null;
-    }
-    const response = await fetch(url, {
-      next: {
-        revalidate,
-        tags: [`vendor:${slug}`, "directory"],
-      },
-    });
-    if (response.status === 404) {
-      return null;
-    }
-    if (!response.ok) {
-      return null;
-    }
-    return (await response.json()) as VendorProfileApiResponse;
-  } catch {
-    return null;
-  }
 }
 
 const ZAMBIA_LOCALITIES = [
@@ -311,13 +291,14 @@ function buildVendorJsonLd(
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
-  const profile = await fetchVendorProfile(slug);
-  if (!profile) {
+  const profileResult = await fetchVendorProfile(slug);
+  if (profileResult.kind !== "vendor") {
     return {
       title: "Vendor not found",
       robots: { index: false, follow: false },
     };
   }
+  const profile = profileResult.data as VendorProfileApiResponse;
 
   const t = await getDirectoryTranslator(locale);
   const description = t("profile.metaDescription", {
@@ -442,7 +423,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
   }
 
   setRequestLocale(locale);
-  const [t, tCatalog, profile, baseMessages] = await Promise.all([
+  const [t, tCatalog, profileResult, baseMessages] = await Promise.all([
     getDirectoryTranslator(locale),
     getCatalogTranslator(locale),
     fetchVendorProfile(slug),
@@ -454,9 +435,23 @@ export default async function VendorProfilePage({ params }: PageProps) {
     namespace: "common",
   })("share.label");
 
-  if (!profile) {
+  if (profileResult.kind === "not_found") {
     notFound();
   }
+  if (profileResult.kind === "unavailable") {
+    return (
+      <ApiUnavailablePanel
+        retryHref={`/${locale}/v/${encodeURIComponent(slug)}`}
+        labels={{
+          title: tCatalog("pdp.unavailableTitle"),
+          body: tCatalog("pdp.unavailableBody"),
+          retry: tCatalog("pdp.unavailableRetry"),
+        }}
+        testId="vendor-unavailable"
+      />
+    );
+  }
+  const profile = profileResult.data as VendorProfileApiResponse;
 
   const { vendor, listings, services, events, reviews_summary: reviews } = profile;
   const clips = profile.clips ?? [];
@@ -494,8 +489,11 @@ export default async function VendorProfilePage({ params }: PageProps) {
     condition: listing.condition,
     inStock: listing.in_stock,
     imagePublicId: listing.image_public_id,
-    rating: reviews.rating_avg ?? 0,
-    reviewCount: reviews.rating_count,
+    rating:
+      listing.rating_count && listing.rating_count > 0 && listing.rating_avg
+        ? listing.rating_avg
+        : 0,
+    reviewCount: listing.rating_count && listing.rating_count > 0 ? listing.rating_count : 0,
     distanceM: null,
     belowMedian: false,
     deliveryAvailable: listing.delivery_available ?? false,
@@ -580,6 +578,10 @@ export default async function VendorProfilePage({ params }: PageProps) {
       panel: <VendorEventsGrid locale={locale} events={events} />,
     });
   }
+
+  const whatsappHref = vendor.whatsapp_msisdn
+    ? waMeLinkFromRaw(vendor.whatsapp_msisdn, t("profile.whatsappPrefill"))
+    : null;
 
   const hasRating = reviews.rating_avg !== null && reviews.rating_count > 0;
   const hasAnyStat = hasRating || vendor.order_count > 0;
@@ -707,10 +709,10 @@ export default async function VendorProfilePage({ params }: PageProps) {
                 following: t("profile.following"),
               }}
             />
-            {vendor.whatsapp_msisdn ? (
+            {whatsappHref ? (
               <a
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-semibold text-[var(--primary-btn-fg)] no-underline hover:bg-[var(--primary-btn-hover)] focus-visible:outline-none focus-visible:shadow-focusRing"
-                href={`https://wa.me/${vendor.whatsapp_msisdn}`}
+                href={whatsappHref}
                 rel="noopener noreferrer"
                 target="_blank"
               >

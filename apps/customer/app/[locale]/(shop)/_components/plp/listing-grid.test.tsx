@@ -56,31 +56,21 @@ describe("ListingGrid", () => {
   });
 
   it("uses a denser five-column marketplace grid at wide desktop", () => {
-    render(
-      <ListingGrid
-        locale="en"
-        listings={[listing()]}
-        labels={labels}
-        density="compact"
-      />,
-    );
+    render(<ListingGrid locale="en" listings={[listing()]} labels={labels} density="compact" />);
     const grid = screen.getByTestId("listing-grid");
-    expect(grid).toHaveClass("gap-2", "xl:grid-cols-5");
-    expect(screen.getByTestId("product-card")).toHaveAttribute(
-      "data-density",
-      "compact",
-    );
+    expect(grid).toHaveClass("gap-3", "xl:grid-cols-5");
+    expect(screen.getByTestId("product-card")).toHaveAttribute("data-density", "compact");
   });
 
-  it("is 2 columns at 360px and steps up to 6 on wide desktop", () => {
+  it("is 2 columns at 360px and steps up to 5 on wide desktop", () => {
     render(<ListingGrid locale="en" listings={[listing()]} labels={labels} />);
     expect(screen.getByTestId("listing-grid")).toHaveClass(
       "grid-cols-2",
       "md:grid-cols-3",
       "lg:grid-cols-4",
       "xl:grid-cols-5",
-      "2xl:grid-cols-6",
     );
+    expect(screen.getByTestId("listing-grid").className).not.toContain("2xl:grid-cols-6");
   });
 
   it("renders a snap-scrolling single-row list in rail layout", () => {
@@ -140,20 +130,12 @@ describe("ListingGrid", () => {
       <ListingGrid locale="en" listings={[delivering]} labels={labels} />,
     );
     expect(screen.queryByText("Pickup available")).not.toBeInTheDocument();
-    rerender(
-      <ListingGrid locale="en" listings={[delivering]} labels={labels} density="default" />,
-    );
+    rerender(<ListingGrid locale="en" listings={[delivering]} labels={labels} density="default" />);
     expect(screen.getByText("Pickup available")).toBeInTheDocument();
   });
 
   it("links standalone listings by listing id when productSlug is null", () => {
-    render(
-      <ListingGrid
-        locale="en"
-        listings={[listing({ productSlug: null })]}
-        labels={labels}
-      />,
-    );
+    render(<ListingGrid locale="en" listings={[listing({ productSlug: null })]} labels={labels} />);
     expect(screen.getByRole("link")).toHaveAttribute("href", "/en/l/listing-1");
   });
 });

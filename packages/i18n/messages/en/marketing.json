@@ -2,22 +2,22 @@
   "about": {
     "meta": {
       "title": "About Convergeo",
-      "description": "Convergeo is Zambia's mobile-first marketplace for products, services and events — pay with MoMo, card, or cash on delivery."
+      "description": "Convergeo is Zambia's mobile-first marketplace for products, services and events — pay with Mobile Money, card, or cash on delivery."
     },
     "hero": {
       "eyebrow": "About us",
       "headline": "Zambia's marketplace, built for trust",
-      "subhead": "Convergeo brings products, services and events into one place — pay with escrow on MoMo or card, or cash on delivery up to K500."
+      "subhead": "Convergeo brings products, services and events into one place — pay with escrow on Mobile Money or card, or cash on delivery up to K500."
     },
     "mission": {
       "heading": "Our mission",
-      "body": "Make buying and selling online in Zambia safe, simple and fast — even on a slow connection. Every conversation can happen on WhatsApp, and MoMo, card and escrow buyer protection are live today."
+      "body": "Make buying and selling online in Zambia safe, simple and fast — even on a slow connection. Every conversation can happen on WhatsApp, and Mobile Money, card and escrow buyer protection are live today."
     },
     "values": {
       "heading": "What we stand for",
       "trust": {
         "title": "Trust first",
-        "body": "Pay with MoMo or card — we hold the money until you confirm delivery. No paying upfront and hoping a stranger delivers."
+        "body": "Pay with Mobile Money or card — we hold the money until you confirm delivery. No paying upfront and hoping a stranger delivers."
       },
       "local": {
         "title": "Built for Zambia",
@@ -35,7 +35,7 @@
     "howItWorks": {
       "heading": "How Convergeo works",
       "step1": "Discover products, services and events from sellers across Zambia.",
-      "step2": "Place your order and pay with MTN/Airtel MoMo, card, or cash on delivery (up to K500).",
+      "step2": "Place your order and pay with MTN or Airtel Mobile Money, card, or cash on delivery (up to K500).",
       "step3": "Your order is delivered or ready for pickup.",
       "step4": "We step in if anything goes wrong."
     },
@@ -124,7 +124,7 @@
       "relatedHeading": "Related articles",
       "notHelpful": "Still need help?",
       "contactCta": "Contact support",
-      "comingSoon": "Pay with MTN/Airtel MoMo or card — we hold the money until you confirm delivery. Cash on delivery for orders under K500."
+      "comingSoon": "Pay with MTN or Airtel Mobile Money or card — we hold the money until you confirm delivery. Cash on delivery for orders under K500."
     },
     "cta": {
       "heading": "Didn't find your answer?",

@@ -109,7 +109,7 @@
         "title": "Welcome to Convergeo",
         "subtitle": "Your config-driven storefront will appear here as merchandising slots go live."
       },
-      "escrowLine": "Pay with MTN/Airtel Mobile Money or card — we hold the money until you confirm delivery. Cash on delivery for orders under K500.",
+      "escrowLine": "Pay with MTN or Airtel Mobile Money or card — we hold the money until you confirm delivery. Cash on delivery for orders under K500.",
       "escrowStep1": "You pay",
       "escrowStep2": "Held by Convergeo",
       "escrowStep3": "Released after delivery",
@@ -460,7 +460,7 @@
       "delivery": "Delivery available for this seller",
       "pickup": "Pickup available for this seller",
       "returns": "Returns & refunds",
-      "escrow": "Pay with MTN/Airtel Mobile Money or card — we hold the money until you confirm delivery. Cash on delivery for orders under K500."
+      "escrow": "Pay with MTN or Airtel Mobile Money or card — we hold the money until you confirm delivery. Cash on delivery for orders under K500."
     },
     "condition": {
       "new": "New",

@@ -11,7 +11,9 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
+import { ApiUnavailablePanel } from "../_components/api-unavailable";
 import { BackToTop } from "../_components/back-to-top";
+import { BrowsePager, parseBrowsePage, sliceBrowsePage } from "../_components/browse-pager";
 import { DateFilterChips } from "../_components/events/date-filter-chips";
 import { EventGrid, type EventBrowseItem } from "../_components/events/event-grid";
 import {
@@ -41,6 +43,7 @@ type PageProps = {
     neighbourhood?: string;
     lat?: string;
     lng?: string;
+    page?: string;
   }>;
 };
 
@@ -123,7 +126,7 @@ async function fetchEvents(params: {
   neighbourhood: string;
   lat: number | null;
   lng: number | null;
-}): Promise<EventsApiResponse | null> {
+}): Promise<{ kind: "ok"; data: EventsApiResponse } | { kind: "unavailable" }> {
   const search = new URLSearchParams();
   if (params.onDate) {
     search.set("on_date", params.onDate);
@@ -149,17 +152,17 @@ async function fetchEvents(params: {
   try {
     const url = absoluteApiUrl(`/events${suffix}`);
     if (!url) {
-      return null;
+      return { kind: "unavailable" };
     }
     const response = await fetch(url, {
       next: { revalidate, tags: ["events"] },
     });
     if (!response.ok) {
-      return null;
+      return { kind: "unavailable" };
     }
-    return (await response.json()) as EventsApiResponse;
+    return { kind: "ok", data: (await response.json()) as EventsApiResponse };
   } catch {
-    return null;
+    return { kind: "unavailable" };
   }
 }
 
@@ -213,7 +216,8 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   const neighbourhood = (query.neighbourhood ?? "").trim();
   const lat = parseCoord(query.lat, -90, 90);
   const lng = parseCoord(query.lng, -180, 180);
-  const data = await fetchEvents({
+  const page = parseBrowsePage(query.page);
+  const eventsResult = await fetchEvents({
     dateWindow,
     category,
     onDate,
@@ -222,9 +226,28 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
     lat,
     lng,
   });
-  const items = data?.items ?? [];
-  const calendarDates = data?.calendar_dates ?? [];
-  const apiCategories = data?.categories?.length ? data.categories : [...EVENT_CATEGORIES];
+
+  if (eventsResult.kind === "unavailable") {
+    return (
+      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10 pb-8">
+        <ApiUnavailablePanel
+          retryHref={`/${locale}/events`}
+          labels={{
+            title: t("browse.unavailableTitle"),
+            body: t("browse.unavailableBody"),
+            retry: t("browse.unavailableRetry"),
+          }}
+          testId="events-unavailable"
+        />
+      </div>
+    );
+  }
+
+  const data = eventsResult.data;
+  const allItems = data.items;
+  const total = data.total ?? allItems.length;
+  const calendarDates = data.calendar_dates ?? [];
+  const apiCategories = data.categories?.length ? data.categories : [...EVENT_CATEGORIES];
   let categoryTaxonomy: {
     slug: string;
     parent_slug: string | null;
@@ -254,8 +277,18 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   } catch {
     /* Existing category chips remain available when taxonomy is unavailable. */
   }
-  const featuredEvent = items[0];
-  const remainingEvents = items.slice(1);
+  const pagedItems = sliceBrowsePage(allItems, page);
+  const featuredEvent = page === 1 ? pagedItems[0] : null;
+  const remainingEvents = page === 1 ? pagedItems.slice(1) : pagedItems;
+  const pagerParams = {
+    date_window: dateWindow !== "tonight" ? dateWindow : undefined,
+    category: category ?? undefined,
+    on_date: onDate ?? undefined,
+    city: city || undefined,
+    neighbourhood: neighbourhood || undefined,
+    lat: lat !== null ? String(lat) : undefined,
+    lng: lng !== null ? String(lng) : undefined,
+  };
 
   const filterLabels = {
     tonight: t("filters.tonight"),
@@ -303,10 +336,12 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10 pb-8">
       <header className="overflow-hidden rounded-lg bg-panel text-panel-text shadow-2">
-        <div className="grid min-h-[24rem] lg:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)]">
+        <div className="grid min-h-[16rem] lg:min-h-[24rem] lg:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)]">
           <div className="flex flex-col justify-center gap-5 p-6 md:p-10 lg:p-12">
             <div className="space-y-2">
-              <h1 className="font-display text-h2 text-panel-text">{t("browse.title")}</h1>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-panel-muted">
+                {t("browse.title")}
+              </p>
               {featuredEvent ? (
                 <>
                   <h2 className="font-display text-hero text-panel-text">{featuredEvent.title}</h2>
@@ -318,10 +353,13 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
                   </div>
                 </>
               ) : (
+                <h1 className="font-display text-h2 text-panel-text">{t("browse.title")}</h1>
+              )}
+              {!featuredEvent ? (
                 <p className="max-w-xl text-body leading-relaxed text-panel-muted">
                   {t("browse.subtitle")}
                 </p>
-              )}
+              ) : null}
             </div>
 
             {featuredEvent ? (
@@ -369,7 +407,12 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
       </header>
 
       <section className="flex flex-col gap-6" aria-labelledby="events-results-heading">
-        <PageHeader title={t("browse.title")} subtitle={t("browse.subtitle")} />
+        {featuredEvent ? (
+          <PageHeader
+            title={t("browse.subtitle")}
+            subtitle={tCatalog("plp.results", { count: total })}
+          />
+        ) : null}
 
         <div>
           <Suspense fallback={null}>
@@ -388,7 +431,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
           </Suspense>
         </div>
 
-        {items.length === 0 ? (
+        {allItems.length === 0 ? (
           <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
         ) : remainingEvents.length > 0 ? (
           <>
@@ -407,7 +450,39 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
                 verified: t("browse.verified"),
               }}
             />
+            <BrowsePager
+              locale={locale}
+              pathname="/events"
+              searchParams={pagerParams}
+              page={page}
+              total={total}
+              labels={{
+                previous: t("browse.pagination.previous"),
+                next: t("browse.pagination.next"),
+                page: t("browse.pagination.page"),
+              }}
+            />
             <BackToTop label={tCatalog("plp.backToTop")} />
+          </>
+        ) : allItems.length > 0 ? (
+          <>
+            <EmptyState
+              title={t("browse.emptyTitle")}
+              body={t("browse.onlyFeatured")}
+              data-testid="events-only-featured"
+            />
+            <BrowsePager
+              locale={locale}
+              pathname="/events"
+              searchParams={pagerParams}
+              page={page}
+              total={total}
+              labels={{
+                previous: t("browse.pagination.previous"),
+                next: t("browse.pagination.next"),
+                page: t("browse.pagination.page"),
+              }}
+            />
           </>
         ) : null}
       </section>

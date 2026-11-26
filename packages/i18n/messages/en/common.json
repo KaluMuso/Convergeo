@@ -116,8 +116,8 @@
     "hideFooter": "Hide site links"
   },
   "paymentTrust": {
-    "footerSeal": "Held in escrow until you confirm delivery",
-    "footerPaymentNote": "MTN/Airtel Mobile Money & card · Escrow until delivery · COD up to K500"
+    "footerSeal": "Pay cash when your order arrives",
+    "footerPaymentNote": "MTN or Airtel Mobile Money & card · Escrow until delivery · COD up to K500"
   },
   "codTrust": {
     "line": "You pay on delivery → We deliver → You confirm"

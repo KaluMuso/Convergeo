@@ -348,6 +348,7 @@ export function TicketPicker({
 
   return (
     <section
+      id="event-ticket-picker"
       className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 shadow-2"
       aria-labelledby={`ticket-picker-${eventSlug}`}
     >

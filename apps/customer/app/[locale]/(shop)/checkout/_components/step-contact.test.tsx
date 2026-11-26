@@ -5,13 +5,12 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { signInWithOtp, verifyOtp, reconcileCustomerSession, contactRequest } =
-  vi.hoisted(() => ({
-    signInWithOtp: vi.fn(),
-    verifyOtp: vi.fn(),
-    reconcileCustomerSession: vi.fn(),
-    contactRequest: vi.fn(),
-  }));
+const { signInWithOtp, verifyOtp, reconcileCustomerSession, contactRequest } = vi.hoisted(() => ({
+  signInWithOtp: vi.fn(),
+  verifyOtp: vi.fn(),
+  reconcileCustomerSession: vi.fn(),
+  contactRequest: vi.fn(),
+}));
 
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: async () => ({
@@ -25,6 +24,7 @@ vi.mock("../../../../../lib/customer-session", () => ({
 }));
 
 vi.mock("@vergeo/config", () => ({
+  ApiError: class ApiError extends Error {},
   createApiClient: () => ({ request: contactRequest }),
 }));
 
@@ -54,6 +54,9 @@ const labels: ContactStepLabels = {
   throttled: "Try again in {seconds} seconds",
   generic: "Something went wrong",
   skippedLoggedIn: "Already signed in",
+  needPhone: "Add your phone",
+  savePhone: "Save and continue",
+  saveFailed: "Could not continue",
 };
 
 async function submitOtp(user: ReturnType<typeof userEvent.setup>) {
@@ -114,12 +117,7 @@ describe("StepContact authenticated OTP ordering", () => {
     await submitOtp(user);
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledOnce());
-    expect(events).toEqual([
-      "verifyOtp",
-      "cart merge",
-      "contact POST",
-      "onComplete",
-    ]);
+    expect(events).toEqual(["verifyOtp", "cart merge", "contact POST", "onComplete"]);
     expect(reconcileCustomerSession).toHaveBeenCalledWith(
       expect.objectContaining({ access_token: "real-session-token" }),
       false,

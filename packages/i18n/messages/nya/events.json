@@ -12,7 +12,16 @@
     "verified": "Verified",
     "calendarLabel": "Masiku omwe ali ndi events mwezi uno",
     "hostCta": "Pangani event",
-    "hostPitch": "Gulitsani tickets ndi dynamic QR check-in ndi kulandira ndalama motetezeka."
+    "hostPitch": "Gulitsani tickets ndi dynamic QR check-in ndi kulandira ndalama motetezeka.",
+    "unavailableTitle": "We couldn't load events",
+    "unavailableBody": "Check your connection and try again.",
+    "unavailableRetry": "Try again",
+    "onlyFeatured": "More events coming soon.",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {total}"
+    }
   },
   "filters": {
     "tonight": "Usikuuno",
@@ -93,7 +102,10 @@
     "getTickets": "Pezani tickets",
     "getTicketsSoon": "Ticket sales zikubwera posachedwa",
     "pastInstance": "Yapita",
-    "spots": "{sold} / {total} spots"
+    "spots": "{sold} / {total} spots",
+    "stickyCta": {
+      "ariaLabel": "Quick ticket purchase"
+    }
   },
   "organiser": {
     "imageAlt": "Chithunzi cha event {position}"
