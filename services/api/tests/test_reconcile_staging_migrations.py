@@ -155,6 +155,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261124090100",
     # T8 social contacts, requests, blocks and 1:1 chat (additive, documented down).
     "20261124120000",
+    # Ask Vergeo service-role checks use auth.role() (rewrite in place, no down).
+    "20261126190000",
 }
 
 

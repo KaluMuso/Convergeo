@@ -135,6 +135,8 @@ REVIEWED_SUFFIX = (
     "20261124090100_service_packages.sql",
     # T8 social contacts, requests, blocks and 1:1 chat (additive, documented down).
     "20261124120000_social_contacts.sql",
+    # Ask Vergeo service-role checks use auth.role() (rewrite in place, no down).
+    "20261126190000_ask_service_role_auth_role.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
@@ -688,9 +690,9 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 198 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 199 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 198 source migrations",
+            "disposable copy does not match 199 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
@@ -776,7 +778,7 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                     print("failure_cleanup|restored_198|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 198 migrations",
+                        "error: disposable failure cleanup could not restore 199 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -1146,7 +1148,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 198 migrations"
+                    "normal full replay did not restore 199 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")
