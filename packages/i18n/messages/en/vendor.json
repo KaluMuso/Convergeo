@@ -127,7 +127,7 @@
         },
         "sell": {
           "title": "Sell to your customers",
-          "description": "Orders flow to your dashboard. During the pilot, customers pay cash on delivery. Online payouts are coming soon."
+          "description": "Orders flow to your dashboard. Customers pay with Mobile Money, card, or cash on delivery. Online payouts are coming soon."
         }
       }
     },
@@ -159,8 +159,8 @@
     },
     "payout": {
       "heading": "Online payouts: coming soon",
-      "promise": "During the pilot, customers pay cash on delivery.",
-      "body": "Mobile-money payouts and buyer protection are coming soon. Until then, orders are paid in cash when they arrive, and we will confirm settlement details with each invited seller."
+      "promise": "Customers pay with Mobile Money, card, or cash on delivery.",
+      "body": "Customer payments are held in escrow until delivery. Payouts to your Mobile Money number are coming soon; until then we will confirm settlement details with each invited seller."
     },
     "faq": {
       "heading": "Frequently asked questions",
@@ -171,7 +171,7 @@
         },
         "payout": {
           "question": "When do I get paid?",
-          "answer": "During the pilot, customers pay cash on delivery. Online payouts are coming soon — we will confirm timing with each invited seller."
+          "answer": "Customers pay with Mobile Money, card, or cash on delivery. Online payouts are coming soon — we will confirm timing with each invited seller."
         },
         "whatCanISell": {
           "question": "What can I sell?",
@@ -736,6 +736,8 @@
         "returnWindowRequired": "Enter a return window when returns are enabled."
       },
       "emptyTitle": "No listings yet",
+      "addPhotoFirst": "Add a photo first.",
+      "addPhotoLink": "Add photo",
       "statusLabel": "Status",
       "productStatus": {
         "inReview": "Live, in review: buyers see it once Convergeo approves it",
@@ -1019,7 +1021,7 @@
       "save": "Save profile",
       "saving": "Saving…",
       "viewStorefront": "View public storefront",
-      "viewStorefrontUnavailable": "Public storefront preview is unavailable in this environment."
+      "viewStorefrontUnavailable": "Your shop link will appear here once your storefront slug is saved."
     },
     "success": {
       "saved": "Profile saved. Changes appear on your public page within a minute."

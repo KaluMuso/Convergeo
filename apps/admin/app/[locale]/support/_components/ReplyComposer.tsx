@@ -200,7 +200,7 @@ export function ReplyComposer({ customerId, orderId, onSent }: ReplyComposerProp
 
       <button
         type="button"
-        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
+        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)] disabled:opacity-60"
         disabled={
           submitting ||
           conflict ||

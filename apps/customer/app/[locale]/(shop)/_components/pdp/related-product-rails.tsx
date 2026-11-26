@@ -72,12 +72,8 @@ export function RelatedProductRails({
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
-    const query = listingId
-      ? `?listing_id=${encodeURIComponent(listingId)}`
-      : "";
-    const url = absoluteApiUrl(
-      `/products/${encodeURIComponent(slug)}/related-rails${query}`,
-    );
+    const query = listingId ? `?listing_id=${encodeURIComponent(listingId)}` : "";
+    const url = absoluteApiUrl(`/products/${encodeURIComponent(slug)}/related-rails${query}`);
     const recUrl = (scope: "store" | "category") =>
       absoluteApiUrl(
         `/products/${encodeURIComponent(slug)}/recommendations?scope=${scope}&limit=8`,
@@ -87,27 +83,43 @@ export function RelatedProductRails({
       const store = recUrl("store");
       const category = recUrl("category");
       if (!store || !category) throw new Error("API unavailable");
-      const [storeRes, categoryRes] = await Promise.all([
+      const [storeOut, categoryOut] = await Promise.allSettled([
         fetch(store, { signal: controller.signal, cache: "no-store" }),
         fetch(category, { signal: controller.signal, cache: "no-store" }),
       ]);
-      if (!storeRes.ok || !categoryRes.ok)
+      if (storeOut.status === "rejected" && categoryOut.status === "rejected") {
         throw new Error("Recommendations unavailable");
-      const [storeData, categoryData] = (await Promise.all([
-        storeRes.json(),
-        categoryRes.json(),
-      ])) as [
-        { items?: RecommendationItem[] },
-        { items?: RecommendationItem[] },
-      ];
-      if (!Array.isArray(storeData.items) || !Array.isArray(categoryData.items))
-        throw new Error("Invalid recommendations");
+      }
+
+      let storeItems: RecommendationItem[] = [];
+      let categoryItems: RecommendationItem[] = [];
+      let vendorName: string | null = null;
+
+      if (storeOut.status === "fulfilled" && storeOut.value.ok) {
+        const storeData = (await storeOut.value.json()) as { items?: RecommendationItem[] };
+        if (Array.isArray(storeData.items)) {
+          storeItems = storeData.items;
+          vendorName = storeData.items[0]?.vendor_name ?? null;
+        }
+      }
+
+      if (categoryOut.status === "fulfilled" && categoryOut.value.ok) {
+        const categoryData = (await categoryOut.value.json()) as { items?: RecommendationItem[] };
+        if (Array.isArray(categoryData.items)) {
+          categoryItems = categoryData.items;
+        }
+      }
+
+      if (storeItems.length === 0 && categoryItems.length === 0) {
+        throw new Error("Recommendations unavailable");
+      }
+
       return {
         product_slug: slug,
         listing_id: listingId,
-        vendor_name: storeData.items[0]?.vendor_name ?? null,
-        same_vendor: storeData.items.map(toRelatedItem),
-        same_category: categoryData.items.map(toRelatedItem),
+        vendor_name: vendorName,
+        same_vendor: storeItems.map(toRelatedItem),
+        same_category: categoryItems.map(toRelatedItem),
         source: "recommendations",
       };
     }
@@ -180,17 +192,13 @@ export function RelatedProductRails({
       return true;
     });
   const vendor = unique(
-    data.source === "recommendations" ||
-      (data.listing_id === listingId && data.vendor_name)
+    data.source === "recommendations" || (data.listing_id === listingId && data.vendor_name)
       ? data.same_vendor
       : [],
   );
   const category = unique(data.same_category);
   return (
-    <div
-      className="flex min-w-0 flex-col gap-8"
-      data-testid="pdp-related-rails"
-    >
+    <div className="flex min-w-0 flex-col gap-8" data-testid="pdp-related-rails">
       <RelatedProducts
         locale={locale}
         items={vendor}
@@ -199,10 +207,7 @@ export function RelatedProductRails({
           heading:
             data.source === "recommendations" && labels.storeHeading
               ? labels.storeHeading
-              : labels.vendorHeading.replace(
-                  "{vendor}",
-                  data.vendor_name ?? "",
-                ),
+              : labels.vendorHeading.replace("{vendor}", data.vendor_name ?? ""),
         }}
         cloudName={cloudName}
         headingId="pdp-related-vendor-heading"

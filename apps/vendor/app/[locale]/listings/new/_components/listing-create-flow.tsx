@@ -8,10 +8,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../../_components/async-state";
-import {
-  canUseWholesaleCapabilities,
-  isAuditableApproved,
-} from "../../../_lib/kyc-integrity";
+import { canUseWholesaleCapabilities, isAuditableApproved } from "../../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../../_lib/vendor-errors";
 import { createKycClient } from "../../../onboarding/_lib/kyc-client";
 import { ListingTipsPanel } from "../../_components/listing-guide";
@@ -44,9 +41,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
   const [activeTab, setActiveTab] = useState<FlowTab>("attach");
-  const [selectedProduct, setSelectedProduct] = useState<SuggestItem | null>(
-    null,
-  );
+  const [selectedProduct, setSelectedProduct] = useState<SuggestItem | null>(null);
   const [kycApp, setKycApp] = useState<KycApplication | null>(null);
   const [loadingTier, setLoadingTier] = useState(true);
   const [kycErrorKey, setKycErrorKey] = useState<string | null>(null);
@@ -57,14 +52,8 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
   const [wantsOptions, setWantsOptions] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const getToken = useCallback(
-    () => session?.access_token ?? null,
-    [session?.access_token],
-  );
-  const listingClient = useMemo(
-    () => createListingClient(getToken),
-    [getToken],
-  );
+  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const listingClient = useMemo(() => createListingClient(getToken), [getToken]);
   const kycClient = useMemo(() => createKycClient(getToken), [getToken]);
 
   const wholesaleEnabled = kycApp
@@ -90,10 +79,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     [t],
   );
 
-  const fieldErrorMessages = useMemo(
-    () => readFieldErrorMessages(t.raw(FIELD_ERRORS_KEY)),
-    [t],
-  );
+  const fieldErrorMessages = useMemo(() => readFieldErrorMessages(t.raw(FIELD_ERRORS_KEY)), [t]);
 
   const commissionLabels = useMemo(
     () => ({
@@ -155,13 +141,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     notify.success(message);
     setError(null);
     window.setTimeout(() => {
-      router.push(
-        wantsOptions
-          ? `/${locale}/listings/${response.listing_id}/edit#options`
-          : requiresEvidence
-            ? `/${locale}/listings/${response.listing_id}/edit`
-            : `/${locale}/listings`,
-      );
+      router.push(`/${locale}/listings/${response.listing_id}/edit#photos`);
     }, 1200);
   };
 
@@ -319,9 +299,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             draftNotice: t("listings.quickList.draftNotice"),
             canonicalRequired: t("listings.quickList.canonicalRequired"),
             catalogLabel: t("listings.tabs.attach"),
-            categoriesUnavailable: t(
-              "listings.quickList.categoriesUnavailable",
-            ),
+            categoriesUnavailable: t("listings.quickList.categoriesUnavailable"),
             fields: fieldLabels,
             submitError: t("listings.errors.submitFailed"),
             standaloneRequired: t("listings.errors.standalone_required"),
@@ -339,9 +317,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
   return (
     <div className="flex flex-col gap-4">
       <header className="space-y-1">
-        <h1 className="font-display text-h3 text-display-ink">
-          {t("listings.title")}
-        </h1>
+        <h1 className="font-display text-h3 text-display-ink">{t("listings.title")}</h1>
         <p className="text-sm text-text-2">{t("listings.intro")}</p>
       </header>
 

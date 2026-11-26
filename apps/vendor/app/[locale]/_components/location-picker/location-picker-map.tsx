@@ -30,6 +30,13 @@ export function LocationPickerMap({ lat, lng, onPinMove, disabled }: LocationPic
         return;
       }
 
+      const iconBase = "https://unpkg.com/leaflet@1.9.4/dist/images";
+      leaflet.Icon.Default.mergeOptions({
+        iconRetinaUrl: `${iconBase}/marker-icon-2x.png`,
+        iconUrl: `${iconBase}/marker-icon.png`,
+        shadowUrl: `${iconBase}/marker-shadow.png`,
+      });
+
       const map = leaflet.map(containerRef.current, {
         center: [lat, lng],
         zoom: DEFAULT_ZOOM,

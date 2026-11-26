@@ -93,8 +93,9 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: Web Push delivery queue + enqueue trigger (additive, reversible).
         # + 1 reviewed: catalog moderation holds + ad targets (additive).
         # + 1 reviewed: T8 social contacts, requests, blocks, 1:1 chat (additive).
-        self.assertEqual(len(runner.FORWARD), 71)
-        self.assertEqual(len(set(runner.FORWARD)), 71)
+        # + 1 reviewed: Ask Vergeo service-role checks use auth.role().
+        self.assertEqual(len(runner.FORWARD), 72)
+        self.assertEqual(len(set(runner.FORWARD)), 72)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

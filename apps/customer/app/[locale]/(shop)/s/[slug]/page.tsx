@@ -1,4 +1,4 @@
-import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { formatK, loadNamespace, type Locale } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
@@ -13,6 +13,8 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import { ApiUnavailablePanel } from "../../_components/api-unavailable";
+import { fetchServiceDetail } from "../../_components/detail-fetch/fetch-service";
 import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 
 import { BookService } from "./_components/book-service";
@@ -87,27 +89,6 @@ async function getServicesTranslator(locale: string): Promise<ServicesTranslator
   }) as unknown as ServicesTranslator;
 }
 
-async function fetchService(slug: string): Promise<ServiceDetail | null> {
-  try {
-    const url = absoluteApiUrl(`/services/${encodeURIComponent(slug)}`);
-    if (!url) {
-      return null;
-    }
-    const response = await fetch(url, {
-      next: { revalidate, tags: [`service:${slug}`, "services"] },
-    });
-    if (response.status === 404) {
-      return null;
-    }
-    if (!response.ok) {
-      return null;
-    }
-    return (await response.json()) as ServiceDetail;
-  } catch {
-    return null;
-  }
-}
-
 type ServiceReviewsPayload = {
   items: {
     id: string;
@@ -166,21 +147,22 @@ function badgeVariant(tier: ServiceDetail["provider"]["response_time_tier"]) {
 }
 
 export function generateStaticParams() {
-  return LOCALES.map((locale) => ({ locale, slug: "placeholder" }));
+  return [];
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
-  const service = await fetchService(slug);
+  const result = await fetchServiceDetail(slug);
   const t = await getServicesTranslator(locale);
 
-  if (!service) {
+  if (result.kind !== "service") {
     return {
       title: t("browse.title"),
       robots: { index: false, follow: false },
     };
   }
 
+  const service = result.data;
   const description = t("detail.metaDescription", {
     title: service.title,
     area: service.service_area ?? service.provider.display_name,
@@ -217,12 +199,29 @@ export default async function ServiceDetailPage({ params }: PageProps) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const t = await getServicesTranslator(locale);
-  const service = await fetchService(slug);
+  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
+  const tCatalog = createTranslator({
+    locale,
+    messages: { catalog: catalogMessages },
+    namespace: "catalog",
+  }) as ServicesTranslator;
+  const [t, result] = await Promise.all([getServicesTranslator(locale), fetchServiceDetail(slug)]);
 
-  if (!service) {
-    notFound();
+  if (result.kind === "not_found") notFound();
+  if (result.kind === "unavailable") {
+    return (
+      <ApiUnavailablePanel
+        retryHref={`/${locale}/s/${encodeURIComponent(slug)}`}
+        labels={{
+          title: tCatalog("pdp.unavailableTitle"),
+          body: tCatalog("pdp.unavailableBody"),
+          retry: tCatalog("pdp.unavailableRetry"),
+        }}
+        testId="service-unavailable"
+      />
+    );
   }
+  const service = result.data as ServiceDetail;
 
   const reviewData = await fetchServiceReviews(service.id);
   const tier = service.provider.response_time_tier;

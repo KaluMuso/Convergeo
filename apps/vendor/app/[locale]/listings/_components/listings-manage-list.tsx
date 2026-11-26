@@ -1,11 +1,11 @@
 "use client";
 
 import { useSession } from "@vergeo/auth/use-session";
+import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CloudinaryImage } from "../../../../../../packages/ui/src/media/cloudinary-image";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { VendorGrid } from "../../_components/vendor-page";
 import { VendorRouteHeader } from "../../_components/vendor-route-header";
@@ -150,27 +150,32 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
           </div>
           <VendorGrid cols="cards" className="px-1">
             {listings.map((listing) => {
-              const cover = [...(listing.images ?? [])].sort((a, b) => a.position - b.position)[0]
-                ?.cloudinary_public_id;
+              const coverImage = [...(listing.images ?? [])].sort(
+                (left, right) => left.position - right.position,
+              )[0];
               return (
                 <div
                   key={listing.id}
                   className="rounded-lg border border-border p-4 shadow-sm lg:p-5"
                 >
                   <div className="flex items-start gap-3">
-                    {cover ? (
+                    {coverImage ? (
                       <CloudinaryImage
-                        publicId={cover}
-                        alt={t("listings.formAside.previewPhotoAlt")}
+                        publicId={coverImage.cloudinary_public_id}
+                        alt={listing.title}
                         width={64}
                         ratio={1}
-                        className="size-16 shrink-0 rounded-lg"
+                        className="size-16 shrink-0 rounded-lg border border-border object-cover"
                       />
                     ) : (
-                      <div
-                        aria-hidden
-                        className="size-16 shrink-0 rounded-lg border border-dashed border-border bg-bg-2"
-                      />
+                      <div className="flex size-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-bg-2 p-1 text-center">
+                        <Link
+                          className="text-[0.65rem] font-medium leading-tight text-primary underline-offset-2 hover:underline"
+                          href={`/${locale}/listings/${listing.id}/edit#photos`}
+                        >
+                          {t("listings.manage.addPhotoLink")}
+                        </Link>
+                      </div>
                     )}
                     <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
                       <div className="min-w-0 space-y-1">

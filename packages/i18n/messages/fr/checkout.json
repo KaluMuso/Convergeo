@@ -150,7 +150,10 @@
       "expired": "Ce code a expiré. Touchez Envoyer un nouveau code.",
       "throttled": "Trop d'essais. Attendez {seconds} s, puis réessayez.",
       "generic": "Cela n'a pas marché. Vérifiez le code et réessayez.",
-      "skippedLoggedIn": "Utilisation du numéro de téléphone de votre compte"
+      "skippedLoggedIn": "Utilisation du numéro de téléphone de votre compte",
+      "needPhone": "Add your phone number so we can send you order updates on WhatsApp or SMS.",
+      "savePhone": "Save number and continue",
+      "saveFailed": "We couldn't continue. Check your network and try again."
     },
     "fulfilment": {
       "title": "Livraison ou retrait ?",
@@ -272,8 +275,8 @@
       "methodMomo": "Mobile money ({rail})",
       "methodCard": "Carte (page sécurisée Lenco)",
       "methodCod": "Payer à l'arrivée (paiement à la livraison)",
-      "railMtn": "MTN",
-      "railAirtel": "Airtel",
+      "railMtn": "MTN Mobile Money",
+      "railAirtel": "Airtel Money",
       "payerNumber": "Téléphone payeur : {number}",
       "escrowTitle": "Comment ça marche",
       "escrowStep1": "Vous payez",

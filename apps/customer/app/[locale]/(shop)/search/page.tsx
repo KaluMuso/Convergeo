@@ -4,6 +4,7 @@ import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { PageHeader } from "@vergeo/ui/src/page-header";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import { buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
+import dynamic from "next/dynamic";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
@@ -26,7 +27,6 @@ import {
 import { SaveSearchButton } from "../_components/search/save-search-button";
 import { SearchAnalytics } from "../_components/search/search-analytics";
 import { SearchAppliedFilterBar } from "../_components/search/search-applied-filter-bar";
-import { SearchFilterPanel } from "../_components/search/search-filter-panel";
 import {
   appendSearchFiltersToApiParams,
   decodeSearchFilters,
@@ -49,6 +49,18 @@ import type { SearchKind } from "../_components/search/search-kinds";
 import type { Metadata } from "next";
 
 import { CustomerRouteShell } from "@/components/customer-route-shell";
+
+const SearchFilterPanel = dynamic(
+  () => import("../_components/search/search-filter-panel").then((mod) => mod.SearchFilterPanel),
+  {
+    loading: () => (
+      <div
+        className="hidden min-h-48 rounded-lg border border-border bg-surface lg:block"
+        aria-hidden
+      />
+    ),
+  },
+);
 
 type PageProps = {
   params: Promise<{ locale: string }>;

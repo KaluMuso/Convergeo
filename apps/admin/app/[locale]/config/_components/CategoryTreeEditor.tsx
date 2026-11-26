@@ -168,7 +168,7 @@ export function CategoryTreeEditor() {
             <p>{t("categories.moveChildrenPrompt")}</p>
             <button
               type="button"
-              className="mt-2 inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm font-medium text-white"
+              className="mt-2 inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm font-medium text-[var(--primary-btn-fg)]"
               onClick={() => void moveUnderParent(node, node.parent_id)}
             >
               {t("categories.moveChildrenConfirm")}

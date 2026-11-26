@@ -2,7 +2,7 @@
   "title": "Admin console",
   "shell": {
     "eyebrow": "Convergeo operations",
-    "environment": "Hardened admin origin",
+    "environment": "Secure admin workspace",
     "signOut": "Sign out",
     "navAriaLabel": "Admin navigation",
     "mobileNavLabel": "Admin menu",
@@ -1097,7 +1097,7 @@
     "liabilitiesTotal": "Total payout liabilities: {amount}",
     "emptyTrafficTitle": "No order / funnel traffic yet",
     "emptyTrafficBody": "GMV, order pipeline, funnel, and ledger liabilities are all zero from the live API — these are not placeholder analytics.",
-    "emptyTrafficDependency": "Missing backend dependency for non-zero tiles: real checkout/order volume plus ledger postings (MR-B01) and reconciliation reports.",
+    "emptyTrafficDependency": "No orders yet — numbers will appear once customers check out and payments are recorded.",
     "priorityHeading": "Needs attention",
     "priorityHint": "Financial risk, payout liabilities, and order pipeline status.",
     "metricsHeading": "Platform metrics",

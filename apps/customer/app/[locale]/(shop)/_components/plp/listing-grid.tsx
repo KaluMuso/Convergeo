@@ -1,3 +1,4 @@
+import { browseProductGridClass } from "@vergeo/ui/src/browse-grid";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { Rail } from "@vergeo/ui/src/rail";
 
@@ -67,8 +68,8 @@ type ListingGridProps = {
 const LISTING_MEDIA_SIZES = "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
 
 const GRID_CLASS = {
-  plp: "motion-fade grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
-  account: "motion-fade grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4",
+  plp: `motion-fade ${browseProductGridClass}`,
+  account: "motion-fade grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4",
 } as const;
 
 function GridWrapper({

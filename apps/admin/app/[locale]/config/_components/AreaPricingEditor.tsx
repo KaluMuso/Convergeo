@@ -28,7 +28,7 @@ type IntField = (typeof INT_FIELDS)[number][0];
 
 const INPUT = "min-h-11 rounded-md border border-border px-2 font-mono";
 const BUTTON =
-  "inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm font-medium text-white";
+  "inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm font-medium text-[var(--primary-btn-fg)]";
 const SECONDARY = "inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm";
 
 /** Whole numbers only: money is integer ngwee, multipliers basis points. */

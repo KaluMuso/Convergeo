@@ -12,7 +12,16 @@
     "verified": "Vérifié",
     "calendarLabel": "Jours avec des événements ce mois-ci",
     "hostCta": "Organiser un événement",
-    "hostPitch": "Vendez des billets avec enregistrement par QR dynamique et soyez payé en toute sécurité."
+    "hostPitch": "Vendez des billets avec enregistrement par QR dynamique et soyez payé en toute sécurité.",
+    "unavailableTitle": "We couldn't load events",
+    "unavailableBody": "Check your connection and try again.",
+    "unavailableRetry": "Try again",
+    "onlyFeatured": "More events coming soon.",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {total}"
+    }
   },
   "filters": {
     "tonight": "Ce soir",
@@ -93,7 +102,10 @@
     "getTickets": "Obtenir des billets",
     "getTicketsSoon": "Vente de billets bientôt disponible",
     "pastInstance": "Passé",
-    "spots": "{sold} / {total} places"
+    "spots": "{sold} / {total} places",
+    "stickyCta": {
+      "ariaLabel": "Quick ticket purchase"
+    }
   },
   "organiser": {
     "imageAlt": "Photo de l'événement {position}"

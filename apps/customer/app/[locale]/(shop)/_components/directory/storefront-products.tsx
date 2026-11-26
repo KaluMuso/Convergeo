@@ -4,10 +4,7 @@ import { useMemo, useState } from "react";
 
 import { ListingGrid, type CatalogListing } from "../plp/listing-grid";
 
-import {
-  CompareOtherShopsLink,
-  type StorefrontCompare,
-} from "./business-home/compare-other-shops";
+import { CompareOtherShopsLink, type StorefrontCompare } from "./business-home/compare-other-shops";
 
 export type StorefrontListing = CatalogListing & {
   categorySlug?: string | null;
@@ -68,7 +65,7 @@ export function StorefrontProducts({
     }`;
 
   return (
-    <div className="flex flex-col gap-3" data-testid="storefront-products">
+    <div className="flex w-full max-w-[1400px] flex-col gap-3" data-testid="storefront-products">
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
         <label className="relative min-w-0 md:w-72 md:shrink-0">
           <span className="sr-only">{labels.search}</span>

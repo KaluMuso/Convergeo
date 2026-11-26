@@ -5,6 +5,7 @@ import {
   normalizeToE164,
   supportsContactPicker,
   waMeInviteLink,
+  waMeLinkFromRaw,
   waMeShareLink,
 } from "./phone";
 
@@ -51,6 +52,12 @@ describe("WhatsApp links", () => {
 
   it("builds generic share link", () => {
     expect(waMeShareLink("Hi")).toBe("https://wa.me/?text=Hi");
+  });
+
+  it("normalises raw msisdn for vendor wa.me links", () => {
+    expect(waMeLinkFromRaw("260971234567", "Hi")).toBe("https://wa.me/260971234567?text=Hi");
+    expect(waMeLinkFromRaw("+260 971 234 567", "Hi")).toBe("https://wa.me/260971234567?text=Hi");
+    expect(waMeLinkFromRaw("invalid", "Hi")).toBeNull();
   });
 });
 
