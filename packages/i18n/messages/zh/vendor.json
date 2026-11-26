@@ -736,6 +736,8 @@
         "returnWindowRequired": "启用退货时，请输入退货窗口期。"
       },
       "emptyTitle": "暂无商品",
+      "addPhotoFirst": "Add a photo first.",
+      "addPhotoLink": "Add photo",
       "statusLabel": "状态",
       "productStatus": {
         "inReview": "Live, in review: buyers see it once Convergeo approves it",
