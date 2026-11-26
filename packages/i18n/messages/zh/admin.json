@@ -369,7 +369,7 @@
       "momoPhone": "电话号码",
       "momoOperator": "运营商",
       "legalName": "法定姓名",
-      "resolvedName": "MoMo 注册姓名",
+      "resolvedName": "移动支付注册姓名",
       "matchScore": "匹配分数",
       "matchResult": "结果",
       "matched": "已匹配",
@@ -413,7 +413,7 @@
     },
     "reasons": {
       "blurry_document": "文件模糊或无法辨认",
-      "name_mismatch": "姓名与 MoMo 注册信息不符",
+      "name_mismatch": "姓名与 移动支付注册信息不符",
       "expired_id": "身份证件似乎已过期",
       "incomplete_submission": "提交材料不完整",
       "other": "其他（请在下方说明）"
@@ -965,8 +965,8 @@
         "partialRefund": "部分退款（ngwee）+ 释放剩余金额",
         "release": "释放给商家",
         "partialAmount": "部分退款（ngwee，最高 {max}）",
-        "customerMomo": "客户 MoMo 号码",
-        "customerRail": "MoMo 通道",
+        "customerMomo": "客户移动支付号码",
+        "customerRail": "移动支付通道",
         "rails": {
           "mtn": "MTN",
           "airtel": "Airtel",
@@ -976,7 +976,7 @@
         "noteRequired": "决定备注为必填项。",
         "partialRequired": "请输入有效的部分退款金额。",
         "partialTooHigh": "部分退款金额不能超过 {max}。",
-        "momoRequired": "客户 MoMo 号码为必填项。",
+        "momoRequired": "客户移动支付号码为必填项。",
         "submit": "记录决定",
         "submitting": "处理中…",
         "success": "决定已记录——各方将收到通知。",

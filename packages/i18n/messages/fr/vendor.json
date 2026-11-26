@@ -1315,7 +1315,7 @@
           "body": "Rien à faire pour l'instant. Notre équipe répond en général sous 1 jour ouvré."
         },
         "payoutMethod": {
-          "title": "Add your MoMo number to get paid",
+          "title": "Add your Mobile Money number to get paid",
           "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
         },
         "ordersWaiting": {
@@ -2966,7 +2966,7 @@
     "disabled": "Les boutiques multiples ne sont pas encore disponibles.",
     "primary": "Boutique principale",
     "acting": "Vous travaillez ici",
-    "payoutHold": "Les versements de cette boutique sont suspendus jusqu'à ce que notre équipe vérifie le numéro MoMo partagé.",
+    "payoutHold": "Les versements de cette boutique sont suspendus jusqu'à ce que notre équipe vérifie le numéro mobile money partagé.",
     "reviewNote": "Note de notre équipe : {note}",
     "ownerKycNeeded": "Terminez la vérification du propriétaire (KYC) avant d'ajouter des boutiques.",
     "switcher": {
@@ -3054,14 +3054,14 @@
       "whatsapp": "Numéro WhatsApp (facultatif)",
       "email": "E-mail (facultatif)",
       "payout": "Versements",
-      "payoutNumber": "Numéro MoMo de versement",
+      "payoutNumber": "Numéro mobile money de versement",
       "payoutHelp": "Un numéro utilisé par une autre entreprise est interdit. Partager un numéro entre vos propres boutiques nécessite une vérification par notre équipe.",
       "rail": "Réseau",
       "reviewNote": "Après la création, ajoutez la photo de la devanture et la preuve des locaux, puis envoyez pour vérification.",
       "priceAddon": "Cette boutique est une option payante : {price}/mois sur votre forfait.",
       "priceIncluded": "Cette boutique est incluse dans votre forfait.",
       "rails": {
-        "mtn": "MTN MoMo",
+        "mtn": "MTN Mobile Money",
         "airtel": "Airtel Money",
         "zamtel": "Zamtel Kwacha"
       }
@@ -3077,7 +3077,7 @@
       "unregisteredLimit": "Les commerçants non enregistrés peuvent gérer une boutique. Ajoutez d'abord votre enregistrement PACRA.",
       "planLimit": "Votre forfait n'inclut plus de boutiques. Passez à un forfait supérieur.",
       "tooClose": "Cette boutique est à {nearest} m d'une autre de vos boutiques. Les succursales doivent être espacées d'au moins {min} m.",
-      "payoutTaken": "Ce numéro MoMo appartient à une autre entreprise. Utilisez votre propre numéro.",
+      "payoutTaken": "Ce numéro mobile money appartient à une autre entreprise. Utilisez votre propre numéro.",
       "evidenceRequired": "Ajoutez d'abord la photo de la devanture et la preuve des locaux.",
       "evidenceLocked": "Les justificatifs ne peuvent changer qu'avant la vérification.",
       "evidencePath": "Ce fichier n'est pas valide. Veuillez le renvoyer.",

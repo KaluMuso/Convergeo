@@ -509,7 +509,7 @@
         "deliveryFree": "Free delivery",
         "total": "Total you pay",
         "totalUnknown": "—",
-        "momo": "Pay with MTN or Airtel MoMo",
+        "momo": "Pay with Mobile Money (MTN or Airtel)",
         "codSuffix": "or cash on delivery"
       },
       "priceDrop": {

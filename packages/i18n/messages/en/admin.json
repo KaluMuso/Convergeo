@@ -445,7 +445,7 @@
       "momoPhone": "Phone",
       "momoOperator": "Operator",
       "legalName": "Legal name",
-      "resolvedName": "MoMo registered name",
+      "resolvedName": "Mobile Money registered name",
       "matchScore": "Match score",
       "matchResult": "Result",
       "matched": "Matched",
@@ -522,7 +522,7 @@
     },
     "reasons": {
       "blurry_document": "Document is blurry or unreadable",
-      "name_mismatch": "Name does not match MoMo registration",
+      "name_mismatch": "Name does not match Mobile Money registration",
       "expired_id": "ID document appears expired",
       "incomplete_submission": "Submission is incomplete",
       "other": "Other (specify below)"
@@ -1251,8 +1251,8 @@
         "partialRefund": "Partial refund (ngwee) + release remainder",
         "release": "Release to vendor",
         "partialAmount": "Partial refund (ngwee, max {max})",
-        "customerMomo": "Customer MoMo number",
-        "customerRail": "MoMo rail",
+        "customerMomo": "Customer Mobile Money number",
+        "customerRail": "Mobile Money rail",
         "rails": {
           "mtn": "MTN",
           "airtel": "Airtel",
@@ -1262,7 +1262,7 @@
         "noteRequired": "A decision note is required.",
         "partialRequired": "Enter a valid partial refund amount.",
         "partialTooHigh": "Partial refund cannot exceed {max}.",
-        "momoRequired": "Customer MoMo number is required.",
+        "momoRequired": "Customer Mobile Money number is required.",
         "submit": "Record decision",
         "submitting": "Processing…",
         "success": "Decision recorded — parties will be notified.",

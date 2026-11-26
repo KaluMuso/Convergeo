@@ -369,7 +369,7 @@
       "momoPhone": "Téléphone",
       "momoOperator": "Opérateur",
       "legalName": "Nom légal",
-      "resolvedName": "Nom MoMo enregistré",
+      "resolvedName": "Nom mobile money enregistré",
       "matchScore": "Score de correspondance",
       "matchResult": "Résultat",
       "matched": "Concordant",
@@ -413,7 +413,7 @@
     },
     "reasons": {
       "blurry_document": "Le document est flou ou illisible",
-      "name_mismatch": "Le nom ne correspond pas à l'enregistrement MoMo",
+      "name_mismatch": "Le nom ne correspond pas à l'enregistrement mobile money",
       "expired_id": "La pièce d'identité semble expirée",
       "incomplete_submission": "La soumission est incomplète",
       "other": "Autre (précisez ci-dessous)"
@@ -965,8 +965,8 @@
         "partialRefund": "Remboursement partiel (ngwee) + libération du solde",
         "release": "Libérer au vendeur",
         "partialAmount": "Remboursement partiel (ngwee, max {max})",
-        "customerMomo": "Numéro MoMo du client",
-        "customerRail": "Réseau MoMo",
+        "customerMomo": "Numéro mobile money du client",
+        "customerRail": "Réseau mobile money",
         "rails": {
           "mtn": "MTN",
           "airtel": "Airtel",
@@ -976,7 +976,7 @@
         "noteRequired": "Une note de décision est requise.",
         "partialRequired": "Saisissez un montant de remboursement partiel valide.",
         "partialTooHigh": "Le remboursement partiel ne peut pas dépasser {max}.",
-        "momoRequired": "Le numéro MoMo du client est requis.",
+        "momoRequired": "Le numéro mobile money du client est requis.",
         "submit": "Enregistrer la décision",
         "submitting": "Traitement…",
         "success": "Décision enregistrée — les parties seront notifiées.",
