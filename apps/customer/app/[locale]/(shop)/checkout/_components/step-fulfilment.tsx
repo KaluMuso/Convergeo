@@ -345,6 +345,9 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       throttled: messages.contact.throttledTemplate,
       generic: messages.contact.generic,
       skippedLoggedIn: messages.contact.skippedLoggedIn,
+      needPhone: messages.contact.needPhone,
+      savePhone: messages.contact.savePhone,
+      saveFailed: messages.contact.saveFailed,
     },
     fulfilment: {
       title: messages.fulfilment.title,
