@@ -3147,5 +3147,47 @@
       "invalidTransition": "该申请当前无法更改。",
       "generic": "出现问题，请重试。"
     }
+  },
+  "requests": {
+    "home": {
+      "payoutsPilot": {
+        "title": "Payouts start soon",
+        "body": "We are not paying out through the app during the pilot. Your sales are still tracked — open Payouts to see how money works for now."
+      }
+    },
+    "jobs": {
+      "budgetRange": "Buyer budget: {min} – {max}",
+      "budgetFrom": "Buyer budget: from {min}",
+      "budgetUpTo": "Buyer budget: up to {max}",
+      "budgetOpen": "Buyer budget: not specified",
+      "preferredDate": "Preferred date: {date}",
+      "quoteStatus": {
+        "submitted": "Quote waiting on buyer",
+        "accepted": "Quote accepted",
+        "declined": "Quote declined",
+        "expired": "Quote expired",
+        "unknown": "Quote: {status}"
+      }
+    },
+    "rfq": {
+      "buyerRef": "Customer ref: {ref}",
+      "validUntil": "Quote valid until {date}",
+      "unknownListing": "Product (loading name…)",
+      "unknownService": "Service (loading name…)",
+      "declineConfirm": "Decline this quote request? The customer will not hear from you on this thread.",
+      "declining": "Declining…",
+      "status": {
+        "expired": "Expired",
+        "cancelled": "Cancelled",
+        "closed": "Closed",
+        "unknown": "Status: {status}"
+      }
+    },
+    "disputes": {
+      "opened": "Opened {date}"
+    },
+    "reviews": {
+      "posted": "Posted {date}"
+    }
   }
 }
