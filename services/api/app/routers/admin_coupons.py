@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Annotated
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.services.coupons.manage import (
     CouponCreateRequest,
@@ -21,7 +22,11 @@ from app.services.coupons.rules import LUSAKA
 from app.services.coupons.store import COUPONS_FLAG, ServiceRoleClient, require_flag
 from fastapi import APIRouter, Depends
 
-router = APIRouter(prefix="/admin/coupons", tags=["admin-coupons"])
+router = APIRouter(
+    prefix="/admin/coupons",
+    tags=["admin-coupons"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 
 
 @router.get("", response_model=CouponListResponse)

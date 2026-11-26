@@ -34,6 +34,18 @@ class JsonFormatter(logging.Formatter):
             if isinstance(value, (str, int, float)):
                 payload[field] = value
 
+        alert = getattr(record, "alert", None)
+        if isinstance(alert, str):
+            payload["alert"] = alert
+
+        event_id = getattr(record, "event_id", None)
+        if isinstance(event_id, str):
+            payload["event_id"] = event_id
+
+        flags = getattr(record, "flags", None)
+        if isinstance(flags, list) and all(isinstance(item, str) for item in flags):
+            payload["flags"] = flags
+
         exception_type = getattr(record, "exception_type", None)
         if isinstance(exception_type, str):
             payload["exception_type"] = exception_type

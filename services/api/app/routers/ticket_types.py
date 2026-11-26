@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
@@ -17,8 +18,11 @@ from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends
 from pydantic import Field, field_validator, model_validator
 
-router = APIRouter(prefix="/organiser", tags=["ticket-types"])
-
+router = APIRouter(
+    prefix="/organiser",
+    tags=["ticket-types"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 TicketKind = Literal["fixed", "tier", "free_rsvp"]
 
 
@@ -190,8 +194,9 @@ def _load_vendor_for_owner(
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select("id, owner_user_id, status, kyc_tier")
-        .eq("owner_user_id", owner_user_id))
+            .select("id, owner_user_id, status, kyc_tier")
+            .eq("owner_user_id", owner_user_id)
+        )
         .maybe_single()
         .execute()
     )

@@ -117,7 +117,7 @@
   },
   "paymentTrust": {
     "footerSeal": "Pay cash when your order arrives",
-    "footerPaymentNote": "Cash on delivery · Online payment coming soon"
+    "footerPaymentNote": "MTN/Airtel MoMo & card · Escrow until delivery · COD up to K500"
   },
   "codTrust": {
     "line": "You pay on delivery → We deliver → You confirm"
@@ -136,7 +136,7 @@
       "escrow": "Held by Convergeo until you're happy",
       "verified": "Verified sellers",
       "returns": "Returns policy",
-      "momoCod": "Pay with MoMo or cash on delivery"
+      "momoCod": "Pay with Mobile Money or cash on delivery"
     },
     "recentlyViewed": {
       "title": "Recently viewed",

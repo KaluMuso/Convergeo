@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.coupons.manage import (
@@ -29,7 +30,11 @@ from app.services.coupons.rules import LUSAKA
 from app.services.coupons.store import COUPONS_FLAG, ServiceRoleClient, require_flag
 from fastapi import APIRouter, Depends
 
-router = APIRouter(prefix="/vendor/coupons", tags=["vendor-coupons"])
+router = APIRouter(
+    prefix="/vendor/coupons",
+    tags=["vendor-coupons"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 
 
 def _vendor_id(service: ServiceRoleClient, user: CurrentUser) -> str:

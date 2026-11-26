@@ -16,7 +16,7 @@ import secrets
 from datetime import date, datetime
 from typing import Annotated, Any
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.account_birthday import ADULT_AGE, age_on
@@ -49,7 +49,7 @@ async def require_internal_birthday_token(request: Request) -> None:
     except InternalTokenMisconfigured as exc:
         raise AppError(code="configuration_error", message=str(exc), http_status=503) from exc
     provided = request.headers.get("X-Internal-Token")
-    if not provided or not secrets.compare_digest(provided, expected):
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized", message="Invalid or missing internal token", http_status=401
         )
