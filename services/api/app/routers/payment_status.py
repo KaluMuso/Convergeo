@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
@@ -23,6 +24,8 @@ from app.services.payments.initiate import InitiatePaymentRequest, initiate_chec
 from app.services.payments.state import PaymentStatus
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import Field
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
@@ -340,18 +343,24 @@ async def retry_payment(
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> PaymentRetryResponse:
     ip_key = get_client_ip(request) or "unknown"
-    allowed_ip, retry_ip = bump_rate_counter(
-        scope=PAYMENT_WRITE.scope,
-        key=f"ip:{ip_key}",
-        window=PAYMENT_WRITE.window,
-        limit=PAYMENT_WRITE.limit,
-    )
-    allowed_user, retry_user = bump_rate_counter(
-        scope=PAYMENT_WRITE.scope,
-        key=f"user:{current_user.id}",
-        window=PAYMENT_WRITE.window,
-        limit=PAYMENT_WRITE.limit,
-    )
+    # Fail open on limiter/DB errors (consistent with the rest of the limiter):
+    # an outage must never block a customer from completing payment.
+    try:
+        allowed_ip, retry_ip = bump_rate_counter(
+            scope=PAYMENT_WRITE.scope,
+            key=f"ip:{ip_key}",
+            window=PAYMENT_WRITE.window,
+            limit=PAYMENT_WRITE.limit,
+        )
+        allowed_user, retry_user = bump_rate_counter(
+            scope=PAYMENT_WRITE.scope,
+            key=f"user:{current_user.id}",
+            window=PAYMENT_WRITE.window,
+            limit=PAYMENT_WRITE.limit,
+        )
+    except Exception:
+        logger.warning("payments/retry rate limiter unavailable; failing open", exc_info=True)
+        allowed_ip, retry_ip, allowed_user, retry_user = True, 0, True, 0
     if not allowed_ip or not allowed_user:
         raise_rate_limited(
             retry_after=max(retry_ip, retry_user),

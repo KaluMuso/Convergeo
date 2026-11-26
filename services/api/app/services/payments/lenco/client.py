@@ -151,6 +151,14 @@ def _validate_payout_operator(operator: str) -> str:
     )
 
 
+# HTTP 400/422 with errorCode 01 (validation) or 12 (invalid mobile number) means
+# Lenco refused the request before creating a collection (lenco-api-distilled.md).
+# Everything else (04 duplicate reference, 5xx, timeouts, network, unknown 4xx)
+# stays "dispatch may have succeeded".
+DEFINITIVE_REJECTION_HTTP_STATUSES = frozenset({400, 422})
+COLLECTION_VALIDATION_ERROR_CODES = frozenset({"01", "12"})
+
+
 def _envelope_error_code(envelope: dict[str, Any]) -> str | None:
     raw = envelope.get("errorCode")
     return str(raw) if raw else None
@@ -199,6 +207,7 @@ class LencoClient:
         authoritative_not_found: bool = False,
         reference: str | None = None,
         dispatch_may_have_succeeded: bool = False,
+        definitive_rejection_codes: frozenset[str] = frozenset(),
     ) -> dict[str, Any]:
         staging = os.environ.get("ENV", "").strip().lower() == "staging"
         if staging:
@@ -290,6 +299,20 @@ class LencoClient:
             if response.status_code >= 400:
                 if authoritative_not_found and _envelope_error_code(envelope) == "11":
                     return envelope
+                if (
+                    response.status_code in DEFINITIVE_REJECTION_HTTP_STATUSES
+                    and _envelope_error_code(envelope) in definitive_rejection_codes
+                ):
+                    # Lenco validated and refused the request before creating a
+                    # collection: nothing can arrive later for this reference.
+                    raise_lenco_failure(
+                        error_code=_envelope_error_code(envelope),
+                        message=str(envelope.get("message", "request rejected")),
+                        http_status=response.status_code,
+                        reference=reference,
+                        observation_uncertain=False,
+                        dispatch_may_have_succeeded=False,
+                    )
                 raise_lenco_failure(
                     error_code=_envelope_error_code(envelope),
                     message=str(envelope.get("message", "client error")),
@@ -332,6 +355,7 @@ class LencoClient:
             json_body=payload,
             reference=request.reference,
             dispatch_may_have_succeeded=True,
+            definitive_rejection_codes=COLLECTION_VALIDATION_ERROR_CODES,
         )
         return LencoCollectionResponse.model_validate(_camel_to_snake(body))
 

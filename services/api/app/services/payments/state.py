@@ -978,6 +978,10 @@ async def sweep_stale_payments(
             continue
 
         if lenco_status == PaymentStatus.PAY_OFFLINE:
+            if payment.status == PaymentStatus.INITIATED:
+                # No INITIATED -> PAY_OFFLINE edge; applying it would raise and
+                # abort the batch. Leave in flight for the poller/webhook.
+                continue
             apply_payment_status(
                 service_client,
                 payment_id=payment.id,

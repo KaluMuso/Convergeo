@@ -35,7 +35,6 @@ from app.services.payments.state import (
     get_payment_ttl_minutes,
     lenco_collection_status_to_payment_status,
     process_webhook_event,
-    release_checkout_for_retry,
     validate_query_collection_observation,
 )
 
@@ -374,7 +373,7 @@ def _fetch_non_terminal_payments(
     cutoff = datetime.now(UTC) - timedelta(minutes=older_than_minutes)
     response = (
         service_client.client.table("payments")
-        .select("id, status, lenco_reference, updated_at")
+        .select("id, checkout_group_id, status, lenco_reference, amount_ngwee, updated_at")
         .in_("status", list(NON_TERMINAL_POLL_STATUSES))
         .lt("updated_at", cutoff.isoformat())
         .execute()
@@ -393,6 +392,36 @@ def _initiated_stale(payment: dict[str, Any], *, ttl_minutes: int) -> bool:
     if updated.tzinfo is None:
         updated = updated.replace(tzinfo=UTC)
     return datetime.now(UTC) - updated >= timedelta(minutes=ttl_minutes)
+
+
+def _enqueue_stale_initiated_ops_alert(
+    service_client: ServiceRoleClient, payment: dict[str, Any]
+) -> None:
+    """Ops alert (deduped per payment) for a stale INITIATED payment Lenco cannot find."""
+    payment_id = str(payment.get("id", ""))
+    logger.warning(
+        "reconciliation poll: stale INITIATED payment not found at provider; needs review",
+        extra={"alert": "payment_stale_initiated_not_found", "payment_id": payment_id},
+    )
+    try:
+        from app.services.notifications.dedupe import enqueue_outbox_row
+
+        enqueue_outbox_row(
+            service_client.client,
+            event_type="payment.stale_initiated_not_found",
+            entity_id=payment_id,
+            channel="in_app",
+            template="payment_stale_initiated_ops",
+            payload={
+                "payment_id": payment_id,
+                "checkout_group_id": payment.get("checkout_group_id"),
+                "amount_ngwee": payment.get("amount_ngwee"),
+                "reference": payment.get("lenco_reference"),
+                "needs_review": True,
+            },
+        )
+    except Exception:
+        logger.exception("stale initiated ops alert enqueue failed for payment %s", payment_id)
 
 
 async def poll_non_terminal_payments(
@@ -435,32 +464,13 @@ async def poll_non_terminal_payments(
                 if current_status == PaymentStatus.INITIATED and _initiated_stale(
                     payment, ttl_minutes=get_payment_ttl_minutes(service_client)
                 ):
-                    amount_ngwee = int(payment.get("amount_ngwee") or 0)
-                    observation = {
-                        "reference": reference,
-                        "amount_ngwee": amount_ngwee,
-                        "currency": "ZMW",
-                        "source": "poller_not_found",
-                        "terminal_provider_failure": True,
-                    }
-                    outcome = apply_payment_status(
-                        service_client,
-                        payment_id=payment_id,
-                        incoming_status=PaymentStatus.FAILED,
-                        actor_id=SYSTEM_ACTOR_ID,
-                        note="Initiated collection never created at provider — releasing checkout",
-                        observation=observation,
-                    )
-                    if outcome is not None:
-                        release_checkout_for_retry(
-                            service_client,
-                            checkout_group_id=str(payment["checkout_group_id"]),
-                            actor_id=SYSTEM_ACTOR_ID,
-                            note="Stale initiated payment cleared for retry",
-                        )
-                        updated += 1
-                    else:
-                        unchanged += 1
+                    # NOT_FOUND is NOT proof that a timed-out initiate cannot still
+                    # create a collection at Lenco (sweep_stale_payments invariant).
+                    # Never set terminal_provider_failure here: that is what lets a
+                    # second claim open a second live collection. Keep the payment
+                    # in flight and surface it to ops instead.
+                    _enqueue_stale_initiated_ops_alert(service_client, payment)
+                    unchanged += 1
                     continue
                 logger.warning(
                     "reconciliation poll: provider has no collection for payment %s "

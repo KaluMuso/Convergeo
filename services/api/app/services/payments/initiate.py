@@ -124,6 +124,8 @@ async def initiate_checkout_payment(
             "amount_ngwee": amount_ngwee,
             "currency": "ZMW",
             "source": "initiation_rejected",
+            # record_collection_failure requires provider_outcome == 'failed'.
+            "provider_outcome": "failed",
             "terminal_provider_failure": True,
             "provider_error_code": exc.code,
         }
