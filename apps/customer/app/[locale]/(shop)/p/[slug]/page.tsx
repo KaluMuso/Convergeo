@@ -46,7 +46,7 @@ import {
 import { PdpRatingChip } from "../../_components/pdp/pdp-rating-chip";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
-import { groupSpecRows } from "../../_components/pdp/spec-table";
+import { groupSpecRows } from "../../_components/pdp/spec-groups";
 import { specRowsFromJson } from "../../_components/pdp/specs-table";
 
 import {

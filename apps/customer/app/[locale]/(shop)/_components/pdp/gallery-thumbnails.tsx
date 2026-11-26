@@ -59,7 +59,7 @@ export function GalleryThumbnails({
 
   return (
     <MotionSafeWrapper
-      data-testid="gallery-strip"
+      data-testid="gallery-thumb-strip"
       className={
         layout === "vertical"
           ? "sticky top-20 flex w-[3.75rem] shrink-0 flex-col gap-2 self-start"

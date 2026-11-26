@@ -2,7 +2,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { groupSpecRows, PdpSpecTable } from "./spec-table";
+import { groupSpecRows } from "./spec-groups";
+import { PdpSpecTable } from "./spec-table";
 
 afterEach(cleanup);
 

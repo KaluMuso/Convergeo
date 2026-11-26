@@ -196,6 +196,7 @@ export function PdpInteractiveGallery({
       <div className="relative min-w-0 flex-1">
         <div
           ref={mainRef}
+          data-testid="gallery-strip"
           className="group relative aspect-square w-full max-h-[min(100vw,28rem)] overflow-hidden rounded-lg border border-border bg-surface lg:max-h-none"
           onPointerEnter={onPointerEnter}
           onPointerMove={onPointerMove}

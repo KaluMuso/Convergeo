@@ -36,10 +36,7 @@ export function VariantSwatches({
   }
 
   return (
-    <div
-      data-testid="pdp-variant-swatches"
-      className="motion-safe flex flex-wrap gap-2"
-    >
+    <div data-testid="pdp-variant-swatches" className="motion-safe flex flex-wrap gap-2">
       {group.values.map((value: VariantOptionValue) => {
         const fromNgwee = lowestVariantPriceForValue(variants, value.id);
         const imageId =
@@ -61,7 +58,7 @@ export function VariantSwatches({
               <CloudinaryImage
                 publicId={imageId}
                 alt={value.label}
-                width={128}
+                width={360}
                 ratio="1/1"
                 cloudName={cloudName}
                 className="h-20 w-full object-contain"

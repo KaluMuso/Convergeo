@@ -54,12 +54,12 @@ describe("PdpGallery", () => {
     renderGallery([]);
 
     expect(screen.getByTestId("pdp-gallery-empty")).toHaveTextContent("No images yet");
-    expect(screen.queryByTestId("gallery-strip")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("gallery-thumb-strip")).not.toBeInTheDocument();
   });
 
   it("does not render a thumbnail strip for a single image", () => {
     renderGallery([{ publicId: "demo/one", alt: "Solo" }]);
-    expect(screen.queryByTestId("gallery-strip")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("gallery-thumb-strip")).not.toBeInTheDocument();
   });
 
   it("shows a labelled fallback when the image fails to load", () => {

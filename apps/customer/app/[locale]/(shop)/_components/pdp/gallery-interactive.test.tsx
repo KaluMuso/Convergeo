@@ -70,7 +70,7 @@ describe("PdpInteractiveGallery", () => {
 
   it("omits the strip for a single image", () => {
     renderGallery(1);
-    expect(screen.queryByTestId("gallery-strip")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("gallery-thumb-strip")).not.toBeInTheDocument();
   });
 });
 

@@ -87,7 +87,7 @@ export function PdpSectionNav({
               <CloudinaryImage
                 publicId={thumbnailPublicId}
                 alt={thumbnailAlt}
-                width={80}
+                width={360}
                 ratio="1/1"
                 cloudName={cloudName}
                 className="h-full w-full object-contain"
