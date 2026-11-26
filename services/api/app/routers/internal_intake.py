@@ -34,7 +34,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Annotated, Any, Final, Protocol
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.intake import state_machine
@@ -80,7 +80,7 @@ async def require_internal_intake_token(request: Request) -> None:
     """Guard the intake ops endpoints — not callable without the shared token."""
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal intake token",

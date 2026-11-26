@@ -4,6 +4,7 @@ import re
 import time
 from typing import Annotated, Any, Literal
 
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.media.authz import VendorScope, require_vendor_scope
@@ -18,8 +19,11 @@ from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/media", tags=["media"])
-
+router = APIRouter(
+    prefix="/media",
+    tags=["media"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 MAX_LISTING_IMAGE_BYTES = 10_485_760
 # M17-P02: "clip" is a DISTINCT kind with its own preset, cap, formats and
 # folder. The image ceiling above is untouched — a video preset must never

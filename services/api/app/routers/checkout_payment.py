@@ -107,6 +107,18 @@ def _is_valid_payer_number(value: str) -> bool:
     return PAYER_NUMBER_PATTERN.match(normalized) is not None
 
 
+def derive_momo_rail_from_number(normalized: str) -> MomoRail:
+    """Infer MTN vs Airtel from the Zambian mobile prefix (+26096/76 MTN, +26097/77 Airtel)."""
+    if len(normalized) < 6:
+        return "mtn"
+    operator = normalized[4:6]
+    if operator in {"97", "77"}:
+        return "airtel"
+    if operator in {"96", "76"}:
+        return "mtn"
+    return "airtel" if normalized[5] == "7" else "mtn"
+
+
 def _is_gift_checkout(service: ServiceRoleClient, session_id: str) -> bool:
     try:
         response = (

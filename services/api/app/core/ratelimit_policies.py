@@ -13,20 +13,33 @@ enforcement. Instead it provides:
    ``EXEMPT_ROUTE_IDS``), and raises if any mutating route is not registered.
    A new unregistered mutating route therefore fails CI immediately.
 
-The registry is the single declarative source of truth; existing per-route
-enforcement continues to call the ``ratelimit`` primitive. :func:`policy_for`
-lets a future shared dependency/middleware look a policy up by method + path
-without editing individual routers.
+The registry is the single declarative source of truth; routers that do not
+bump inline mount :func:`enforce_registered_policy` on their
+``APIRouter(dependencies=...)``. Existing bespoke per-route enforcement
+continues to call the ``ratelimit`` primitive. :func:`policy_for` remains the
+lookup helper for method + path.
 """
 
 from __future__ import annotations
 
+import hashlib
+import logging
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import timedelta
 
+import jwt
+from fastapi import Request
 from starlette.routing import Route
 
+from app.core.auth import get_current_user
+from app.core.ratelimit import bump_rate_counter, raise_rate_limited
+from app.services.analytics.client_key import trusted_client_key
+from app.settings import get_settings
+
+logger = logging.getLogger(__name__)
+
+GUEST_CART_COOKIE = "vergeo_guest_cart"  # keep in sync with routers/cart.py
 MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
@@ -49,6 +62,13 @@ class RateLimitPolicy:
 STANDARD_WRITE = RateLimitPolicy(scope="write_standard", limit=60, window=timedelta(minutes=1))
 SENSITIVE_WRITE = RateLimitPolicy(scope="write_sensitive", limit=10, window=timedelta(minutes=1))
 PAYMENT_WRITE = RateLimitPolicy(scope="write_payment", limit=20, window=timedelta(minutes=1))
+# Cart and checkout-step routes are hit many times per page load (the cart page
+# alone makes ~9 calls) and each route now has its own bucket, so they get
+# higher per-route ceilings than the generic tier.
+CART_WRITE = RateLimitPolicy(scope="write_cart", limit=120, window=timedelta(minutes=1))
+CHECKOUT_STEP_WRITE = RateLimitPolicy(
+    scope="write_checkout_step", limit=40, window=timedelta(minutes=1)
+)
 ADMIN_WRITE = RateLimitPolicy(scope="write_admin", limit=120, window=timedelta(minutes=1))
 # Internal cron/n8n ticks are called by trusted schedulers on a shared secret;
 # they get a generous machine-to-machine ceiling rather than a human one.
@@ -123,7 +143,7 @@ EXEMPT_ROUTE_IDS: frozenset[str] = frozenset(
 POLICIES: dict[str, RateLimitPolicy] = {
     "DELETE /account/addresses/{address_id}": STANDARD_WRITE,
     "DELETE /admin/translations/overrides": ADMIN_WRITE,
-    "DELETE /cart/items/{listing_id}": STANDARD_WRITE,
+    "DELETE /cart/items/{listing_id}": CART_WRITE,
     "DELETE /merch/slots/{slot_id}": ADMIN_WRITE,
     # Admin-governed home feed + advertising (admin sub-router, un-prefixed keys).
     "POST /home-feed/sections": ADMIN_WRITE,
@@ -154,7 +174,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PATCH /account/onboarding": STANDARD_WRITE,
     "PATCH /account/preferences": STANDARD_WRITE,
     "PATCH /account/profile": STANDARD_WRITE,
-    "PATCH /cart/items/{listing_id}": STANDARD_WRITE,
+    "PATCH /cart/items/{listing_id}": CART_WRITE,
     "PATCH /config/categories/{category_id}": ADMIN_WRITE,
     "PATCH /config/commissions/{category_key}": ADMIN_WRITE,
     "PATCH /config/delivery-zones/{zone_key}": ADMIN_WRITE,
@@ -234,18 +254,18 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /beta/invites": ADMIN_WRITE,
     "POST /beta/redeem": SENSITIVE_WRITE,
     "POST /business/apply": SENSITIVE_WRITE,
-    "POST /cart/items": STANDARD_WRITE,
-    "POST /cart/items/{listing_id}/save-for-later": STANDARD_WRITE,
-    "POST /cart/merge": STANDARD_WRITE,
+    "POST /cart/items": CART_WRITE,
+    "POST /cart/items/{listing_id}/save-for-later": CART_WRITE,
+    "POST /cart/merge": CART_WRITE,
     "POST /cart/reorder/{order_id}": SENSITIVE_WRITE,
-    "POST /cart/revalidate": STANDARD_WRITE,
-    "POST /cart/rfq/{rfq_id}/accept": STANDARD_WRITE,
+    "POST /cart/revalidate": CART_WRITE,
+    "POST /cart/rfq/{rfq_id}/accept": CART_WRITE,
     # Unified cart: event-ticket lines (the price is resolved server-side).
-    "POST /cart/tickets": STANDARD_WRITE,
-    "DELETE /cart/tickets/{line_id}": STANDARD_WRITE,
+    "POST /cart/tickets": CART_WRITE,
+    "DELETE /cart/tickets/{line_id}": CART_WRITE,
     "POST /checkout/session": PAYMENT_WRITE,
-    "POST /checkout/steps/contact": PAYMENT_WRITE,
-    "POST /checkout/steps/fulfilment": PAYMENT_WRITE,
+    "POST /checkout/steps/contact": CHECKOUT_STEP_WRITE,
+    "POST /checkout/steps/fulfilment": CHECKOUT_STEP_WRITE,
     "POST /checkout/steps/payment": PAYMENT_WRITE,
     "POST /config/categories/reorder": ADMIN_WRITE,
     "POST /disputes/orders/{order_id}": STANDARD_WRITE,
@@ -596,6 +616,102 @@ def policy_for(method: str, path: str) -> RateLimitPolicy | None:
     read the declarative registry instead of editing each router.
     """
     return POLICIES.get(route_id(method, path))
+
+
+def _route_template(request: Request) -> str:
+    route = request.scope.get("route")
+    return str(getattr(route, "path", "") or "")
+
+
+def _guest_cart_key(request: Request) -> str | None:
+    """Stable per-guest bucket id from the signed guest-cart cookie, if valid.
+
+    Only a cookie that verifies against our signing key is used, so a client
+    cannot mint arbitrary bucket ids by sending garbage cookies.
+    """
+    cookie = request.cookies.get(GUEST_CART_COOKIE)
+    if not cookie:
+        return None
+    try:
+        payload = jwt.decode(
+            cookie,
+            get_settings().supabase_service_role_key,
+            algorithms=["HS256"],
+        )
+    except Exception:  # noqa: BLE001 — invalid/forged cookie falls back to IP.
+        return None
+    token = payload.get("gt") if isinstance(payload, dict) else None
+    if payload.get("typ") != "cart_guest" or not isinstance(token, str) or not token:
+        return None
+    return "gc:" + hashlib.sha256(token.encode()).hexdigest()[:32]
+
+
+async def _rate_limit_actor_key(request: Request) -> str:
+    """Counter actor: user id, else verified guest-cart id, else trusted client IP.
+
+    The IP comes from :func:`trusted_client_key` (rightmost ``X-Forwarded-For``
+    hop / Cloudflare-asserted ``CF-Connecting-IP``), never the client-forgeable
+    leftmost hop.
+    """
+    authorization = request.headers.get("Authorization")
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            user = await get_current_user(request, get_settings())
+            return user.id
+        except Exception:  # noqa: BLE001 — invalid token falls back to guest/IP.
+            pass
+    guest = _guest_cart_key(request)
+    if guest is not None:
+        return guest
+    return trusted_client_key(request)
+
+
+async def enforce_registered_policy(request: Request) -> None:
+    """Enforce the :data:`POLICIES` entry for the matched mutating route.
+
+    Mounted as ``APIRouter(dependencies=[Depends(enforce_registered_policy)])`` on
+    routers that declare policies in the registry but do not bump inline. Limits
+    are keyed per user id (when a bearer token verifies) else per IP. Fail-open when
+    the limiter backend is unavailable so a DB outage does not block writes.
+    """
+    if request.method not in MUTATING_METHODS:
+        return
+
+    path_template = _route_template(request)
+    if not path_template:
+        return
+
+    rid = route_id(request.method, path_template)
+    if rid in EXEMPT_ROUTE_IDS:
+        return
+
+    policy = POLICIES.get(rid)
+    if policy is None:
+        logger.warning("Mutating route %s has no registered rate-limit policy", rid)
+        return
+
+    key = f"{rid}|{await _rate_limit_actor_key(request)}"
+    try:
+        allowed, retry_after = bump_rate_counter(
+            scope=policy.scope,
+            key=key,
+            window=policy.window,
+            limit=policy.limit,
+        )
+    except Exception:  # noqa: BLE001 — fail-open on limiter outage.
+        logger.debug(
+            "registered policy rate-limit check failed for %s (allowing)",
+            rid,
+            exc_info=True,
+        )
+        return
+
+    if not allowed:
+        raise_rate_limited(
+            retry_after=retry_after,
+            message_key="auth.errors.rate_limited",
+            message="Too many requests",
+        )
 
 
 def assert_all_mutating_routes_covered(app: object) -> None:

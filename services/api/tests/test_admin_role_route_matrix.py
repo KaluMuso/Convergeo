@@ -313,6 +313,7 @@ MODERATOR_ROUTES: frozenset[str] = frozenset(
 SUPERADMIN_ONLY_ROUTES: frozenset[str] = frozenset(
     {
         "GET /admin/accounts",
+        "GET /admin/accounts/lookup",
         "POST /admin/accounts/{user_id}/deactivate",
         "DELETE /admin/roles/{key}",
         "DELETE /admin/roles/{key}/users/{user_id}",

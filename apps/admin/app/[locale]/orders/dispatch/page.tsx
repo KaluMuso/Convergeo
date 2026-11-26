@@ -3,6 +3,7 @@ import Link from "next/link";
 import { setRequestLocale } from "next-intl/server";
 
 import { getAdminTranslator } from "../../../../lib/admin-translator";
+import { AdminPage } from "../../_components/admin-page";
 import { DispatchBoard } from "../_components/DispatchBoard";
 
 type PageProps = {
@@ -18,19 +19,26 @@ export default async function DispatchBoardPage({ params }: PageProps) {
   setRequestLocale(locale);
   const t = await getAdminTranslator(locale, "admin.dispatch");
 
+  const tOrders = await getAdminTranslator(locale, "admin.orders");
+
   return (
-    <div className="space-y-4">
-      <header className="space-y-1">
+    <AdminPage
+      title={t("title")}
+      subtitle={t("subtitle")}
+      breadcrumbs={[
+        { key: "orders", label: tOrders("title"), href: `/${locale}/orders` },
+        { key: "dispatch", label: t("title") },
+      ]}
+      actions={
         <Link
           href={`/${locale}/orders`}
-          className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm font-medium text-primary press-scale hover:border-primary"
         >
           {t("back")}
         </Link>
-        <h1 className="font-serif text-xl text-text">{t("title")}</h1>
-        <p className="text-sm text-muted">{t("subtitle")}</p>
-      </header>
+      }
+    >
       <DispatchBoard />
-    </div>
+    </AdminPage>
   );
 }

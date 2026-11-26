@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
@@ -25,8 +26,11 @@ from app.services.tickets.qr import (
 )
 from fastapi import APIRouter, Depends, Query
 
-router = APIRouter(prefix="/account/tickets", tags=["ticket-wallet"])
-
+router = APIRouter(
+    prefix="/account/tickets",
+    tags=["ticket-wallet"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 TicketStatus = Literal["issued", "checked_in", "transferred", "void"]
 
 

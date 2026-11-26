@@ -2,19 +2,30 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
+from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
+from app.core.ratelimit_policies import PAYMENT_WRITE
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.routers.checkout_payment import (
+    MomoRail,
+    _is_valid_payer_number,
+    _normalize_payer_number,
+    derive_momo_rail_from_number,
+)
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.payments.base import (
     PaymentStrategy,
 )
 from app.services.payments.initiate import InitiatePaymentRequest, initiate_checkout_payment
 from app.services.payments.state import PaymentStatus
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import Field
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
@@ -326,10 +337,36 @@ async def get_payment_status(
 
 @router.post("/retry", response_model=PaymentRetryResponse)
 async def retry_payment(
+    request: Request,
     body: PaymentRetryRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> PaymentRetryResponse:
+    ip_key = get_client_ip(request) or "unknown"
+    # Fail open on limiter/DB errors (consistent with the rest of the limiter):
+    # an outage must never block a customer from completing payment.
+    try:
+        allowed_ip, retry_ip = bump_rate_counter(
+            scope=PAYMENT_WRITE.scope,
+            key=f"ip:{ip_key}",
+            window=PAYMENT_WRITE.window,
+            limit=PAYMENT_WRITE.limit,
+        )
+        allowed_user, retry_user = bump_rate_counter(
+            scope=PAYMENT_WRITE.scope,
+            key=f"user:{current_user.id}",
+            window=PAYMENT_WRITE.window,
+            limit=PAYMENT_WRITE.limit,
+        )
+    except Exception:
+        logger.warning("payments/retry rate limiter unavailable; failing open", exc_info=True)
+        allowed_ip, retry_ip, allowed_user, retry_user = True, 0, True, 0
+    if not allowed_ip or not allowed_user:
+        raise_rate_limited(
+            retry_after=max(retry_ip, retry_user),
+            message_key="auth.errors.rate_limited",
+        )
+
     group = _assert_group_owner(
         _load_checkout_group(service, body.checkout_group_id),
         current_user.id,
@@ -373,21 +410,30 @@ async def retry_payment(
                 http_status=409,
             )
 
-    payer_phone = body.payer_number or _extract_payer_phone(latest)
-    if not payer_phone:
+    raw_payer = body.payer_number or _extract_payer_phone(latest)
+    if not raw_payer:
         raise AppError(
             code="checkout.payer_number_required",
             message="Payer mobile number is required to retry payment",
             http_status=422,
             details={"field": "payer_number"},
         )
+    payer_phone = _normalize_payer_number(raw_payer)
+    if not _is_valid_payer_number(payer_phone):
+        raise AppError(
+            code="checkout.invalid_payer_number",
+            message="Enter a valid Zambian mobile number (MTN 096/076 or Airtel 097/077)",
+            http_status=422,
+            details={"field": "payer_number"},
+        )
 
-    if latest and latest.get("rail"):
-        rail = str(latest["rail"])
-    elif body.rail in {"mtn", "airtel"}:
+    rail: MomoRail
+    if body.rail in {"mtn", "airtel"}:
         rail = body.rail
+    elif latest and latest.get("rail") in {"mtn", "airtel"}:
+        rail = "mtn" if str(latest["rail"]) == "mtn" else "airtel"
     else:
-        rail = "mtn"
+        rail = derive_momo_rail_from_number(payer_phone)
     total_raw = group.get("total_ngwee", 0)
     amount_ngwee = int(total_raw) if isinstance(total_raw, int) else 0
     first_order_id = str(orders[0]["id"])

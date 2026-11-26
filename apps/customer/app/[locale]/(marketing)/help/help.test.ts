@@ -88,11 +88,11 @@ describe("help FAQ search", () => {
   });
 });
 
-describe("pilot copy (cash on delivery only)", () => {
+describe("live payment help copy", () => {
   const LIVE_PAYMENT_CLAIM =
-    /pay (by|with) (mtn|airtel|mobile money|card)|payouts? (hit|reach)|sign up in minutes/i;
+    /pay (by|with) (mtn|airtel|mobile money|card)|escrow|payouts? (hit|reach)/i;
 
-  it("marks every escrow / mobile-money / payout article as coming soon", () => {
+  it("does not mark live payment articles as coming soon", () => {
     for (const slug of [
       "how-escrow-works",
       "is-my-money-safe",
@@ -101,18 +101,22 @@ describe("pilot copy (cash on delivery only)", () => {
       "mobile-money-payments",
       "vendor-payouts",
     ]) {
-      expect(getArticleBySlug(slug)?.comingSoon, slug).toBe(true);
+      expect(getArticleBySlug(slug)?.comingSoon, slug).toBe(false);
     }
   });
 
-  it("does not claim live online payment, and never says the old brand name", () => {
+  it("never uses the old brand name in help articles", () => {
     for (const article of getAllArticles()) {
-      expect(`${article.title} ${article.summary}`, article.slug).not.toMatch(LIVE_PAYMENT_CLAIM);
       expect(article.body, article.slug).not.toMatch(/vergeo5/i);
-      if (!article.comingSoon) {
-        expect(article.body, article.slug).not.toMatch(LIVE_PAYMENT_CLAIM);
-        expect(article.body.toLowerCase(), article.slug).not.toContain("escrow");
-      }
+      expect(`${article.title} ${article.summary}`, article.slug).not.toMatch(/vergeo5/i);
+    }
+  });
+
+  it("mentions live MoMo, card or escrow in core payment articles", () => {
+    for (const slug of ["payment-methods", "how-escrow-works", "mobile-money-payments"]) {
+      const article = getArticleBySlug(slug);
+      expect(article, slug).toBeTruthy();
+      expect(`${article?.summary} ${article?.body}`, slug).toMatch(LIVE_PAYMENT_CLAIM);
     }
   });
 });

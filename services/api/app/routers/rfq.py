@@ -13,6 +13,7 @@ from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
@@ -25,8 +26,11 @@ from app.services.service_packages import state as package_state
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import Field, field_validator
 
-router = APIRouter(prefix="/rfq", tags=["rfq"])
-
+router = APIRouter(
+    prefix="/rfq",
+    tags=["rfq"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 Party = Literal["customer", "vendor"]
 
 THREAD_SELECT = (
@@ -703,8 +707,9 @@ async def list_rfq_threads(
         vendor_resp = (
             scope_owner_vendor_query(
                 service_client.client.table("vendors")
-            .select("id")
-            .eq("owner_user_id", current_user.id))
+                .select("id")
+                .eq("owner_user_id", current_user.id)
+            )
             .limit(1)
             .execute()
         )
