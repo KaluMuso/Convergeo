@@ -32,17 +32,17 @@ function labelsFrom(messages: typeof catalogMessages) {
   };
 }
 
-/** COD-only pilot: the strip must never advertise escrow, mobile money or cards. */
-const PAYMENT_CLAIMS = /escrow|held by|mobile money|momo|card|visa|airtel|mtn/i;
+/** Payments are live: the strip may mention Mobile Money, never the "MoMo" shorthand. */
+const BANNED_SHORTHAND = /\bmomo\b/i;
 
 describe("HomeTrustStrip", () => {
-  it("renders the four COD-pilot trust items in order", () => {
+  it("renders the four trust items in order", () => {
     render(<HomeTrustStrip labels={labelsFrom(catalogMessages)} />);
     const strip = screen.getByTestId("home-trust-strip");
     expect(strip).toHaveAttribute("aria-label", "Why shop on Convergeo");
     const items = within(strip).getAllByRole("listitem");
     expect(items.map((item) => item.textContent)).toEqual([
-      "Pay on delivery",
+      catalogMessages.home.trustStrip.cod,
       "Verified sellers",
       "Lusaka delivery",
       "Easy returns",
@@ -60,7 +60,7 @@ describe("HomeTrustStrip", () => {
     for (const messages of [catalogMessages, frCatalog, zhCatalog]) {
       const strip = messages.home.trustStrip;
       expect(Object.values(strip).every((value) => value.length > 0)).toBe(true);
-      expect(Object.values(strip).join(" ")).not.toMatch(PAYMENT_CLAIMS);
+      expect(Object.values(strip).join(" ")).not.toMatch(BANNED_SHORTHAND);
       expect(strip.cod).not.toMatch(/^⚠/);
     }
     expect(frCatalog.home.trustStrip.cod).not.toBe(catalogMessages.home.trustStrip.cod);
