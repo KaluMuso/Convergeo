@@ -20,6 +20,7 @@ type HomeTaskListProps = {
 /** Numbered "do this next" list — most urgent first, each one a single tap. */
 export function HomeTaskList({ locale, tasks }: HomeTaskListProps) {
   const t = useTranslations("vendor");
+  const tRequests = useTranslations("vendor.requests.home");
   if (tasks.length === 0) {
     return (
       <section
@@ -60,34 +61,40 @@ export function HomeTaskList({ locale, tasks }: HomeTaskListProps) {
         />
       </div>
       <ol className="flex flex-col gap-2">
-        {tasks.map((task, index) => (
-          <li key={task.key}>
-            <Link
-              href={`/${locale}${task.href}`}
-              className={`card-lift press-scale flex min-h-14 items-start gap-3 rounded-xl border p-3 focus-visible:outline-none focus-visible:shadow-focusRing ${TONE_CLASSES[task.tone]}`}
-              data-testid="vendor-home-task"
-              data-task={task.key}
-            >
-              <span
-                aria-hidden="true"
-                className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary font-mono text-xs font-semibold text-[var(--primary-btn-fg)]"
+        {tasks.map((task, index) => {
+          const title =
+            task.key === "payoutsPilot"
+              ? tRequests("payoutsPilot.title")
+              : t(`home.tasks.items.${task.key}.title`, { count: task.count ?? 0 });
+          const body =
+            task.key === "payoutsPilot"
+              ? tRequests("payoutsPilot.body")
+              : t(`home.tasks.items.${task.key}.body`, { count: task.count ?? 0 });
+          return (
+            <li key={task.key}>
+              <Link
+                href={`/${locale}${task.href}`}
+                className={`card-lift press-scale flex min-h-14 items-start gap-3 rounded-xl border p-3 focus-visible:outline-none focus-visible:shadow-focusRing ${TONE_CLASSES[task.tone]}`}
+                data-testid="vendor-home-task"
+                data-task={task.key}
               >
-                {index + 1}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-text">
-                  {t(`home.tasks.items.${task.key}.title`, { count: task.count ?? 0 })}
+                <span
+                  aria-hidden="true"
+                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary font-mono text-xs font-semibold text-[var(--primary-btn-fg)]"
+                >
+                  {index + 1}
                 </span>
-                <span className="mt-0.5 block text-sm text-text-2">
-                  {t(`home.tasks.items.${task.key}.body`, { count: task.count ?? 0 })}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-text">{title}</span>
+                  <span className="mt-0.5 block text-sm text-text-2">{body}</span>
                 </span>
-              </span>
-              <span aria-hidden="true" className="mt-0.5 text-lg leading-none text-text-3">
-                ›
-              </span>
-            </Link>
-          </li>
-        ))}
+                <span aria-hidden="true" className="mt-0.5 text-lg leading-none text-text-3">
+                  ›
+                </span>
+              </Link>
+            </li>
+          );
+        })}
       </ol>
     </section>
   );

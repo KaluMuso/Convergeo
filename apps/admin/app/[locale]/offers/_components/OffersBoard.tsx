@@ -342,8 +342,8 @@ export function PauseDialog({ offer, pause, onClose, onDone }: PauseDialogProps)
           <button
             type="button"
             data-testid="offer-pause-confirm"
-            className={`inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium text-white ${
-              pause ? "bg-danger" : "bg-primary"
+            className={`inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium ${
+              pause ? "bg-danger text-on-danger" : "bg-primary text-[var(--primary-btn-fg)]"
             }`}
             onClick={() => void submit()}
             disabled={submitting}

@@ -14,6 +14,7 @@ from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.coupons.rules import LUSAKA
@@ -21,8 +22,11 @@ from app.services.coupons.store import BIRTHDAY_FLAG, ServiceRoleClient, require
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
-router = APIRouter(prefix="/account/birthday", tags=["account"])
-
+router = APIRouter(
+    prefix="/account/birthday",
+    tags=["account"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 CHANGE_COOLDOWN = timedelta(days=365)
 ADULT_AGE = 18
 WRITE_LIMIT = 10

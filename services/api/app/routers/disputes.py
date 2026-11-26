@@ -6,6 +6,7 @@ import time
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
@@ -23,8 +24,11 @@ from app.services.disputes.service import (
 from fastapi import APIRouter, Depends
 from pydantic import Field
 
-router = APIRouter(prefix="/disputes", tags=["disputes"])
-
+router = APIRouter(
+    prefix="/disputes",
+    tags=["disputes"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 ORDER_EVIDENCE_BUCKET = "order-evidence"
 MAX_EVIDENCE_BYTES = 10_485_760
 
@@ -124,8 +128,9 @@ def _load_vendor_for_owner(
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select("id, owner_user_id")
-        .eq("owner_user_id", owner_user_id))
+            .select("id, owner_user_id")
+            .eq("owner_user_id", owner_user_id)
+        )
         .maybe_single()
         .execute()
     )

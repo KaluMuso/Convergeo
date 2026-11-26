@@ -21,7 +21,36 @@ export type AdminPermissions = {
 };
 
 export type AdminRole = { key: string; name: string; permissions: string[] };
-export type AdminRoleAssignment = { user_id: string; role: string };
+export type AdminRoleAssignment = {
+  user_id: string;
+  role: string;
+  display_name?: string | null;
+  email?: string | null;
+};
+
+export type AccountMatch = {
+  user_id: string;
+  display_name: string | null;
+  email: string | null;
+  roles: string[];
+};
+
+/** Name, then email, then a short id — never a bare full UUID. */
+export function accountLabel(account: {
+  user_id: string;
+  display_name?: string | null;
+  email?: string | null;
+}): string {
+  return account.display_name || account.email || `…${account.user_id.slice(-6)}`;
+}
+
+export async function lookupAccounts(query: string): Promise<AccountMatch[]> {
+  const result = await rolesApi.request<{ accounts: AccountMatch[] }>(
+    `/admin/accounts/lookup?${new URLSearchParams({ q: query }).toString()}`,
+    { cache: "no-store" },
+  );
+  return Array.isArray(result?.accounts) ? result.accounts : [];
+}
 
 const PERMISSIONS = new Set([
   "finance.read",

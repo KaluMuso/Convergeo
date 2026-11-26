@@ -148,6 +148,8 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `birthday-greetings.json`         | Growth / DPA (flag-gated, added 2026-11-13) | no                      | DORMANT                                                               |
 | `analytics-retention.json`        | Analytics / DPA                             | no                      | DORMANT                                                               |
 | `analytics-rollup.json`           | Analytics (Intelligence 1B)                 | no                      | DORMANT (ships `active: false`; flag-gated by `analytics_v2_rollups`) |
+| `webhook-drain.json`              | Reconciliation (webhook drain, T54)         | yes (live copy in bundled recon workflow) | PARTIAL (committed template ships `active: false`; live drain runs every 1m → `/internal/reconciliation/webhook-drain-tick`) |
+| `door-poll.json`                  | Reconciliation (pay-at-door poll, T54)      | no                      | DORMANT (ships `active: false`; `/internal/reconciliation/door-poll-tick`) |
 | `export-purge.json`               | DPA data-export purge                       | no                      | DORMANT                                                               |
 | `embeddings-cron.json`            | Search/AI                                   | no                      | DORMANT                                                               |
 | `uptime-alert.json`               | Observability                               | no                      | DORMANT                                                               |

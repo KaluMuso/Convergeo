@@ -15,6 +15,7 @@ from typing import Annotated, Any, Protocol
 from app.core.auth import CurrentUser, get_current_user
 from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
@@ -38,8 +39,10 @@ from app.services.stock.claim import sql_uuid
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
 
-router = APIRouter(tags=["job-completion"])
-
+router = APIRouter(
+    tags=["job-completion"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 # Provider-marked-complete is recorded on the append-only audit_log; its timestamp
 # anchors the auto-confirm window (never a schema/migration).
 PROVIDER_COMPLETE_ACTION = "job.provider_completed"

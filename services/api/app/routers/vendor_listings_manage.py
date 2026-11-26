@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError, field_value_error
 from app.schemas.base import NgweeInt, StrictModel
@@ -35,8 +36,11 @@ from app.services.stock.revalidate import CartLineSnapshot, RevalidateResult, re
 from fastapi import APIRouter, Depends
 from pydantic import Field, ValidationError, field_validator, model_validator
 
-router = APIRouter(prefix="/vendor/listings", tags=["vendor-listings-manage"])
-
+router = APIRouter(
+    prefix="/vendor/listings",
+    tags=["vendor-listings-manage"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 ListingStatus = Literal["draft", "active", "paused"]
 UsedGrade = Literal["used_excellent", "used_good", "used_fair", "parts_not_working"]
 FulfilmentOption = Literal["lusaka_delivery", "pickup_shop", "pickup_nationwide"]
@@ -218,8 +222,9 @@ def _load_vendor_for_owner(
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select("id, owner_user_id, status, kyc_tier")
-        .eq("owner_user_id", owner_user_id))
+            .select("id, owner_user_id, status, kyc_tier")
+            .eq("owner_user_id", owner_user_id)
+        )
         .maybe_single()
         .execute()
     )

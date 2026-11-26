@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import logging
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import (
+    InternalTokenMisconfigured,
+    resolve_internal_token,
+    tokens_match,
+)
 from app.errors import AppError, get_request_id
 from app.services.ledger.engine import LedgerAccountNotFoundError
 from app.services.payments.reconcile import (
@@ -41,7 +45,7 @@ async def require_internal_reconciliation_token(request: Request) -> None:
     """Guard cron ticks — not publicly callable without the shared internal token."""
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal reconciliation token",

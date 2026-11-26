@@ -8,6 +8,7 @@ import {
 import { setRequestLocale } from "next-intl/server";
 
 import { getAdminTranslator } from "../../../lib/admin-translator";
+import { AdminPage } from "../_components/admin-page";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -38,13 +39,16 @@ export default async function ThemePresetsPage({ params }: PageProps) {
   const presetIds = SEASONAL_PRESET_IDS.join(", ");
 
   return (
-    <div className="space-y-6" data-testid="admin-theme-console">
-      <header className="space-y-1">
-        <h1 className="font-serif text-xl text-text">{t("title")}</h1>
-        <p className="text-sm text-muted">{t("subtitle")}</p>
-      </header>
-
-      <div className="rounded-lg border border-primary bg-bg p-4" data-testid="admin-theme-active">
+    <AdminPage
+      title={t("title")}
+      subtitle={t("subtitle")}
+      data-testid="admin-theme-console"
+      className="space-y-6"
+    >
+      <div
+        className="card-lift rounded-xl border border-primary bg-bg p-4"
+        data-testid="admin-theme-active"
+      >
         <p className="text-xs uppercase tracking-wide text-muted">{t("activeLabel")}</p>
         <p className="mt-1 font-semibold text-text">{t(`presets.${activeId}.name`)}</p>
         <p className="mt-1 text-sm text-muted">{t("activeHint")}</p>
@@ -144,6 +148,6 @@ export default async function ThemePresetsPage({ params }: PageProps) {
         <h2 className="font-semibold text-text">{t("roadmap.title")}</h2>
         <p className="text-sm text-muted">{t("roadmap.body")}</p>
       </section>
-    </div>
+    </AdminPage>
   );
 }

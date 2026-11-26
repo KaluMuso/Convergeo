@@ -6,11 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
 import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
 import { EmptyBlock, LoadingBlock } from "../../_components/StateBlocks";
-import {
-  extrasApi,
-  trialEndFromDate,
-  type TrialRow,
-} from "../../extras/_components/api";
+import { extrasApi, trialEndFromDate, type TrialRow } from "../../extras/_components/api";
 
 export function TrialsBoard() {
   const t = useTranslations("admin.trials");
@@ -75,11 +71,7 @@ export function TrialsBoard() {
       ) : (
         <ul className="m-0 list-none divide-y divide-border rounded-md border border-border bg-surface p-0">
           {items.map((row) => (
-            <TrialRowView
-              key={row.business_id}
-              row={row}
-              onDone={() => void load()}
-            />
+            <TrialRowView key={row.business_id} row={row} onDone={() => void load()} />
           ))}
         </ul>
       )}
@@ -126,16 +118,13 @@ function TrialRowView({ row, onDone }: { row: TrialRow; onDone: () => void }) {
     }
   }
 
-  const input =
-    "min-h-11 rounded-md border border-border bg-surface px-2 text-sm text-text";
+  const input = "min-h-11 rounded-md border border-border bg-surface px-2 text-sm text-text";
   return (
     <li className="space-y-2 p-3" data-testid={`trial-${row.business_id}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="m-0 font-medium text-text">{row.legal_name}</p>
         <span className="text-xs text-muted">
-          {row.in_trial
-            ? t("endsOn", { date: ends })
-            : t("endedOn", { date: ends })}
+          {row.in_trial ? t("endsOn", { date: ends }) : t("endedOn", { date: ends })}
         </span>
       </div>
       <div className="flex flex-wrap items-end gap-2">
@@ -148,7 +137,7 @@ function TrialRowView({ row, onDone }: { row: TrialRow; onDone: () => void }) {
             onChange={(e) => setDate(e.target.value)}
           />
         </label>
-        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-text-2">
+        <label className="flex min-w-[min(100%,10rem)] flex-1 flex-col gap-1 text-xs text-text-2">
           {t("reason")}
           <input
             className={input}
