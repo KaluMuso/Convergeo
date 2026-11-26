@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -52,9 +52,39 @@ describe("PdpDetailsTabs", () => {
       />,
     );
 
-    expect(
-      screen.queryByRole("tab", { name: "Overview" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Overview" })).not.toBeInTheDocument();
     expect(screen.getByText("Spec copy")).toBeVisible();
+  });
+});
+
+describe("PdpDetailsTabs hash deep-link", () => {
+  const renderTabs = () =>
+    render(
+      <PdpDetailsTabs
+        labels={labels}
+        hasOverview
+        overviewPanel={<p>Overview copy</p>}
+        specsPanel={<p>Spec copy</p>}
+        reviewsPanel={<p>Review copy</p>}
+      />,
+    );
+
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it.each(["#pdp-reviews", "#reviews"])("opens the Reviews tab for %s on mount", async (hash) => {
+    window.location.hash = hash;
+    renderTabs();
+    await waitFor(() => expect(screen.getByText("Review copy")).toBeVisible());
+    expect(screen.getByText("Overview copy")).not.toBeVisible();
+  });
+
+  it("opens the Reviews tab on hashchange", async () => {
+    renderTabs();
+    expect(screen.getByText("Review copy")).not.toBeVisible();
+    window.location.hash = "#pdp-reviews";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await waitFor(() => expect(screen.getByText("Review copy")).toBeVisible());
   });
 });

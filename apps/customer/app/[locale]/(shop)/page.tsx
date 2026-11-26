@@ -391,7 +391,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
           <HomeVendorsRail
             id="home-rail-vendors"
             title={t("home.rails.vendorsTitle")}
-            viewAllHref={`/${locale}/directory`}
+            viewAllHref={`/${locale}/vendors`}
             viewAllLabel={t("home.rails.viewAll")}
             vendors={defaultData.topVendors}
             locale={locale}
