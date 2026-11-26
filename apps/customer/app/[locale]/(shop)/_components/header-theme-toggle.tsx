@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import { useTheme } from "@vergeo/ui/src/theme-provider";
+import { useEffect, useState } from "react";
 
 type HeaderThemeToggleProps = {
   labels: { label: string; light: string; dark: string; system: string };
