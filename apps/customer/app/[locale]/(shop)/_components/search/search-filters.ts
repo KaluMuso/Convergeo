@@ -32,9 +32,7 @@ export function buildSearchFilterChips(
       id: `category:${state.categoryPath}`,
       kind: "category",
       path: state.categoryPath,
-      label:
-        categoryLabels[state.categoryPath] ??
-        formatCategoryPathLabel(state.categoryPath),
+      label: categoryLabels[state.categoryPath] ?? formatCategoryPathLabel(state.categoryPath),
     });
   }
 
@@ -52,9 +50,7 @@ export function formatCategoryPathLabel(path: string): string {
     .join(" ");
 }
 
-export function decodeSearchFilters(
-  params: URLSearchParams,
-): SearchFilterState {
+export function decodeSearchFilters(params: URLSearchParams): SearchFilterState {
   return {
     minPrice: params.get("min_price") ?? undefined,
     maxPrice: params.get("max_price") ?? undefined,
@@ -76,16 +72,31 @@ export function encodeSearchFilters(state: SearchFilterState): URLSearchParams {
   return params;
 }
 
+/** Kwacha major units (UI / URL) → ngwee string for API query params. */
+export function kwachaMajorToNgweeString(kwacha: string): string | undefined {
+  const major = Number(kwacha);
+  if (!Number.isFinite(major)) {
+    return undefined;
+  }
+  return String(Math.round(major * 100));
+}
+
 /** Append product filters to `/search` API query params (ngwee + category_path). */
 export function appendSearchFiltersToApiParams(
   params: URLSearchParams,
   state: SearchFilterState,
 ): void {
   if (state.minPrice) {
-    params.set("price_min_ngwee", state.minPrice);
+    const ngwee = kwachaMajorToNgweeString(state.minPrice);
+    if (ngwee !== undefined) {
+      params.set("price_min_ngwee", ngwee);
+    }
   }
   if (state.maxPrice) {
-    params.set("price_max_ngwee", state.maxPrice);
+    const ngwee = kwachaMajorToNgweeString(state.maxPrice);
+    if (ngwee !== undefined) {
+      params.set("price_max_ngwee", ngwee);
+    }
   }
   if (state.categoryPath) {
     params.set("category_path", state.categoryPath);
@@ -114,10 +125,7 @@ export function hrefWithoutSearchFilterChip(
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function clearSearchFiltersHref(
-  pathname: string,
-  searchParams: URLSearchParams,
-): string {
+export function clearSearchFiltersHref(pathname: string, searchParams: URLSearchParams): string {
   const next = new URLSearchParams();
   const preserved = ["q", "kind"] as const;
   for (const key of preserved) {

@@ -29,8 +29,8 @@ describe("search-filters", () => {
       maxPrice: "500",
       categoryPath: "electronics",
     });
-    expect(api.get("price_min_ngwee")).toBe("100");
-    expect(api.get("price_max_ngwee")).toBe("500");
+    expect(api.get("price_min_ngwee")).toBe("10000");
+    expect(api.get("price_max_ngwee")).toBe("50000");
     expect(api.get("category_path")).toBe("electronics");
   });
 
@@ -45,15 +45,11 @@ describe("search-filters", () => {
     });
     expect(chips).toHaveLength(2);
 
-    const base = new URLSearchParams(
-      "q=phone&min_price=10&category_path=electronics/phones",
-    );
+    const base = new URLSearchParams("q=phone&min_price=10&category_path=electronics/phones");
     expect(hrefWithoutSearchFilterChip("/en/search", base, chips[0]!)).toBe(
       "/en/search?q=phone&category_path=electronics%2Fphones",
     );
-    expect(clearSearchFiltersHref("/en/search", base)).toBe(
-      "/en/search?q=phone",
-    );
+    expect(clearSearchFiltersHref("/en/search", base)).toBe("/en/search?q=phone");
   });
 
   it("formats category path labels", () => {

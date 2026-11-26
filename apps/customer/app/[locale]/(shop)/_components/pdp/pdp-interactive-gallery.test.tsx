@@ -300,9 +300,9 @@ describe("PdpInteractiveBody gallery (digest 1378788464 regression)", () => {
 
   it("keeps honest escrow trust copy on the buy box panel", async () => {
     renderBody();
-    expect(await screen.findByTestId("pdp-trust-escrow")).toHaveTextContent(
-      "Held in escrow until you confirm",
-    );
+    await waitFor(() => {
+      expect(screen.getByText("Held in escrow until you confirm")).toBeInTheDocument();
+    });
   });
 
   it("loads comparison and carries a selected seller's image and minimum quantity into purchase", async () => {

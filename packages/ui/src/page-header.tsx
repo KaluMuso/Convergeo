@@ -43,7 +43,7 @@ export function PageHeader({
         />
       ) : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="min-w-[min(100%,16rem)] flex-1 space-y-1">
           <h1 className="font-display text-h2 tracking-tight text-display-ink">{title}</h1>
           {subtitle ? <p className="max-w-prose text-body text-text-2">{subtitle}</p> : null}
         </div>

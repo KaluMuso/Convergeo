@@ -114,9 +114,37 @@ async def initiate_checkout_payment(
                 bearer=bearer,
             )
         )
-    except PaymentProviderError:
-        # The durable claimed reference is still reconcilable after response loss.
-        return InitiatePaymentResult(payment_id, PaymentStatus.INITIATED, lenco_reference, None)
+    except PaymentProviderError as exc:
+        if exc.definitive_rejection is not True:
+            # Only an explicit, positively-identified provider refusal is terminal.
+            # Everything else (timeouts, 5xx, parse failures, missing data, unknown
+            # errors) may have created a collection: stay INITIATED so the durable
+            # reference is reconciled and no second collection is claimed.
+            return InitiatePaymentResult(payment_id, PaymentStatus.INITIATED, lenco_reference, None)
+        observation = {
+            "reference": lenco_reference,
+            "amount_ngwee": amount_ngwee,
+            "currency": "ZMW",
+            "source": "initiation_rejected",
+            # record_collection_failure requires provider_outcome == 'failed'.
+            "provider_outcome": "failed",
+            "terminal_provider_failure": True,
+            "provider_error_code": exc.code,
+        }
+        apply_payment_status(
+            service_client,
+            payment_id=payment_id,
+            incoming_status=PaymentStatus.FAILED,
+            actor_id=actor_id,
+            note=f"Lenco refused collection: {exc.code}",
+            observation=observation,
+        )
+        raise AppError(
+            code="payment.initiation_rejected",
+            message="Mobile money could not start — check the number and try again",
+            http_status=422,
+            details={"provider_code": exc.code, "payment_id": payment_id},
+        ) from exc
 
     raw_patch: dict[str, Any] = {
         "payer_phone": request.phone,

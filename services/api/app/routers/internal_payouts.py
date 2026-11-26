@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import (
+    InternalTokenMisconfigured,
+    resolve_internal_token,
+    tokens_match,
+)
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.payments.lenco.client import LencoStrategy
@@ -38,7 +42,7 @@ async def require_internal_payouts_token(request: Request) -> None:
     """Guard cron ticks — not publicly callable without the shared internal token."""
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal payouts token",
