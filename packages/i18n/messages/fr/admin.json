@@ -13,6 +13,22 @@
         "admin": "Admin",
         "custom": "Rôle personnalisé"
       }
+    },
+    "density": {
+      "label": "Switch to {mode} density",
+      "comfortable": "Comfortable",
+      "compact": "Compact",
+      "comfortableShort": "Comfort",
+      "compactShort": "Compact"
+    },
+    "commandPalette": {
+      "title": "Jump to admin tool",
+      "open": "Search tools",
+      "placeholder": "Jump to a tool…",
+      "hint": "Navigation only — type to filter tools you can access.",
+      "close": "Close",
+      "noResults": "No tools match that search.",
+      "shortcut": "⌘K"
     }
   },
   "nav": {

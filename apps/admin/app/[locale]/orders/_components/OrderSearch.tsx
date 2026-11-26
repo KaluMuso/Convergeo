@@ -356,9 +356,7 @@ export function OrderSearch({ locale }: OrderSearchProps) {
               applied,
               (() => {
                 const last = results[results.length - 1];
-                return last
-                  ? { before: last.created_at, beforeId: last.id }
-                  : null;
+                return last ? { before: last.created_at, beforeId: last.id } : null;
               })(),
             )
           }

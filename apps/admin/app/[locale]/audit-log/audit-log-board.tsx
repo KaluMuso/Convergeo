@@ -138,46 +138,44 @@ export function AuditLogBoard({ locale }: { locale: string }) {
   const [draft, setDraft] = useState<AuditFilters>(EMPTY_FILTERS);
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS);
   const [items, setItems] = useState<AuditEntry[] | null>(null);
-  const [nextCursor, setNextCursor] = useState<{ before: string; beforeId: string } | null>(
-    null,
-  );
+  const [nextCursor, setNextCursor] = useState<{ before: string; beforeId: string } | null>(null);
   const [error, setError] = useState<"" | "loadFailed" | "invalid">("");
   const [loading, setLoading] = useState(true);
   const generation = useRef(0);
 
   const load = useCallback(
     async (active: AuditFilters, cursor: { before: string; beforeId: string } | null) => {
-    const built = buildAuditQuery(active, cursor);
-    if ("invalid" in built) {
-      setError("invalid");
-      return;
-    }
-    const current = ++generation.current;
-    setLoading(true);
-    setError("");
-    try {
-      const page = await rolesApi.request<AuditPage>(`/admin/audit-log?${built.query}`, {
-        cache: "no-store",
-      });
-      if (current !== generation.current) return;
-      if (!Array.isArray(page?.items)) throw new Error("Invalid audit page");
-      setItems((previous) => (cursor && previous ? [...previous, ...page.items] : page.items));
-      setNextCursor(
-        page.next_before && page.next_before_id
-          ? { before: page.next_before, beforeId: page.next_before_id }
-          : null,
-      );
-    } catch {
-      if (current === generation.current) {
-        setError("loadFailed");
-        setItems([]);
+      const built = buildAuditQuery(active, cursor);
+      if ("invalid" in built) {
+        setError("invalid");
+        return;
       }
-    } finally {
-      if (current === generation.current) setLoading(false);
-    }
-  },
-  [],
-);
+      const current = ++generation.current;
+      setLoading(true);
+      setError("");
+      try {
+        const page = await rolesApi.request<AuditPage>(`/admin/audit-log?${built.query}`, {
+          cache: "no-store",
+        });
+        if (current !== generation.current) return;
+        if (!Array.isArray(page?.items)) throw new Error("Invalid audit page");
+        setItems((previous) => (cursor && previous ? [...previous, ...page.items] : page.items));
+        setNextCursor(
+          page.next_before && page.next_before_id
+            ? { before: page.next_before, beforeId: page.next_before_id }
+            : null,
+        );
+      } catch {
+        if (current === generation.current) {
+          setError("loadFailed");
+          setItems([]);
+        }
+      } finally {
+        if (current === generation.current) setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (grants === null) {

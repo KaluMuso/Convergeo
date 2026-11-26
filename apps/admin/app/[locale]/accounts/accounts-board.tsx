@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { rolesApi, useAdminPermissions } from "../../../lib/roles-api";
+import { AdminPageClient } from "../_components/admin-page-client";
 import { ConfirmModal } from "../_components/ConfirmModal";
 import { CopyButton } from "../_components/CopyButton";
 
@@ -114,17 +115,16 @@ export function AccountsBoard({ locale }: { locale: string }) {
   const label = (account: AdminAccount) => account.display_name ?? account.email ?? t("noName");
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="font-serif text-xl">{t("title")}</h1>
-        <p className="text-sm text-muted">{t("subtitle")}</p>
-        <p className="text-sm text-muted">{t("deactivateHelp")}</p>
-        <p className="text-sm">
-          <a className="underline" href={`/${locale}/roles`}>
-            {t("manageRolesLink")}
-          </a>
-        </p>
-      </header>
+    <AdminPageClient title={t("title")} subtitle={t("subtitle")} className="space-y-6">
+      <p className="text-sm text-text-2">{t("deactivateHelp")}</p>
+      <p className="text-sm">
+        <a
+          className="min-h-11 inline-flex items-center font-medium text-primary underline-offset-2 hover:underline"
+          href={`/${locale}/roles`}
+        >
+          {t("manageRolesLink")}
+        </a>
+      </p>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <label className="block w-full max-w-md text-sm">
           {t("search")}
@@ -268,6 +268,6 @@ export function AccountsBoard({ locale }: { locale: string }) {
           />
         </label>
       </ConfirmModal>
-    </div>
+    </AdminPageClient>
   );
 }
