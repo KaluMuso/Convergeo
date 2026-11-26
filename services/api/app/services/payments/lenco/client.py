@@ -312,6 +312,7 @@ class LencoClient:
                         reference=reference,
                         observation_uncertain=False,
                         dispatch_may_have_succeeded=False,
+                        definitive_rejection=True,
                     )
                 raise_lenco_failure(
                     error_code=_envelope_error_code(envelope),
@@ -572,10 +573,19 @@ class LencoStrategy:
         except LencoClientError:
             raise
         except Exception as exc:
-            raise PaymentProviderError("provider_error", str(exc)) from exc
+            # The request reached Lenco; a failure after a 200 (e.g. response
+            # parse error) says nothing about whether a collection was created.
+            raise PaymentProviderError(
+                "provider_error", str(exc), dispatch_may_have_succeeded=True
+            ) from exc
 
         if response.data is None:
-            raise PaymentProviderError("provider_error", "collection response missing data")
+            # 200 without data: a collection may exist; never treat as a refusal.
+            raise PaymentProviderError(
+                "provider_error",
+                "collection response missing data",
+                dispatch_may_have_succeeded=True,
+            )
 
         data = response.data
         return InitiateCollectionResult(

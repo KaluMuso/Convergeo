@@ -20,6 +20,7 @@ from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.lenco.config import get_api_token, get_base_url
 from app.services.payments.lenco.reconciliation import LencoReconciliationAdapter
 from app.services.payments.money import major_str_to_ngwee
+from app.services.payments.ops_alerts import alert_stale_initiated_not_found
 from app.services.payments.reconciliation_matcher import (
     collect_provider_pages,
     match_movements,
@@ -394,36 +395,6 @@ def _initiated_stale(payment: dict[str, Any], *, ttl_minutes: int) -> bool:
     return datetime.now(UTC) - updated >= timedelta(minutes=ttl_minutes)
 
 
-def _enqueue_stale_initiated_ops_alert(
-    service_client: ServiceRoleClient, payment: dict[str, Any]
-) -> None:
-    """Ops alert (deduped per payment) for a stale INITIATED payment Lenco cannot find."""
-    payment_id = str(payment.get("id", ""))
-    logger.warning(
-        "reconciliation poll: stale INITIATED payment not found at provider; needs review",
-        extra={"alert": "payment_stale_initiated_not_found", "payment_id": payment_id},
-    )
-    try:
-        from app.services.notifications.dedupe import enqueue_outbox_row
-
-        enqueue_outbox_row(
-            service_client.client,
-            event_type="payment.stale_initiated_not_found",
-            entity_id=payment_id,
-            channel="in_app",
-            template="payment_stale_initiated_ops",
-            payload={
-                "payment_id": payment_id,
-                "checkout_group_id": payment.get("checkout_group_id"),
-                "amount_ngwee": payment.get("amount_ngwee"),
-                "reference": payment.get("lenco_reference"),
-                "needs_review": True,
-            },
-        )
-    except Exception:
-        logger.exception("stale initiated ops alert enqueue failed for payment %s", payment_id)
-
-
 async def poll_non_terminal_payments(
     service_client: ServiceRoleClient,
     *,
@@ -469,7 +440,9 @@ async def poll_non_terminal_payments(
                     # Never set terminal_provider_failure here: that is what lets a
                     # second claim open a second live collection. Keep the payment
                     # in flight and surface it to ops instead.
-                    _enqueue_stale_initiated_ops_alert(service_client, payment)
+                    alert_stale_initiated_not_found(
+                        service_client.client, payment=payment, actor_id=SYSTEM_ACTOR_ID
+                    )
                     unchanged += 1
                     continue
                 logger.warning(

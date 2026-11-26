@@ -13,7 +13,6 @@ from app.services.payments.base import (
     InitiateCollectionRequest,
     PaymentProviderError,
     PaymentStrategy,
-    ProviderErrorKind,
     ProviderOutcome,
     QueryStatusRequest,
 )
@@ -116,8 +115,11 @@ async def initiate_checkout_payment(
             )
         )
     except PaymentProviderError as exc:
-        if exc.dispatch_may_have_succeeded or exc.kind is ProviderErrorKind.TRANSPORT:
-            # The durable claimed reference is still reconcilable after response loss.
+        if exc.definitive_rejection is not True:
+            # Only an explicit, positively-identified provider refusal is terminal.
+            # Everything else (timeouts, 5xx, parse failures, missing data, unknown
+            # errors) may have created a collection: stay INITIATED so the durable
+            # reference is reconciled and no second collection is claimed.
             return InitiatePaymentResult(payment_id, PaymentStatus.INITIATED, lenco_reference, None)
         observation = {
             "reference": lenco_reference,

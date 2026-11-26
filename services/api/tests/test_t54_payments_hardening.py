@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -13,12 +14,14 @@ import pytest
 from app.errors import AppError
 from app.routers.checkout_payment import derive_momo_rail_from_number
 from app.services.payments.base import (
+    InitiateCollectionRequest,
     PaymentProviderError,
     ProviderOutcome,
     QueryStatusResult,
 )
 from app.services.payments.initiate import InitiatePaymentRequest, initiate_checkout_payment
-from app.services.payments.lenco.client import LencoClient
+from app.services.payments.lenco import client as lenco_client_module
+from app.services.payments.lenco.client import LencoClient, LencoStrategy
 from app.services.payments.lenco.models import LencoClientError, LencoCollectionRequest
 from app.services.payments.reconcile import PollResult, poll_non_terminal_payments
 from app.services.payments.state import (
@@ -32,7 +35,19 @@ from tests.test_payment_state import (
     CHECKOUT_GROUP_ID,
     FakeServiceClient,
     FakeSupabaseClient,
+    FakeTable,
 )
+
+
+class ChannelCheckedOutbox(FakeTable):
+    """Mirrors the notification_outbox CHECK (channel in whatsapp/sms/email)."""
+
+    def insert(self, payload: dict[str, Any]) -> Any:
+        if payload.get("channel") not in {"whatsapp", "sms", "email"}:
+            raise RuntimeError(
+                "23514 new row violates check constraint notification_outbox_channel_check"
+            )
+        return super().insert(payload)
 
 
 class StrictRpcSupabaseClient(FakeSupabaseClient):
@@ -46,7 +61,7 @@ class StrictRpcSupabaseClient(FakeSupabaseClient):
 
     def __init__(self) -> None:
         super().__init__()
-        self.tables["notification_outbox"] = type(self.tables["payments"])()
+        self.tables["notification_outbox"] = ChannelCheckedOutbox()
 
     def rpc(self, name: str, params: dict[str, Any]) -> Any:
         if name != "record_collection_failure":
@@ -115,7 +130,7 @@ async def test_initiate_terminal_rejection_marks_failed() -> None:
         side_effect=PaymentProviderError(
             "invalid_number",
             "bad msisdn",
-            dispatch_may_have_succeeded=False,
+            definitive_rejection=True,
         )
     )
     with pytest.raises(AppError) as exc:
@@ -208,6 +223,125 @@ async def test_initiate_ambiguous_failure_stays_initiated_without_terminal_flag(
     assert "terminal_provider_failure" not in payment["raw"]
 
 
+# --- Through LencoStrategy: only a positive rejection is terminal --------------------
+
+
+def _initiate_request() -> InitiatePaymentRequest:
+    return InitiatePaymentRequest(
+        checkout_group_id=CHECKOUT_GROUP_ID,
+        amount_ngwee=10_000,
+        rail="mtn",
+        phone="+260961234567",
+    )
+
+
+def _fresh_checkout_fake() -> StrictRpcSupabaseClient:
+    fake = StrictRpcSupabaseClient()
+    fake.tables["checkout_groups"].rows.append(
+        {"id": CHECKOUT_GROUP_ID, "total_ngwee": 10_000, "status": "pending"}
+    )
+    return fake
+
+
+async def _initiate_via_strategy(fake: StrictRpcSupabaseClient, strategy: LencoStrategy) -> Any:
+    return await initiate_checkout_payment(
+        FakeServiceClient(fake), _initiate_request(), strategy=strategy, actor_id=ACTOR_ID
+    )
+
+
+class _ParseFailureClient:
+    async def initiate_collection(self, _request: Any) -> Any:
+        raise ValueError("response parse failure after HTTP 200")
+
+
+@pytest.mark.asyncio
+async def test_strategy_parse_failure_after_200_stays_initiated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(lenco_client_module, "payments_enabled", lambda: True)
+    fake = _fresh_checkout_fake()
+    result = await _initiate_via_strategy(fake, LencoStrategy(_ParseFailureClient()))  # type: ignore[arg-type]
+    assert result.status == PaymentStatus.INITIATED
+    payment = fake.tables["payments"].rows[0]
+    assert payment["status"] == "initiated"
+    assert "terminal_provider_failure" not in payment["raw"]
+
+
+@pytest.mark.asyncio
+async def test_strategy_200_without_data_stays_initiated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(lenco_client_module, "payments_enabled", lambda: True)
+    http = httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda _r: httpx.Response(200, json={"status": True, "message": "ok", "data": None})
+        ),
+        base_url="https://api.lenco.co/access/v2",
+    )
+    strategy = LencoStrategy(
+        LencoClient(http_client=http, token="t", base_url="https://api.lenco.co/access/v2")
+    )
+    fake = _fresh_checkout_fake()
+    result = await _initiate_via_strategy(fake, strategy)
+    assert result.status == PaymentStatus.INITIATED
+    payment = fake.tables["payments"].rows[0]
+    assert payment["status"] == "initiated"
+    assert "terminal_provider_failure" not in payment["raw"]
+
+
+@pytest.mark.asyncio
+async def test_strategy_wrap_sites_flag_dispatch_may_have_succeeded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(lenco_client_module, "payments_enabled", lambda: True)
+    request = InitiateCollectionRequest(
+        reference="ord-x", amount_ngwee=1000, phone="+260971234567", operator="airtel"
+    )
+    with pytest.raises(PaymentProviderError) as parse_exc:
+        await LencoStrategy(_ParseFailureClient()).initiate_collection(request)  # type: ignore[arg-type]
+    assert parse_exc.value.dispatch_may_have_succeeded is True
+    assert parse_exc.value.definitive_rejection is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("status", "code"), [(400, "12"), (400, "01"), (422, "01")])
+async def test_strategy_definitive_rejection_marks_failed_terminal(
+    monkeypatch: pytest.MonkeyPatch, status: int, code: str
+) -> None:
+    monkeypatch.setattr(lenco_client_module, "payments_enabled", lambda: True)
+    http = httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda _r: httpx.Response(
+                status, json={"status": False, "message": "invalid", "errorCode": code}
+            )
+        ),
+        base_url="https://api.lenco.co/access/v2",
+    )
+    strategy = LencoStrategy(
+        LencoClient(http_client=http, token="t", base_url="https://api.lenco.co/access/v2")
+    )
+    fake = _fresh_checkout_fake()
+    with pytest.raises(AppError) as exc:
+        await _initiate_via_strategy(fake, strategy)
+    assert exc.value.code == "payment.initiation_rejected"
+    payment = fake.tables["payments"].rows[0]
+    assert payment["status"] == PaymentStatus.FAILED.value
+    assert payment["raw"]["terminal_provider_failure"] is True
+
+
+@pytest.mark.asyncio
+async def test_unflagged_provider_error_is_never_terminal() -> None:
+    """No flags at all (legacy/unknown wrap) must not be read as a refusal."""
+    fake = _fresh_checkout_fake()
+    strategy = MagicMock()
+    strategy.initiate_collection = AsyncMock(side_effect=PaymentProviderError("x", "unknown"))
+    result = await initiate_checkout_payment(
+        FakeServiceClient(fake), _initiate_request(), strategy=strategy, actor_id=ACTOR_ID
+    )
+    assert result.status == PaymentStatus.INITIATED
+    assert "terminal_provider_failure" not in fake.tables["payments"].rows[0]["raw"]
+
+
 # --- LencoClient.initiate_collection: dispatch_may_have_succeeded ---------------------
 
 
@@ -238,6 +372,7 @@ async def test_definitive_validation_rejection_is_not_dispatch_may_have_succeede
         )
     )
     assert err.dispatch_may_have_succeeded is False
+    assert err.definitive_rejection is True
     assert err.observation_uncertain is False
     assert err.kind.value == "provider"
 
@@ -260,6 +395,7 @@ async def test_ambiguous_http_failures_keep_dispatch_may_have_succeeded(
 ) -> None:
     err = await _initiate_with(lambda _r: response)
     assert err.dispatch_may_have_succeeded is True
+    assert err.definitive_rejection is False
 
 
 @pytest.mark.asyncio
@@ -298,7 +434,9 @@ def _seed_poll_payment(
 
 
 @pytest.mark.asyncio
-async def test_poller_not_found_stale_initiated_stays_non_terminal_and_alerts() -> None:
+async def test_poller_not_found_stale_initiated_stays_non_terminal_and_alerts(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     fake = StrictRpcSupabaseClient()
     pid = _seed_poll_payment(fake, status="initiated", age_minutes=120)
 
@@ -316,14 +454,25 @@ async def test_poller_not_found_stale_initiated_stays_non_terminal_and_alerts() 
     assert payment["status"] == "initiated"
     # Never grant a second claim: no terminal_provider_failure, no release.
     assert "terminal_provider_failure" not in payment["raw"]
-    assert fake.tables["audit_log"].rows == []
     assert result == PollResult(scanned=1, updated=0, unchanged=1, errors=0)
-    alerts = fake.tables["notification_outbox"].rows
-    assert len(alerts) == 1
-    assert alerts[0]["payload"]["payment_id"] == pid
-    assert alerts[0]["payload"]["needs_review"] is True
-    assert alerts[0]["payload"]["checkout_group_id"] == CHECKOUT_GROUP_ID
-    assert alerts[0]["payload"]["amount_ngwee"] == 25_000
+    # Admin-visible: one deduped audit_log row; nothing written to the outbox.
+    assert fake.tables["notification_outbox"].rows == []
+    audit = fake.tables["audit_log"].rows
+    assert len(audit) == 1
+    assert audit[0]["action"] == "payment.stale_initiated_not_found"
+    assert audit[0]["entity_type"] == "payment"
+    assert audit[0]["entity_id"] == pid
+    assert audit[0]["after"]["needs_review"] is True
+    assert audit[0]["after"]["checkout_group_id"] == CHECKOUT_GROUP_ID
+    assert audit[0]["after"]["amount_ngwee"] == 25_000
+    alert_records = [r for r in caplog.records if getattr(r, "alert", None)]
+    assert [r.alert for r in alert_records] == ["payment_stale_initiated_not_found"]  # type: ignore[attr-defined]
+    assert alert_records[0].levelno == logging.ERROR
+    # A second tick must not duplicate the audit row (alert log still repeats).
+    await poll_non_terminal_payments(
+        FakeServiceClient(fake), query_status=query_status, older_than_minutes=1
+    )
+    assert len(fake.tables["audit_log"].rows) == 1
 
 
 @pytest.mark.asyncio
@@ -370,7 +519,7 @@ async def test_poller_failed_observation_passes_strict_rpc_checks() -> None:
 # --- Late collection alert & fee idempotency ------------------------------------------
 
 
-def test_late_collection_enqueues_ops_alert() -> None:
+def test_late_collection_raises_structured_ops_alert(caplog: pytest.LogCaptureFixture) -> None:
     fake = StrictRpcSupabaseClient()
     fake.tables["payments"].rows.append(
         {
@@ -400,11 +549,12 @@ def test_late_collection_enqueues_ops_alert() -> None:
         },
     )
     assert outcome is None
-    rows = fake.tables["notification_outbox"].rows
-    assert len(rows) == 1
-    assert rows[0]["template"] == "payment_late_collection_ops"
-    assert rows[0]["payload"]["payment_id"] == "pay-late"
-    assert rows[0]["payload"]["amount_ngwee"] == 1_000
+    assert fake.tables["notification_outbox"].rows == []
+    records = [r for r in caplog.records if getattr(r, "alert", None) == "payment_late_collection"]
+    assert len(records) == 1
+    assert records[0].levelno == logging.ERROR
+    assert records[0].payment_id == "pay-late"  # type: ignore[attr-defined]
+    assert records[0].amount_ngwee == 1_000  # type: ignore[attr-defined]
 
 
 def test_book_collection_fee_is_idempotent_per_payment(monkeypatch: pytest.MonkeyPatch) -> None:

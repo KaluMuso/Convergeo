@@ -22,6 +22,7 @@ from app.services.payments.bearer import (
 )
 from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.money import SUPPORTED_CURRENCY, major_str_to_ngwee
+from app.services.payments.ops_alerts import alert_late_collection
 from app.services.payments.webhook_verify import (
     WEBHOOK_VERIFICATION_VERSION,
     canonical_payload_sha256,
@@ -644,35 +645,6 @@ def transition_payment(
     )
 
 
-def _enqueue_late_collection_ops_alert(
-    service_client: ServiceRoleClient,
-    *,
-    payment_id: str,
-    checkout_group_id: str,
-    amount_ngwee: int,
-    reference: str,
-) -> None:
-    """Surface late collections immediately via outbox (not only the daily report)."""
-    from app.services.notifications.dedupe import enqueue_outbox_row
-
-    try:
-        enqueue_outbox_row(
-            service_client.client,
-            event_type="payment.late_collection",
-            entity_id=payment_id,
-            channel="in_app",
-            template="payment_late_collection_ops",
-            payload={
-                "payment_id": payment_id,
-                "checkout_group_id": checkout_group_id,
-                "amount_ngwee": amount_ngwee,
-                "reference": reference,
-            },
-        )
-    except Exception:
-        return
-
-
 def apply_payment_status(
     service_client: ServiceRoleClient,
     *,
@@ -737,8 +709,7 @@ def apply_payment_status(
         settlement_result = str(result.get("result") or "")
         if settlement_result not in {"applied", "duplicate"}:
             if settlement_result == "late_collection":
-                _enqueue_late_collection_ops_alert(
-                    service_client,
+                alert_late_collection(
                     payment_id=payment_id,
                     checkout_group_id=snapshot.checkout_group_id,
                     amount_ngwee=snapshot.amount_ngwee,
