@@ -1019,7 +1019,7 @@
       "save": "Save profile",
       "saving": "Saving…",
       "viewStorefront": "View public storefront",
-      "viewStorefrontUnavailable": "Public storefront preview is unavailable in this environment."
+      "viewStorefrontUnavailable": "Your shop link will appear here once your storefront slug is saved."
     },
     "success": {
       "saved": "Profile saved. Changes appear on your public page within a minute."

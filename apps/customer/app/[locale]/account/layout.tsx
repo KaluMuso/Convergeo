@@ -174,6 +174,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
             locale={locale}
             messages={{
               account: accountMessages,
+              common: commonMessages,
               orders: ordersMessages,
               nav: navMessages,
             }}
