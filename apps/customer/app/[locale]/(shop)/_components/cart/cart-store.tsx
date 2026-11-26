@@ -19,9 +19,9 @@ type CartStoreListener = () => void;
 let storeState: CartStoreState = {
   cart: null,
   notices: [],
-  // Default idle: callers set loading while a refresh is in flight. Starting
-  // false lets an empty local cart render immediately instead of a long spinner.
-  loading: false,
+  // Start loading so the cart page does not flash an empty state before the
+  // first refresh completes (empty vs load-error must stay distinct).
+  loading: true,
   loadError: false,
   drawerOpen: false,
   lastAddedMessage: null,

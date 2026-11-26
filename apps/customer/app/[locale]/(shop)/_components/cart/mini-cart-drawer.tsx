@@ -455,21 +455,13 @@ async function cartRequest<T>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const url = `${context.apiBaseUrl.replace(/\/$/, "")}${path}`;
-  const method = (init.method ?? "GET").toUpperCase();
-  const send = async (): Promise<Response> =>
-    fetch(url, {
+  let response: Response;
+  try {
+    response = await fetch(`${context.apiBaseUrl.replace(/\/$/, "")}${path}`, {
       ...init,
       headers,
       credentials: "include",
     });
-
-  let response: Response;
-  try {
-    response = await send();
-    if (path === "/cart" && method === "GET" && response.status >= 500) {
-      response = await send();
-    }
   } catch {
     throw new ApiError("network_error", "Network request failed", {
       status: 0,
@@ -546,19 +538,12 @@ async function fetchRevalidateNotices(context?: CartRequestContext): Promise<Cha
   }
 }
 
-function cartIsEmpty(cart: CartResponse): boolean {
-  return cart.items.length === 0 && (cart.ticket_lines?.length ?? 0) === 0;
-}
-
 async function loadCartWithNotices(
   context: CartRequestContext,
 ): Promise<{ cart: CartResponse; notices: ChangeNotice[] }> {
   const cart = await cartRequest<CartResponse>("/cart", {}, context);
   if (cart.notices && cart.notices.length > 0) {
     return { cart, notices: cart.notices };
-  }
-  if (cartIsEmpty(cart)) {
-    return { cart, notices: [] };
   }
   const notices = await fetchRevalidateNotices(context);
   return { cart, notices };
@@ -659,7 +644,6 @@ customerAuth.subscribe(() => {
 });
 
 export function resetCartClientForTests() {
-  refreshCartInFlight = null;
   identityBarrier = false;
   observedGeneration = null;
   lastReadyUserId = null;
@@ -672,9 +656,7 @@ export function resetCartClientForTests() {
   pendingAddKeys.clear();
 }
 
-let refreshCartInFlight: Promise<CartResponse | null> | null = null;
-
-async function refreshCartOnce(): Promise<CartResponse | null> {
+export async function refreshCart(): Promise<CartResponse | null> {
   const startingSessionVersion = cartSessionVersion;
   let context: CartRequestContext;
   try {
@@ -707,16 +689,6 @@ async function refreshCartOnce(): Promise<CartResponse | null> {
     }
     return null;
   }
-}
-
-export async function refreshCart(): Promise<CartResponse | null> {
-  if (refreshCartInFlight) {
-    return refreshCartInFlight;
-  }
-  refreshCartInFlight = refreshCartOnce().finally(() => {
-    refreshCartInFlight = null;
-  });
-  return refreshCartInFlight;
 }
 
 function publishCartMutation(
