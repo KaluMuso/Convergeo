@@ -644,6 +644,35 @@ def transition_payment(
     )
 
 
+def _enqueue_late_collection_ops_alert(
+    service_client: ServiceRoleClient,
+    *,
+    payment_id: str,
+    checkout_group_id: str,
+    amount_ngwee: int,
+    reference: str,
+) -> None:
+    """Surface late collections immediately via outbox (not only the daily report)."""
+    from app.services.notifications.dedupe import enqueue_outbox_row
+
+    try:
+        enqueue_outbox_row(
+            service_client.client,
+            event_type="payment.late_collection",
+            entity_id=payment_id,
+            channel="in_app",
+            template="payment_late_collection_ops",
+            payload={
+                "payment_id": payment_id,
+                "checkout_group_id": checkout_group_id,
+                "amount_ngwee": amount_ngwee,
+                "reference": reference,
+            },
+        )
+    except Exception:
+        return
+
+
 def apply_payment_status(
     service_client: ServiceRoleClient,
     *,
@@ -705,11 +734,22 @@ def apply_payment_status(
                 message="Atomic collection decision returned no result",
                 http_status=500,
             )
-        if result.get("result") != "applied":
+        settlement_result = str(result.get("result") or "")
+        if settlement_result not in {"applied", "duplicate"}:
+            if settlement_result == "late_collection":
+                _enqueue_late_collection_ops_alert(
+                    service_client,
+                    payment_id=payment_id,
+                    checkout_group_id=snapshot.checkout_group_id,
+                    amount_ngwee=snapshot.amount_ngwee,
+                    reference=snapshot.lenco_reference,
+                )
             return None
         from app.services.payments.fees import book_collection_fee
 
         book_collection_fee(payment_id=payment_id, fee=provider_fee, bearer=bearer)
+        if settlement_result == "duplicate":
+            return None
         return TransitionOutcome(
             payment_id=payment_id,
             from_status=PaymentStatus(str(result["from_status"])),
@@ -855,7 +895,14 @@ def _fetch_stale_payments(
     response = (
         service_client.client.table("payments")
         .select("id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw")
-        .in_("status", [PaymentStatus.PAY_OFFLINE.value, PaymentStatus.USSD_PUSHED.value])
+        .in_(
+            "status",
+            [
+                PaymentStatus.INITIATED.value,
+                PaymentStatus.PAY_OFFLINE.value,
+                PaymentStatus.USSD_PUSHED.value,
+            ],
+        )
         .lt("updated_at", cutoff.isoformat())
         .execute()
     )

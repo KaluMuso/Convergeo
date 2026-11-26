@@ -13,6 +13,7 @@ from app.services.payments.base import (
     InitiateCollectionRequest,
     PaymentProviderError,
     PaymentStrategy,
+    ProviderErrorKind,
     ProviderOutcome,
     QueryStatusRequest,
 )
@@ -114,9 +115,32 @@ async def initiate_checkout_payment(
                 bearer=bearer,
             )
         )
-    except PaymentProviderError:
-        # The durable claimed reference is still reconcilable after response loss.
-        return InitiatePaymentResult(payment_id, PaymentStatus.INITIATED, lenco_reference, None)
+    except PaymentProviderError as exc:
+        if exc.dispatch_may_have_succeeded or exc.kind is ProviderErrorKind.TRANSPORT:
+            # The durable claimed reference is still reconcilable after response loss.
+            return InitiatePaymentResult(payment_id, PaymentStatus.INITIATED, lenco_reference, None)
+        observation = {
+            "reference": lenco_reference,
+            "amount_ngwee": amount_ngwee,
+            "currency": "ZMW",
+            "source": "initiation_rejected",
+            "terminal_provider_failure": True,
+            "provider_error_code": exc.code,
+        }
+        apply_payment_status(
+            service_client,
+            payment_id=payment_id,
+            incoming_status=PaymentStatus.FAILED,
+            actor_id=actor_id,
+            note=f"Lenco refused collection: {exc.code}",
+            observation=observation,
+        )
+        raise AppError(
+            code="payment.initiation_rejected",
+            message="Mobile money could not start — check the number and try again",
+            http_status=422,
+            details={"provider_code": exc.code, "payment_id": payment_id},
+        ) from exc
 
     raw_patch: dict[str, Any] = {
         "payer_phone": request.phone,

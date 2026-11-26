@@ -32,8 +32,10 @@ from app.services.payments.state import (
     PaymentTransitionError,
     apply_payment_status,
     collection_observation_from_query,
+    get_payment_ttl_minutes,
     lenco_collection_status_to_payment_status,
     process_webhook_event,
+    release_checkout_for_retry,
     validate_query_collection_observation,
 )
 
@@ -380,6 +382,19 @@ def _fetch_non_terminal_payments(
     return _rows(response)
 
 
+def _initiated_stale(payment: dict[str, Any], *, ttl_minutes: int) -> bool:
+    raw = payment.get("updated_at") or payment.get("created_at")
+    if not isinstance(raw, str):
+        return False
+    try:
+        updated = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if updated.tzinfo is None:
+        updated = updated.replace(tzinfo=UTC)
+    return datetime.now(UTC) - updated >= timedelta(minutes=ttl_minutes)
+
+
 async def poll_non_terminal_payments(
     service_client: ServiceRoleClient,
     *,
@@ -417,6 +432,36 @@ async def poll_non_terminal_payments(
                 continue
 
             if query_result.outcome == ProviderOutcome.NOT_FOUND:
+                if current_status == PaymentStatus.INITIATED and _initiated_stale(
+                    payment, ttl_minutes=get_payment_ttl_minutes(service_client)
+                ):
+                    amount_ngwee = int(payment.get("amount_ngwee") or 0)
+                    observation = {
+                        "reference": reference,
+                        "amount_ngwee": amount_ngwee,
+                        "currency": "ZMW",
+                        "source": "poller_not_found",
+                        "terminal_provider_failure": True,
+                    }
+                    outcome = apply_payment_status(
+                        service_client,
+                        payment_id=payment_id,
+                        incoming_status=PaymentStatus.FAILED,
+                        actor_id=SYSTEM_ACTOR_ID,
+                        note="Initiated collection never created at provider — releasing checkout",
+                        observation=observation,
+                    )
+                    if outcome is not None:
+                        release_checkout_for_retry(
+                            service_client,
+                            checkout_group_id=str(payment["checkout_group_id"]),
+                            actor_id=SYSTEM_ACTOR_ID,
+                            note="Stale initiated payment cleared for retry",
+                        )
+                        updated += 1
+                    else:
+                        unchanged += 1
+                    continue
                 logger.warning(
                     "reconciliation poll: provider has no collection for payment %s "
                     "(requested_reference=%s)",
