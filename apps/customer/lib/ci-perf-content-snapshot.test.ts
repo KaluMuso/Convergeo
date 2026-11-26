@@ -15,7 +15,7 @@ beforeEach(() => {
     { width: 100, height: 100 },
   ] as unknown as DOMRectList);
   document.body.innerHTML = `<header data-testid="pdp-header"><h1>Smartphone X1</h1></header>
-    <div data-testid="pdp-interactive-body"><div data-testid="pdp-interactive-gallery"><img id="fixture-image"></div></div>
+    <div data-testid="pdp-interactive-body"><div data-testid="gallery-strip"><img id="fixture-image"></div></div>
     <section data-testid="pdp-buy-box"><div data-testid="price-block">K4,500.00</div>
       <p data-testid="pdp-price" style="display:none">K100.00</p>
       <div data-testid="pdp-buy-box-seller">Lusaka Electronics Hub</div></section>
@@ -139,7 +139,7 @@ describe("actual measured DOM snapshot", () => {
   it("rejects image count or order changes between snapshot and decode", async () => {
     const image = document.getElementById("fixture-image")!;
     const other = document.createElement("img");
-    document.querySelector('[data-testid="pdp-interactive-gallery"]')!.append(other);
+    document.querySelector('[data-testid="gallery-strip"]')!.append(other);
     Object.defineProperties(other, {
       naturalWidth: { configurable: true, value: 360 },
       complete: { configurable: true, value: true },
