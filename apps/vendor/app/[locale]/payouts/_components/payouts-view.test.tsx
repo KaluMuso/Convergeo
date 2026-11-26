@@ -77,6 +77,27 @@ it("shows no pause notice once payouts are running", async () => {
   expect(screen.queryByTestId("payouts-paused-notice")).not.toBeInTheDocument();
 });
 
+it("shows payout date above the reference in history", async () => {
+  getBalances.mockResolvedValue(balances({}));
+  getHistory.mockResolvedValue({
+    items: [
+      {
+        id: "p1",
+        amount_ngwee: 12_000,
+        rail: "mtn",
+        status: "paid",
+        lenco_reference: "pay-test-ref",
+        created_at: "2026-11-20T10:00:00.000Z",
+      },
+    ],
+  });
+
+  renderView();
+
+  expect(await screen.findByText("pay-test-ref")).toBeInTheDocument();
+  expect(screen.getByText(/Nov/i)).toBeInTheDocument();
+});
+
 it("keeps the 24-hour method-change hold separate from the platform pause", async () => {
   getBalances.mockResolvedValue(balances({ payouts_blocked: true }));
   getHistory.mockResolvedValue({ items: [] });

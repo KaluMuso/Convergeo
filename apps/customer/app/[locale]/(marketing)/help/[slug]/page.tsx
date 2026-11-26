@@ -1,5 +1,7 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { LinkButton } from "@vergeo/ui/src/link-button";
+import { buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import { buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -42,10 +44,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!article) {
     return {};
   }
+  const title = article.title;
+  const description = article.summary;
+  const canonicalPath = buildLocaleCanonical(locale, "help", slug);
   return {
-    title: article.title,
-    description: article.summary,
-    alternates: { canonical: `/${locale}/help/${slug}` },
+    title,
+    description,
+    alternates: { canonical: canonicalPath },
+    ...buildSocialMetadata({
+      title,
+      description,
+      locale,
+      url: canonicalPath,
+    }),
   };
 }
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token, tokens_match
 from app.errors import AppError
 from app.services.embeddings.batch import EMBEDDING_BATCH_LIMIT, process_embedding_tick
 from fastapi import APIRouter, Depends, Request
@@ -29,7 +29,7 @@ async def require_internal_embeddings_token(request: Request) -> None:
     """Guard cron ticks — not publicly callable without the shared internal token."""
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal embeddings token",

@@ -59,7 +59,6 @@ from app.services.payments.base import (
     InitiateCollectionRequest,
     PaymentProviderError,
     PaymentStrategy,
-    ProviderErrorKind,
     ProviderOutcome,
     QueryStatusRequest,
 )
@@ -1268,8 +1267,9 @@ COMMIT;
             )
         )
     except PaymentProviderError as exc:
-        if exc.dispatch_may_have_succeeded or exc.kind is ProviderErrorKind.TRANSPORT:
-            # Response lost: the reference is durable, the poll/webhook decides.
+        if exc.definitive_rejection is not True:
+            # Only a positively-identified provider refusal fails the attempt.
+            # Otherwise the reference is durable and the poll/webhook decides.
             return door_status(dispatch)
         _transition_attempt(
             attempt,

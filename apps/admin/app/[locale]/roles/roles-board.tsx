@@ -4,13 +4,19 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  accountLabel,
   rolesApi,
   useAdminPermissions,
   useRefreshAdminPermissions,
+  type AccountMatch,
   type AdminRole,
   type AdminRoleAssignment,
 } from "../../../lib/roles-api";
+import { AdminPageClient } from "../_components/admin-page-client";
 import { adminPrimaryButtonClass } from "../_components/admin-primary-button";
+import { ConfirmModal } from "../_components/ConfirmModal";
+
+import { AccountPicker } from "./account-picker";
 
 const PERMISSIONS = [
   "finance.read",
@@ -30,6 +36,13 @@ const PERMISSIONS = [
 
 type RolesResponse = { roles: AdminRole[]; assignments: AdminRoleAssignment[] };
 
+type PendingConfirm =
+  | { kind: "delete"; role: AdminRole }
+  | { kind: "revoke"; assignment: AdminRoleAssignment }
+  | { kind: "superadmin"; account: AccountMatch };
+
+const INPUT_CLASS = "min-h-11 w-full rounded-md border border-border bg-surface p-2";
+
 export function RolesBoard() {
   const t = useTranslations("admin.rolesUi");
   const [data, setData] = useState<RolesResponse | null>(null);
@@ -46,8 +59,9 @@ export function RolesBoard() {
   const [editingKey, setEditingKey] = useState("");
   const [name, setName] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
-  const [target, setTarget] = useState("");
+  const [target, setTarget] = useState<AccountMatch | null>(null);
   const [assignedRole, setAssignedRole] = useState("");
+  const [pending, setPending] = useState<PendingConfirm | null>(null);
 
   const reload = useCallback(async (current: number) => {
     setLoading(true);
@@ -81,8 +95,9 @@ export function RolesBoard() {
     setKey("");
     setName("");
     setSelected([]);
-    setTarget("");
+    setTarget(null);
     setAssignedRole("");
+    setPending(null);
     inFlight.current = false;
     if (canManage) void reload(current);
     return () => {
@@ -129,6 +144,34 @@ export function RolesBoard() {
     setSelected([]);
   }
 
+  function roleName(key: string) {
+    if (key === "superadmin") return t("superadmin");
+    if (key === "admin") return t("admin");
+    return data?.roles.find((role) => role.key === key)?.name ?? key;
+  }
+
+  async function runConfirmed(action: PendingConfirm) {
+    if (action.kind === "delete") {
+      await mutate(`/admin/roles/${action.role.key}`, "DELETE");
+    } else if (action.kind === "revoke") {
+      await mutate(
+        `/admin/roles/${encodeURIComponent(action.assignment.role)}/users/${encodeURIComponent(action.assignment.user_id)}`,
+        "DELETE",
+      );
+    } else {
+      await assignTo(action.account, "superadmin");
+    }
+    return true;
+  }
+
+  async function assignTo(account: AccountMatch, role: string) {
+    const success = await mutate(
+      `/admin/roles/${encodeURIComponent(role)}/users/${encodeURIComponent(account.user_id)}`,
+      "PUT",
+    );
+    if (success && active.current) setTarget(null);
+  }
+
   if (!canManage) return <p role="alert">{t("permissionDenied")}</p>;
   if (loading) return <p role="status">{t("loading")}</p>;
   if (!data)
@@ -142,17 +185,13 @@ export function RolesBoard() {
     );
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="font-serif text-xl">{t("title")}</h1>
-        <p className="text-sm text-muted">{t("subtitle")}</p>
-        <p className="text-sm text-muted" data-testid="roles-deactivate-help">
-          {t("deactivateHelp")}
-        </p>
-        <p className="text-sm text-muted">{t("permissionsHelp")}</p>
-      </header>
+    <AdminPageClient title={t("title")} subtitle={t("subtitle")} className="space-y-6">
+      <p className="text-sm text-text-2" data-testid="roles-deactivate-help">
+        {t("deactivateHelp")}
+      </p>
+      <p className="text-sm text-text-2">{t("permissionsHelp")}</p>
       {error ? (
-        <p role="alert" className="text-error">
+        <p role="alert" className="text-danger">
           {t(error)}
         </p>
       ) : null}
@@ -199,7 +238,7 @@ export function RolesBoard() {
               value={key}
               disabled={busy || !!editingKey}
               onChange={(event) => setKey(event.target.value)}
-              className="min-h-11 rounded border p-2"
+              className="min-h-11 rounded-md border border-border bg-surface p-2"
             />
           </span>
         </label>
@@ -212,7 +251,7 @@ export function RolesBoard() {
             maxLength={80}
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="min-h-11 w-full rounded border p-2"
+            className={INPUT_CLASS}
           />
         </label>
         <fieldset disabled={busy} className="grid gap-2 sm:grid-cols-2">
@@ -255,7 +294,7 @@ export function RolesBoard() {
         <h2 className="font-semibold">{t("current")}</h2>
         {data.roles.length === 0 ? <p>{t("emptyRoles")}</p> : null}
         {data.roles.map((role) => (
-          <div key={role.key} className="rounded border p-3 text-sm">
+          <div key={role.key} className="rounded-lg border border-border bg-surface p-3 text-sm">
             <p className="font-semibold">
               {role.name} <code>{role.key}</code>
             </p>
@@ -274,11 +313,8 @@ export function RolesBoard() {
             </button>
             <button
               disabled={busy}
-              className="min-h-11 text-error underline"
-              onClick={() => {
-                if (window.confirm(t("confirmDelete", { name: role.name })))
-                  void mutate(`/admin/roles/${role.key}`, "DELETE");
-              }}
+              className="min-h-11 text-danger underline"
+              onClick={() => setPending({ kind: "delete", role })}
             >
               {t("delete")}
             </button>
@@ -293,7 +329,7 @@ export function RolesBoard() {
           onSubmit={(event) => {
             event.preventDefault();
             if (
-              !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(target) ||
+              !target ||
               !(
                 assignedRole === "superadmin" ||
                 data.roles.some((role) => role.key === assignedRole)
@@ -302,35 +338,21 @@ export function RolesBoard() {
               setError("invalid");
               return;
             }
-            if (
-              assignedRole === "superadmin" &&
-              !window.confirm(t("confirmSuperadmin", { userId: target }))
-            )
+            if (assignedRole === "superadmin") {
+              setPending({ kind: "superadmin", account: target });
               return;
-            void mutate(
-              `/admin/roles/${encodeURIComponent(assignedRole)}/users/${encodeURIComponent(target)}`,
-              "PUT",
-            );
+            }
+            void assignTo(target, assignedRole);
           }}
         >
-          <label className="block text-sm">
-            {t("accountUuid")}
-            <input
-              required
-              disabled={busy}
-              pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
-              value={target}
-              onChange={(event) => setTarget(event.target.value)}
-              className="min-h-11 w-full rounded border p-2"
-            />
-          </label>
+          <AccountPicker value={target} onChange={setTarget} disabled={busy} />
           <label className="block text-sm">
             {t("role")}
             <select
               disabled={busy}
               value={assignedRole}
               onChange={(event) => setAssignedRole(event.target.value)}
-              className="min-h-11 w-full rounded border p-2"
+              className={INPUT_CLASS}
             >
               <option value="">{t("choose")}</option>
               <option value="superadmin">{t("superadmin")}</option>
@@ -349,38 +371,85 @@ export function RolesBoard() {
           </button>
         </form>
         <h3 className="font-semibold">{t("assignments")}</h3>
-        {data.assignments.length === 0 ? <p>{t("emptyAssignments")}</p> : null}
-        {data?.assignments.map((assignment) => (
-          <div
-            key={`${assignment.user_id}:${assignment.role}`}
-            className="flex flex-wrap items-center justify-between gap-2 border-b py-2 text-sm"
-          >
-            <span>
-              <code>{assignment.user_id}</code> · {assignment.role}
-            </span>
-            <button
-              disabled={busy}
-              className="min-h-11 text-error underline"
-              onClick={() => {
-                if (
-                  window.confirm(
-                    t("confirmRevoke", {
-                      role: assignment.role,
-                      userId: assignment.user_id,
-                    }),
-                  )
-                )
-                  void mutate(
-                    `/admin/roles/${encodeURIComponent(assignment.role)}/users/${encodeURIComponent(assignment.user_id)}`,
-                    "DELETE",
-                  );
-              }}
-            >
-              {t("revoke")}
-            </button>
+        {data.assignments.length === 0 ? (
+          <p>{t("emptyAssignments")}</p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+            <table className="w-full text-left text-sm" data-testid="roles-assignments">
+              <thead className="border-b border-border text-xs text-muted">
+                <tr>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    {t("colName")}
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    {t("colEmail")}
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    {t("role")}
+                  </th>
+                  <th scope="col" className="px-3 py-2">
+                    <span className="sr-only">{t("colActions")}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {data.assignments.map((assignment) => (
+                  <tr key={`${assignment.user_id}:${assignment.role}`}>
+                    <td className="px-3 py-2 font-medium">
+                      {assignment.display_name || t("noName")}
+                    </td>
+                    <td className="px-3 py-2 text-muted">{assignment.email || t("noEmail")}</td>
+                    <td className="px-3 py-2">{roleName(assignment.role)}</td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        disabled={busy}
+                        className="min-h-11 text-danger underline"
+                        onClick={() => setPending({ kind: "revoke", assignment })}
+                      >
+                        {t("revoke")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
+        )}
       </section>
-    </div>
+      <ConfirmModal
+        open={pending !== null}
+        data-testid="roles-confirm"
+        destructive={pending?.kind !== "superadmin"}
+        title={
+          pending?.kind === "delete"
+            ? t("deleteTitle")
+            : pending?.kind === "revoke"
+              ? t("revokeTitle")
+              : t("superadminTitle")
+        }
+        summary={
+          pending?.kind === "delete"
+            ? t("confirmDelete", { name: pending.role.name })
+            : pending?.kind === "revoke"
+              ? t("confirmRevoke", {
+                  role: roleName(pending.assignment.role),
+                  name: accountLabel(pending.assignment),
+                })
+              : pending?.kind === "superadmin"
+                ? t("confirmSuperadmin", { name: accountLabel(pending.account) })
+                : ""
+        }
+        confirmLabel={
+          pending?.kind === "delete"
+            ? t("delete")
+            : pending?.kind === "revoke"
+              ? t("revoke")
+              : t("assign")
+        }
+        canConfirm={!busy}
+        onConfirm={() => (pending ? runConfirmed(pending) : Promise.resolve(true))}
+        onClose={() => setPending(null)}
+      />
+    </AdminPageClient>
   );
 }

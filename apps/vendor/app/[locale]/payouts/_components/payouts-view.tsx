@@ -237,6 +237,13 @@ function LivePayoutsView({ locale }: { locale: string }) {
               >
                 <div className="min-w-0">
                   <p className="font-mono text-sm font-semibold">{formatK(item.amount_ngwee)}</p>
+                  <time className="text-sm text-text" dateTime={item.created_at}>
+                    {new Date(item.created_at).toLocaleDateString(locale, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </time>
                   <p className="truncate text-xs text-text-3">{item.lenco_reference}</p>
                 </div>
                 <Badge label={statusLabel(item.status, t)} variant={statusVariant(item.status)} />
