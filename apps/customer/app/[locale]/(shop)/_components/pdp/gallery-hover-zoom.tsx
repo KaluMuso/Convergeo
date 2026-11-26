@@ -30,7 +30,7 @@ export function HoverZoomPane({
     if (!pointer) {
       return;
     }
-    setHiResUrl(cldUrl(publicId, { width: 1600, quality: "auto", cloudName }) || null);
+    setHiResUrl(cldUrl(publicId, { width: 1200, quality: "auto", cloudName }) || null);
   }, [cloudName, pointer, publicId]);
 
   if (!pointer || box.width < 1 || box.height < 1) {

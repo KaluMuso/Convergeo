@@ -488,7 +488,7 @@ function MotionGrid({
           <CloudinaryImage
             publicId={thumb.publicId}
             alt=""
-            width={128}
+            width={360}
             ratio="1/1"
             cloudName={cloudName}
             className="h-full w-full object-contain"

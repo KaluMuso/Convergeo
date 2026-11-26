@@ -211,7 +211,7 @@ export function PdpInteractiveGallery({
               publicId={image.publicId}
               alt={image.alt}
               cloudName={cloudName}
-              width={800}
+              width={720}
               sizes="(max-width: 1024px) 100vw, 480px"
               priority={currentIndex === 0}
               ratio="1/1"
