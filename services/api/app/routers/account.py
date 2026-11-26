@@ -4,14 +4,18 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from app.core.auth import CurrentUser, get_current_user
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.core.supabase import get_user_client
 from app.errors import AppError
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from supabase import Client
 
-router = APIRouter(prefix="/account", tags=["account"])
-
+router = APIRouter(
+    prefix="/account",
+    tags=["account"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 SUPPORTED_LOCALES = frozenset({"en", "bem", "nya", "fr"})
 
 

@@ -8,6 +8,7 @@ from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -20,7 +21,11 @@ from supabase_auth.types import VerifyEmailOtpParams, VerifyMobileOtpParams
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/account", tags=["privacy"])
+router = APIRouter(
+    prefix="/account",
+    tags=["privacy"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 
 
 class ServiceRoleClient(Protocol):

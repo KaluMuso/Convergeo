@@ -19,6 +19,7 @@ from typing import Annotated, Any, Literal, Protocol
 from uuid import UUID
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.admin_people import (
@@ -33,8 +34,11 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin", tags=["admin-accounts"])
-
+router = APIRouter(
+    prefix="/admin",
+    tags=["admin-accounts"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 _MAX_ACCOUNTS = 200
 
 
