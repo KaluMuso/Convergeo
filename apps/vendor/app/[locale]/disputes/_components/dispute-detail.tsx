@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { formatOrderCode } from "../../_lib/order-code";
 import { Button, FormField, Spinner } from "../../listings/new/_lib/ui";
 
 type DisputeDetail = {
@@ -159,7 +160,7 @@ export function VendorDisputeDetailView({ disputeId }: VendorDisputeDetailViewPr
         <h1 className="font-display text-h2 text-display-ink">{t("disputes.detail.title")}</h1>
         <p className="text-sm text-text-2">
           {t("disputes.detail.order", {
-            orderId: dispute.order_id.slice(0, 8).toUpperCase(),
+            orderId: formatOrderCode(dispute.order_id),
           })}
         </p>
         <p className="text-sm font-medium text-display-ink">

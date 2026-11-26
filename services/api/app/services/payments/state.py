@@ -22,6 +22,7 @@ from app.services.payments.bearer import (
 )
 from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.money import SUPPORTED_CURRENCY, major_str_to_ngwee
+from app.services.payments.ops_alerts import alert_late_collection
 from app.services.payments.webhook_verify import (
     WEBHOOK_VERIFICATION_VERSION,
     canonical_payload_sha256,
@@ -705,11 +706,21 @@ def apply_payment_status(
                 message="Atomic collection decision returned no result",
                 http_status=500,
             )
-        if result.get("result") != "applied":
+        settlement_result = str(result.get("result") or "")
+        if settlement_result not in {"applied", "duplicate"}:
+            if settlement_result == "late_collection":
+                alert_late_collection(
+                    payment_id=payment_id,
+                    checkout_group_id=snapshot.checkout_group_id,
+                    amount_ngwee=snapshot.amount_ngwee,
+                    reference=snapshot.lenco_reference,
+                )
             return None
         from app.services.payments.fees import book_collection_fee
 
         book_collection_fee(payment_id=payment_id, fee=provider_fee, bearer=bearer)
+        if settlement_result == "duplicate":
+            return None
         return TransitionOutcome(
             payment_id=payment_id,
             from_status=PaymentStatus(str(result["from_status"])),
@@ -855,7 +866,14 @@ def _fetch_stale_payments(
     response = (
         service_client.client.table("payments")
         .select("id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw")
-        .in_("status", [PaymentStatus.PAY_OFFLINE.value, PaymentStatus.USSD_PUSHED.value])
+        .in_(
+            "status",
+            [
+                PaymentStatus.INITIATED.value,
+                PaymentStatus.PAY_OFFLINE.value,
+                PaymentStatus.USSD_PUSHED.value,
+            ],
+        )
         .lt("updated_at", cutoff.isoformat())
         .execute()
     )
@@ -931,6 +949,10 @@ async def sweep_stale_payments(
             continue
 
         if lenco_status == PaymentStatus.PAY_OFFLINE:
+            if payment.status == PaymentStatus.INITIATED:
+                # No INITIATED -> PAY_OFFLINE edge; applying it would raise and
+                # abort the batch. Leave in flight for the poller/webhook.
+                continue
             apply_payment_status(
                 service_client,
                 payment_id=payment.id,

@@ -1,0 +1,91 @@
+{
+  "name": "Webhook Drain Tick",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/reconciliation/webhook-drain-tick",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_RECONCILIATION_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "webhook-drain-tick",
+      "name": "Drain Lenco Webhooks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Reconciliation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const input = $input.all();\nif (input.length !== 1 || !input[0] || !input[0].json) {\n  throw new Error('Webhook drain returned unexpected item count');\n}\nconst src = input[0].json;\nfor (const key of ['scanned', 'applied', 'skipped', 'errors']) {\n  if (!Number.isSafeInteger(src[key]) || src[key] < 0) {\n    throw new Error(`Webhook drain invalid counter: ${key}`);\n  }\n}\nreturn [{ json: { scanned: src.scanned, applied: src.applied, skipped: src.skipped, errors: src.errors } }];"
+      },
+      "id": "assert-drain-outcome",
+      "name": "Assert Drain Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Every Minute": {
+      "main": [[{ "node": "Drain Lenco Webhooks", "type": "main", "index": 0 }]]
+    },
+    "Drain Lenco Webhooks": {
+      "main": [[{ "node": "Assert Drain Outcome", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "m08-webhook-drain",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "M08",
+      "createdAt": "2026-07-10T00:00:00.000Z",
+      "updatedAt": "2026-07-10T00:00:00.000Z"
+    }
+  ]
+}

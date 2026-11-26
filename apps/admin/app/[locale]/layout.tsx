@@ -69,7 +69,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   const toastDismiss = typeof toastCopy?.dismiss === "string" ? toastCopy.dismiss : undefined;
 
   return (
-    <html lang={locale} className={fontVariables()}>
+    <html lang={locale} className={fontVariables()} suppressHydrationWarning>
       <head>
         {/* Pre-paint theme bootstrap — avoids a light/dark flash before hydration. */}
         <ThemeScript />

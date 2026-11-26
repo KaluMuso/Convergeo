@@ -44,6 +44,7 @@ class LencoClientError(PaymentProviderError):
         reference: str | None = None,
         observation_uncertain: bool = False,
         dispatch_may_have_succeeded: bool = False,
+        definitive_rejection: bool = False,
     ) -> None:
         self.category = category
         super().__init__(
@@ -53,6 +54,7 @@ class LencoClientError(PaymentProviderError):
             reference=reference,
             observation_uncertain=observation_uncertain,
             dispatch_may_have_succeeded=dispatch_may_have_succeeded,
+            definitive_rejection=definitive_rejection,
         )
 
 
@@ -318,6 +320,7 @@ def raise_lenco_failure(
     reference: str | None = None,
     observation_uncertain: bool = False,
     dispatch_may_have_succeeded: bool = False,
+    definitive_rejection: bool = False,
 ) -> NoReturn:
     raise lenco_failure(
         error_code=error_code,
@@ -329,6 +332,7 @@ def raise_lenco_failure(
         reference=reference,
         observation_uncertain=observation_uncertain,
         dispatch_may_have_succeeded=dispatch_may_have_succeeded,
+        definitive_rejection=definitive_rejection,
     )
 
 
@@ -343,6 +347,7 @@ def lenco_failure(
     reference: str | None = None,
     observation_uncertain: bool = False,
     dispatch_may_have_succeeded: bool = False,
+    definitive_rejection: bool = False,
 ) -> LencoClientError:
     category = map_lenco_failure(
         error_code=error_code,
@@ -366,4 +371,5 @@ def lenco_failure(
         reference=reference,
         observation_uncertain=observation_uncertain,
         dispatch_may_have_succeeded=dispatch_may_have_succeeded,
+        definitive_rejection=definitive_rejection,
     )

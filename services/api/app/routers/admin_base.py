@@ -9,6 +9,7 @@ from app.core.admin_audit import (
     get_admin_audit_recorder,
 )
 from app.core.auth import CurrentUser, require_admin_scope, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
@@ -16,7 +17,7 @@ router = APIRouter(
     prefix="/admin",
     tags=["admin"],
     route_class=AdminAuditedRoute,
-    dependencies=[Depends(require_admin_scope)],
+    dependencies=[Depends(require_admin_scope), Depends(enforce_registered_policy)],
 )
 
 

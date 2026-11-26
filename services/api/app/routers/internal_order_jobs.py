@@ -5,9 +5,14 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from app.core.internal_token import (
+    InternalTokenMisconfigured,
+    resolve_internal_token,
+    tokens_match,
+)
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.db import SqlResult
 from app.services.escrow.release import (
     DEFAULT_RELEASE_AFTER_DELIVERED_HOURS,
     DEFAULT_RELEASE_AFTER_SHIPPED_DAYS,
@@ -90,12 +95,22 @@ async def require_internal_order_jobs_token(request: Request) -> None:
     """Guard cron ticks — not publicly callable without the shared internal token."""
     expected = _expected_internal_token()
     provided = request.headers.get("X-Internal-Token")
-    if not provided or provided != expected:
+    if not tokens_match(provided, expected):
         raise AppError(
             code="unauthorized",
             message="Invalid or missing internal order jobs token",
             http_status=401,
         )
+
+
+def _sql_rows_or_fail(result: SqlResult, *, context: str) -> list[str]:
+    if not result.ok:
+        raise AppError(
+            code="database_unavailable",
+            message=f"Order job database query failed ({context})",
+            http_status=503,
+        )
+    return result.rows
 
 
 def _read_config_int(key: str, default: int) -> int:
@@ -181,9 +196,7 @@ ORDER BY o.id ASC
 LIMIT {int(limit)};
 """
     result = run_sql_script(script)
-    if not result.ok:
-        return []
-    return result.rows
+    return _sql_rows_or_fail(result, context="list_auto_confirm_candidates")
 
 
 def _list_auto_release_candidates(
@@ -234,9 +247,7 @@ ORDER BY o.id ASC
 LIMIT {int(limit)};
 """
     result = run_sql_script(script)
-    if not result.ok:
-        return []
-    return result.rows
+    return _sql_rows_or_fail(result, context="list_auto_release_candidates")
 
 
 def _unpaid_cancel_hours() -> int:
@@ -280,9 +291,7 @@ ORDER BY o.id ASC
 LIMIT {int(limit)};
 """
     result = run_sql_script(script)
-    if not result.ok:
-        return []
-    return result.rows
+    return _sql_rows_or_fail(result, context="list_unpaid_prepaid_candidates")
 
 
 def _process_unpaid_cancel(order_ids: list[str], hours: int) -> tuple[int, int]:

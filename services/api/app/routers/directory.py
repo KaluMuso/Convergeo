@@ -12,6 +12,7 @@ from app.routers.comparison import is_lusaka_delivery_available
 from app.schemas.offers import OfferBadgeOut
 from app.services.branches.rules import multi_branch_enabled
 from app.services.brand_theme import read_brand_theme
+from app.services.db_chunk import chunked_in_query
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import (
     fetch_demo_event_ids,
@@ -1077,14 +1078,17 @@ def get_vendor_profile(
 
     images_by_listing: dict[str, str | None] = {listing_id: None for listing_id in listing_ids}
     if listing_ids:
-        images_response = (
-            client.table("listing_images")
-            .select("listing_id, cloudinary_public_id, position")
-            .in_("listing_id", listing_ids)
-            .order("position")
-            .execute()
+        image_rows = chunked_in_query(
+            listing_ids,
+            run=lambda chunk: (
+                client.table("listing_images")
+                .select("listing_id, cloudinary_public_id, position")
+                .in_("listing_id", chunk)
+                .order("position")
+                .execute()
+            ),
         )
-        for image_row in images_response.data or []:
+        for image_row in image_rows:
             listing_id = str(image_row.get("listing_id") or "")
             if listing_id in images_by_listing and images_by_listing[listing_id] is None:
                 public_id = image_row.get("cloudinary_public_id")

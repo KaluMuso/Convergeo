@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.cart.store import fetch_listing
+from app.services.db_chunk import chunked_in_query
 from app.services.inventory.location_stock import (
     fetch_branch_stock_rows,
     is_branch_tracked,
@@ -591,14 +592,17 @@ def build_product_detail(
     }
 
     if listing_ids:
-        images_response = (
-            client.table("listing_images")
-            .select("listing_id, cloudinary_public_id, position")
-            .in_("listing_id", listing_ids)
-            .order("position")
-            .execute()
+        image_rows = chunked_in_query(
+            listing_ids,
+            run=lambda chunk: (
+                client.table("listing_images")
+                .select("listing_id, cloudinary_public_id, position")
+                .in_("listing_id", chunk)
+                .order("position")
+                .execute()
+            ),
         )
-        for image_row in images_response.data or []:
+        for image_row in image_rows:
             listing_id = str(image_row.get("listing_id") or "")
             if listing_id in images_by_listing:
                 images_by_listing[listing_id].append(image_row)
@@ -811,14 +815,17 @@ def _shoppable_related_items(
     listing_ids = [str(row["id"]) for row in cheapest_by_product.values() if row.get("id")]
     image_by_listing: dict[str, str] = {}
     if listing_ids:
-        images_response = (
-            client.table("listing_images")
-            .select("listing_id, cloudinary_public_id, position")
-            .in_("listing_id", listing_ids)
-            .order("position")
-            .execute()
+        image_rows = chunked_in_query(
+            listing_ids,
+            run=lambda chunk: (
+                client.table("listing_images")
+                .select("listing_id, cloudinary_public_id, position")
+                .in_("listing_id", chunk)
+                .order("position")
+                .execute()
+            ),
         )
-        for image_row in images_response.data or []:
+        for image_row in image_rows:
             listing_id = str(image_row.get("listing_id") or "")
             public_id = image_row.get("cloudinary_public_id")
             if (

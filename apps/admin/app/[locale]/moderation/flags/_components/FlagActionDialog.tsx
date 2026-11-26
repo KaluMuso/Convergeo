@@ -74,8 +74,8 @@ export function FlagActionDialog({ item, action, onClose, onComplete }: FlagActi
           </button>
           <button
             type="button"
-            className={`inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium text-white ${
-              destructive ? "bg-danger" : "bg-primary"
+            className={`inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium ${
+              destructive ? "bg-danger text-on-danger" : "bg-primary text-[var(--primary-btn-fg)]"
             }`}
             onClick={() => void submit()}
             disabled={submitting}

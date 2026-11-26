@@ -42,8 +42,13 @@ function StarRow({
   );
 }
 
-export function VendorReviewsQueue() {
+type VendorReviewsQueueProps = {
+  locale?: string;
+};
+
+export function VendorReviewsQueue({ locale = "en" }: VendorReviewsQueueProps) {
   const t = useTranslations("vendor.reviews");
+  const tR = useTranslations("vendor.requests.reviews");
   const { session } = useSession();
   const [reviews, setReviews] = useState<VendorReviewRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +128,7 @@ export function VendorReviewsQueue() {
       </header>
 
       {error ? (
-        <p className="text-sm text-error" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
@@ -150,6 +155,11 @@ export function VendorReviewsQueue() {
                     starFilled={t("starFilled")}
                     starEmpty={t("starEmpty")}
                   />
+                  <p className="text-sm text-text-2">
+                    {tR("posted", {
+                      date: new Date(review.created_at).toLocaleDateString(locale),
+                    })}
+                  </p>
                   {review.body ? <p className="text-sm text-text-2">{review.body}</p> : null}
                 </div>
 

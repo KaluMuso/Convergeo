@@ -5,6 +5,8 @@ import { formatK } from "@vergeo/i18n";
 import { useFormatter, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { CopyButton } from "../../_components/CopyButton";
+
 import {
   listAdvanceDebts,
   recordAdvanceRepayment,
@@ -153,7 +155,7 @@ export function AdvanceDebts() {
           {items.map((debt) => (
             <li key={debt.id} className="space-y-1 rounded-lg border border-border bg-surface p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium">{debt.vendor_name || debt.vendor_id}</p>
+                <p className="font-medium">{debt.vendor_name || t("unknownOrganiser")}</p>
                 <span className="rounded border border-border px-2 py-0.5 text-xs">
                   {t(`status.${debt.status}`)}
                 </span>
@@ -190,7 +192,10 @@ export function AdvanceDebts() {
                   {t("form.useOrganiser")}
                 </button>
               ) : null}
-              <p className="font-mono text-xs text-muted">{debt.vendor_id}</p>
+              <CopyButton
+                value={debt.vendor_id}
+                label={t("copyOrganiserId", { name: debt.vendor_name || t("unknownOrganiser") })}
+              />
             </li>
           ))}
         </ul>

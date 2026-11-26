@@ -90,11 +90,11 @@
   "home": {
     "meta": {
       "title": "Shop products, services & events in Zambia",
-      "description": "Compare sellers, book services, and find events across Zambia on Convergeo — pay cash on delivery, Lusaka delivery, nationwide pickup."
+      "description": "Compare sellers, book services, and find events across Zambia on Convergeo — MoMo, card and escrow, COD up to K500, Lusaka delivery, nationwide pickup."
     },
     "serviceBar": {
       "ariaLabel": "Delivery and pickup information",
-      "message": "Cash on delivery · Lusaka delivery · Nationwide pickup"
+      "message": "MoMo & card escrow · COD up to K500 · Lusaka delivery · Nationwide pickup"
     },
     "merchPreview": {
       "banner": "Draft preview — merchandising changes are not live until you publish in admin."
@@ -509,7 +509,7 @@
         "deliveryFree": "Free delivery",
         "total": "Total you pay",
         "totalUnknown": "—",
-        "momo": "Pay with MTN or Airtel MoMo",
+        "momo": "Pay with Mobile Money (MTN or Airtel)",
         "codSuffix": "or cash on delivery"
       },
       "priceDrop": {

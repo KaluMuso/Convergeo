@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { adminNavPageMetadata } from "../../../lib/admin-page-metadata";
 
 import { getAdminTranslator } from "../../../lib/admin-translator";
+import { AdminPage } from "../_components/admin-page";
 
 import { AdvanceDebts } from "./_components/AdvanceDebts";
 import { HighValueQueue } from "./_components/HighValueQueue";
@@ -29,13 +30,9 @@ export default async function HighValueEventsPage({ params }: PageProps) {
   const t = await getAdminTranslator(locale, "admin.events");
 
   return (
-    <div className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="font-serif text-xl text-text">{t("title")}</h1>
-        <p className="text-sm text-muted">{t("subtitle")}</p>
-      </header>
+    <AdminPage title={t("title")} subtitle={t("subtitle")}>
       <HighValueQueue />
       <AdvanceDebts />
-    </div>
+    </AdminPage>
   );
 }

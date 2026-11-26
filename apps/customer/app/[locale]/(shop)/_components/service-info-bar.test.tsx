@@ -32,8 +32,8 @@ describe("ServiceInfoBar", () => {
     );
     const bar = screen.getByTestId("service-info-bar");
     expect(bar).toHaveTextContent(/Lusaka delivery/i);
-    expect(bar).toHaveTextContent(/cash on delivery/i);
-    expect(bar).not.toHaveTextContent(/MoMo checkout is live/i);
+    expect(bar).toHaveTextContent(/MoMo|COD/i);
+    expect(bar).not.toHaveTextContent(/coming soon/i);
   });
 });
 
@@ -62,9 +62,7 @@ describe("site-wide payment trust copy (live online payments)", () => {
   );
 
   it("English footer mentions escrow or mobile money", () => {
-    expect(enCommon.paymentTrust.footerPaymentNote).toMatch(
-      /mobile money|escrow|MoMo/i,
-    );
+    expect(enCommon.paymentTrust.footerPaymentNote).toMatch(/mobile money|escrow|MoMo/i);
     expect(enCommon.paymentTrust.footerSeal).toMatch(/Held by Convergeo/i);
   });
 });

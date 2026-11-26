@@ -527,3 +527,45 @@ def test_balances_say_when_payouts_are_switched_off(
     assert balances.payouts_paused is expected_paused
     # The per-vendor 24h hold is a separate condition and stays independent.
     assert balances.payouts_blocked is False
+
+
+def test_method_change_reauth_required_without_confirmed_email(
+    api_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.routers.privacy.lookup_confirmed_email", lambda _service, **_: None)
+
+    response = api_client.post(
+        "/vendor/payouts/method",
+        headers={"Authorization": f"Bearer {TOKEN_A}"},
+        json={
+            "payout_msisdn": "0977888777",
+            "payout_rail": "mtn",
+            "otp": "123456",
+            "channel": "email",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "reauth_required"
+
+
+def test_method_change_reauth_rate_limited(
+    api_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.routers.privacy.bump_rate_counter", lambda **_: (False, 30))
+
+    response = api_client.post(
+        "/vendor/payouts/method",
+        headers={"Authorization": f"Bearer {TOKEN_A}"},
+        json={
+            "payout_msisdn": "0977888777",
+            "payout_rail": "mtn",
+            "otp": "123456",
+            "channel": "email",
+        },
+    )
+
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == "rate_limited"

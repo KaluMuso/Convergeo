@@ -31,10 +31,13 @@ class FakeQuery:
     def __init__(self, rows: list[dict[str, Any]]) -> None:
         self.rows = rows
 
-    def select(self, *_args: Any) -> FakeQuery:
+    def select(self, *_args: Any, **_kwargs: Any) -> FakeQuery:
         return self
 
     def in_(self, *_args: Any) -> FakeQuery:
+        return self
+
+    def range(self, *_args: Any) -> FakeQuery:
         return self
 
     def order(self, *_args: Any, **_kwargs: Any) -> FakeQuery:
