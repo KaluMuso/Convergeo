@@ -588,8 +588,9 @@ def test_search_without_criteria_lists_recent_orders_with_totals(
     _mock_roles(monkeypatch, {ADMIN_ID: frozenset({"admin"})})
     _seed_search_fixtures(fake_client)
     fake_client.tables["orders"].rows[0].update(
-        {"delivery_fee_ngwee": 2500, "coupon_discount_ngwee": 1000}
+        {"delivery_fee_ngwee": 2500, "coupon_discount_ngwee": 1000, "total_ngwee": 22050}
     )
+    fake_client.tables["orders"].rows[1].update({"total_ngwee": 40000})
     fake_client.tables["order_items"].rows.extend(
         [
             {"order_id": ORDER_ID, "qty": 2, "unit_price_ngwee": 10000},
@@ -606,7 +607,8 @@ def test_search_without_criteria_lists_recent_orders_with_totals(
     data = response.json()
     assert [item["id"] for item in data] == [ORDER_B_ID, ORDER_ID]
     assert data[0]["total_ngwee"] == 40000
-    assert data[1]["total_ngwee"] == 20000 + 550 + 2500 - 1000
+    # Stored orders.total_ngwee is authoritative (not recomputed from line items).
+    assert data[1]["total_ngwee"] == 22050
     assert data[1]["customer_display_name"] == "Jane Customer"
 
 

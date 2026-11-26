@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 MAX_TERM_LEN = 80
 MAX_LOOKUP_IDS = 100
 _DISTINCT_ACTOR_SCAN = 10_000
+_MAX_EMAIL_FALLBACK = 20
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
 )
@@ -89,8 +90,12 @@ def _emails_for_user_ids(
         if len(users) < 1000:
             break
         page += 1
-    for uid in want:
+    # Fallback only for the stragglers (e.g. list_users failed); bounded so a bad page
+    # can never turn into a per-id GoTrue storm.
+    for uid in sorted(want)[:_MAX_EMAIL_FALLBACK]:
         emails[uid] = _email_for(service, uid)
+    if len(want) > _MAX_EMAIL_FALLBACK:
+        logger.warning("admin people: %d emails left unresolved", len(want) - _MAX_EMAIL_FALLBACK)
     return emails
 
 

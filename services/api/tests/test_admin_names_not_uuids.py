@@ -458,3 +458,14 @@ def test_inventory_oversight_matches_product_names_and_never_shows_ids(
     ]
     assert body["items"][0]["display_title"] is None
     assert body["total"] == 1
+
+
+def test_inventory_hostile_q_adds_no_extra_or_clause(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = Fake({"products": [], "vendor_listings": []})
+    client = _client(monkeypatch, fake, frozenset({"admin"}))
+    response = client.get("/admin/inventory", params={"q": "tv,status.eq.active),(x"})
+    assert response.status_code == 200
+    for (clause,) in fake.calls_for("vendor_listings", "or_"):
+        parts = clause.split(",")
+        assert all(part.startswith(("title_override.ilike.", "product_id.in.")) for part in parts)
+        assert "(x" not in clause and ")" not in clause.replace("product_id.in.(", "")
