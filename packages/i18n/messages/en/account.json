@@ -387,5 +387,11 @@
     "errors": {
       "rateLimited": "Too many requests. Please try again shortly."
     }
+  },
+  "errorPage": {
+    "title": "Something went wrong",
+    "body": "We couldn't load this page.",
+    "retry": "Try again",
+    "back": "Back to account"
   }
 }

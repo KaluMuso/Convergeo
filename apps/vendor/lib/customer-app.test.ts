@@ -16,10 +16,10 @@ describe("customer-app", () => {
     );
   });
 
-  it("fails closed in production without site URL", () => {
+  it("falls back to the public customer origin in production without site URL", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
-    expect(getCustomerAppUrl()).toBeNull();
-    expect(getVendorStorefrontUrl("en", "shop")).toBeNull();
+    expect(getCustomerAppUrl()).toBe("https://www.vergeo5.com");
+    expect(getVendorStorefrontUrl("en", "shop")).toBe("https://www.vergeo5.com/en/v/shop");
   });
 });

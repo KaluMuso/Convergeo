@@ -12,7 +12,16 @@
     "verified": "Verified",
     "calendarLabel": "Amasuku ayali na events mweshi uyu",
     "hostCta": "Panga event",
-    "hostPitch": "Shitisha tickets na dynamic QR check-in no kupoka amali mu nsambu."
+    "hostPitch": "Shitisha tickets na dynamic QR check-in no kupoka amali mu nsambu.",
+    "unavailableTitle": "We couldn't load events",
+    "unavailableBody": "Check your connection and try again.",
+    "unavailableRetry": "Try again",
+    "onlyFeatured": "More events coming soon.",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {total}"
+    }
   },
   "filters": {
     "tonight": "Ulecungulo",
@@ -93,7 +102,10 @@
     "getTickets": "Poka tickets",
     "getTicketsSoon": "Ticket sales shisa limbi",
     "pastInstance": "Yapita",
-    "spots": "{sold} / {total} spots"
+    "spots": "{sold} / {total} spots",
+    "stickyCta": {
+      "ariaLabel": "Quick ticket purchase"
+    }
   },
   "organiser": {
     "imageAlt": "Icithunzi ca event {position}"

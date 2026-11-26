@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "@vergeo/ui/src/theme-provider";
+import { useEffect, useState } from "react";
 
 type HeaderThemeToggleProps = {
   labels: { label: string; light: string; dark: string; system: string };
@@ -15,14 +16,13 @@ type HeaderThemeToggleProps = {
  */
 export function HeaderThemeToggle({ labels, caption = false }: HeaderThemeToggleProps) {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const displayTheme = mounted ? theme : "system";
   const order = ["system", "light", "dark"] as const;
   const next = order[(order.indexOf(theme) + 1) % order.length] ?? "system";
   const current =
-    theme === "light"
-      ? labels.light
-      : theme === "dark"
-        ? labels.dark
-        : labels.system;
+    displayTheme === "light" ? labels.light : displayTheme === "dark" ? labels.dark : labels.system;
 
   return (
     <button
@@ -47,9 +47,9 @@ export function HeaderThemeToggle({ labels, caption = false }: HeaderThemeToggle
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        {theme === "dark" ? (
+        {displayTheme === "dark" ? (
           <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />
-        ) : theme === "light" ? (
+        ) : displayTheme === "light" ? (
           <>
             <circle cx="12" cy="12" r="4" />
             <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
