@@ -1,11 +1,11 @@
 "use client";
 
 import { useSession } from "@vergeo/auth/use-session";
+import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CloudinaryImage } from "../../../../../../packages/ui/src/media/cloudinary-image";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { VendorGrid } from "../../_components/vendor-page";
 import { VendorRouteHeader } from "../../_components/vendor-route-header";
@@ -150,69 +150,83 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
           </div>
           <VendorGrid cols="cards" className="px-1">
             {listings.map((listing) => {
-              const cover = [...(listing.images ?? [])].sort((a, b) => a.position - b.position)[0]
-                ?.cloudinary_public_id;
+              const coverImage = [...(listing.images ?? [])].sort(
+                (left, right) => left.position - right.position,
+              )[0];
               return (
                 <div
                   key={listing.id}
-                  className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-sm"
+                  className="rounded-lg border border-border p-4 shadow-sm lg:p-5"
                 >
-                  {cover ? (
-                    <CloudinaryImage
-                      publicId={cover}
-                      alt={t("listings.formAside.previewPhotoAlt")}
-                      width={640}
-                      ratio="4/3"
-                      className="aspect-[4/3] w-full rounded-none object-cover"
-                    />
-                  ) : (
-                    <div
-                      aria-hidden
-                      className="aspect-[4/3] w-full border-b border-dashed border-border bg-bg-2"
-                    />
-                  )}
-                  <div className="flex flex-1 flex-col gap-2 p-4">
-                    <Badge
-                      variant={statusVariant(listing.status)}
-                      label={statusLabel(listing.status, statusLabels)}
-                    />
-                    <p className="m-0 line-clamp-2 text-base font-semibold text-text">
-                      {listing.title}
-                    </p>
-                    <PriceBlock ngwee={listing.price_ngwee} />
-                    <ListingVisibilityHint status={listing.status} />
-                    <ListingProductStatusChip
-                      listingStatus={listing.status}
-                      productStatus={listing.product_status}
-                    />
-                    <div className="mt-1 flex items-center justify-between gap-3">
-                      <div className="text-xs text-text-2">
-                        <span className="font-medium text-text">
-                          {t("listings.manage.stockLabel")}
-                        </span>
-                        <span className="sr-only"> </span>
-                        {listing.stock_mode === "always_available"
-                          ? t("listings.manage.stockAlways")
-                          : t("listings.manage.stockValue", { qty: listing.stock_qty ?? 0 })}
-                      </div>
-
-                      {listing.stock_mode === "tracked" ? (
+                  <div className="flex items-start gap-3">
+                    {coverImage ? (
+                      <CloudinaryImage
+                        publicId={coverImage.cloudinary_public_id}
+                        alt={listing.title}
+                        width={64}
+                        ratio={1}
+                        className="size-16 shrink-0 rounded-lg border border-border object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-bg-2 p-1 text-center">
                         <Link
-                          className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
-                          href={`/${locale}/listings/${listing.id}/edit#stock`}
+                          className="text-[0.65rem] font-medium leading-tight text-primary underline-offset-2 hover:underline"
+                          href={`/${locale}/listings/${listing.id}/edit#photos`}
                         >
-                          {t("listings.manage.stock.heading")}
+                          {t("listings.manage.addPhotoLink")}
                         </Link>
-                      ) : null}
+                      </div>
+                    )}
+                    <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <p className="truncate text-sm font-medium text-text">{listing.title}</p>
+                        <PriceBlock ngwee={listing.price_ngwee} />
+                        <p className="text-xs text-text-2">
+                          <span className="sr-only">{t("listings.manage.statusLabel")}</span>
+                          <span className="font-medium text-text">
+                            {statusLabel(listing.status, statusLabels)}
+                          </span>
+                        </p>
+                        <ListingVisibilityHint status={listing.status} />
+                        <ListingProductStatusChip
+                          listingStatus={listing.status}
+                          productStatus={listing.product_status}
+                        />
+                      </div>
+                      <Badge
+                        variant={statusVariant(listing.status)}
+                        label={statusLabel(listing.status, statusLabels)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="text-xs text-text-2">
+                      <span className="font-medium text-text">
+                        {t("listings.manage.stockLabel")}
+                      </span>
+                      <span className="sr-only"> </span>
+                      {listing.stock_mode === "always_available"
+                        ? t("listings.manage.stockAlways")
+                        : t("listings.manage.stockValue", { qty: listing.stock_qty ?? 0 })}
                     </div>
 
-                    <Link
-                      className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium"
-                      href={`/${locale}/listings/${listing.id}/edit`}
-                    >
-                      {t("listings.manage.editCta")}
-                    </Link>
+                    {listing.stock_mode === "tracked" ? (
+                      <Link
+                        className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
+                        href={`/${locale}/listings/${listing.id}/edit#stock`}
+                      >
+                        {t("listings.manage.stock.heading")}
+                      </Link>
+                    ) : null}
                   </div>
+
+                  <Link
+                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium"
+                    href={`/${locale}/listings/${listing.id}/edit`}
+                  >
+                    {t("listings.manage.editCta")}
+                  </Link>
                 </div>
               );
             })}

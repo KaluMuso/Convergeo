@@ -15,13 +15,18 @@ request skipped is still enforced on master before anything ships.
 Outputs (written as `name=true|false` lines to $GITHUB_OUTPUT and echoed):
 
   docs_only     only documentation changed (see DOC_ONLY below)
-  run_js        JavaScript / TypeScript
-  run_python    Python API shards (docs_only -> reduced doc-truth run instead)
+  run_js        JavaScript / TypeScript (docs_only -> lint-only in the js job)
+  run_python    Python API shards
   run_security  Security gates (headers + authz matrix)
-  run_db_light  Migration replay, RLS matrix, Money DB-trigger integration
+  run_db_light  Migration replay, RLS matrix, Money DB-trigger, COD container smoke
   run_typegen   Database / typegen drift (~45 min migration-ledger proof)
   run_heavy     critical / financial real-stack + coordinator acceptance
-  run_perf      Bundle, image lint & Lighthouse (perf.yml)
+  run_perf      Bundle, image lint & Lighthouse (perf.yml; apps/packages only)
+
+Optional path-filter inputs (from dorny/paths-filter in ci.yml; unset on non-PR runs):
+
+  FILTER_API, FILTER_DB, FILTER_WEB, FILTER_DOCS — logged for audit; tier logic
+  still uses the git diff (fail-open when the diff is unknown).
 """
 
 from __future__ import annotations
@@ -62,7 +67,14 @@ DB = re.compile(
 # release/*) touching these must run "Database / typegen drift".
 TYPEGEN_INPUTS = re.compile(r"^(?:supabase/migrations/|packages/types/)")
 
-API = re.compile(r"^(?:services/|infra/api\.Dockerfile$)")
+API = re.compile(r"^(?:services/api/|infra/api\.Dockerfile$)")
+
+# Heavy Postgres / typegen / container gates (T40).
+HEAVY_DB = re.compile(
+    r"^(?:services/api/|supabase/|packages/types/|scripts/ci/|infra/api\.Dockerfile$)"
+)
+
+WEB = re.compile(r"^(?:apps/|packages/)")
 
 # Money, auth and migration paths. A change here keeps every real-stack tier on,
 # whatever branch the pull request targets (release-train lesson: the merge that
@@ -123,8 +135,8 @@ def classify(
     if docs_only:
         return {
             "docs_only": True,
-            "run_js": False,
-            "run_python": True,  # reduced to the doc-truth tests by the workflow
+            "run_js": True,
+            "run_python": False,
             "run_security": False,
             "run_db_light": False,
             "run_typegen": False,
@@ -137,8 +149,10 @@ def classify(
         return everything
 
     frontend = _any(FRONTEND, files)
+    web = _any(WEB, files)
     api = _any(API, files)
     db = _any(DB, files)
+    heavy_db = _any(HEAVY_DB, files)
     money = _any(MONEY, files)
     to_master = base_ref == "master"
     backend = api or db  # anything that can change DB, money or API behaviour
@@ -147,13 +161,12 @@ def classify(
     if not (frontend or backend):
         return everything
 
-    run_db_light = backend
-    # The 45 minute migration-ledger proof only depends on the schema and typegen
-    # inputs. API-only changes cannot alter it, but the final gate into master
-    # always runs everything for API changes.
-    run_typegen = db or _any(TYPEGEN_INPUTS, files) or (api and to_master)
+    run_db_light = heavy_db
+    run_typegen = heavy_db and (
+        _any(TYPEGEN_INPUTS, files) or db or (api and to_master)
+    )
     run_heavy = backend and (to_master or money)
-    run_perf = (frontend or backend) and (to_master or money)
+    run_perf = web and (to_master or money)
 
     return {
         "docs_only": False,
@@ -194,6 +207,9 @@ def main() -> int:
     lines = [f"{name}={'true' if result[name] else 'false'}" for name in OUTPUTS]
     print(f"event={event} base_ref={os.environ.get('BASE_REF', '')!r}")
     print(f"changed files: {'unknown (fail open)' if files is None else len(files)}")
+    for key in ("FILTER_API", "FILTER_DB", "FILTER_WEB", "FILTER_DOCS"):
+        if os.environ.get(key):
+            print(f"{key.lower()}={os.environ[key]!r}")
     for line in lines:
         print(line)
     target = os.environ.get("GITHUB_OUTPUT")
