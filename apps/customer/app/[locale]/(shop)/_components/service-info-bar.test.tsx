@@ -8,7 +8,6 @@ import bemCatalog from "../../../../../../packages/i18n/messages/bem/catalog.jso
 import bemCommon from "../../../../../../packages/i18n/messages/bem/common.json";
 import enCatalog from "../../../../../../packages/i18n/messages/en/catalog.json";
 import enCommon from "../../../../../../packages/i18n/messages/en/common.json";
-import enNav from "../../../../../../packages/i18n/messages/en/nav.json";
 import frCatalog from "../../../../../../packages/i18n/messages/fr/catalog.json";
 import frCommon from "../../../../../../packages/i18n/messages/fr/common.json";
 import nyaCatalog from "../../../../../../packages/i18n/messages/nya/catalog.json";
