@@ -12,6 +12,7 @@ from app.core.internal_token import (
 )
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.db import SqlResult
 from app.services.escrow.release import (
     DEFAULT_RELEASE_AFTER_DELIVERED_HOURS,
     DEFAULT_RELEASE_AFTER_SHIPPED_DAYS,
@@ -19,7 +20,6 @@ from app.services.escrow.release import (
     ReleaseResult,
     evaluate_and_release,
 )
-from app.services.db import SqlResult
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.orders.state import (
     SYSTEM_ACTOR_ID,

@@ -25,6 +25,12 @@ class TestTokensMatch:
     def test_match_is_true(self) -> None:
         assert tokens_match("secret", "secret") is True
 
+    def test_non_ascii_provided_is_false_not_error(self) -> None:
+        assert tokens_match("s\u00e9cret", "secret") is False
+
+    def test_non_ascii_match_is_true(self) -> None:
+        assert tokens_match("s\u00e9cret", "s\u00e9cret") is True
+
 
 class TestResolveInternalToken:
     def test_development_allows_default_when_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -77,9 +83,7 @@ class TestResolveInternalToken:
     def test_production_accepts_real_secret(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("ENV", "production")
         monkeypatch.setenv(ENV_VAR, "prod-secret-not-default")
-        assert (
-            resolve_internal_token(ENV_VAR, dev_default=DEV_DEFAULT) == "prod-secret-not-default"
-        )
+        assert resolve_internal_token(ENV_VAR, dev_default=DEV_DEFAULT) == "prod-secret-not-default"
 
     def test_explicit_env_kwarg_overrides_os(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("ENV", "development")
@@ -152,3 +156,21 @@ class TestInternalTokenHttpFailClosed:
         assert denied.status_code == 401
         missing = client.post("/internal/payouts/tick")
         assert missing.status_code == 401
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/internal/payouts/tick",
+        "/internal/reconciliation/poll-tick",
+        "/internal/payment-sweeper/tick",
+        "/internal/release-job/tick",
+        "/internal/event-release/tick",
+    ],
+)
+def test_non_ascii_token_header_is_401_not_500(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, path: str
+) -> None:
+    monkeypatch.setenv("ENV", "development")
+    response = client.post(path, headers={"X-Internal-Token": "t\u00f6ken".encode("latin-1")})
+    assert response.status_code == 401

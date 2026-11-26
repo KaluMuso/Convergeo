@@ -25,7 +25,7 @@ def test_json_formatter_allowlists_alert_fields() -> None:
     record.alert = "lenco_webhook_invalid_signature"
     record.event_id = "evt-123"
     record.flags = ["MALFORMED_JSON"]
-    setattr(record, "customer_phone", "+260971234567")
+    record.customer_phone = "+260971234567"
 
     payload = json.loads(JsonFormatter().format(record))
     assert payload["alert"] == "lenco_webhook_invalid_signature"

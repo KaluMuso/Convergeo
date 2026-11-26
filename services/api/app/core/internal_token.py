@@ -59,4 +59,4 @@ def tokens_match(provided: str | None, expected: str) -> bool:
     """Constant-time comparison for ``X-Internal-Token`` headers."""
     if not provided:
         return False
-    return hmac.compare_digest(provided, expected)
+    return hmac.compare_digest(provided.encode("utf-8"), expected.encode("utf-8"))
