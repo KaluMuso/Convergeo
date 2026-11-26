@@ -53,6 +53,15 @@ export function waMeShareLink(text: string): string {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
 
+/** wa.me deep link from raw msisdn (digits or +E.164) with prefilled text; null when invalid. */
+export function waMeLinkFromRaw(raw: string, text: string): string | null {
+  const e164 = normalizeToE164(raw);
+  if (!e164) {
+    return null;
+  }
+  return waMeInviteLink(e164, text);
+}
+
 export function supportsContactPicker(): boolean {
   return typeof navigator !== "undefined" && "contacts" in navigator;
 }

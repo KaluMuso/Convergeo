@@ -61,6 +61,15 @@ describe("FloatingActions", () => {
     expect(screen.getByTestId("floating-actions")).toHaveClass("v-fab-stack--raised");
   });
 
+  it("raises the FAB stack on service and event detail sticky CTAs", () => {
+    for (const pathname of ["/en/s/cleaning", "/en/e/summer-fest"]) {
+      nav.pathname = pathname;
+      const { unmount } = render(<FloatingActions locale="en" labels={labels} footer={null} />);
+      expect(screen.getByTestId("floating-actions")).toHaveClass("v-fab-stack--raised");
+      unmount();
+    }
+  });
+
   it("sends the typed question to Ask Vergeo", () => {
     nav.pathname = "/en/c/all";
     render(<FloatingActions locale="en" labels={labels} footer={null} />);

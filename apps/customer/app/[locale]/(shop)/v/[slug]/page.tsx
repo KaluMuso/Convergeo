@@ -15,6 +15,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import { waMeLinkFromRaw } from "../../../../../lib/social/phone";
 import { ShareLinkButton } from "../../../_components/share-link-button";
 import { buildStorefrontCompare } from "../../_components/directory/business-home/compare-other-shops";
 import {
@@ -102,6 +103,8 @@ type VendorProfileApiResponse = {
     pickup_available?: boolean;
     other_offers_count?: number;
     other_min_price_ngwee?: number | null;
+    rating_avg?: number | null;
+    rating_count?: number;
     /** W8 live offer (flag `bundles`), attached server-side by the API. */
     offer_badge?: OfferBadge | null;
   }>;
@@ -448,8 +451,11 @@ export default async function VendorProfilePage({ params }: PageProps) {
     condition: listing.condition,
     inStock: listing.in_stock,
     imagePublicId: listing.image_public_id,
-    rating: reviews.rating_avg ?? 0,
-    reviewCount: reviews.rating_count,
+    rating:
+      listing.rating_count && listing.rating_count > 0 && listing.rating_avg
+        ? listing.rating_avg
+        : 0,
+    reviewCount: listing.rating_count && listing.rating_count > 0 ? listing.rating_count : 0,
     distanceM: null,
     belowMedian: false,
     deliveryAvailable: listing.delivery_available ?? false,
@@ -534,6 +540,10 @@ export default async function VendorProfilePage({ params }: PageProps) {
       panel: <VendorEventsGrid locale={locale} events={events} />,
     });
   }
+
+  const whatsappHref = vendor.whatsapp_msisdn
+    ? waMeLinkFromRaw(vendor.whatsapp_msisdn, t("profile.whatsappPrefill"))
+    : null;
 
   const hasRating = reviews.rating_avg !== null && reviews.rating_count > 0;
   const hasAnyStat = hasRating || vendor.order_count > 0;
@@ -662,10 +672,10 @@ export default async function VendorProfilePage({ params }: PageProps) {
                 following: t("profile.following"),
               }}
             />
-            {vendor.whatsapp_msisdn ? (
+            {whatsappHref ? (
               <a
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-semibold text-[var(--primary-btn-fg)] no-underline hover:bg-[var(--primary-btn-hover)] focus-visible:outline-none focus-visible:shadow-focusRing"
-                href={`https://wa.me/${vendor.whatsapp_msisdn}`}
+                href={whatsappHref}
                 rel="noopener noreferrer"
                 target="_blank"
               >
