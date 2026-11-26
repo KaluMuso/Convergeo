@@ -86,15 +86,6 @@ export function qualifyContent(url, snapshot, payload) {
   return { passed: true, reason: "exact_fixture_content_and_loaded_media" };
 }
 
-function resolvePdpGalleryRoot() {
-  const body = document.querySelector('[data-testid="pdp-interactive-body"]');
-  if (!body) return null;
-  return (
-    body.querySelector('[data-testid="pdp-interactive-gallery"]') ??
-    body.querySelector('[data-testid="gallery-strip"]')
-  );
-}
-
 export function readMeasuredSnapshot() {
   const isVisible = (element) => {
     if (!element || !element.getClientRects().length) return false;
@@ -122,7 +113,9 @@ export function readMeasuredSnapshot() {
   );
   const card = matchingCards[0];
   const buyBox = document.querySelector('[data-testid="pdp-buy-box"]');
-  const gallery = pdp ? resolvePdpGalleryRoot() : card;
+  const gallery = pdp
+    ? document.querySelector('[data-testid="pdp-interactive-body"] [data-testid="gallery-strip"]')
+    : card;
   const heading = text(document.querySelector("main h1"));
   const errorBoundary = Array.from(document.querySelectorAll("main h1, main p")).some((element) =>
     ["Something went wrong", "We hit an unexpected problem."].some((copy) =>
@@ -225,7 +218,7 @@ export async function readDecodedFixtureImages(expectedSources) {
   };
   const gallery =
     location.pathname === "/en/p/smartphone-x1"
-      ? resolvePdpGalleryRoot()
+      ? document.querySelector('[data-testid="pdp-interactive-body"] [data-testid="gallery-strip"]')
       : Array.from(document.querySelectorAll('[data-testid="listing-card"]')).find(
           (card) =>
             card.querySelector('[data-testid="listing-card-link"]')?.getAttribute("href") ===
