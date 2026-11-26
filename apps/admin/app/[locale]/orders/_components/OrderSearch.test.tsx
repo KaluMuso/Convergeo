@@ -91,9 +91,12 @@ describe("OrderSearch", () => {
       return node!;
     });
     await act(async () => more.click());
-    const last = firstPage[firstPage.length - 1]!.created_at;
+    const last = firstPage[firstPage.length - 1]!;
     expect(mocks.request).toHaveBeenLastCalledWith(
-      `/admin/orders/search?${new URLSearchParams({ before: last }).toString()}`,
+      `/admin/orders/search?${new URLSearchParams({
+        before: last.created_at,
+        before_id: last.id,
+      }).toString()}`,
     );
     await vi.waitFor(() =>
       expect(host.querySelectorAll('[data-testid="orders-results-table"] tbody tr')).toHaveLength(

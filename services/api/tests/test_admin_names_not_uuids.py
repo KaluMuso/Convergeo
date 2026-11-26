@@ -106,11 +106,22 @@ class Fake:
             matches = [u for u in users if term in str(u.get("email", "")).lower()]
             return SimpleNamespace(json=lambda: {"users": matches})
 
+        def list_users(page: int | None = None, per_page: int | None = None) -> list[Any]:
+            per = per_page or 1000
+            start = ((page or 1) - 1) * per
+            chunk = users[start : start + per]
+            return [
+                SimpleNamespace(id=u["id"], email=u.get("email"))
+                for u in chunk
+                if isinstance(u.get("id"), str)
+            ]
+
         self.auth = SimpleNamespace(
             admin=SimpleNamespace(
                 get_user_by_id=lambda uid: SimpleNamespace(
                     user=SimpleNamespace(email=emails.get(uid))
                 ),
+                list_users=list_users,
                 _request=request,
             )
         )
@@ -193,7 +204,7 @@ def test_search_people_survives_auth_search_failure() -> None:
     def boom(*_args: Any, **_kwargs: Any) -> Any:
         raise RuntimeError("gotrue down")
 
-    fake.auth.admin._request = boom
+    fake.auth.admin.list_users = boom
     assert [p["user_id"] for p in search_people(fake, "chanda")] == [TARGET]
 
 
@@ -359,13 +370,42 @@ def test_audit_actor_filter_accepts_a_name_or_email(monkeypatch: pytest.MonkeyPa
     assert ("actor", [TARGET]) in fake.calls_for("audit_log", "in_")
 
     nobody = client.get("/admin/audit-log", params={"actor_q": "nobody-here"})
-    assert nobody.json() == {"items": [], "next_before": None}
+    assert nobody.json() == {"items": [], "next_before": None, "next_before_id": None}
     assert client.get("/admin/audit-log", params={"actor_q": "%%"}).status_code == 422
 
 
 def test_audit_name_search_keeps_the_audit_read_gate(monkeypatch: pytest.MonkeyPatch) -> None:
     client = _client(monkeypatch, _audit_fake(), frozenset({"admin"}))
     assert client.get("/admin/audit-log", params={"actor_q": "chanda"}).status_code == 403
+
+
+def test_audit_actor_email_redacted_for_non_superadmin(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.core.auth import require_route_permission
+
+    fake = _audit_fake()
+    app = create_app()
+    viewer = CurrentUser(id=USER, roles=frozenset({"rbac_auditor"}), token="t")
+    app.dependency_overrides[require_route_permission] = lambda: viewer
+    app.dependency_overrides[get_supabase_client] = lambda: fake
+    app.dependency_overrides[get_supabase_service_client] = lambda: fake
+    monkeypatch.setattr("app.core.auth.get_supabase_service_client", lambda: fake)
+    items = TestClient(app, raise_server_exceptions=False).get("/admin/audit-log").json()["items"]
+    assert all(item.get("actor_email") in (None, "") for item in items)
+
+
+def test_audit_actor_q_does_not_probe_non_actor_emails(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Email of a user who never appears as audit actor must not match actor_q."""
+    client = _client(monkeypatch, _audit_fake())
+    response = client.get("/admin/audit-log", params={"actor_q": "ops-only@"})
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "next_before": None, "next_before_id": None}
+
+
+def test_people_by_ids_pages_past_lookup_cap() -> None:
+    ids = [f"10000000-0000-4000-8000-{i:012x}" for i in range(105)]
+    fake = Fake({"profiles": [{"id": uid, "display_name": f"U{i}"} for i, uid in enumerate(ids)]})
+    people = people_by_ids(fake, ids, with_email=False)
+    assert len(people) == 105
 
 
 # ---------------------------------------------------------------------------

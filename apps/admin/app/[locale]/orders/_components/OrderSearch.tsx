@@ -33,13 +33,19 @@ export function shortOrderRef(id: string): string {
 
 type Filters = { orderId: string; phone: string; vendor: string; status: string };
 
-export function orderSearchParams(filters: Filters, before: string | null): URLSearchParams {
+export function orderSearchParams(
+  filters: Filters,
+  cursor: { before: string; beforeId: string } | null,
+): URLSearchParams {
   const params = new URLSearchParams();
   if (filters.orderId.trim()) params.set("order_id", filters.orderId.trim());
   if (filters.phone.trim()) params.set("phone", filters.phone.trim());
   if (filters.vendor.trim()) params.set("vendor", filters.vendor.trim());
   if (filters.status.trim()) params.set("status", filters.status.trim());
-  if (before) params.set("before", before);
+  if (cursor) {
+    params.set("before", cursor.before);
+    params.set("before_id", cursor.beforeId);
+  }
   return params;
 }
 
@@ -66,28 +72,31 @@ export function OrderSearch({ locale }: OrderSearchProps) {
   const generation = useRef(0);
 
   const runSearch = useCallback(
-    async (override?: Partial<Filters>, before: string | null = null) => {
+    async (
+      override?: Partial<Filters>,
+      cursor: { before: string; beforeId: string } | null = null,
+    ) => {
       const filters: Filters = { orderId, phone, vendor, status, ...override };
       const current = ++generation.current;
-      if (before) setLoadingMore(true);
+      if (cursor) setLoadingMore(true);
       else setLoading(true);
       setError(null);
       setSearched(true);
       try {
-        const params = orderSearchParams(filters, before);
+        const params = orderSearchParams(filters, cursor);
         const query = params.toString();
         const data = await ordersApi.request<OrderSearchItem[]>(
           `/admin/orders/search${query ? `?${query}` : ""}`,
         );
         if (current !== generation.current) return;
         const page = Array.isArray(data) ? data : [];
-        setResults((previous) => (before ? [...previous, ...page] : page));
+        setResults((previous) => (cursor ? [...previous, ...page] : page));
         setApplied(filters);
         setHasMore(canPage(filters) && page.length >= ORDERS_PAGE_SIZE);
       } catch {
         if (current !== generation.current) return;
         setError(t("error"));
-        if (!before) setResults([]);
+        if (!cursor) setResults([]);
         setHasMore(false);
       } finally {
         if (current === generation.current) {
@@ -342,7 +351,16 @@ export function OrderSearch({ locale }: OrderSearchProps) {
           className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-medium"
           disabled={loadingMore}
           onClick={() =>
-            applied && void runSearch(applied, results[results.length - 1]?.created_at ?? null)
+            applied &&
+            void runSearch(
+              applied,
+              (() => {
+                const last = results[results.length - 1];
+                return last
+                  ? { before: last.created_at, beforeId: last.id }
+                  : null;
+              })(),
+            )
           }
         >
           {loadingMore ? t("searching") : t("loadMore")}

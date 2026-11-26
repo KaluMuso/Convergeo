@@ -21,7 +21,12 @@ from uuid import UUID
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.services.admin_people import MAX_TERM_LEN, clean_search_term, search_people
+from app.services.admin_people import (
+    MAX_TERM_LEN,
+    _emails_for_user_ids,
+    clean_search_term,
+    search_people,
+)
 from fastapi import APIRouter, Depends, Query, Request
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
@@ -47,17 +52,6 @@ class AdminAccountOut(BaseModel):
     display_name: str | None
     email: str | None
     roles: list[str]
-
-
-def _email_for(service: ServiceRoleClient, user_id: str) -> str | None:
-    try:
-        response = service.client.auth.admin.get_user_by_id(user_id)
-    except Exception:  # noqa: BLE001 - directory still renders without the email
-        logger.warning("admin directory: email lookup failed", exc_info=True)
-        return None
-    user = getattr(response, "user", None)
-    email = getattr(user, "email", None)
-    return email if isinstance(email, str) and email else None
 
 
 def _names_for(service: ServiceRoleClient, user_ids: list[str]) -> dict[str, str | None]:
@@ -106,22 +100,20 @@ def list_admin_accounts(
     if term is not None:
         needle = term.casefold()
         matched: list[str] = []
+        emails = _emails_for_user_ids(service, user_ids)
         for uid in user_ids:
-            haystack = [names.get(uid) or "", *roles_by_user[uid]]
+            haystack = [names.get(uid) or "", *roles_by_user[uid], emails.get(uid) or ""]
             if any(needle in value.casefold() for value in haystack):
-                matched.append(uid)
-                continue
-            emails[uid] = _email_for(service, uid)
-            if needle in (emails[uid] or "").casefold():
                 matched.append(uid)
         user_ids = matched
     total = len(user_ids)
     page = user_ids[offset : offset + limit]
+    page_emails = emails if emails else _emails_for_user_ids(service, page)
     accounts = [
         AdminAccountOut(
             user_id=user_id,
             display_name=names.get(user_id),
-            email=emails[user_id] if user_id in emails else _email_for(service, user_id),
+            email=page_emails.get(user_id),
             roles=sorted(roles_by_user[user_id]),
         )
         for user_id in page

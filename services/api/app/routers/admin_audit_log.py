@@ -25,7 +25,7 @@ from app.services.admin_people import (
     clean_search_term,
     is_uuid,
     people_by_ids,
-    search_people,
+    search_audit_actors,
 )
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
@@ -138,11 +138,12 @@ def _entity_labels(
 class AuditPageOut(BaseModel):
     items: list[AuditEntryOut]
     next_before: datetime | None
+    next_before_id: str | None = None
 
 
 @router.get("/audit-log", response_model=AuditPageOut)
 def read_audit_log(
-    _viewer: Annotated[CurrentUser, Depends(require_route_permission)],
+    viewer: Annotated[CurrentUser, Depends(require_route_permission)],
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     actor: Annotated[UUID | None, Query()] = None,
     actor_q: Annotated[str | None, Query(max_length=MAX_TERM_LEN)] = None,
@@ -153,6 +154,7 @@ def read_audit_log(
     since: Annotated[datetime | None, Query(alias="from")] = None,
     until: Annotated[datetime | None, Query(alias="to")] = None,
     before: Annotated[datetime | None, Query()] = None,
+    before_id: Annotated[UUID | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE)] = 50,
 ) -> AuditPageOut:
     if action is not None and not _ACTION_RE.match(action):
@@ -165,9 +167,11 @@ def read_audit_log(
     if actor_q is not None and actor is None:
         if clean_search_term(actor_q) is None:
             raise AppError(code="validation_error", message="Invalid actor filter", http_status=422)
-        actor_ids = [person["user_id"] for person in search_people(service, actor_q, limit=50)]
+        actor_ids = [
+            person["user_id"] for person in search_audit_actors(service, actor_q, limit=50)
+        ]
         if not actor_ids:
-            return AuditPageOut(items=[], next_before=None)
+            return AuditPageOut(items=[], next_before=None, next_before_id=None)
 
     query = (
         service.client.table("audit_log")
@@ -202,7 +206,12 @@ def read_audit_log(
     if until is not None:
         query = query.lte("at", until.isoformat())
     if before is not None:
-        query = query.lt("at", before.isoformat())
+        before_iso = before.isoformat()
+        if before_id is not None:
+            bid = str(before_id)
+            query = query.or_(f"at.lt.{before_iso},and(at.eq.{before_iso},id.lt.{bid})")
+        else:
+            query = query.lt("at", before_iso)
 
     data = getattr(query.execute(), "data", None)
     rows = [row for row in data if isinstance(row, dict)] if isinstance(data, list) else []
@@ -214,13 +223,16 @@ def read_audit_log(
     }
     people = people_by_ids(service, account_ids)
     labels = _entity_labels(service, page, people)
+    show_actor_email = "superadmin" in viewer.roles
     items = [
         AuditEntryOut(
             id=str(row.get("id")),
             at=row["at"],
             actor=str(row["actor"]) if row.get("actor") else None,
             actor_name=_person_field(people, row.get("actor"), "display_name"),
-            actor_email=_person_field(people, row.get("actor"), "email"),
+            actor_email=(
+                _person_field(people, row.get("actor"), "email") if show_actor_email else None
+            ),
             actor_roles=row.get("actor_roles"),
             action=str(row.get("action") or ""),
             entity_type=str(row.get("entity_type") or ""),
@@ -238,4 +250,5 @@ def read_audit_log(
         if row.get("at")
     ]
     next_before = items[-1].at if len(rows) > limit and items else None
-    return AuditPageOut(items=items, next_before=next_before)
+    next_before_id = items[-1].id if next_before is not None else None
+    return AuditPageOut(items=items, next_before=next_before, next_before_id=next_before_id)

@@ -300,15 +300,10 @@ def _order_to_search_item(
     *,
     vendors: dict[str, dict[str, Any]],
     profiles: dict[str, dict[str, Any]],
-    items_total: dict[str, int] | None = None,
 ) -> OrderSearchItem:
     vendor = vendors.get(str(row["vendor_id"]), {})
     profile = profiles.get(str(row["customer_id"]), {})
-    total = (
-        (items_total or {}).get(str(row["id"]), 0)
-        + _int_or_zero(row.get("delivery_fee_ngwee"))
-        - _int_or_zero(row.get("coupon_discount_ngwee"))
-    )
+    total = _int_or_zero(row.get("total_ngwee"))
     return OrderSearchItem(
         total_ngwee=max(0, total),
         customer_display_name=profile.get("display_name") or None,
@@ -333,6 +328,7 @@ def _search_orders(
     status: str | None = None,
     q: str | None = None,
     before: datetime | None = None,
+    before_id: str | None = None,
     limit: int = RECENT_PAGE,
 ) -> list[OrderSearchItem]:
     order_rows: list[dict[str, Any]] = []
@@ -340,8 +336,16 @@ def _search_orders(
     if not any((order_id, phone, vendor, status, q)):
         query = _table(client, "orders").select("*")
         if before is not None:
-            query = query.lt("created_at", before.isoformat())
-        response = query.order("created_at", desc=True).limit(limit).execute()
+            before_iso = before.isoformat()
+            if before_id is not None:
+                query = query.or_(
+                    f"created_at.lt.{before_iso},and(created_at.eq.{before_iso},id.lt.{before_id})"
+                )
+            else:
+                query = query.lt("created_at", before_iso)
+        response = (
+            query.order("created_at", desc=True).order("id", desc=True).limit(limit).execute()
+        )
         order_rows = list(response.data or [])
     elif order_id:
         validated_id = _validate_order_id(order_id)
@@ -382,18 +386,28 @@ def _search_orders(
                     order_rows = list(response.data or [])
             else:
                 if before is not None:
-                    query = query.lt("created_at", before.isoformat())
-                response = query.order("created_at", desc=True).limit(limit).execute()
+                    before_iso = before.isoformat()
+                    if before_id is not None:
+                        query = query.or_(
+                            f"created_at.lt.{before_iso},"
+                            f"and(created_at.eq.{before_iso},id.lt.{before_id})"
+                        )
+                    else:
+                        query = query.lt("created_at", before_iso)
+                response = (
+                    query.order("created_at", desc=True)
+                    .order("id", desc=True)
+                    .limit(limit)
+                    .execute()
+                )
                 order_rows = list(response.data or [])
 
     vendor_ids = {str(row["vendor_id"]) for row in order_rows}
     customer_ids = {str(row["customer_id"]) for row in order_rows}
     vendors = _load_vendor_map(client, vendor_ids)
     profiles = _load_profile_map(client, customer_ids)
-    items_total = _load_items_total_map(client, {str(row["id"]) for row in order_rows})
     return [
-        _order_to_search_item(row, vendors=vendors, profiles=profiles, items_total=items_total)
-        for row in order_rows
+        _order_to_search_item(row, vendors=vendors, profiles=profiles) for row in order_rows
     ]
 
 
@@ -736,9 +750,10 @@ async def search_orders(
     status: Annotated[str | None, Query(max_length=32)] = None,
     q: Annotated[str | None, Query(max_length=MAX_SEARCH_LEN)] = None,
     before: Annotated[datetime | None, Query()] = None,
+    before_id: Annotated[UUID | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=RECENT_PAGE)] = RECENT_PAGE,
 ) -> list[OrderSearchItem]:
-    """With no criteria, returns the newest orders; page with ``before`` = last ``created_at``."""
+    """With no criteria, returns the newest orders; page with ``before`` / ``before_id``."""
     return _search_orders(
         service_client,
         order_id=order_id,
@@ -747,6 +762,7 @@ async def search_orders(
         status=status,
         q=q,
         before=before,
+        before_id=str(before_id) if before_id is not None else None,
         limit=limit,
     )
 

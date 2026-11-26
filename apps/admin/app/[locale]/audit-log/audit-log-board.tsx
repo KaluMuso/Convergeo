@@ -37,7 +37,11 @@ export function entityKey(entry: AuditEntry): string | null {
   return null;
 }
 
-type AuditPage = { items: AuditEntry[]; next_before: string | null };
+type AuditPage = {
+  items: AuditEntry[];
+  next_before: string | null;
+  next_before_id?: string | null;
+};
 
 export type DiffRow = { key: string; before: unknown; after: unknown };
 
@@ -95,7 +99,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 /** Build the read-only query string; invalid filters are reported, never sent. */
 export function buildAuditQuery(
   filters: AuditFilters,
-  before: string | null,
+  cursor: { before: string; beforeId: string } | null,
 ): { query: string } | { invalid: true } {
   const params = new URLSearchParams();
   const actor = filters.actor.trim();
@@ -119,7 +123,10 @@ export function buildAuditQuery(
   if (filters.outcome) params.set("outcome", filters.outcome);
   if (filters.from) params.set("from", new Date(`${filters.from}T00:00:00Z`).toISOString());
   if (filters.to) params.set("to", new Date(`${filters.to}T23:59:59Z`).toISOString());
-  if (before) params.set("before", before);
+  if (cursor) {
+    params.set("before", cursor.before);
+    params.set("before_id", cursor.beforeId);
+  }
   params.set("limit", "50");
   return { query: params.toString() };
 }
@@ -131,13 +138,16 @@ export function AuditLogBoard({ locale }: { locale: string }) {
   const [draft, setDraft] = useState<AuditFilters>(EMPTY_FILTERS);
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS);
   const [items, setItems] = useState<AuditEntry[] | null>(null);
-  const [nextBefore, setNextBefore] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<{ before: string; beforeId: string } | null>(
+    null,
+  );
   const [error, setError] = useState<"" | "loadFailed" | "invalid">("");
   const [loading, setLoading] = useState(true);
   const generation = useRef(0);
 
-  const load = useCallback(async (active: AuditFilters, before: string | null) => {
-    const built = buildAuditQuery(active, before);
+  const load = useCallback(
+    async (active: AuditFilters, cursor: { before: string; beforeId: string } | null) => {
+    const built = buildAuditQuery(active, cursor);
     if ("invalid" in built) {
       setError("invalid");
       return;
@@ -151,8 +161,12 @@ export function AuditLogBoard({ locale }: { locale: string }) {
       });
       if (current !== generation.current) return;
       if (!Array.isArray(page?.items)) throw new Error("Invalid audit page");
-      setItems((previous) => (before && previous ? [...previous, ...page.items] : page.items));
-      setNextBefore(page.next_before ?? null);
+      setItems((previous) => (cursor && previous ? [...previous, ...page.items] : page.items));
+      setNextCursor(
+        page.next_before && page.next_before_id
+          ? { before: page.next_before, beforeId: page.next_before_id }
+          : null,
+      );
     } catch {
       if (current === generation.current) {
         setError("loadFailed");
@@ -161,7 +175,9 @@ export function AuditLogBoard({ locale }: { locale: string }) {
     } finally {
       if (current === generation.current) setLoading(false);
     }
-  }, []);
+  },
+  [],
+);
 
   useEffect(() => {
     if (grants === null) {
@@ -289,11 +305,11 @@ export function AuditLogBoard({ locale }: { locale: string }) {
           </table>
         </div>
       )}
-      {nextBefore ? (
+      {nextCursor ? (
         <button
           className="min-h-11 underline"
           disabled={loading}
-          onClick={() => void load(filters, nextBefore)}
+          onClick={() => void load(filters, nextCursor)}
         >
           {t("more")}
         </button>
