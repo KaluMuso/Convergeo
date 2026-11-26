@@ -156,11 +156,11 @@ def test_duplicate_settlement_still_books_fee(monkeypatch: pytest.MonkeyPatch) -
     from app.services import payments
 
     booked: list[dict[str, object]] = []
-    monkeypatch.setattr(
-        payments.fees,
-        "book_collection_fee",
-        lambda **kwargs: booked.append(kwargs) or None,
-    )
+
+    def _record_fee(**kwargs: object) -> None:
+        booked.append(kwargs)
+
+    monkeypatch.setattr(payments.fees, "book_collection_fee", _record_fee)
     fake = FakeSupabaseClient()
     fake.tables["payments"].rows.append(
         {
