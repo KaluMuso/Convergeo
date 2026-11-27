@@ -1,7 +1,6 @@
 import { formatK, loadNamespace, type Locale } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
 import { LinkButton } from "@vergeo/ui/src/link-button";
-import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { cldUrl } from "@vergeo/ui/src/media/cloudinary-url";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import { buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
@@ -27,6 +26,11 @@ import { SERVICE_SIDEBAR_CTA_ID } from "./_components/service-page-sticky";
 import { ServiceProviderCard } from "./_components/service-provider-card";
 import { ServiceQuoteCta } from "./_components/service-quote-cta";
 import { ServiceReviewsSection } from "./_components/service-reviews-section";
+import { ArchetypeLayout } from "./_components/templates/archetype-layout";
+import { ServiceRequestPanel } from "./_components/templates/request-panel";
+import { ServiceHero } from "./_components/templates/service-hero";
+import { asRecord, isBespoke, parseArchetype, parseStaff } from "./_lib/archetypes";
+import { buildPanelLabels } from "./_lib/panel-labels";
 
 const ServicePortfolioGallery = dynamic(
   () =>
@@ -57,6 +61,8 @@ type ServiceDetail = {
   portfolio_images: string[];
   includes: string[];
   packages?: unknown;
+  archetype?: string;
+  attributes?: unknown;
   provider: {
     id: string;
     slug: string;
@@ -255,7 +261,11 @@ export default async function ServiceDetailPage({ params }: PageProps) {
   const packages = normalisePackages(service.packages);
   const isQuoteBased = service.from_price_ngwee === null;
   const quoteHref = `/${locale}/services/post-job?category=${encodeURIComponent(service.category)}`;
-  const heroImage = service.portfolio_images[0];
+  const archetype = parseArchetype(service.archetype);
+  const attrs = asRecord(service.attributes);
+  const bespoke = isBespoke(archetype);
+  const tt = (key: string, values?: Record<string, string | number>) =>
+    t(`templates.${key}`, values);
   const responseLine = responseTimeLine(t, tier);
   const stickyPriceLine = service.is_free
     ? t("detail.free")
@@ -266,7 +276,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
     ? ("free" as const)
     : service.bookable && service.booking_price_ngwee
       ? ("book" as const)
-      : isQuoteBased
+      : isQuoteBased || bespoke
         ? ("quote_direct" as const)
         : ("quote_browse" as const);
 
@@ -294,50 +304,26 @@ export default async function ServiceDetailPage({ params }: PageProps) {
         {t("browse.title")}
       </Link>
 
-      <header className="overflow-hidden rounded-lg border border-border bg-primary-tint shadow-2">
-        <div className="grid min-h-[22rem] lg:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
-          <div className="flex flex-col justify-center gap-5 p-6 md:p-10 lg:p-12">
-            <div className="flex flex-wrap items-center gap-2">
-              {tier ? (
-                <Badge variant={badgeVariant(tier)} label={t(`badges.${tier}` as "badges.fast")} />
-              ) : null}
-              {service.provider.preferred_badge ? (
-                <Badge variant="public" label={t("browse.preferredBadge")} />
-              ) : null}
-              {service.is_free ? <Badge variant="free" label={t("detail.free")} /> : null}
-            </div>
-            <div className="space-y-3">
-              <h1 className="font-display text-hero text-display-ink">{service.title}</h1>
-              {service.service_area ? (
-                <p className="text-sm text-text-2">{service.service_area}</p>
-              ) : null}
-              <p className="text-lg font-semibold text-text">{stickyPriceLine}</p>
-              {responseLine ? (
-                <p className="text-sm text-text-2" data-testid="service-response-time">
-                  {responseLine}
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          {heroImage ? (
-            <CloudinaryImageStatic
-              publicId={heroImage}
-              alt={service.title}
-              width={960}
-              sizes="(max-width: 1024px) 100vw, 45vw"
-              ratio="4/3"
-              priority
-              className="h-full rounded-none"
-            />
-          ) : (
-            <div
-              className="min-h-64 bg-gradient-to-br from-primary/15 via-surface to-primary/5"
-              aria-hidden="true"
-            />
-          )}
-        </div>
-      </header>
+      <ServiceHero
+        archetype={archetype}
+        archetypeLabel={t(`templates.archetypes.${archetype}`)}
+        title={service.title}
+        area={service.service_area}
+        priceLine={stickyPriceLine}
+        responseLine={responseLine}
+        images={service.portfolio_images}
+        badges={
+          <>
+            {tier ? (
+              <Badge variant={badgeVariant(tier)} label={t(`badges.${tier}` as "badges.fast")} />
+            ) : null}
+            {service.provider.preferred_badge ? (
+              <Badge variant="public" label={t("browse.preferredBadge")} />
+            ) : null}
+            {service.is_free ? <Badge variant="free" label={t("detail.free")} /> : null}
+          </>
+        }
+      />
 
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,23rem)] lg:gap-12">
         <div className="flex min-w-0 flex-col gap-8">
@@ -352,20 +338,24 @@ export default async function ServiceDetailPage({ params }: PageProps) {
             </section>
           ) : null}
 
-          <ServicePackages
-            locale={locale}
-            serviceId={service.id}
-            vendorName={service.provider.display_name}
-            packages={packages}
-            t={(key, values) => t(`packages.${key}`, values)}
-            quoteLabels={{
-              ...quoteLabels,
-              errors: {
-                ...quoteLabels.errors,
-                packageUnavailable: t("packages.errors.unavailable"),
-              },
-            }}
-          />
+          {bespoke ? (
+            <ArchetypeLayout archetype={archetype} offers={packages} attrs={attrs} t={tt} />
+          ) : (
+            <ServicePackages
+              locale={locale}
+              serviceId={service.id}
+              vendorName={service.provider.display_name}
+              packages={packages}
+              t={(key, values) => t(`packages.${key}`, values)}
+              quoteLabels={{
+                ...quoteLabels,
+                errors: {
+                  ...quoteLabels.errors,
+                  packageUnavailable: t("packages.errors.unavailable"),
+                },
+              }}
+            />
+          )}
 
           {service.includes.length > 0 ? (
             <section className="flex flex-col gap-3" aria-labelledby="service-included-heading">
@@ -445,7 +435,9 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               reviewCount: t("detail.providerCard.reviewCount", {
                 count: reviewData.rating_count,
               }),
-              starsAria: t("detail.providerCard.starsAria", { rating: "{rating}" }),
+              starsAria: t("detail.providerCard.starsAria", {
+                rating: "{rating}",
+              }),
               viewProfile: t("detail.providerCard.viewProfile"),
             }}
           />
@@ -481,42 +473,55 @@ export default async function ServiceDetailPage({ params }: PageProps) {
             />
           ) : null}
 
-          <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 shadow-2">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-3">
-                {t("detail.askForQuote")}
-              </p>
-              <p className="font-display text-h2 text-display-ink">
-                {service.from_price_ngwee !== null
-                  ? t("detail.fromPrice", {
-                      price: formatK(service.from_price_ngwee),
-                    })
-                  : t("detail.askForQuote")}
-              </p>
-            </div>
+          {bespoke && !service.is_free ? (
+            <ServiceRequestPanel
+              locale={locale}
+              serviceId={service.id}
+              vendorName={service.provider.display_name}
+              archetype={archetype}
+              offers={packages}
+              staffNames={parseStaff(attrs).map((member) => member.name)}
+              labels={buildPanelLabels(tt, archetype)}
+              quoteLabels={quoteLabels}
+            />
+          ) : (
+            <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 shadow-2">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-3">
+                  {t("detail.askForQuote")}
+                </p>
+                <p className="font-display text-h2 text-display-ink">
+                  {service.from_price_ngwee !== null
+                    ? t("detail.fromPrice", {
+                        price: formatK(service.from_price_ngwee),
+                      })
+                    : t("detail.askForQuote")}
+                </p>
+              </div>
 
-            {service.is_free ? null : isQuoteBased ? (
-              <ServiceQuoteCta
-                locale={locale}
-                serviceId={service.id}
-                vendorName={service.provider.display_name}
-                hint={t("detail.requestQuoteHintDirect")}
-                labels={quoteLabels}
-              />
-            ) : (
-              <>
-                <LinkButton
-                  href={quoteHref}
-                  variant="primary"
-                  className="w-full rounded-md text-sm font-semibold"
-                  LinkComponent={Link}
-                >
-                  {t("detail.requestQuote")}
-                </LinkButton>
-                <p className="text-center text-xs text-text-3">{t("detail.requestQuoteHint")}</p>
-              </>
-            )}
-          </section>
+              {service.is_free ? null : isQuoteBased ? (
+                <ServiceQuoteCta
+                  locale={locale}
+                  serviceId={service.id}
+                  vendorName={service.provider.display_name}
+                  hint={t("detail.requestQuoteHintDirect")}
+                  labels={quoteLabels}
+                />
+              ) : (
+                <>
+                  <LinkButton
+                    href={quoteHref}
+                    variant="primary"
+                    className="w-full rounded-md text-sm font-semibold"
+                    LinkComponent={Link}
+                  >
+                    {t("detail.requestQuote")}
+                  </LinkButton>
+                  <p className="text-center text-xs text-text-3">{t("detail.requestQuoteHint")}</p>
+                </>
+              )}
+            </section>
+          )}
         </aside>
       </div>
 

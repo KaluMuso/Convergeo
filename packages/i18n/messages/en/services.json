@@ -24,6 +24,35 @@
       "previous": "Previous",
       "next": "Next",
       "page": "Page {page} of {total}"
+    },
+    "fullyBooked": "Fully booked",
+    "ratingLine": "{rating} ({count})",
+    "filters": {
+      "heading": "Filters",
+      "more": "More filters",
+      "clear": "Clear all",
+      "remove": "Remove filter: {label}",
+      "results": "{count, plural, one {# service} other {# services}}",
+      "area": "Area",
+      "areaAll": "Anywhere",
+      "price": "Price",
+      "priceAny": "Any price",
+      "priceBands": {
+        "under100": "Under K100",
+        "mid": "K100 to K500",
+        "high": "K500 to K2,000",
+        "premium": "Over K2,000"
+      },
+      "rating": "Rating",
+      "ratingAny": "Any rating",
+      "ratingOptions": {
+        "45": "4.5 and up",
+        "4": "4 and up",
+        "3": "3 and up"
+      },
+      "availability": "Availability",
+      "availabilityAny": "Any",
+      "availabilityNow": "Available now"
     }
   },
   "categories": {
@@ -35,7 +64,13 @@
     "home-services": "Home services",
     "tech-services": "Tech services",
     "cleaning": "Cleaning",
-    "tailoring": "Tailoring"
+    "tailoring": "Tailoring",
+    "lodging": "Hotels & lodges",
+    "property": "Housing",
+    "fitness": "Gyms & fitness",
+    "rentals": "Rentals",
+    "family-fun": "Family fun",
+    "staffing": "Hiring & staffing"
   },
   "badges": {
     "fast": "Fast responder",
@@ -478,6 +513,194 @@
     "noPaymentNote": "Requesting a package does not charge you. You agree the final price with the provider in the quote chat.",
     "errors": {
       "unavailable": "This package is no longer available. Refresh the page to see the current packages."
+    }
+  },
+  "templates": {
+    "archetypes": {
+      "accommodation": "Stays",
+      "appointment": "Appointments",
+      "membership": "Memberships",
+      "on_site": "Home services",
+      "rental": "Rentals",
+      "ticketed": "Tickets & visits",
+      "professional": "Professional services"
+    },
+    "common": {
+      "from": "From",
+      "priceQuote": "Ask for price",
+      "select": "Choose this",
+      "noOffers": "No options are listed yet. Send a request and the provider will reply with details.",
+      "perNight": "/ night",
+      "perMonth": "/ month",
+      "per": {
+        "hour": "/ hour",
+        "day": "/ day",
+        "week": "/ week"
+      },
+      "cancellation": "Cancellation",
+      "cancellationKinds": {
+        "flexible": "Flexible",
+        "moderate": "Moderate",
+        "strict": "Strict"
+      },
+      "availabilityLabel": "Availability",
+      "availability": {
+        "available": "Accepting requests",
+        "limited": "Limited availability",
+        "unavailable": "Fully booked"
+      }
+    },
+    "days": {
+      "0": "Sunday",
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday"
+    },
+    "accommodation": {
+      "heading": "Rooms",
+      "amenities": "Amenities & facilities",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "roomTypes": {
+        "standard": "Standard",
+        "premium": "Premium",
+        "presidential": "Presidential",
+        "family": "Family",
+        "dorm": "Dorm",
+        "other": "Room"
+      },
+      "bedTypes": {
+        "single": "single",
+        "double": "double",
+        "queen": "queen",
+        "king": "king",
+        "bunk": "bunk"
+      },
+      "sleeps": "{count, plural, one {Sleeps # guest} other {Sleeps # guests}}",
+      "beds": "{count, plural, one {# bed} other {# beds}}",
+      "bedsOfType": "{count, plural, one {# {type} bed} other {# {type} beds}}",
+      "size": "{sqm} m²",
+      "breakfast": "Breakfast included",
+      "minNights": "{count, plural, one {Min # night} other {Min # nights}}",
+      "unitsLeft": "{count, plural, one {Only # left} other {Only # left}}"
+    },
+    "appointment": {
+      "heading": "Treatment menu",
+      "team": "Meet the team",
+      "walkIns": "Walk-ins",
+      "walkInsYes": "Welcome",
+      "homeVisit": "Home visits",
+      "minutes": "{count} min",
+      "hours": "{count, plural, one {# hour} other {# hours}}",
+      "hoursMinutes": "{hours} h {minutes} min"
+    },
+    "membership": {
+      "heading": "Passes & memberships",
+      "schedule": "Class schedule",
+      "facilities": "Facilities",
+      "bestValue": "Best value",
+      "kinds": {
+        "day": "Day pass",
+        "week": "Weekly",
+        "month": "Monthly",
+        "quarter": "Quarterly",
+        "year": "Annual",
+        "class_pack": "Class pack"
+      },
+      "perDay": "About {price} per day",
+      "validFor": "{count, plural, one {Valid for # day} other {Valid for # days}}",
+      "visits": "{count, plural, one {# visit included} other {# visits included}}",
+      "unlimited": "Unlimited visits",
+      "classes": "Classes included",
+      "guests": "{count, plural, one {# guest pass} other {# guest passes}}",
+      "peakOnly": "Off-peak hours only",
+      "spots": "{count} spots"
+    },
+    "rental": {
+      "heading": "Available to rent",
+      "pickup": "Pickup",
+      "withOperator": "With operator",
+      "delivery": "Delivery available",
+      "available": "{count} available",
+      "minPeriod": {
+        "hour": "{count, plural, one {Min # hour} other {Min # hours}}",
+        "day": "{count, plural, one {Min # day} other {Min # days}}",
+        "week": "{count, plural, one {Min # week} other {Min # weeks}}"
+      },
+      "deposit": "Deposit {price}, paid to the provider"
+    },
+    "request": {
+      "heading": {
+        "accommodation": "Request this stay",
+        "appointment": "Request an appointment",
+        "membership": "Request a pass",
+        "on_site": "Request a visit",
+        "rental": "Request this rental",
+        "ticketed": "Request tickets",
+        "professional": "Request a quote"
+      },
+      "cta": {
+        "accommodation": "Request to book",
+        "appointment": "Request appointment",
+        "membership": "Request this pass",
+        "on_site": "Request a visit",
+        "rental": "Request rental",
+        "ticketed": "Request tickets",
+        "professional": "Request a quote"
+      },
+      "selectOffer": "Option",
+      "chooseOffer": "Choose an option",
+      "fix": "Complete the details",
+      "startDate": {
+        "accommodation": "Check-in",
+        "appointment": "Preferred date",
+        "membership": "Start date",
+        "on_site": "Preferred date",
+        "rental": "Pickup date",
+        "ticketed": "Visit date",
+        "professional": "Date needed"
+      },
+      "endDate": "Check-out",
+      "time": "Preferred time",
+      "guests": "Guests",
+      "quantity": "Quantity",
+      "period": "Rental period",
+      "staff": "Preferred stylist",
+      "anyStaff": "No preference",
+      "timeOfDay": {
+        "any": "Any time",
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening"
+      },
+      "nightsOne": "{count} night",
+      "nightsMany": "{count} nights",
+      "periods": {
+        "hour": {
+          "one": "{count} hour",
+          "many": "{count} hours"
+        },
+        "day": {
+          "one": "{count} day",
+          "many": "{count} days"
+        },
+        "week": {
+          "one": "{count} week",
+          "many": "{count} weeks"
+        }
+      },
+      "errors": {
+        "pickOffer": "Choose an option first.",
+        "pickDate": "Pick a date.",
+        "pickEnd": "Pick a check-out date.",
+        "endBeforeStart": "Check-out must be after check-in.",
+        "pastDate": "That date has passed."
+      },
+      "noPaymentNote": "This sends a request. Nothing is reserved or paid until the provider confirms.",
+      "dialogTitle": "Request: {name}"
     }
   }
 }

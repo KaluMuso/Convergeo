@@ -16,7 +16,36 @@
     "preferredBadge": "优选",
     "verticalLabel": "类别",
     "providerCta": "发布您的服务",
-    "providerPitch": "触达正在寻找您所提供服务的客户。"
+    "providerPitch": "触达正在寻找您所提供服务的客户。",
+    "fullyBooked": "已订满",
+    "ratingLine": "{rating}（{count}）",
+    "filters": {
+      "heading": "筛选",
+      "more": "更多筛选",
+      "clear": "全部清除",
+      "remove": "移除筛选：{label}",
+      "results": "{count, plural, other {# 项服务}}",
+      "area": "地区",
+      "areaAll": "不限",
+      "price": "价格",
+      "priceAny": "不限价格",
+      "priceBands": {
+        "under100": "K100 以下",
+        "mid": "K100 至 K500",
+        "high": "K500 至 K2,000",
+        "premium": "K2,000 以上"
+      },
+      "rating": "评分",
+      "ratingAny": "不限评分",
+      "ratingOptions": {
+        "45": "4.5 分以上",
+        "4": "4 分以上",
+        "3": "3 分以上"
+      },
+      "availability": "可用性",
+      "availabilityAny": "不限",
+      "availabilityNow": "现在可约"
+    }
   },
   "categories": {
     "all": "全部",
@@ -27,7 +56,13 @@
     "home-services": "家庭服务",
     "tech-services": "技术服务",
     "cleaning": "清洁",
-    "tailoring": "裁缝"
+    "tailoring": "裁缝",
+    "lodging": "酒店与旅舍",
+    "property": "住房",
+    "fitness": "健身房",
+    "rentals": "租赁",
+    "family-fun": "亲子娱乐",
+    "staffing": "招聘与用工"
   },
   "badges": {
     "fast": "快速响应",
@@ -423,6 +458,194 @@
     "noPaymentNote": "选择套餐不会向您收费。最终价格由您与服务商在报价对话中商定。",
     "errors": {
       "unavailable": "该套餐已不可用。请刷新页面查看当前套餐。"
+    }
+  },
+  "templates": {
+    "archetypes": {
+      "accommodation": "住宿",
+      "appointment": "预约",
+      "membership": "会员",
+      "on_site": "上门服务",
+      "rental": "租赁",
+      "ticketed": "门票与游玩",
+      "professional": "专业服务"
+    },
+    "common": {
+      "from": "起价",
+      "priceQuote": "询价",
+      "select": "选择",
+      "noOffers": "暂未列出选项。发送请求，服务商会回复详情。",
+      "perNight": "/ 晚",
+      "perMonth": "/ 月",
+      "per": {
+        "hour": "/ 小时",
+        "day": "/ 天",
+        "week": "/ 周"
+      },
+      "cancellation": "取消政策",
+      "cancellationKinds": {
+        "flexible": "灵活",
+        "moderate": "适中",
+        "strict": "严格"
+      },
+      "availabilityLabel": "可用性",
+      "availability": {
+        "available": "接受请求",
+        "limited": "名额有限",
+        "unavailable": "已订满"
+      }
+    },
+    "days": {
+      "0": "星期日",
+      "1": "星期一",
+      "2": "星期二",
+      "3": "星期三",
+      "4": "星期四",
+      "5": "星期五",
+      "6": "星期六"
+    },
+    "accommodation": {
+      "heading": "客房",
+      "amenities": "设施与服务",
+      "checkIn": "入住",
+      "checkOut": "退房",
+      "roomTypes": {
+        "standard": "标准",
+        "premium": "高级",
+        "presidential": "总统套房",
+        "family": "家庭房",
+        "dorm": "宿舍",
+        "other": "客房"
+      },
+      "bedTypes": {
+        "single": "单人",
+        "double": "双人",
+        "queen": "大床",
+        "king": "特大床",
+        "bunk": "上下铺"
+      },
+      "sleeps": "{count, plural, other {可住 # 人}}",
+      "beds": "{count, plural, other {# 张床}}",
+      "bedsOfType": "{count, plural, other {# 张{type}床}}",
+      "size": "{sqm} 平方米",
+      "breakfast": "含早餐",
+      "minNights": "{count, plural, other {至少 # 晚}}",
+      "unitsLeft": "{count, plural, other {仅剩 #}}"
+    },
+    "appointment": {
+      "heading": "服务项目",
+      "team": "团队",
+      "walkIns": "无需预约",
+      "walkInsYes": "欢迎",
+      "homeVisit": "上门服务",
+      "minutes": "{count} 分钟",
+      "hours": "{count, plural, other {# 小时}}",
+      "hoursMinutes": "{hours} 小时 {minutes} 分钟"
+    },
+    "membership": {
+      "heading": "通行证与会员",
+      "schedule": "课程表",
+      "facilities": "设施",
+      "bestValue": "最划算",
+      "kinds": {
+        "day": "单日票",
+        "week": "周卡",
+        "month": "月卡",
+        "quarter": "季卡",
+        "year": "年卡",
+        "class_pack": "课程包"
+      },
+      "perDay": "约 {price} 每天",
+      "validFor": "{count, plural, other {有效期 # 天}}",
+      "visits": "{count, plural, other {含 # 次入场}}",
+      "unlimited": "不限次数",
+      "classes": "含课程",
+      "guests": "{count, plural, other {# 张访客票}}",
+      "peakOnly": "仅限非高峰时段",
+      "spots": "{count} 个名额"
+    },
+    "rental": {
+      "heading": "可租用",
+      "pickup": "取货",
+      "withOperator": "含操作员",
+      "delivery": "可送货",
+      "available": "可租 {count}",
+      "minPeriod": {
+        "hour": "{count, plural, other {至少 # 小时}}",
+        "day": "{count, plural, other {至少 # 天}}",
+        "week": "{count, plural, other {至少 # 周}}"
+      },
+      "deposit": "押金 {price}，付给服务商"
+    },
+    "request": {
+      "heading": {
+        "accommodation": "申请入住",
+        "appointment": "申请预约",
+        "membership": "申请通行证",
+        "on_site": "申请上门",
+        "rental": "申请租赁",
+        "ticketed": "申请门票",
+        "professional": "申请报价"
+      },
+      "cta": {
+        "accommodation": "申请预订",
+        "appointment": "申请预约",
+        "membership": "申请此通行证",
+        "on_site": "申请上门",
+        "rental": "申请租赁",
+        "ticketed": "申请门票",
+        "professional": "申请报价"
+      },
+      "selectOffer": "选项",
+      "chooseOffer": "请选择",
+      "fix": "请补全信息",
+      "startDate": {
+        "accommodation": "入住日期",
+        "appointment": "期望日期",
+        "membership": "开始日期",
+        "on_site": "期望日期",
+        "rental": "取货日期",
+        "ticketed": "游玩日期",
+        "professional": "所需日期"
+      },
+      "endDate": "退房日期",
+      "time": "期望时间",
+      "guests": "人数",
+      "quantity": "数量",
+      "period": "租期",
+      "staff": "指定发型师",
+      "anyStaff": "不限",
+      "timeOfDay": {
+        "any": "不限",
+        "morning": "上午",
+        "afternoon": "下午",
+        "evening": "晚上"
+      },
+      "nightsOne": "{count} 晚",
+      "nightsMany": "{count} 晚",
+      "periods": {
+        "hour": {
+          "one": "{count} 小时",
+          "many": "{count} 小时"
+        },
+        "day": {
+          "one": "{count} 天",
+          "many": "{count} 天"
+        },
+        "week": {
+          "one": "{count} 周",
+          "many": "{count} 周"
+        }
+      },
+      "errors": {
+        "pickOffer": "请先选择一个选项。",
+        "pickDate": "请选择日期。",
+        "pickEnd": "请选择退房日期。",
+        "endBeforeStart": "退房须晚于入住。",
+        "pastDate": "该日期已过。"
+      },
+      "noPaymentNote": "这只是发送请求。服务商确认前不会预留或收费。",
+      "dialogTitle": "请求：{name}"
     }
   }
 }

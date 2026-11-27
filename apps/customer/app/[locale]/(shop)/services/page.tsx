@@ -5,16 +5,23 @@ import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/s
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
-import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { ApiUnavailablePanel } from "../_components/api-unavailable";
 import { BackToTop } from "../_components/back-to-top";
 import { BrowsePager, parseBrowsePage, sliceBrowsePage } from "../_components/browse-pager";
 
+import { ServiceFilterBoxes } from "./_components/service-filter-boxes";
 import { ServiceGrid, type ServiceBrowseItem } from "./_components/service-grid";
 import { SERVICE_VERTICALS } from "./_components/service-verticals";
-import { VerticalFilterChips } from "./_components/vertical-filter-chips";
+import {
+  hrefFor,
+  NO_FILTERS,
+  parseFilters,
+  toApiQuery,
+  toUrlParams,
+  type ServiceFilters,
+} from "./_lib/filters";
 
 import type { Metadata } from "next";
 
@@ -25,7 +32,7 @@ export const revalidate = 60;
 type ServicesApiResponse = {
   items: ServiceBrowseItem[];
   total: number;
-  verticals: string[];
+  verticals?: string[];
 };
 
 type PageProps = {
@@ -33,6 +40,9 @@ type PageProps = {
   searchParams: Promise<{
     category?: string;
     area?: string;
+    band?: string;
+    rating?: string;
+    avail?: string;
     page?: string;
   }>;
 };
@@ -42,16 +52,6 @@ type ServicesTranslator = {
   /** Unformatted message, for templates the client fills in itself. */
   raw(key: string): unknown;
 };
-
-function parseCategory(value: string | undefined): string | null {
-  if (!value) {
-    return null;
-  }
-  if ((SERVICE_VERTICALS as readonly string[]).includes(value)) {
-    return value;
-  }
-  return null;
-}
 
 async function getServicesTranslator(locale: string): Promise<ServicesTranslator> {
   const baseMessages = await getMessages();
@@ -68,18 +68,11 @@ async function getServicesTranslator(locale: string): Promise<ServicesTranslator
   }) as unknown as ServicesTranslator;
 }
 
-async function fetchServices(params: {
-  category: string | null;
-  area: string;
-}): Promise<{ kind: "ok"; data: ServicesApiResponse } | { kind: "unavailable" }> {
-  const search = new URLSearchParams();
-  if (params.category) {
-    search.set("category", params.category);
-  }
-  if (params.area.trim()) {
-    search.set("area", params.area.trim());
-  }
-  const suffix = search.toString() ? `?${search.toString()}` : "";
+async function fetchServices(
+  filters: ServiceFilters,
+): Promise<{ kind: "ok"; data: ServicesApiResponse } | { kind: "unavailable" }> {
+  const query = toApiQuery(filters);
+  const suffix = query ? `?${query}` : "";
 
   try {
     const url = absoluteApiUrl(`/services${suffix}`);
@@ -106,7 +99,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const { locale } = await params;
   const query = await searchParams;
   const t = await getServicesTranslator(locale);
-  const hasFilters = Boolean(query.category || query.area);
+  const hasFilters = Boolean(
+    query.category || query.area || query.band || query.rating || query.avail,
+  );
 
   return {
     title: t("browse.title"),
@@ -135,10 +130,9 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
     messages: { catalog: catalogMessages },
     namespace: "catalog",
   }) as ServicesTranslator;
-  const category = parseCategory(query.category);
-  const area = query.area ?? "";
+  const filters = parseFilters(query);
   const page = parseBrowsePage(query.page);
-  const fetchResult = await fetchServices({ category, area });
+  const fetchResult = await fetchServices(filters);
 
   if (fetchResult.kind === "unavailable") {
     return (
@@ -159,27 +153,44 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
   const data = fetchResult.data;
   const allItems = data.items;
   const total = data.total ?? allItems.length;
+  const hasActiveFilters = Object.values(toUrlParams(filters)).some(Boolean);
   const items = sliceBrowsePage(allItems, page);
-  const verticals = data.verticals ?? [...SERVICE_VERTICALS];
-  const pagerParams = { category: category ?? undefined, area: area || undefined };
+  // Show every vertical the page knows; the API list may lag a deploy behind.
+  const verticals = [...SERVICE_VERTICALS];
+  const pagerParams = toUrlParams(filters);
 
   const filterLabels = {
-    verticalLabel: t("browse.verticalLabel"),
-    areaLabel: t("browse.areaLabel"),
+    heading: t("browse.filters.heading"),
+    more: t("browse.filters.more"),
+    clear: t("browse.filters.clear"),
+    remove: String(t.raw("browse.filters.remove")),
+    results: t("browse.filters.results", { count: total }),
+    area: t("browse.filters.area"),
+    areaAll: t("browse.filters.areaAll"),
     areaPlaceholder: t("browse.areaPlaceholder"),
     filterSubmit: t("browse.filterSubmit"),
-    preferredBadge: t("browse.preferredBadge"),
-    categories: {
-      all: t("categories.all"),
-      beauty: t("categories.beauty"),
-      "food-catering": t("categories.food-catering"),
-      auto: t("categories.auto"),
-      "printing-creative": t("categories.printing-creative"),
-      "home-services": t("categories.home-services"),
-      "tech-services": t("categories.tech-services"),
-      cleaning: t("categories.cleaning"),
-      tailoring: t("categories.tailoring"),
+    price: t("browse.filters.price"),
+    priceAny: t("browse.filters.priceAny"),
+    priceBands: {
+      under100: t("browse.filters.priceBands.under100"),
+      mid: t("browse.filters.priceBands.mid"),
+      high: t("browse.filters.priceBands.high"),
+      premium: t("browse.filters.priceBands.premium"),
     },
+    rating: t("browse.filters.rating"),
+    ratingAny: t("browse.filters.ratingAny"),
+    ratingOptions: {
+      "45": t("browse.filters.ratingOptions.45"),
+      "4": t("browse.filters.ratingOptions.4"),
+      "3": t("browse.filters.ratingOptions.3"),
+    },
+    availability: t("browse.filters.availability"),
+    availabilityAny: t("browse.filters.availabilityAny"),
+    availabilityNow: t("browse.filters.availabilityNow"),
+    all: t("categories.all"),
+    categories: Object.fromEntries(
+      verticals.map((vertical) => [vertical, t(`categories.${vertical}` as "categories.beauty")]),
+    ),
   };
 
   return (
@@ -188,19 +199,33 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
         <PageHeader title={t("browse.title")} subtitle={t("browse.subtitle")} />
 
         <div>
-          <Suspense fallback={null}>
-            <VerticalFilterChips
-              locale={locale}
-              labels={filterLabels}
-              activeCategory={category}
-              activeArea={area}
-              verticals={verticals}
-            />
-          </Suspense>
+          <ServiceFilterBoxes
+            locale={locale}
+            filters={filters}
+            verticals={verticals}
+            areas={allItems.map((item) => item.service_area)}
+            labels={filterLabels}
+          />
         </div>
+        <p className="m-0 text-sm text-text-3" aria-live="polite" data-testid="results-count">
+          {filterLabels.results}
+        </p>
 
         {allItems.length === 0 ? (
-          <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
+          <EmptyState
+            title={t("browse.emptyTitle")}
+            body={t("browse.emptyBody")}
+            action={
+              hasActiveFilters ? (
+                <Link
+                  href={hrefFor(locale, NO_FILTERS)}
+                  className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+                >
+                  {filterLabels.clear}
+                </Link>
+              ) : undefined
+            }
+          />
         ) : (
           <>
             <ServiceGrid
@@ -217,6 +242,17 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
                 },
                 preferredBadge: t("browse.preferredBadge"),
                 free: t("detail.free"),
+                fullyBooked: t("browse.fullyBooked"),
+                ratingLine: String(t.raw("browse.ratingLine")),
+                archetypes: {
+                  accommodation: t("templates.archetypes.accommodation"),
+                  appointment: t("templates.archetypes.appointment"),
+                  membership: t("templates.archetypes.membership"),
+                  on_site: t("templates.archetypes.on_site"),
+                  rental: t("templates.archetypes.rental"),
+                  ticketed: t("templates.archetypes.ticketed"),
+                  professional: t("templates.archetypes.professional"),
+                },
               }}
             />
             <BrowsePager
