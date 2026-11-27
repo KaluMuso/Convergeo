@@ -23,7 +23,6 @@ export type DetailsDraft = {
   rows: Record<string, Row[]>;
   lines: Record<string, string>;
   menu: MenuSectionRow[];
-  presentedBy: Row;
 };
 
 export type FieldKind = "text" | "textarea" | "time" | "number" | "select";
@@ -52,8 +51,6 @@ export const SCALAR_SPECS: Readonly<Record<string, FieldSpec>> = {
   seating_note: { key: "seating_note", kind: "textarea", max: 300 },
   reservation_note: { key: "reservation_note", kind: "textarea", max: 300 },
   host_name: { key: "host_name", kind: "text", max: 80 },
-  promo_note: { key: "promo_note", kind: "text", max: 200 },
-  giveaway_note: { key: "giveaway_note", kind: "text", max: 200 },
   host_names: { key: "host_names", kind: "text", max: 120 },
   occasion: { key: "occasion", kind: "text", max: 80 },
   rsvp_note: { key: "rsvp_note", kind: "textarea", max: 300 },
@@ -129,16 +126,7 @@ export const LIST_SPECS: Readonly<Record<string, ListSpec>> = {
     ],
     max: 8,
   },
-  activations: {
-    fields: [
-      { key: "title", kind: "text", required: true, max: 80 },
-      { key: "description", kind: "text", max: 200 },
-    ],
-    max: 8,
-  },
 };
-
-export const PRESENTED_BY_FIELDS = SPONSOR_FIELDS;
 
 /** One-per-line list sections: [section, maxLines, maxLineLength]. */
 export const LINE_SPECS: Readonly<Record<string, readonly [number, number]>> = {
@@ -152,7 +140,7 @@ const DIETARY = ["vegetarian", "vegan", "halal", "gluten_free", "spicy"] as cons
 export const DIETARY_OPTIONS = DIETARY;
 
 export function emptyDraft(): DetailsDraft {
-  return { scalars: {}, rows: {}, lines: {}, menu: [], presentedBy: {} };
+  return { scalars: {}, rows: {}, lines: {}, menu: [] };
 }
 
 /** "12.50" kwacha to integer ngwee without floats; null when malformed. */
@@ -188,6 +176,14 @@ export function detailsToDraft(raw: unknown): DetailsDraft {
   for (const key of Object.keys(SCALAR_SPECS)) draft.scalars[key] = s(src[key]);
   for (const [key, spec] of Object.entries(LIST_SPECS))
     draft.rows[key] = toRows(src[key], spec.fields);
+  // Sponsor approval status is server-controlled: carried read-only for the badge and
+  // never serialised back (rowToJson only emits spec fields).
+  if (Array.isArray(src.sponsors)) {
+    draft.rows.sponsors = (draft.rows.sponsors ?? []).map((row, i) => ({
+      ...row,
+      status: s((src.sponsors as Record<string, unknown>[])[i]?.status) || "pending",
+    }));
+  }
   for (const key of Object.keys(LINE_SPECS)) {
     draft.lines[key] = Array.isArray(src[key]) ? (src[key] as unknown[]).map(s).join("\n") : "";
   }
@@ -204,8 +200,6 @@ export function detailsToDraft(raw: unknown): DetailsDraft {
       ),
     }));
   }
-  const presented = (src.presented_by ?? {}) as Record<string, unknown>;
-  draft.presentedBy = Object.fromEntries(SPONSOR_FIELDS.map((f) => [f.key, s(presented[f.key])]));
   return draft;
 }
 
@@ -272,10 +266,6 @@ export function draftToDetails(
       .filter((section) => section !== null);
     if (menu.length) out.menu_sections = menu;
   }
-  if (sections.has("presented_by")) {
-    const presented = rowToJson(draft.presentedBy, SPONSOR_FIELDS);
-    if (presented) out.presented_by = presented;
-  }
   return out;
 }
 
@@ -330,10 +320,6 @@ export function validateDraft(archetype: EventArchetype, draft: DetailsDraft): D
       const error = checkRow(row, spec.fields);
       if (error) return error;
     }
-  }
-  if (sections.has("presented_by")) {
-    const error = checkRow(draft.presentedBy, SPONSOR_FIELDS);
-    if (error) return error;
   }
   if (sections.has("menu_sections")) {
     if (draft.menu.length > MENU_LIMITS.sections) return "tooMany";

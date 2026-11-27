@@ -2090,7 +2090,6 @@
         "speakers": "Add speaker",
         "activities": "Add activity",
         "age_groups": "Add age group",
-        "activations": "Add activation",
         "menu_sections": "Add menu section",
         "menu_item": "Add dish"
       },
@@ -2102,8 +2101,6 @@
         "speakers": "Speakers and hosts",
         "activities": "Activities",
         "age_groups": "Age groups",
-        "activations": "What's on",
-        "presented_by": "Presented by (lead sponsor)",
         "menu_sections": "Menu",
         "stages": "Stages",
         "languages": "Languages",
@@ -2121,8 +2118,6 @@
         "seating_note": "Seating note",
         "reservation_note": "Reservation note",
         "host_name": "Host or chef",
-        "promo_note": "Promo note",
-        "giveaway_note": "Giveaway note",
         "host_names": "Hosts",
         "occasion": "Occasion",
         "rsvp_note": "RSVP note",
@@ -2168,10 +2163,6 @@
           "min_age": "Minimum age",
           "max_age": "Maximum age (optional)"
         },
-        "activations": {
-          "title": "Title",
-          "description": "Description"
-        },
         "menu_sections": {
           "title": "Section title",
           "name": "Dish name",
@@ -2203,6 +2194,13 @@
         "invalidPrice": "Enter a price like 120 or 120.50.",
         "invalidNumber": "Ages must be whole numbers.",
         "tooMany": "You have added too many items in one section."
+      },
+      "restaurantTables": "Tables: create one ticket type per table size (for example Table for 2, Table for 4) with its own ticket cap. There is no seat map.",
+      "sponsorReviewNote": "Sponsors show publicly only after Vergeo5 approves them. Editing a sponsor sends it back for review.",
+      "sponsorStatus": {
+        "pending": "Awaiting approval",
+        "approved": "Approved",
+        "rejected": "Not approved"
       }
     }
   },

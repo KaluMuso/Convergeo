@@ -83,20 +83,21 @@ describe("draftToDetails", () => {
     expect(draftToDetails("concert", draft)).toEqual({});
   });
 
-  it("emits presented_by and numeric ages for the right archetypes", () => {
+  it("emits numeric ages for the right archetypes", () => {
     const draft = emptyDraft();
-    draft.presentedBy = {
-      name: "Mosi",
-      logo: "",
-      link_url: "https://example.com",
-      tagline: "",
-    };
     draft.rows.age_groups = [{ label: "Kids", min_age: "3", max_age: "12" }];
-    expect(draftToDetails("branded", draft)).toEqual({
-      presented_by: { name: "Mosi", link_url: "https://example.com" },
-    });
     expect(draftToDetails("sports_family", draft)).toEqual({
       age_groups: [{ label: "Kids", min_age: 3, max_age: 12 }],
+    });
+  });
+
+  it("carries sponsor status read-only and never sends it back", () => {
+    const draft = detailsToDraft({
+      sponsors: [{ name: "Mosi", status: "approved" }, { name: "Zam" }],
+    });
+    expect(draft.rows.sponsors?.map((r) => r.status)).toEqual(["approved", "pending"]);
+    expect(draftToDetails("concert", draft)).toEqual({
+      sponsors: [{ name: "Mosi" }, { name: "Zam" }],
     });
   });
 

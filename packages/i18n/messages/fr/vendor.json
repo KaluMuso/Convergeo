@@ -2085,7 +2085,6 @@
         "speakers": "Ajouter un intervenant",
         "activities": "Ajouter une activité",
         "age_groups": "Ajouter une tranche d'âge",
-        "activations": "Ajouter une animation",
         "menu_sections": "Ajouter une section de menu",
         "menu_item": "Ajouter un plat"
       },
@@ -2097,8 +2096,6 @@
         "speakers": "Intervenants et hôtes",
         "activities": "Activités",
         "age_groups": "Tranches d'âge",
-        "activations": "Au programme",
-        "presented_by": "Présenté par (partenaire principal)",
         "menu_sections": "Menu",
         "stages": "Scènes",
         "languages": "Langues",
@@ -2116,8 +2113,6 @@
         "seating_note": "Note sur le placement",
         "reservation_note": "Note de réservation",
         "host_name": "Hôte ou chef",
-        "promo_note": "Note promo",
-        "giveaway_note": "Note concours",
         "host_names": "Organisateurs",
         "occasion": "Occasion",
         "rsvp_note": "Note de réponse",
@@ -2163,10 +2158,6 @@
           "min_age": "Âge minimum",
           "max_age": "Âge maximum (facultatif)"
         },
-        "activations": {
-          "title": "Titre",
-          "description": "Description"
-        },
         "menu_sections": {
           "title": "Titre de la section",
           "name": "Nom du plat",
@@ -2198,6 +2189,13 @@
         "invalidPrice": "Saisissez un prix comme 120 ou 120.50.",
         "invalidNumber": "L'âge doit être un nombre entier.",
         "tooMany": "Trop d'éléments dans une même section."
+      },
+      "restaurantTables": "Tables : créez un type de billet par taille de table (par exemple Table de 2, Table de 4) avec son propre plafond de billets. Il n'y a pas de plan de salle.",
+      "sponsorReviewNote": "Les sponsors ne s'affichent publiquement qu'après approbation par Vergeo5. Modifier un sponsor le renvoie en validation.",
+      "sponsorStatus": {
+        "pending": "En attente d'approbation",
+        "approved": "Approuvé",
+        "rejected": "Non approuvé"
       }
     }
   },

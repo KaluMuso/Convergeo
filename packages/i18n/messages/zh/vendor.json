@@ -2085,7 +2085,6 @@
         "speakers": "添加讲者",
         "activities": "添加活动",
         "age_groups": "添加年龄组",
-        "activations": "添加现场内容",
         "menu_sections": "添加菜单分区",
         "menu_item": "添加菜品"
       },
@@ -2097,8 +2096,6 @@
         "speakers": "讲者与主持",
         "activities": "活动项目",
         "age_groups": "年龄分组",
-        "activations": "现场内容",
-        "presented_by": "冠名赞助商",
         "menu_sections": "菜单",
         "stages": "舞台",
         "languages": "语言",
@@ -2116,8 +2113,6 @@
         "seating_note": "座位说明",
         "reservation_note": "预订说明",
         "host_name": "主办人或主厨",
-        "promo_note": "促销说明",
-        "giveaway_note": "抽奖说明",
         "host_names": "主办人",
         "occasion": "场合",
         "rsvp_note": "回复说明",
@@ -2163,10 +2158,6 @@
           "min_age": "最小年龄",
           "max_age": "最大年龄（选填）"
         },
-        "activations": {
-          "title": "标题",
-          "description": "说明"
-        },
         "menu_sections": {
           "title": "分区标题",
           "name": "菜品名称",
@@ -2198,6 +2189,13 @@
         "invalidPrice": "请输入价格，例如 120 或 120.50。",
         "invalidNumber": "年龄必须为整数。",
         "tooMany": "同一分区的条目过多。"
+      },
+      "restaurantTables": "餐桌：每种桌位规格创建一种票种（例如2人桌、4人桌），并设置各自的票数上限。不提供座位图。",
+      "sponsorReviewNote": "赞助商经 Vergeo5 审核通过后才会公开显示。修改赞助商会重新进入审核。",
+      "sponsorStatus": {
+        "pending": "等待审核",
+        "approved": "已通过",
+        "rejected": "未通过"
       }
     }
   },

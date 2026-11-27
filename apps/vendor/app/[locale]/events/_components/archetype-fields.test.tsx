@@ -46,16 +46,15 @@ describe("ArchetypeFields", () => {
 
     rerender(<Harness archetype="restaurant" />);
     expect(screen.getByText("archetype.add.menu_sections")).toBeInTheDocument();
-
-    rerender(<Harness archetype="branded" />);
-    expect(screen.getByTestId("presented-by")).toBeInTheDocument();
-    expect(
-      screen.getByRole("group", { name: "archetype.sections.presented_by" }),
-    ).toBeInTheDocument();
+    // Founder decision: one ticket type per table size, no seat map.
+    expect(screen.getByTestId("restaurant-tables-hint")).toHaveTextContent(
+      "archetype.restaurantTables",
+    );
+    rerender(<Harness archetype="concert" />);
+    expect(screen.queryByTestId("restaurant-tables-hint")).toBeNull();
 
     rerender(<Harness archetype="generic" />);
     expect(screen.getByText("archetype.add.agenda")).toBeInTheDocument();
-    expect(screen.queryByTestId("presented-by")).toBeNull();
   });
 
   it("adds and edits list rows and produces API json", () => {
@@ -91,5 +90,17 @@ describe("ArchetypeFields", () => {
       />,
     );
     expect(out()).toEqual({ denomination: "Anglican" });
+  });
+
+  it("shows a read-only approval status per sponsor and never sends it", () => {
+    render(
+      <Harness
+        archetype="concert"
+        initial={{ sponsors: [{ name: "Mosi", status: "approved" }, { name: "Zam" }] }}
+      />,
+    );
+    expect(screen.getByTestId("sponsor-status-0")).toHaveAttribute("data-status", "approved");
+    expect(screen.getByTestId("sponsor-status-1")).toHaveAttribute("data-status", "pending");
+    expect(out()).toEqual({ sponsors: [{ name: "Mosi" }, { name: "Zam" }] });
   });
 });

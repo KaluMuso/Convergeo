@@ -12,7 +12,6 @@ import {
   LINE_SPECS,
   LIST_SPECS,
   MENU_LIMITS,
-  PRESENTED_BY_FIELDS,
   SCALAR_SPECS,
   type DetailsDraft,
   type FieldSpec,
@@ -112,6 +111,18 @@ function RowEditor({
           className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3"
           data-testid={`row-${section}-${index}`}
         >
+          {section === "sponsors" ? (
+            <p
+              className="text-xs text-text-2"
+              data-testid={`sponsor-status-${index}`}
+              data-status={row.status || "pending"}
+            >
+              <span className="font-semibold">
+                {t(`archetype.sponsorStatus.${row.status || "pending"}`)}
+              </span>{" "}
+              {t("archetype.sponsorReviewNote")}
+            </p>
+          ) : null}
           {fields.map((field) => (
             <FieldInput
               key={field.key}
@@ -337,6 +348,11 @@ export function ArchetypeFields({ archetype, draft, onChange, disabled }: Props)
       <div>
         <h2 className="text-sm font-semibold text-text">{t("archetype.heading")}</h2>
         <p className="mt-1 text-xs text-text-2">{t("archetype.help")}</p>
+        {archetype === "restaurant" ? (
+          <p className="mt-2 text-xs text-text-2" data-testid="restaurant-tables-hint">
+            {t("archetype.restaurantTables")}
+          </p>
+        ) : null}
       </div>
 
       {sections.map((section) => {
@@ -422,30 +438,6 @@ export function ArchetypeFields({ archetype, draft, onChange, disabled }: Props)
         }
         return null;
       })}
-
-      {has("presented_by") ? (
-        <fieldset className="flex flex-col gap-2" data-testid="presented-by">
-          <legend className="mb-1 text-sm font-medium text-text">
-            {t("archetype.sections.presented_by")}
-          </legend>
-          {PRESENTED_BY_FIELDS.map((field) => (
-            <FieldInput
-              key={field.key}
-              spec={field}
-              label={t(`archetype.fields.sponsors.${field.key}`)}
-              value={draft.presentedBy[field.key] ?? ""}
-              disabled={disabled}
-              t={t}
-              onChange={(value) =>
-                onChange({
-                  ...draft,
-                  presentedBy: { ...draft.presentedBy, [field.key]: value },
-                })
-              }
-            />
-          ))}
-        </fieldset>
-      ) : null}
     </div>
   );
 }
