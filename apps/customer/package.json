@@ -26,7 +26,6 @@
     "serwist": "^9.5.13"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "15.5.29",
     "@serwist/next": "^9.5.13",
     "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/jest-dom": "^6.6.3",

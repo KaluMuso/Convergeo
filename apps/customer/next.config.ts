@@ -1,4 +1,3 @@
-import withBundleAnalyzer from "@next/bundle-analyzer";
 import withSerwistInit from "@serwist/next";
 import { assertVercelPublicSupabaseEnv } from "@vergeo/config";
 import {
@@ -173,10 +172,4 @@ const nextConfig: NextConfig = {
 // breaks CLAUDE.md #7 (customer routes ≤150 KB gz). Instead the SDK is lazy-loaded in
 // an async chunk (`app/sentry-init.tsx` → dynamic `import('@sentry/nextjs')`). Client
 // source-map upload runs as a separate gated build step — see docs/ops/observability.md.
-// `ANALYZE=true pnpm --filter customer build` writes per-bundle treemaps to .next/analyze.
-const analyze = withBundleAnalyzer({
-  enabled: process.env.ANALYZE === "true",
-  openAnalyzer: false,
-});
-
-export default analyze(withNextIntl(withSerwist(nextConfig)));
+export default withNextIntl(withSerwist(nextConfig));
