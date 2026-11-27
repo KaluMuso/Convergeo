@@ -393,6 +393,7 @@ export function PdpInteractiveBody({
         .filter(Boolean)
         .join(" ")}
       data-testid="pdp-interactive-body"
+      data-pdp-zoom-root
     >
       <div className="min-w-0 md:col-start-1 md:row-start-1">
         <PdpGallery
@@ -408,7 +409,10 @@ export function PdpInteractiveBody({
       </div>
 
       {buyBoxListing && selectedListing && purchase ? (
-        <div className="flex flex-col gap-3 md:sticky md:top-24 md:col-start-2 md:row-start-1">
+        <div
+          data-pdp-zoom-target
+          className="flex flex-col gap-3 md:sticky md:top-24 md:col-start-2 md:row-start-1"
+        >
           {/* Title, brand and seller count sit beside the gallery (Amazon/Takealot). */}
           {headerSlot}
           <BuyBox

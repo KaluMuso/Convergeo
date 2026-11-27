@@ -65,6 +65,11 @@ describe("PDP gallery under the CI perf image fixture", () => {
           alt="x"
           pointer={{ x: 10, y: 10 }}
           box={{ width: 400, height: 400 }}
+          layout={{
+            pane: { left: 420, top: 0, width: 400, height: 500 },
+            zoom: 2.5,
+            lens: { width: 160, height: 200 },
+          }}
         />,
       ),
     ).not.toThrow();

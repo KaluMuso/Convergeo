@@ -16,6 +16,38 @@ body {
   overflow-x: hidden;
 }
 
+/* Home hero band: true edge-to-edge (breaks out of the padded, max-width <main>), flush
+   under the header, and underlapped by the next section so the faded bottom edge melts
+   into the page instead of ending in a hard-cut rectangle. --hero-overlap is read by the
+   carousel to keep its dots/CTAs clear of the underlapped strip. */
+.v-home-hero-band {
+  --hero-overlap: 2.5rem;
+  position: relative;
+  left: 50%;
+  width: 100vw;
+  max-width: 100vw;
+  transform: translateX(-50%);
+  margin-top: -0.5rem;
+  margin-bottom: calc(-1 * var(--hero-overlap));
+}
+
+@media (min-width: 48rem) {
+  .v-home-hero-band {
+    margin-top: -0.75rem;
+  }
+}
+
+@media (min-width: 64rem) {
+  .v-home-hero-band {
+    margin-top: -1rem;
+  }
+}
+
+.v-home-hero-band + * {
+  position: relative;
+  z-index: 1;
+}
+
 body {
   min-height: 100dvh;
   /* Ground palette from design tokens; flips with [data-theme="dark"]. */
