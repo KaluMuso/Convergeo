@@ -546,8 +546,8 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-  '@babel/runtime@7.29.15':
-    resolution: {integrity: sha512-304gsbbGVmQc+cNGHzwHBlqepYdWLKj3VXCQBGt/EGcV7PUPfKI7kAUNW1FZEOCwlQiLvQjg1JEaAlRQ616h+Q==}
+  '@babel/runtime@7.29.16':
+    resolution: {integrity: sha512-LKBjGopxrQE0aFucNL69OyyyF143MOWUULEOftU3oCgyD35Sy84UUpVnt/sNvTb7ZmCyALSt7om+fojlW35zYQ==}
     engines: {node: '>=6.9.0'}
 
   '@babel/runtime@7.29.7':
@@ -4859,7 +4859,7 @@ snapshots:
     dependencies:
       '@babel/types': 7.29.8
 
-  '@babel/runtime@7.29.15': {}
+  '@babel/runtime@7.29.16': {}
 
   '@babel/runtime@7.29.7': {}
 
@@ -6192,7 +6192,7 @@ snapshots:
   '@testing-library/dom@10.4.1':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/runtime': 7.29.15
+      '@babel/runtime': 7.29.16
       '@types/aria-query': 5.0.4
       aria-query: 5.3.0
       dom-accessibility-api: 0.5.16
