@@ -1,14 +1,3 @@
-import { adminNavPageMetadata } from "../../../lib/admin-page-metadata";
+import { routeMessagesLayout } from "../_components/route-messages";
 
-import type { Metadata } from "next";
-
-type LayoutProps = { children: React.ReactNode; params: Promise<{ locale: string }> };
-
-export async function generateMetadata({ params }: LayoutProps): Promise<Metadata> {
-  const { locale } = await params;
-  return adminNavPageMetadata(locale, "services");
-}
-
-export default function ServicesLayout({ children }: LayoutProps) {
-  return children;
-}
+export default routeMessagesLayout("services");
