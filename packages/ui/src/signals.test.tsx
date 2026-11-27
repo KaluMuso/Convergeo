@@ -86,10 +86,11 @@ describe("FilterBox / FilterChip", () => {
     );
     expect(screen.getByText("Seller")).toBeInTheDocument();
     const chips = screen.getAllByTestId("filter-chip");
+    expect(chips).toHaveLength(2);
     expect(chips[0]).toHaveAttribute("aria-pressed", "true");
     expect(chips[0]).toHaveAttribute("href", "/x?verified=1");
     expect(chips[1]).toHaveAttribute("aria-disabled", "true");
-    expect(chips[1].tagName).toBe("SPAN");
+    expect(chips[1]!.tagName).toBe("SPAN");
   });
 
   it("uses onNavigate instead of a full page load when provided", () => {
