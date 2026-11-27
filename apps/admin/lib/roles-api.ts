@@ -139,6 +139,8 @@ export function useAdminPermissionCheck(route: string | null) {
   // painting while the recheck runs, instead of making every navigation wait one extra
   // `/admin/me/permissions` round trip before the new page can even start its own fetch.
   const confirmedRef = useRef<{ grants: AdminPermissions; at: number } | null>(null);
+  const checkRef = useRef(check);
+  checkRef.current = check;
   const refreshRef = useRef<() => void>(() => {});
   const refresh = useCallback(() => refreshRef.current(), []);
 
@@ -153,20 +155,29 @@ export function useAdminPermissionCheck(route: string | null) {
     let unsubscribe: (() => void) | undefined;
     let authTimer: number | undefined;
 
-    // "hard": drop the grants first (initial load, refocus, explicit refresh after a role
+    // "hard": drop the grants first (initial load, explicit refresh after a role
     // mutation, account switch). "soft": used only when moving to another route within the
     // same session; keep painting the last confirmed grants while rechecking, and let a
     // definitive failure or a changed grant set win.
-    function reload(mode: "hard" | "soft" = "hard") {
+    function reload(mode: "hard" | "soft" | "quiet" = "hard") {
       if (!active) return;
       const current = ++request;
+      // "quiet": refocus. The mounted page (and any form state in it) stays exactly as it is
+      // while the recheck runs, whatever the age of the last confirmation.
+      const quiet =
+        mode === "quiet" &&
+        checkRef.current.route === route &&
+        checkRef.current.grants !== null &&
+        !checkRef.current.error;
       const reusable =
         mode === "soft" &&
         confirmedRef.current !== null &&
         Date.now() - confirmedRef.current.at < ADMIN_GRANTS_REUSE_MS
           ? confirmedRef.current.grants
           : null;
-      if (reusable) {
+      if (quiet) {
+        // Nothing to repaint: keep the current grants until the answer arrives.
+      } else if (reusable) {
         setCheck((previous) =>
           previous.route === route && previous.grants && !previous.error
             ? previous
@@ -186,21 +197,21 @@ export function useAdminPermissionCheck(route: string | null) {
         },
         (error: unknown) => {
           if (!active || current !== request) return;
-          if (reusable && !isDefinitiveFailure(error)) return;
+          if ((reusable || quiet) && !isDefinitiveFailure(error)) return;
           confirmedRef.current = null;
           setCheck({ route, grants: null, error: true });
         },
       );
     }
 
-    // Refocus stays strict on purpose: a same-route recheck clears the grants first, so a
-    // revoked grant removes the page at once (admin-nav-capabilities.test.ts pins this).
+    // Refocus rechecks quietly: the page stays mounted (in-progress forms survive an
+    // alt-tab). It is removed only if the answer shrinks the grants or is a 401/403.
     function onFocus() {
-      reload("hard");
+      reload("quiet");
     }
 
     function onVisibility() {
-      if (document.visibilityState === "visible") reload("hard");
+      if (document.visibilityState === "visible") reload("quiet");
     }
 
     refreshRef.current = () => reload("hard");

@@ -376,7 +376,8 @@ describe("mounted current-permission shell", () => {
     const slower = deferred<Response>();
     nextReply = slower.promise;
     await refocus();
-    expect(container.querySelector("[data-protected-route]")).toBeNull();
+    // Refocus rechecks quietly: the page stays while the answer is pending.
+    expect(container.querySelector("[data-protected-route]")).not.toBeNull();
     current = grants([]);
     await refocus();
     await act(async () => {
@@ -670,5 +671,70 @@ describe("route changes reuse confirmed grants while rechecking", () => {
       "shell.permissionChecking",
     );
     await act(async () => pending.resolve(reply(current)));
+  });
+});
+
+describe("refocus rechecks grants quietly", () => {
+  const typed = () => container.querySelector<HTMLInputElement>("input[data-draft]");
+
+  async function renderWithForm(path: string) {
+    fixture.pathname = path;
+    root ??= createRoot(container);
+    await act(async () => {
+      root?.render(
+        React.createElement(AdminShell, {
+          locale: "en",
+          children: React.createElement(
+            "div",
+            { "data-protected-route": path },
+            React.createElement("input", { "data-draft": "", defaultValue: "" }),
+          ),
+        }),
+      );
+    });
+    const input = typed()!;
+    input.value = "half-written reject reason";
+  }
+
+  it("keeps the page and its form state when the grants are unchanged", async () => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderWithForm("/en/moderation");
+    const pending = deferred<Response>();
+    nextReply = pending.promise;
+    await refocus();
+    expect(typed()?.value).toBe("half-written reject reason");
+    await act(async () => pending.resolve(reply(current)));
+    expect(typed()?.value).toBe("half-written reject reason");
+  });
+
+  it("removes the page when the recheck returns fewer grants", async () => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderWithForm("/en/moderation");
+    current = grants(["finance.read"]);
+    await refocus();
+    expect(typed()).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
+  });
+
+  it.each([401, 403])("removes the page on a %s answer", async (status) => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderWithForm("/en/moderation");
+    nextReply = Promise.resolve(
+      reply({ error: { code: "forbidden", message: "Denied", request_id: "local-only" } }, status),
+    );
+    await refocus();
+    expect(typed()).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionError");
+  });
+
+  it("keeps the page through a network error", async () => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderWithForm("/en/moderation");
+    const pending = deferred<Response>();
+    nextReply = pending.promise;
+    await refocus();
+    await act(async () => pending.reject(new Error("Local transport failure")));
+    expect(typed()?.value).toBe("half-written reject reason");
+    expect(container.querySelector('[role="alert"]')).toBeNull();
   });
 });
