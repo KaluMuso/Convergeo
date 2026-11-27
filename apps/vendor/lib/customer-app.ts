@@ -63,3 +63,13 @@ export function getVendorStorefrontUrl(locale: string, slug: string): string | n
 
   return `${base}/${locale}/v/${encodeURIComponent(trimmedSlug)}`;
 }
+
+/**
+ * Absolute customer-app URL for a path (`/en/account/event-team/accept`), used in text the
+ * vendor shares outside the app. Falls back to the bare path when the origin is unknown.
+ */
+export function getCustomerAppPathUrl(path: string): string {
+  const base = getCustomerAppUrl();
+  const suffix = path.startsWith("/") ? path : `/${path}`;
+  return base === null ? suffix : `${base}${suffix}`;
+}
