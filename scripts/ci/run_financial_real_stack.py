@@ -176,7 +176,12 @@ def nodes_from_collection(text: str) -> list[str]:
 def require_collection(expected: list[str], observed: list[str], status: int) -> None:
     if (status or not expected or len(expected) != len(set(expected))
             or len(observed) != len(set(observed)) or set(observed) != set(expected)):
-        raise RuntimeError("Complete collection differs from reviewed required identities")
+        missing = sorted(set(expected) - set(observed))
+        extra = sorted(set(observed) - set(expected))
+        raise RuntimeError(
+            "Complete collection differs from reviewed required identities "
+            f"(status={status} expected={len(expected)} observed={len(observed)} "
+            f"missing={missing[:5]} extra={extra[:5]})")
 
 
 def financial_identities() -> dict[str, list[str]]:
