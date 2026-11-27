@@ -443,7 +443,9 @@ class TestCancelBlockedWhilePaymentInFlight:
     def test_failed_without_terminal_verdict_still_blocks(self, db: PgConn) -> None:
         order_id, group_id = str(uuid.uuid4()), str(uuid.uuid4())
         _insert_order(db, order_id=order_id, checkout_group_id=group_id, status="placed")
-        _insert_payment(db, payment_id=str(uuid.uuid4()), checkout_group_id=group_id, status="failed")
+        _insert_payment(
+            db, payment_id=str(uuid.uuid4()), checkout_group_id=group_id, status="failed"
+        )
         with pytest.raises(PaymentInFlightError):
             transition_order(
                 order_id=order_id,
@@ -470,7 +472,9 @@ class TestCancelBlockedWhilePaymentInFlight:
     def test_cod_order_is_never_blocked(self, db: PgConn) -> None:
         order_id, group_id = str(uuid.uuid4()), str(uuid.uuid4())
         _insert_order(db, order_id=order_id, checkout_group_id=group_id, status="placed", cod=True)
-        _insert_payment(db, payment_id=str(uuid.uuid4()), checkout_group_id=group_id, status="initiated")
+        _insert_payment(
+            db, payment_id=str(uuid.uuid4()), checkout_group_id=group_id, status="initiated"
+        )
         transition_order(
             order_id=order_id,
             event=OrderEvent.CANCEL,
