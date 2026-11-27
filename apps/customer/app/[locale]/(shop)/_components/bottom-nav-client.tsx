@@ -1,9 +1,10 @@
 "use client";
 
-import { BottomNav, type BottomNavItem } from "@vergeo/ui/src/bottom-nav";
+import { BottomNav, type BottomNavItem, type BottomNavLinkProps } from "@vergeo/ui/src/bottom-nav";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { openMobileMenu, preloadMobileDrawer } from "./mega-menu/menu-events";
 import { useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
 
 type BottomNavClientProps = {
@@ -12,6 +13,48 @@ type BottomNavClientProps = {
   ariaLabel: string;
   locale: string;
 };
+
+function isBrowseHref(href: string): boolean {
+  return (href.split(/[?#]/, 1)[0] ?? href).endsWith("/search");
+}
+
+/**
+ * The "Browse" tab opens the department drawer (drill-down mega menu). It stays
+ * a real link to /search, so without JS (or with a modified click) it still
+ * navigates to search.
+ */
+function ShopBottomNavLink({ href, children, ...rest }: BottomNavLinkProps) {
+  if (!isBrowseHref(href)) {
+    return (
+      <Link href={href} {...rest}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <Link
+      href={href}
+      {...rest}
+      aria-haspopup="dialog"
+      onPointerDown={preloadMobileDrawer}
+      onClick={(event) => {
+        if (
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey ||
+          event.button !== 0
+        ) {
+          return;
+        }
+        event.preventDefault();
+        openMobileMenu();
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
 
 function normalise(path: string): string {
   const pathOnly = path.split(/[?#]/, 1)[0] ?? path;
@@ -94,7 +137,7 @@ export function BottomNavClient({ items, ariaLabel, locale }: BottomNavClientPro
     <BottomNav
       items={resolved}
       ariaLabel={ariaLabel}
-      LinkComponent={Link}
+      LinkComponent={ShopBottomNavLink}
       desktopHiddenClassName="lg:hidden"
     />
   );
