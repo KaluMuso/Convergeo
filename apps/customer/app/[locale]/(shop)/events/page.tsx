@@ -233,7 +233,11 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
     messages: { catalog: catalogMessages },
     namespace: "catalog",
   }) as EventsTranslator;
-  const dateWindow = parseDateWindow(query.date_window);
+  // Founder decision: with a type filter, default to all upcoming dates (not "tonight").
+  const dateWindow =
+    query.date_window === undefined && parseArchetypeParam(query.archetype)
+      ? "all"
+      : parseDateWindow(query.date_window);
   const category = parseCategory(query.category);
   const onDate = parseOnDate(query.on_date);
   const city = (query.city ?? "").trim();
@@ -475,7 +479,6 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
                 sports_family: t("archetype.names.sports_family"),
                 restaurant: t("archetype.names.restaurant"),
                 private_gathering: t("archetype.names.private_gathering"),
-                branded: t("archetype.names.branded"),
               },
               priceLabel: t("filters.priceLabel"),
               priceAny: t("filters.priceAny"),

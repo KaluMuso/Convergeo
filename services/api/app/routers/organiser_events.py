@@ -16,6 +16,8 @@ from app.services.branches.context import scope_owner_vendor_query
 from app.services.events.access import hash_access_code
 from app.services.events.archetypes import (
     EventArchetype,
+    has_pending_sponsor,
+    normalize_sponsors,
     prune_details,
     read_details,
     resolve_archetype,
@@ -367,9 +369,14 @@ def _archetype_updates(body: EventUpdateRequest, event_row: dict[str, Any]) -> d
     if "archetype" in fields:
         updates["archetype"] = body.archetype
     if "archetype_details" in fields and body.archetype_details is not None:
-        updates["archetype_details"] = validate_details(effective, body.archetype_details)
+        updates["archetype_details"] = normalize_sponsors(
+            validate_details(effective, body.archetype_details),
+            event_row.get("archetype_details"),
+        )
     elif effective != previous and event_row.get("archetype_details"):
         updates["archetype_details"] = prune_details(effective, event_row.get("archetype_details"))
+    if "archetype_details" in updates:
+        updates["sponsor_review_pending"] = has_pending_sponsor(updates["archetype_details"])
     return updates
 
 
@@ -1026,7 +1033,9 @@ async def create_organiser_event(
     _require_active_kyc_vendor(service_client, vendor)
     _assert_known_category(body.category)
     create_archetype, _source = resolve_archetype(body.archetype, body.category, body.event_type)
-    create_details = validate_details(create_archetype, body.archetype_details)
+    create_details = normalize_sponsors(
+        validate_details(create_archetype, body.archetype_details), None
+    )
     _validate_instance_time_order(body.instances)
     _validate_recurrence_payload(
         event_type=body.event_type,
@@ -1084,6 +1093,7 @@ async def create_organiser_event(
         insert_payload["archetype"] = body.archetype
     if create_details:
         insert_payload["archetype_details"] = create_details
+        insert_payload["sponsor_review_pending"] = has_pending_sponsor(create_details)
     response = client.table("events").insert(insert_payload).execute()
     event_row = _single_row(response)
     if event_row is None:

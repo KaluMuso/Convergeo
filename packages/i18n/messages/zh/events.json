@@ -287,7 +287,6 @@
       "sports_family": "体育与家庭活动日",
       "restaurant": "餐饮活动",
       "private_gathering": "私人聚会",
-      "branded": "品牌体验活动",
       "generic": "活动"
     },
     "sections": {
@@ -298,7 +297,6 @@
       "activities": "活动项目",
       "ageGroups": "年龄分组",
       "menu": "菜单",
-      "activations": "现场内容",
       "notes": "温馨提示",
       "sponsors": "赞助商",
       "faqs": "常见问题与须知",
@@ -321,7 +319,6 @@
     "hostedBy": "主办：{name}",
     "seating": "座位",
     "reservation": "预订",
-    "presentedBy": "冠名",
     "visitSponsor": "访问 {name}（在新标签页打开）",
     "galleryAlt": "{title}，第 {n} 张照片",
     "dietary": {

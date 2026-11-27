@@ -359,45 +359,6 @@ export function MenuBlock({
   );
 }
 
-// --- Branded activations -----------------------------------------------------
-
-export function ActivationsBlock({
-  activations,
-  promoNote,
-  giveawayNote,
-  t,
-}: {
-  activations: ArchetypeDetails["activations"];
-  promoNote?: string;
-  giveawayNote?: string;
-  t: T;
-}) {
-  if (!activations.length && !promoNote && !giveawayNote) return null;
-  return (
-    <section
-      className={sectionClass}
-      aria-labelledby="arch-activations"
-      data-testid="block-activations"
-    >
-      <Heading id="arch-activations">{t("archetype.sections.activations")}</Heading>
-      {activations.length > 0 ? (
-        <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
-          {activations.map((activation) => (
-            <li key={activation.title} className={cardClass}>
-              <p className="font-medium text-text">{activation.title}</p>
-              {activation.description ? (
-                <p className="text-sm text-text-2">{activation.description}</p>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {promoNote ? <p className="text-sm text-text-2">{promoNote}</p> : null}
-      {giveawayNote ? <p className="text-sm text-text-2">{giveawayNote}</p> : null}
-    </section>
-  );
-}
-
 // --- Religious extras / private gathering notes -------------------------------
 
 export function NotesBlock({
@@ -445,17 +406,10 @@ export function NotesBlock({
 
 // --- Sponsor band ---------------------------------------------------------------
 
-export function SponsorBand({
-  sponsors,
-  presentedBy,
-  t,
-}: {
-  sponsors: Sponsor[];
-  presentedBy?: Sponsor;
-  t: T;
-}) {
-  const others = sponsors.filter((s) => s.name !== presentedBy?.name);
-  if (!presentedBy && others.length === 0) return null;
+export function SponsorBand({ sponsors, t }: { sponsors: Sponsor[]; t: T }) {
+  // Only admin-approved sponsors are ever shown publicly (the API already filters).
+  const others = sponsors.filter((s) => s.status === "approved");
+  if (others.length === 0) return null;
   return (
     <section
       className="flex flex-col gap-3 rounded-lg border border-border p-4"
@@ -467,9 +421,8 @@ export function SponsorBand({
         id="arch-sponsors"
         className="text-xs font-semibold uppercase tracking-[0.14em] text-text-3"
       >
-        {presentedBy ? t("archetype.presentedBy") : t("archetype.sections.sponsors")}
+        {t("archetype.sections.sponsors")}
       </h2>
-      {presentedBy ? <SponsorChip sponsor={presentedBy} t={t} large /> : null}
       {others.length > 0 ? (
         <ul className="flex list-none flex-wrap items-center gap-3 p-0">
           {others.map((sponsor) => (

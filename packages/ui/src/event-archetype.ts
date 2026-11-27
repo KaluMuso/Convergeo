@@ -13,7 +13,6 @@ export const EVENT_ARCHETYPES = [
   "sports_family",
   "restaurant",
   "private_gathering",
-  "branded",
   "generic",
 ] as const;
 
@@ -27,7 +26,7 @@ export const CATEGORY_ARCHETYPE: Readonly<Record<string, EventArchetype>> = {
   music: "concert",
   concerts: "concert",
   festivals: "concert",
-  gospel: "concert",
+  gospel: "religious",
   nightlife: "concert",
   "comedy-theatre-parent": "concert",
   "comedy-theatre": "concert",
@@ -86,11 +85,6 @@ export const ARCHETYPE_THEME: Readonly<Record<EventArchetype, ArchetypeTheme>> =
     accent: "var(--cat-beauty)",
     hero: "soft",
   },
-  branded: {
-    tint: "var(--primary-tint)",
-    accent: "var(--primary)",
-    hero: "panel",
-  },
   generic: {
     tint: "var(--primary-tint)",
     accent: "var(--primary)",
@@ -107,6 +101,7 @@ export type Sponsor = {
   logo?: string;
   link_url?: string;
   tagline?: string;
+  status: "pending" | "approved" | "rejected";
 };
 export type AgendaItem = {
   time: string;
@@ -142,7 +137,6 @@ export type MenuItem = {
   dietary: string[];
 };
 export type MenuSection = { title: string; items: MenuItem[] };
-export type Activation = { title: string; description?: string };
 export type Faq = { question: string; answer: string };
 export type AgePolicy = "all_ages" | "guardian_under_12" | "16_plus" | "18_plus";
 
@@ -169,10 +163,6 @@ export type ArchetypeDetails = {
   seating_note?: string;
   reservation_note?: string;
   host_name?: string;
-  presented_by?: Sponsor;
-  activations: Activation[];
-  promo_note?: string;
-  giveaway_note?: string;
   host_names?: string;
   occasion?: string;
   rsvp_note?: string;
@@ -241,6 +231,7 @@ function sponsor(value: unknown): Sponsor | null {
     logo: safeImageRef(r.logo),
     link_url: safeHttpsUrl(r.link_url),
     tagline: str(r.tagline, 120),
+    status: r.status === "approved" || r.status === "rejected" ? r.status : "pending",
   };
 }
 
@@ -356,14 +347,6 @@ export function sanitiseDetails(raw: unknown): ArchetypeDetails {
     seating_note: str(r.seating_note, 300),
     reservation_note: str(r.reservation_note, 300),
     host_name: str(r.host_name, 80),
-    presented_by: sponsor(r.presented_by) ?? undefined,
-    activations: list(r.activations, 8, (item) => {
-      const a = rec(item);
-      const title = a && str(a.title, 80);
-      return a && title ? { title, description: str(a.description, 200) } : null;
-    }),
-    promo_note: str(r.promo_note, 200),
-    giveaway_note: str(r.giveaway_note, 200),
     host_names: str(r.host_names, 120),
     occasion: str(r.occasion, 80),
     rsvp_note: str(r.rsvp_note, 300),
@@ -418,10 +401,6 @@ export type DetailSection =
   | "seating_note"
   | "reservation_note"
   | "host_name"
-  | "presented_by"
-  | "activations"
-  | "promo_note"
-  | "giveaway_note"
   | "host_names"
   | "occasion"
   | "rsvp_note"
@@ -462,6 +441,5 @@ export const ARCHETYPE_SECTIONS: Readonly<Record<EventArchetype, readonly Detail
     "gift_note",
     ...COMMON_SECTIONS,
   ],
-  branded: ["presented_by", "activations", "promo_note", "giveaway_note", ...COMMON_SECTIONS],
   generic: ["agenda", ...COMMON_SECTIONS],
 };

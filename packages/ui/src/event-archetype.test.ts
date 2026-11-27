@@ -15,7 +15,7 @@ import {
 describe("deriveArchetype", () => {
   it.each([
     ["concerts", "single", "concert"],
-    ["gospel", "single", "concert"],
+    ["gospel", "single", "religious"],
     ["church", "single", "religious"],
     ["football", "single", "sports_family"],
     ["family", null, "sports_family"],
@@ -28,9 +28,9 @@ describe("deriveArchetype", () => {
     expect(deriveArchetype(category, eventType)).toBe(expected);
   });
 
-  it("never derives branded (override only) and maps only known archetypes", () => {
+  it("has no branded archetype and maps only known archetypes", () => {
     const values = Object.values(CATEGORY_ARCHETYPE);
-    expect(values).not.toContain("branded");
+    expect(EVENT_ARCHETYPES).not.toContain("branded" as never);
     for (const value of values) expect(EVENT_ARCHETYPES).toContain(value);
   });
 });
@@ -89,6 +89,7 @@ describe("sanitising", () => {
     });
     expect(out.sponsors).toHaveLength(1);
     expect(out.sponsors[0]).toMatchObject({
+      status: "pending",
       name: "Mosi",
       link_url: undefined,
       logo: undefined,

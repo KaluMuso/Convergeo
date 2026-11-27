@@ -236,6 +236,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PUT /admin/roles/{key}/users/{user_id}": ADMIN_WRITE,
     "DELETE /admin/roles/{key}/users/{user_id}": ADMIN_WRITE,
     "POST /admin/events/{event_id}/high-value-verify": ADMIN_WRITE,
+    "POST /admin/event-sponsors/{event_id}/review": ADMIN_WRITE,
     "POST /admin/event-advance-debts/repayments": PAYMENT_WRITE,
     # 2026-11 governance: scoped operator tools and admin account lifecycle.
     "PATCH /admin/services/{service_id}/status": ADMIN_WRITE,

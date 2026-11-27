@@ -28,7 +28,6 @@ const labels: EventFilterBoxLabels = {
     sports_family: "Sports and family",
     restaurant: "Dining",
     private_gathering: "Private",
-    branded: "Brand",
   },
   priceLabel: "Price",
   priceAny: "Any price",

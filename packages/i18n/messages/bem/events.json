@@ -287,7 +287,6 @@
       "sports_family": "Sports & family fair",
       "restaurant": "Dining event",
       "private_gathering": "Private gathering",
-      "branded": "Brand experience",
       "generic": "Event"
     },
     "sections": {
@@ -298,7 +297,6 @@
       "activities": "Activities",
       "ageGroups": "Age groups",
       "menu": "Menu",
-      "activations": "What's on",
       "notes": "Good to know",
       "sponsors": "Our sponsors",
       "faqs": "Questions and policies",
@@ -321,7 +319,6 @@
     "hostedBy": "Hosted by {name}",
     "seating": "Seating",
     "reservation": "Reservations",
-    "presentedBy": "Presented by",
     "visitSponsor": "Visit {name} (opens in a new tab)",
     "galleryAlt": "{title}, photo {n}",
     "dietary": {

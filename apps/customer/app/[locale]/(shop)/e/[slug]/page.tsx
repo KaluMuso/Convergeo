@@ -27,11 +27,7 @@ import { fetchEventDetail } from "../../_components/detail-fetch/fetch-event";
 import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 
 import { FactChips } from "./_components/archetype/archetype-blocks";
-import {
-  ArchetypeBody,
-  ArchetypeLead,
-  archetypeChips,
-} from "./_components/archetype/archetype-body";
+import { ArchetypeBody, archetypeChips } from "./_components/archetype/archetype-body";
 import { EventCalendarLinks } from "./_components/event-calendar-links";
 import { EventCountdown } from "./_components/event-countdown";
 import { EventJsonLd, isEventIndexable, type EventJsonLdInput } from "./_components/event-jsonld";
@@ -436,8 +432,6 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
           </div>
         </div>
       </header>
-
-      <ArchetypeLead archetype={archetype} rawDetails={event.archetype_details} t={t} />
 
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:gap-12">
         <div className="flex min-w-0 flex-col gap-8">
