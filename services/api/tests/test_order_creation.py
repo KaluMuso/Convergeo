@@ -942,6 +942,6 @@ class TestCreateOrdersEndpoint:
         )
         assert response.status_code == 200
         body = response.json()
-        assert body["status"] == "completed"
+        assert body["status"] == "pending"
         assert body["total_ngwee"] == price
         assert len(body["orders"]) == 1

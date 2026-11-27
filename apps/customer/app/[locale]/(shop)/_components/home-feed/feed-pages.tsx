@@ -26,11 +26,16 @@ export async function fetchFeedPage(
   );
   if (!url) throw new Error("api_unavailable");
   return fetchJson<HomeFeedPage>(url, {
-    headers: accessToken
-      ? { Authorization: `Bearer ${accessToken}` }
-      : undefined,
+    // A cursor page assembles several rails server-side and takes ~2.8s in
+    // production today; the 2s default aborted every attempt, so load-more
+    // always failed ("Couldn't load more right now").
+    timeoutMs: HOME_FEED_PAGE_TIMEOUT_MS,
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
   });
 }
+
+/** Per-attempt timeout for a home feed cursor page (see fetchFeedPage). */
+export const HOME_FEED_PAGE_TIMEOUT_MS = 8_000;
 
 export function FeedPages({
   sections,
@@ -44,12 +49,7 @@ export function FeedPages({
   return (
     <>
       {sections.filter(isRenderableSection).map((section) => (
-        <FeedSectionView
-          key={section.id}
-          section={section}
-          locale={locale}
-          labels={labels}
-        />
+        <FeedSectionView key={section.id} section={section} locale={locale} labels={labels} />
       ))}
     </>
   );

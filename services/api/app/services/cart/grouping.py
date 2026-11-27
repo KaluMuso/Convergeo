@@ -98,3 +98,23 @@ def line_variant_options(listing: dict[str, Any]) -> tuple[tuple[str, str], ...]
         for option in raw
         if isinstance(option, dict) and option.get("group") and option.get("value")
     )
+
+
+def listing_display_title(listing: dict[str, Any]) -> str | None:
+    """Customer-facing line title: listing ``title_override``, else the product name.
+
+    Most listings carry no override (the title lives on the canonical product), so
+    returning only ``title_override`` left cart/checkout lines nameless and the UI
+    fell back to the listing UUID. ``None`` only when neither exists.
+    """
+    override = listing.get("title_override")
+    if isinstance(override, str) and override.strip():
+        return override.strip()
+    product = listing.get("products")
+    if isinstance(product, list) and product:
+        product = product[0]
+    if isinstance(product, dict):
+        name = product.get("name")
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+    return None

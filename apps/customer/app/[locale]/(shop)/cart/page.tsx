@@ -113,6 +113,7 @@ export default async function CartPage({ params }: CartPageProps) {
       lineTotal: raw("cart.lineTotal"),
       quotedPriceBadge: t("cart.quotedPriceBadge"),
       remove: t("cart.remove"),
+      untitledItem: t("cart.untitledItem"),
       removeLabel: raw("cart.removeLabel"),
       saveForLater: t("cart.saveForLater"),
       saveForLaterLabel: raw("cart.saveForLaterLabel"),
