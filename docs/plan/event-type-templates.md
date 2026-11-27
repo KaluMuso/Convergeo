@@ -35,40 +35,39 @@ returns the effective value plus `archetype_source = derived | override`.
 
 | Archetype           | Derived from category slug(s)                                                    | Vibe                        |
 | ------------------- | -------------------------------------------------------------------------------- | --------------------------- |
-| `concert`           | music, concerts, festivals, gospel, nightlife, comedy-theatre(-parent), stand-up | stage lights, high energy   |
-| `religious`         | religious, church                                                                | calm, respectful, unhurried |
+| `concert`           | music, concerts, festivals, nightlife, comedy-theatre(-parent), stand-up         | stage lights, high energy   |
+| `religious`         | religious, church, gospel                                                        | calm, respectful, unhurried |
 | `sports_family`     | sports, football, family                                                         | energetic, daytime, playful |
 | `restaurant`        | pop-up-dinners                                                                   | warm, tactile, appetising   |
 | `private_gathering` | private-events, or `event_type = private`                                        | intimate, personal          |
-| `branded`           | **override only** (organiser picks it for a sponsor-led night)                   | brand-forward, bold         |
 | `generic`           | everything else (workshops, exhibitions, markets, community, free-rsvp, unknown) | clean, polished fallback    |
 
-`gospel` maps to `concert` (stage + lineup); an organiser can override to `religious`.
-`branded` is override-only because "sponsored" is orthogonal to category; the **sponsor
-band is available on every archetype** (see blocks), `branded` additionally makes the
-sponsor the page's lead.
+Founder decisions (27 Nov): `gospel` maps to `religious` (organiser can override to
+`concert`). There is **no `branded` archetype**: the **sponsor band is available on every
+archetype**, and sponsor fields are generic. Sponsor logos/links are **admin-approved**
+before they show publicly (see Sponsor approval).
 
 ## Page layout blocks (customer `/e/[slug]`)
 
 Blocks render only when their data exists; a missing block never leaves a hole.
 `●` default-on, `○` shown when data present, `–` n/a.
 
-| Block                             |        concert         |     religious     | sports_family  |     restaurant     |         branded         | private | generic |
-| --------------------------------- | :--------------------: | :---------------: | :------------: | :----------------: | :---------------------: | :-----: | :-----: |
-| Hero / poster (image-first)       | ● poster 4:5 on mobile |         ●         |       ●        |         ●          |            ●            |    ●    |    ●    |
-| Facts strip (date, doors, venue)  |           ●            |         ●         |       ●        |         ●          |            ●            |    ●    |    ●    |
-| Lineup / stages / slot times      |           ●            |         –         |       –        |         –          |            ○            |    –    |    –    |
-| Agenda / order of service         |           –            |         ●         |  ○ activities  |         –          |            ○            |    ○    |    ○    |
-| Speakers / hosts                  |           –            |         ○         |       –        |       ○ chef       |            –            |    –    |    –    |
-| Activities + age groups           |           –            |         –         |       ●        |         –          |            –            |    –    |    –    |
-| Menu sections                     |           –            |         –         |       –        |         ●          |            –            |    –    |    –    |
-| Ticket tier cards                 |     ● GA/VIP/VVIP      | ● free / donation | ● age + family | ● set-menu / table |      ● multi-tier       | ○ RSVP  |    ●    |
-| Sponsor band                      |           ○            |         ○         |       ○        |         ○          | ● lead ("Presented by") |    –    |    ○    |
-| Gallery (images 2..8)             |           ●            |         ○         |       ●        |         ●          |            ●            |    ○    |    ○    |
-| Venue and map link                |           ●            |         ●         |       ●        |         ●          |            ●            |    ●    |    ●    |
-| Dress code / age policy chips     |           ○            |         ○         |       ○        |         ○          |            ○            |    ○    |    ○    |
-| FAQs / policies (+ refund policy) |           ○            |         ○         |       ○        |         ○          |            ○            |    ○    |    ○    |
-| Organiser card                    |           ●            |         ●         |       ●        |         ●          |            ●            |    ●    |    ●    |
+| Block                             |        concert         |     religious     | sports_family  |     restaurant     | private | generic |
+| --------------------------------- | :--------------------: | :---------------: | :------------: | :----------------: | :-----: | :-----: |
+| Hero / poster (image-first)       | ● poster 4:5 on mobile |         ●         |       ●        |         ●          |    ●    |    ●    |
+| Facts strip (date, doors, venue)  |           ●            |         ●         |       ●        |         ●          |    ●    |    ●    |
+| Lineup / stages / slot times      |           ●            |         –         |       –        |         –          |    –    |    –    |
+| Agenda / order of service         |           –            |         ●         |  ○ activities  |         –          |    ○    |    ○    |
+| Speakers / hosts                  |           –            |         ○         |       –        |       ○ chef       |    –    |    –    |
+| Activities + age groups           |           –            |         –         |       ●        |         –          |    –    |    –    |
+| Menu sections                     |           –            |         –         |       –        |         ●          |    –    |    –    |
+| Ticket tier cards                 |     ● GA/VIP/VVIP      | ● free / donation | ● age + family | ● set-menu / table | ○ RSVP  |    ●    |
+| Sponsor band (approved only)      |           ○            |         ○         |       ○        |         ○          |    ○    |    ○    |
+| Gallery (images 2..8)             |           ●            |         ○         |       ●        |         ●          |    ○    |    ○    |
+| Venue and map link                |           ●            |         ●         |       ●        |         ●          |    ●    |    ●    |
+| Dress code / age policy chips     |           ○            |         ○         |       ○        |         ○          |    ○    |    ○    |
+| FAQs / policies (+ refund policy) |           ○            |         ○         |       ○        |         ○          |    ○    |    ○    |
+| Organiser card                    |           ●            |         ●         |       ●        |         ●          |    ●    |    ●    |
 
 The existing **TicketPicker, refund policy, calendar links, sticky CTA, countdown and
 JSON-LD are reused unchanged**; templates wrap and surround them.
@@ -84,7 +83,6 @@ variable. A tint is `color-mix(in srgb, <token> 14%, var(--surface))`.
 | religious     | `--cat-health` (sage)                         | `font-display`, relaxed leading, no uppercase    | soft, warm, people and place; avoid busy collages    |
 | sports_family | `--cat-fitness` (blue) + `--cat-food` (coral) | large `text-hero`, friendly                      | action and family shots, bright daylight             |
 | restaurant    | `--cat-food` (terracotta)                     | `font-display` + serif-feel menu headings        | food close-ups first, then room                      |
-| branded       | `--primary` + sponsor logo on `--surface`     | bold display, brand-first                        | brand key visual hero, then product/crowd            |
 | private       | `--cat-beauty` (sand)                         | gentle, centred title                            | one hero photo; gallery optional                     |
 | generic       | `--primary-tint`                              | current display type                             | one wide hero                                        |
 
@@ -108,18 +106,18 @@ vs `tickets_sold`, early-bird fields, `kind`.
   "Adult"); the classifier recognises `child|kids|family|group`; **family bundles** are a
   ticket type named "Family (2+2)" with `perks`; quantity price breaks (`tiers`) already
   cover "buy 4+". The `age_groups` content block explains who each ticket is for.
-- **Restaurant:** set-menu and table tickets are separate types ("Table for 4",
-  "5-course set menu"); `seating_note` explains table assignment. **No seat map and no
-  table inventory in MVP** (a table is a ticket type with a `qty_cap`).
-- **Branded:** several price tiers as concert; promo codes use the **existing** event promo
-  mechanism at purchase (no change); the page only shows an optional note (open question 3).
+- **Restaurant:** founder decision: **one ticket type per table size** ("Table for 2",
+  "Table for 4", or a set menu), each with its own `qty_cap`; **no seat map**. The vendor
+  form shows this guidance; `seating_note` explains table assignment.
+- **Sponsored events (any archetype):** promo codes keep using the **existing** event promo
+  mechanism at purchase (no change).
 
 ## Archetype-specific optional fields (validated JSON)
 
 One additive column `events.archetype_details jsonb` (object, ≤16 KB), validated in the
 API by one Pydantic model per archetype (`extra=forbid`, bounded lists, https-only URLs,
 integer ngwee for any price). **Common to all archetypes:** `sponsors[]` (name, logo
-Cloudinary id or https, link, tagline; ≤6), `dress_code` (≤80), `age_policy`
+Cloudinary id or https, link, tagline, **status** `pending|approved|rejected`; ≤6), `dress_code` (≤80), `age_policy`
 (`all_ages | guardian_under_12 | 16_plus | 18_plus`), `faqs[]` (≤8 × question ≤120,
 answer ≤500). Per archetype:
 
@@ -131,8 +129,6 @@ answer ≤500). Per archetype:
   (label, min/max age; ≤8), `bring_list[]`, `family_bundle_note`.
 - `restaurant`: `menu_sections[]` (title; items: name, description, `price_ngwee`
   int, dietary tags), `seating_note`, `reservation_note`, `host_name`.
-- `branded`: `presented_by` (sponsor), `activations[]` (title, description; ≤8),
-  `promo_note` (display text), `giveaway_note`.
 - `private_gathering`: `host_names`, `occasion`, `rsvp_note`, `agenda[]` (≤20), `gift_note`.
 - `generic`: `agenda[]` (≤20).
 
@@ -141,7 +137,7 @@ returns `{}` rather than failing the page (same posture as SP-11).
 
 ## Discovery
 
-`/events` gains URL-synced filter boxes: **type** (archetype), **date** (existing),
+`/events` (default date window becomes "all upcoming" when a type filter is set) gains URL-synced filter boxes: **type** (archetype), **date** (existing),
 **area** (existing `city`/`neighbourhood`), **price** (`price_max` in ngwee, presets in
 K), **free** (`free=1`). The API gains `archetype`, `price_max`, `free` query params.
 Pure read filtering.
@@ -157,19 +153,29 @@ Pure read filtering.
 ## MVP vs later
 
 **MVP (this series):** archetype column + derivation + override; validated JSON per
-archetype; seven customer templates with image hero/gallery, tier cards, sponsor band;
+archetype; six customer templates with image hero/gallery, tier cards, sponsor band;
 `/events` filters; vendor form adapts per archetype; i18n en/fr/zh (+ bem/nya EN fallback).
 
-**Later:** promo codes for branded events; donation tickets with pay-what-you-want;
+**Later:** donation tickets with pay-what-you-want (donations stay display-only for now);
 table/seat inventory and seat map; lineup artist pages; merch linking to the merch
 catalog; livestream embeds; per-archetype OG images; organiser-uploaded sponsor assets
-via the asset library; per-type analytics; admin moderation of sponsor content;
-sponsor self-serve portal.
+via the asset library; per-type analytics; sponsor self-serve portal.
+
+## Sponsor approval
+
+Each sponsor inside `archetype_details` carries `status` (`pending|approved|rejected`).
+Status is **server-controlled**: a client-sent status is ignored; new or edited sponsors
+(name, logo, link or tagline changed) become `pending`; unchanged sponsors keep their
+status. The public payload returns **approved sponsors only**; the organiser sees all with
+a status badge. Admin review: `GET /admin/event-sponsors` (pending queue) and
+`POST /admin/event-sponsors/{event_id}/review` (approve/reject with optional note); both
+need `vendors.manage`, are rate-limited (`ADMIN_WRITE`) and write one audit row per
+decision. `events.sponsor_review_pending` (maintained by the API) drives the queue.
 
 ## Migration and rollout
 
 One migration `20261127150000_event_archetypes.sql` (`events.archetype`,
-`events.archetype_details`, CHECKs, partial index). **Not applied to any database by this
+`events.archetype_details`, `events.sponsor_review_pending`, CHECKs, partial indexes). **Not applied to any database by this
 series — King runs `supabase db push`.** The public read path retries without the new
 columns if the API ships before the migration (no 500s on event pages).
 
@@ -183,15 +189,11 @@ tests under `scripts/ci/` and `services/api/tests/`.
 
 ## Open questions for the founder
 
-1. Is `gospel` a concert or a religious event by default? (Spec: concert, overridable.)
-2. Should `branded` be a page type at all, or only a sponsor band on any archetype?
-3. Promo codes: event ticketing already has promo-code discounts (`services/events/promo.py`, resolved at purchase). Branded events reuse them unchanged; this series only adds a display `promo_note`. Is that enough, or should the organiser UI surface promo management on the branded form?
-4. Donation tickets: display-only note now, or build pay-what-you-want (a payment change)?
-5. Restaurant "table bookings": is a ticket type with a cap per table size enough, or do
-   you need real table/seat selection?
-6. Sponsor content approval: may organisers self-publish sponsor logos/links, or must
-   admin approve first?
-7. Chinese (`zh`) and French copy are machine-assisted; who signs off? Bemba/Nyanja
-   stay on English fallback until native review.
-8. Should `/events` default to "all dates" when a type filter is chosen (today the default
-   window is "tonight")?
+Answered 27 Nov: gospel default (religious), branded (removed; sponsor band everywhere),
+sponsor approval (admin), restaurant tables (ticket type per table size), donations
+(display-only), `/events` default dates (all upcoming when a type filter is set).
+
+1. Promo codes: reuse the existing promo mechanism unchanged (this series adds no promo UI).
+   Enough?
+2. Chinese (`zh`) and French copy are machine-assisted; who signs off? Bemba/Nyanja stay
+   on English fallback until native review.
