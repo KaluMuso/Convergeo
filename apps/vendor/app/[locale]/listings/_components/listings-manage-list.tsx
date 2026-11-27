@@ -122,7 +122,7 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
       />
 
       <div className="px-1">
-        <PlanUsageCard refreshKey={listings.length} />
+        <PlanUsageCard locale={locale} refreshKey={listings.length} />
       </div>
 
       <div className="px-1">

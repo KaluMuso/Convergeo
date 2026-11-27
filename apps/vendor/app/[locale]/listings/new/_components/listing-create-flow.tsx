@@ -321,7 +321,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
         <p className="text-sm text-text-2">{t("listings.intro")}</p>
       </header>
 
-      <PlanUsageCard />
+      <PlanUsageCard locale={locale} />
 
       <ListingTipsPanel defaultOpen />
 

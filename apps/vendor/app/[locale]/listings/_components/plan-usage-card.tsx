@@ -3,6 +3,7 @@
 import { useSession } from "@vergeo/auth/use-session";
 import { createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
@@ -40,6 +41,7 @@ export type VendorPlanStatus = {
 };
 
 type PlanUsageCardProps = {
+  locale: string;
   /** Change to re-fetch (e.g. after a listing is created). */
   refreshKey?: number;
 };
@@ -49,7 +51,7 @@ type PlanUsageCardProps = {
  * when the flag is off or the status cannot be read: plans never block the
  * listings screen. Over the limit nothing is removed — the copy says so.
  */
-export function PlanUsageCard({ refreshKey = 0 }: PlanUsageCardProps) {
+export function PlanUsageCard({ locale, refreshKey = 0 }: PlanUsageCardProps) {
   const t = useTranslations("vendor");
   const { session } = useSession();
   const [status, setStatus] = useState<VendorPlanStatus | null>(null);
@@ -134,6 +136,12 @@ export function PlanUsageCard({ refreshKey = 0 }: PlanUsageCardProps) {
             </ul>
           ) : null}
           <p className="text-sm text-text-2">{t("plans.howToUpgrade")}</p>
+          <Link
+            href={`/${locale}/plan`}
+            className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline"
+          >
+            {t("plans.seePlans")}
+          </Link>
         </div>
       ) : null}
     </section>
