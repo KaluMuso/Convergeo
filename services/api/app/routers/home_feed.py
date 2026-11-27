@@ -30,6 +30,7 @@ from app.services.home_feed.stream import (
 from app.services.offers.badges import listing_badges
 from app.settings import get_settings
 from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi.concurrency import run_in_threadpool
 
 logger = logging.getLogger(__name__)
 
@@ -121,8 +122,8 @@ async def home_feed(
             except Exception:
                 pass
 
-    try:
-        page = build_feed_page(
+    def _build() -> HomeFeedPage:
+        built = build_feed_page(
             supabase.client,
             cursor=cursor,
             page_size=page_size,
@@ -130,13 +131,19 @@ async def home_feed(
             user_id=user_id,
             now=datetime.now(UTC),
         )
+        _attach_offer_badges(
+            supabase.client,
+            [listing for section in built.sections for listing in section.listings],
+        )
+        return built
+
+    try:
+        # Blocking Supabase calls: keep them off the event loop.
+        page = await run_in_threadpool(_build)
     except ValueError as exc:
         raise AppError(
             code="validation_error", message="Invalid feed cursor", http_status=422
         ) from exc
-    _attach_offer_badges(
-        supabase.client, [listing for section in page.sections for listing in section.listings]
-    )
 
     if user_id is None:
         set_cached_json(cache_key, page.model_dump(mode="json"), ttl_seconds=FEED_CACHE_TTL_SECONDS)
