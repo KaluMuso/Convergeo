@@ -596,7 +596,8 @@ def main() -> int:
     except Exception as exc:
         runner.results["accepted"] = False
         runner.results["error"] = runner.redact(str(exc))
-        print("::error::real-stack failure: " + str(runner.results["error"])[:2000], file=sys.stderr)
+        detail = str(runner.results["error"])[:2000]
+        print("::error::real-stack failure: " + detail, file=sys.stderr)
     finally:
         runner.finish()
     print("FINANCIAL_REAL_STACK_PASS" if runner.results["accepted"]
