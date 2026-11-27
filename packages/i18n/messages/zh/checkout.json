@@ -28,6 +28,7 @@
       "sqm": "平方米"
     },
     "remove": "移除",
+    "untitledItem": "商品",
     "removeLabel": "从购物车中移除 {title}",
     "saveForLater": "稍后再买",
     "saveForLaterLabel": "将 {title} 保存到稍后再买",
@@ -105,6 +106,9 @@
     "codStep1": "您下单",
     "codStep2": "我们配送",
     "codStep3": "送达时付款",
+    "escrowStep1": "您付款",
+    "escrowStep2": "我们替您保管",
+    "escrowStep3": "送达后卖家才收到",
     "leadTimeWhen": {
       "oneDay": "一天内",
       "days": "约 {count} 天内",
@@ -147,7 +151,10 @@
       "expired": "验证码已过期。请点“重新发送验证码”。",
       "throttled": "尝试次数太多。请等 {seconds} 秒后再试。",
       "generic": "没有成功。请核对验证码后重试。",
-      "skippedLoggedIn": "使用您账户的电话号码"
+      "skippedLoggedIn": "使用您账户的电话号码",
+      "needPhone": "Add your phone number so we can send you order updates on WhatsApp or SMS.",
+      "savePhone": "Save number and continue",
+      "saveFailed": "We couldn't continue. Check your network and try again."
     },
     "fulfilment": {
       "title": "送货还是自取？",
@@ -163,6 +170,7 @@
       "zoneLabel": "区域：{zone}",
       "pickupAt": "取货地点：{landmark}",
       "pickupHours": "营业时间：{hours}",
+      "pickupClosed": "休息",
       "outsideZone": "这里暂不送货。您可以到卖家处自取。",
       "mixedHint": "可以一个卖家送货，另一个卖家自取。",
       "continue": "继续",
@@ -269,8 +277,8 @@
       "methodMomo": "移动支付（{rail}）",
       "methodCard": "银行卡（Lenco 安全页面）",
       "methodCod": "货到付款（现金）",
-      "railMtn": "MTN",
-      "railAirtel": "Airtel",
+      "railMtn": "MTN Mobile Money",
+      "railAirtel": "Airtel Money",
       "payerNumber": "付款手机：{number}",
       "escrowTitle": "如何运作",
       "escrowStep1": "您付款",
@@ -349,7 +357,7 @@
       "title": "请查看您的手机",
       "subtitle": "手机上有一条消息。输入 PIN 支付 {amount}。",
       "amountLabel": "付款金额",
-      "mtnHelp": "查看手机上的 MTN MoMo 消息，输入 PIN 支付 {amount}。",
+      "mtnHelp": "查看手机上的 MTN Mobile Money 消息，输入 PIN 支付 {amount}。",
       "airtelHelp": "查看手机上的 Airtel Money 消息，输入 PIN 支付 {amount}。",
       "genericHelp": "我们已向您的手机发送移动钱包消息。输入 PIN 支付 {amount}。",
       "waiting": "等待您付款…",

@@ -105,6 +105,7 @@
       "sponsored": "Sponsored",
       "sponsoredBy": "Sponsored by {advertiser}",
       "adCta": "Learn more",
+      "visitVendor": "Visit {vendor}",
       "loadingMore": "Loading more",
       "end": "You're all caught up",
       "retry": "Try again",
@@ -139,7 +140,7 @@
     },
     "trustStrip": {
       "ariaLabel": "⚠ Why shop on Convergeo",
-      "cod": "⚠ Pay on delivery",
+      "cod": "⚠ Mobile Money escrow · COD under K500",
       "verified": "⚠ Verified sellers",
       "lusaka": "⚠ Lusaka delivery",
       "returns": "⚠ Easy returns"
@@ -237,7 +238,12 @@
       "zoomClose": "Tsekani chowonera zithunzi",
       "zoomTitle": "Zithunzi za product",
       "zoomIn": "Kulitsani chithunzi",
-      "zoomOut": "Bwezerani chithunzi kuti chikwanire"
+      "zoomOut": "Bwezerani chithunzi kuti chikwanire",
+      "rolloverZoom": "Pitani pa chithunzi kuti muwonse bwino",
+      "tapToExpand": "Gwiritsani ntchito kuti mufotse",
+      "openLightbox": "Tsegulani chithunzi chakukulu",
+      "thumbAria": "Chithunzi {current} cha {total}",
+      "moreImages": "{count, plural, one {chithunzi # chinaso} other {zithunzi # zinaso}}"
     },
     "unavailableTitle": "Chinthu sichipezeka tsopano",
     "unavailableBody": "Sitinathe kutenga chinthu ichi pano. Onani connection yanu ndiye yesaninso.",
@@ -266,7 +272,15 @@
     },
     "specs": {
       "empty": "Palibe specifications",
-      "heading": "Za specs"
+      "heading": "Za specs",
+      "seeMore": "Onani zambiri",
+      "seeLess": "Onani pang'ono",
+      "groups": {
+        "features": "Mawonekedwe & zofotokozera",
+        "details": "Tsatanetsatane wa chinchere",
+        "measurements": "Miyeso",
+        "materials": "Zogwiritsira & kusunga"
+      }
     },
     "tabs": {
       "ariaLabel": "Zinthu za product",
@@ -379,7 +393,8 @@
       "dialog": "Owonera zithunzi",
       "close": "Tsekani owonera zithunzi",
       "zoomIn": "Kulitsani",
-      "zoomOut": "Chepetsani"
+      "zoomOut": "Chepetsani",
+      "imagesTab": "Zithunzi"
     },
     "value": {
       "madeToOrderDays": "Zapangidwa, zizikhala ready masiku {days}",
@@ -399,7 +414,7 @@
         "deliveryFree": "Kutumiza kwaulere",
         "total": "Ndalama zonse zomwe mulipira",
         "totalUnknown": "Sikudziwika",
-        "momo": "Lipirani ndi MTN kapena Airtel MoMo",
+        "momo": "Lipirani ndi Mobile Money (MTN kapena Airtel)",
         "codSuffix": "kapena ndalama pa delivery"
       },
       "priceDrop": {
@@ -413,6 +428,17 @@
         "cta": "⚠ Set price alert",
         "subscribed": "⚠ We'll notify you when the price drops"
       }
+    },
+    "sectionNav": {
+      "top": "Pamwamba",
+      "about": "Za izi",
+      "specs": "Zofotokozera",
+      "reviews": "Ndemanga",
+      "similar": "Zofanana"
+    },
+    "about": {
+      "seeMore": "Onani zambiri",
+      "seeLess": "Onani pang'ono"
     }
   },
   "plp": {

@@ -13,6 +13,7 @@ from typing import Annotated, Any, Literal
 import jwt
 from app.core.auth import CurrentUser, get_current_user
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -24,6 +25,7 @@ from app.services.cart.grouping import (
     group_by_vendor,
     line_variant_id,
     line_variant_options,
+    listing_display_title,
 )
 from app.services.cart.merge import (
     MergeConflict,
@@ -73,8 +75,11 @@ from supabase import Client
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/cart", tags=["cart"])
-
+router = APIRouter(
+    prefix="/cart",
+    tags=["cart"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 GUEST_CART_COOKIE = "vergeo_guest_cart"
 GUEST_CART_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 _CART_ADD_KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
@@ -480,9 +485,7 @@ def _price_cart_with_tickets(
         views, pricing = _price_cart_offers(line_views, customer_id)
         return views, ticket_lines, pricing
     try:
-        return price_unified(
-            line_views, ticket_lines, service_db_client(), customer_id=customer_id
-        )
+        return price_unified(line_views, ticket_lines, service_db_client(), customer_id=customer_id)
     except Exception:
         logger.warning("cart.offer_pricing_failed", exc_info=True)
         return line_views, ticket_lines, None
@@ -514,9 +517,7 @@ def _build_cart_response(
                 unit_price_ngwee=unit_price,
                 wholesale=bool(item.get("wholesale", False)),
                 line_total_ngwee=line_total_ngwee(qty, unit_price),
-                title_override=listing.get("title_override")
-                if isinstance(listing.get("title_override"), str)
-                else None,
+                title_override=listing_display_title(listing),
                 product_class=str(listing.get("product_class") or "A"),
                 condition=str(listing.get("condition") or "new"),
                 sale_unit=str(listing.get("sale_unit") or "each"),

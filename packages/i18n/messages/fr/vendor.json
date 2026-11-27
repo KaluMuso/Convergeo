@@ -736,6 +736,8 @@
         "returnWindowRequired": "Saisissez un délai de retour lorsque les retours sont activés."
       },
       "emptyTitle": "Aucune annonce",
+      "addPhotoFirst": "Add a photo first.",
+      "addPhotoLink": "Add photo",
       "statusLabel": "Statut",
       "productStatus": {
         "inReview": "Live, in review: buyers see it once Convergeo approves it",
@@ -1315,7 +1317,7 @@
           "body": "Rien à faire pour l'instant. Notre équipe répond en général sous 1 jour ouvré."
         },
         "payoutMethod": {
-          "title": "Add your MoMo number to get paid",
+          "title": "Add your Mobile Money number to get paid",
           "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
         },
         "ordersWaiting": {
@@ -1744,6 +1746,10 @@
       "empty": "Aucun événement pour le moment.",
       "createCta": "Créer un événement",
       "editCta": "Modifier l'événement",
+      "ticketsCta": "Tickets",
+      "scanCta": "Door scan",
+      "salesCta": "Sales",
+      "rosterCta": "Roster",
       "noVenue": "Lieu à confirmer",
       "ticketsSold": "{count, plural, one {# billet vendu} other {# billets vendus}}"
     },
@@ -2291,6 +2297,7 @@
     "loading": "Chargement des missions…",
     "authRequired": "Connectez-vous pour voir les missions correspondantes.",
     "empty": "Aucune mission ouverte ne correspond à vos services pour le moment.",
+    "viewJob": "View job",
     "posted": "Publié le {date}",
     "yourQuote": "Votre devis : {amount}",
     "status": {
@@ -2938,6 +2945,7 @@
     "keepSelling": "Rien n'a été supprimé : vos annonces restent en ligne, et vous pouvez continuer à les modifier et à ajouter du stock. Pour ajouter de nouveaux produits, passez à une formule supérieure.",
     "option": "{name} : {max} annonces pour {price}/mois",
     "optionUnlimited": "{name} : annonces illimitées pour {price}/mois",
+    "seePlans": "See plans",
     "howToUpgrade": "Pour changer de formule, écrivez à notre équipe. Aucun prélèvement automatique.",
     "limitReachedShort": "Vous avez atteint votre limite d'annonces. Vos annonces existantes restent en ligne ; consultez votre formule ci-dessus pour évoluer.",
     "limitReached": "Vous avez atteint la limite d'annonces de votre formule. Vos annonces restent en ligne ; passez à une formule supérieure pour en ajouter.",
@@ -2966,7 +2974,7 @@
     "disabled": "Les boutiques multiples ne sont pas encore disponibles.",
     "primary": "Boutique principale",
     "acting": "Vous travaillez ici",
-    "payoutHold": "Les versements de cette boutique sont suspendus jusqu'à ce que notre équipe vérifie le numéro MoMo partagé.",
+    "payoutHold": "Les versements de cette boutique sont suspendus jusqu'à ce que notre équipe vérifie le numéro mobile money partagé.",
     "reviewNote": "Note de notre équipe : {note}",
     "ownerKycNeeded": "Terminez la vérification du propriétaire (KYC) avant d'ajouter des boutiques.",
     "switcher": {
@@ -3054,14 +3062,14 @@
       "whatsapp": "Numéro WhatsApp (facultatif)",
       "email": "E-mail (facultatif)",
       "payout": "Versements",
-      "payoutNumber": "Numéro MoMo de versement",
+      "payoutNumber": "Numéro mobile money de versement",
       "payoutHelp": "Un numéro utilisé par une autre entreprise est interdit. Partager un numéro entre vos propres boutiques nécessite une vérification par notre équipe.",
       "rail": "Réseau",
       "reviewNote": "Après la création, ajoutez la photo de la devanture et la preuve des locaux, puis envoyez pour vérification.",
       "priceAddon": "Cette boutique est une option payante : {price}/mois sur votre forfait.",
       "priceIncluded": "Cette boutique est incluse dans votre forfait.",
       "rails": {
-        "mtn": "MTN MoMo",
+        "mtn": "MTN Mobile Money",
         "airtel": "Airtel Money",
         "zamtel": "Zamtel Kwacha"
       }
@@ -3077,7 +3085,7 @@
       "unregisteredLimit": "Les commerçants non enregistrés peuvent gérer une boutique. Ajoutez d'abord votre enregistrement PACRA.",
       "planLimit": "Votre forfait n'inclut plus de boutiques. Passez à un forfait supérieur.",
       "tooClose": "Cette boutique est à {nearest} m d'une autre de vos boutiques. Les succursales doivent être espacées d'au moins {min} m.",
-      "payoutTaken": "Ce numéro MoMo appartient à une autre entreprise. Utilisez votre propre numéro.",
+      "payoutTaken": "Ce numéro mobile money appartient à une autre entreprise. Utilisez votre propre numéro.",
       "evidenceRequired": "Ajoutez d'abord la photo de la devanture et la preuve des locaux.",
       "evidenceLocked": "Les justificatifs ne peuvent changer qu'avant la vérification.",
       "evidencePath": "Ce fichier n'est pas valide. Veuillez le renvoyer.",
@@ -3146,6 +3154,48 @@
       "notFound": "Cette option n'est plus disponible.",
       "invalidTransition": "Cette demande ne peut pas être modifiée maintenant.",
       "generic": "Une erreur s'est produite. Réessayez."
+    }
+  },
+  "requests": {
+    "home": {
+      "payoutsPilot": {
+        "title": "Payouts start soon",
+        "body": "We are not paying out through the app during the pilot. Your sales are still tracked — open Payouts to see how money works for now."
+      }
+    },
+    "jobs": {
+      "budgetRange": "Buyer budget: {min} – {max}",
+      "budgetFrom": "Buyer budget: from {min}",
+      "budgetUpTo": "Buyer budget: up to {max}",
+      "budgetOpen": "Buyer budget: not specified",
+      "preferredDate": "Preferred date: {date}",
+      "quoteStatus": {
+        "submitted": "Quote waiting on buyer",
+        "accepted": "Quote accepted",
+        "declined": "Quote declined",
+        "expired": "Quote expired",
+        "unknown": "Quote: {status}"
+      }
+    },
+    "rfq": {
+      "buyerRef": "Customer ref: {ref}",
+      "validUntil": "Quote valid until {date}",
+      "unknownListing": "Product (loading name…)",
+      "unknownService": "Service (loading name…)",
+      "declineConfirm": "Decline this quote request? The customer will not hear from you on this thread.",
+      "declining": "Declining…",
+      "status": {
+        "expired": "Expired",
+        "cancelled": "Cancelled",
+        "closed": "Closed",
+        "unknown": "Status: {status}"
+      }
+    },
+    "disputes": {
+      "opened": "Opened {date}"
+    },
+    "reviews": {
+      "posted": "Posted {date}"
     }
   }
 }

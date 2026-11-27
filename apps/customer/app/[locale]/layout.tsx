@@ -22,6 +22,7 @@ import { getMessages, getTranslations, setRequestLocale } from "next-intl/server
 import { SentryInit } from "../sentry-init";
 
 import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shell";
+import { ChunkErrorRecovery } from "./_components/chunk-error-recovery";
 import { CustomerAuthBarrier } from "./_components/customer-auth-barrier";
 import { LazyFloatingActions } from "./_components/lazy-floating-actions";
 import { LocaleSwitcher } from "./_components/locale-switcher";
@@ -266,6 +267,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
               <SentryInit />
               {/* Probe `/sw.js` before registering — never register a missing worker. */}
               <ServiceWorkerRegister />
+              <ChunkErrorRecovery />
               {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
                 only on consent — the anonymized server log is the source of truth. */}
               <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID} />

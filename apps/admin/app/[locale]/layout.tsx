@@ -1,12 +1,13 @@
-import { LOCALES, loadMessages, type Locale } from "@vergeo/i18n";
+import { LOCALES, loadNamespace, type Locale } from "@vergeo/i18n";
 import { fontVariables } from "@vergeo/ui/fonts";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { ThemeScript } from "@vergeo/ui/src/theme-script";
 import { ToastProvider } from "@vergeo/ui/src/toast";
 import { notFound } from "next/navigation";
-import { NextIntlClientProvider } from "next-intl";
+import { type AbstractIntlMessages, NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { BASE_SPEC, pickMessages, specNamespaces } from "../../lib/route-messages";
 import { SentryInit } from "../sentry-init";
 
 import { AdminShell } from "./_components/admin-shell";
@@ -16,7 +17,10 @@ import type { Metadata, Viewport } from "next";
 import "../globals.css";
 
 export const metadata: Metadata = {
-  title: "Convergeo Admin",
+  title: {
+    template: "%s · Convergeo Admin",
+    default: "Convergeo Admin",
+  },
   robots: {
     index: false,
     follow: false,
@@ -45,19 +49,21 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   }
 
   setRequestLocale(locale);
-  const [commonMessages, adminBundle] = await Promise.all([
+  // Only the shell chrome ships here (BASE_SPEC: nav, shell, title, notification bell).
+  // Each route segment layout adds the branches its client views read through
+  // <RouteMessages>; shipping every catalog on every document cost ~36 kB gzip.
+  const baseNamespaces = specNamespaces(BASE_SPEC);
+  const [commonMessages, baseLoaded] = await Promise.all([
     getMessages(),
-    loadMessages(locale as Locale, ["admin", "services", "notifications"]),
+    Promise.all(baseNamespaces.map((namespace) => loadNamespace(locale as Locale, namespace))),
   ]);
-  const notificationsAll = adminBundle.notifications as Record<string, unknown>;
-
-  const messages = {
-    ...commonMessages,
-    admin: adminBundle.admin,
-    services: adminBundle.services,
-    // Notification center copy only — not the WhatsApp/SMS/email templates.
-    notifications: { center: notificationsAll.center, inApp: notificationsAll.inApp },
-  };
+  const messages: Record<string, unknown> = { ...commonMessages };
+  baseNamespaces.forEach((namespace, index) => {
+    messages[namespace] = pickMessages(
+      baseLoaded[index] ?? {},
+      BASE_SPEC[namespace as keyof typeof BASE_SPEC],
+    );
+  });
 
   // Translated toast copy for emitToastKey() call sites (common.toast).
   const toastCopy = (
@@ -66,14 +72,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   const toastDismiss = typeof toastCopy?.dismiss === "string" ? toastCopy.dismiss : undefined;
 
   return (
-    <html lang={locale} className={fontVariables()}>
+    <html lang={locale} className={fontVariables()} suppressHydrationWarning>
       <head>
         {/* Pre-paint theme bootstrap — avoids a light/dark flash before hydration. */}
         <ThemeScript />
       </head>
       <body className="font-body antialiased">
         <ThemeProvider>
-          <NextIntlClientProvider messages={messages}>
+          <NextIntlClientProvider messages={messages as AbstractIntlMessages}>
             {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
             <SentryInit />
             {/* Authenticated chrome; renders bare children on the login route. */}

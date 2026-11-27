@@ -4,6 +4,7 @@ import json
 from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, require_role
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
@@ -25,7 +26,11 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import PlainTextResponse
 from pydantic import Field
 
-router = APIRouter(prefix="/listings", tags=["listing-import"])
+router = APIRouter(
+    prefix="/listings",
+    tags=["listing-import"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 
 
 class ListingImportJsonRequest(StrictModel):
@@ -96,8 +101,9 @@ def _load_vendor_for_owner(
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select("id, owner_user_id, status, kyc_tier")
-        .eq("owner_user_id", owner_user_id))
+            .select("id, owner_user_id, status, kyc_tier")
+            .eq("owner_user_id", owner_user_id)
+        )
         .maybe_single()
         .execute()
     )

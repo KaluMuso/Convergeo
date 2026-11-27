@@ -7,6 +7,7 @@ money-moving and operational cron endpoints refuse to authorize (503).
 
 from __future__ import annotations
 
+import hmac
 import os
 
 # Settings Literal is development|staging|production; also treat "prod" as strict.
@@ -52,3 +53,10 @@ def resolve_internal_token(
         return value
 
     return value if value else dev_default
+
+
+def tokens_match(provided: str | None, expected: str) -> bool:
+    """Constant-time comparison for ``X-Internal-Token`` headers."""
+    if not provided:
+        return False
+    return hmac.compare_digest(provided.encode("utf-8"), expected.encode("utf-8"))

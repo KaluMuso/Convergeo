@@ -304,6 +304,11 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     if (!listing) {
       return;
     }
+    // A listing goes live only with at least one photo.
+    if (listing.status === "draft" && (listing.images?.length ?? 0) === 0) {
+      setError(t("listings.manage.addPhotoFirst"));
+      return;
+    }
     setActionLoading(
       listing.status === "draft" ? "publish" : listing.status === "paused" ? "unpause" : "pause",
     );

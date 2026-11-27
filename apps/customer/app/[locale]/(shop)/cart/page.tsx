@@ -5,10 +5,7 @@ import { Suspense } from "react";
 
 import { buildPageMetadata } from "../../../../lib/page-title";
 import { CartPageSkeleton } from "../_components/cart/cart-page-skeleton";
-import {
-  CartPageView,
-  type CartPageLabels,
-} from "../_components/cart/vendor-groups";
+import { CartPageView, type CartPageLabels } from "../_components/cart/vendor-groups";
 import { readLeadTimePhrases } from "../_components/sale-quantity";
 
 import type { Metadata } from "next";
@@ -66,7 +63,7 @@ export default async function CartPage({ params }: CartPageProps) {
     loadErrorRetry: t("cart.loadErrorRetry"),
     multiSellerNote: t("cart.multiSellerNote"),
     escrowTeaser: t("cart.escrowTeaser"),
-    escrowSteps: [t("cart.codStep1"), t("cart.codStep2"), t("cart.codStep3")],
+    escrowSteps: [t("cart.escrowStep1"), t("cart.escrowStep2"), t("cart.escrowStep3")],
     stockUnavailableNotice: t("cart.stockUnavailableNotice"),
     reservationExpiredNotice: t("checkout.reservationExpired"),
     summaryHeading: t("cart.summaryHeading"),
@@ -112,12 +109,11 @@ export default async function CartPage({ params }: CartPageProps) {
         sqm: t("cart.saleUnits.sqm"),
       },
       madeToOrderLeadTime: raw("cart.madeToOrderLeadTime"),
-      leadTimeWhen: readLeadTimePhrases((form) =>
-        raw(`cart.leadTimeWhen.${form}`),
-      ),
+      leadTimeWhen: readLeadTimePhrases((form) => raw(`cart.leadTimeWhen.${form}`)),
       lineTotal: raw("cart.lineTotal"),
       quotedPriceBadge: t("cart.quotedPriceBadge"),
       remove: t("cart.remove"),
+      untitledItem: t("cart.untitledItem"),
       removeLabel: raw("cart.removeLabel"),
       saveForLater: t("cart.saveForLater"),
       saveForLaterLabel: raw("cart.saveForLaterLabel"),
@@ -161,9 +157,7 @@ export default async function CartPage({ params }: CartPageProps) {
         sqm: t("cart.saleUnits.sqm"),
       },
       madeToOrderLeadTime: raw("cart.madeToOrderLeadTime"),
-      leadTimeWhen: readLeadTimePhrases((form) =>
-        raw(`cart.leadTimeWhen.${form}`),
-      ),
+      leadTimeWhen: readLeadTimePhrases((form) => raw(`cart.leadTimeWhen.${form}`)),
     },
   };
 

@@ -3,11 +3,13 @@
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../lib/api-base-url";
 import { VendorPage } from "../_components/vendor-page";
+import { canOpenJobQuoteForm, showJobQuoteSummary } from "../_lib/job-quote-ui";
 import { Badge, Button, FormField, Input, Spinner } from "../listings/new/_lib/ui";
 
 type QuoteItem = {
@@ -32,6 +34,14 @@ type MatchedJob = {
   created_at: string;
   own_quote: QuoteItem | null;
 };
+
+type QuoteDraft = {
+  amount: string;
+  message: string;
+  validityDays: string;
+};
+
+const EMPTY_DRAFT: QuoteDraft = { amount: "", message: "", validityDays: "7" };
 
 function createJobsClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
@@ -68,6 +78,23 @@ function zmwDecimalToNgwee(input: string): number {
   return Number(major * 100n + minor);
 }
 
+function formatBudgetLine(
+  job: MatchedJob,
+  t: ReturnType<typeof useTranslations<"vendor.requests.jobs">>,
+): string {
+  const { budget_band_min_ngwee: min, budget_band_max_ngwee: max } = job;
+  if (min != null && max != null) {
+    return t("budgetRange", { min: formatK(min), max: formatK(max) });
+  }
+  if (min != null) {
+    return t("budgetFrom", { min: formatK(min) });
+  }
+  if (max != null) {
+    return t("budgetUpTo", { max: formatK(max) });
+  }
+  return t("budgetOpen");
+}
+
 type PageProps = {
   params: Promise<{ locale: string }>;
 };
@@ -75,15 +102,14 @@ type PageProps = {
 export default function VendorJobsPage({ params }: PageProps) {
   const [locale, setLocale] = useState("en");
   const t = useTranslations("vendor.jobs");
+  const tR = useTranslations("vendor.requests.jobs");
   const { session, loading: sessionLoading } = useSession();
   const [jobs, setJobs] = useState<MatchedJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const [amount, setAmount] = useState("");
-  const [message, setMessage] = useState("");
-  const [validityDays, setValidityDays] = useState("7");
-  const [submitting, setSubmitting] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, QuoteDraft>>({});
+  const [submittingJobId, setSubmittingJobId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -117,11 +143,29 @@ export default function VendorJobsPage({ params }: PageProps) {
     void loadJobs();
   }, [loadJobs, session, sessionLoading]);
 
+  const draftFor = (jobId: string): QuoteDraft => drafts[jobId] ?? EMPTY_DRAFT;
+
+  const patchDraft = (jobId: string, patch: Partial<QuoteDraft>) => {
+    setDrafts((current) => ({
+      ...current,
+      [jobId]: { ...draftFor(jobId), ...patch },
+    }));
+  };
+
+  const quoteStatusLabel = (status: string): string => {
+    const key = `quoteStatus.${status}` as "quoteStatus.submitted";
+    if (tR.has(key)) {
+      return tR(key);
+    }
+    return tR("quoteStatus.unknown", { status });
+  };
+
   const handleSubmitQuote = async (jobId: string) => {
     setFormError(null);
+    const draft = draftFor(jobId);
     let amountNgwee: number;
     try {
-      amountNgwee = zmwDecimalToNgwee(amount);
+      amountNgwee = zmwDecimalToNgwee(draft.amount);
       if (amountNgwee <= 0) {
         setFormError(t("quoteForm.amountInvalid"));
         return;
@@ -131,21 +175,20 @@ export default function VendorJobsPage({ params }: PageProps) {
       return;
     }
 
-    const days = Number.parseInt(validityDays, 10);
+    const days = Number.parseInt(draft.validityDays, 10);
     if (!Number.isFinite(days) || days < 1 || days > 30) {
       setFormError(t("quoteForm.validityInvalid"));
       return;
     }
 
-    setSubmitting(true);
+    setSubmittingJobId(jobId);
     try {
       await jobsClient.submitQuote(jobId, {
         amount_ngwee: amountNgwee,
-        message: message.trim() || undefined,
+        message: draft.message.trim() || undefined,
         validity_days: days,
       });
-      setAmount("");
-      setMessage("");
+      setDrafts((current) => ({ ...current, [jobId]: EMPTY_DRAFT }));
       setActiveJobId(null);
       await loadJobs();
     } catch (err) {
@@ -157,19 +200,19 @@ export default function VendorJobsPage({ params }: PageProps) {
         setFormError(t("errors.submitFailed"));
       }
     } finally {
-      setSubmitting(false);
+      setSubmittingJobId(null);
     }
   };
 
-  const handleWithdraw = async (quoteId: string) => {
-    setSubmitting(true);
+  const handleWithdraw = async (quoteId: string, jobId: string) => {
+    setSubmittingJobId(jobId);
     try {
       await jobsClient.withdrawQuote(quoteId);
       await loadJobs();
     } catch {
       setError(t("errors.withdrawFailed"));
     } finally {
-      setSubmitting(false);
+      setSubmittingJobId(null);
     }
   };
 
@@ -207,105 +250,138 @@ export default function VendorJobsPage({ params }: PageProps) {
         </section>
       ) : (
         <ul className="space-y-4">
-          {jobs.map((job) => (
-            <li key={job.id} className="space-y-3 rounded border border-border bg-surface p-4">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge
-                    variant="new"
-                    label={t(`categories.${job.category}`, { default: job.category })}
-                  />
-                  {job.own_quote ? (
-                    <Badge variant="free" label={t("status.quoted")} />
-                  ) : (
-                    <Badge variant="public" label={t("status.new")} />
-                  )}
-                </div>
-                <p className="text-sm font-medium text-display-ink">{job.description}</p>
-                <p className="text-xs text-text-2">
-                  {t("posted", { date: new Date(job.created_at).toLocaleDateString(locale) })}
-                </p>
-              </div>
+          {jobs.map((job) => {
+            const draft = draftFor(job.id);
+            const submitting = submittingJobId === job.id;
+            const quoteStatus = job.own_quote?.status ?? null;
+            const allowQuoteForm = canOpenJobQuoteForm(job.own_quote);
+            const showSummary = showJobQuoteSummary(job.own_quote);
 
-              {job.own_quote && job.own_quote.status === "submitted" ? (
-                <div className="space-y-2 rounded bg-bg-2 p-3">
-                  <p className="font-mono text-sm text-display-ink">
-                    {t("yourQuote", { amount: formatK(job.own_quote.amount_ngwee) })}
-                  </p>
-                  {job.own_quote.message ? (
-                    <p className="text-xs text-text-2">{job.own_quote.message}</p>
+            return (
+              <li key={job.id} className="space-y-3 rounded border border-border bg-surface p-4">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge
+                      variant="new"
+                      label={t(`categories.${job.category}`, { default: job.category })}
+                    />
+                    {quoteStatus ? (
+                      <Badge variant="free" label={quoteStatusLabel(quoteStatus)} />
+                    ) : (
+                      <Badge variant="public" label={t("status.new")} />
+                    )}
+                  </div>
+                  <p className="text-sm font-medium text-display-ink">{job.description}</p>
+                  <Link
+                    href={`/${locale}/jobs/${job.id}`}
+                    className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline"
+                  >
+                    {t("viewJob")}
+                  </Link>
+                  <p className="text-sm text-text-2">{formatBudgetLine(job, tR)}</p>
+                  {job.preferred_date ? (
+                    <p className="text-sm text-text-2">
+                      {tR("preferredDate", {
+                        date: new Date(job.preferred_date).toLocaleDateString(locale),
+                      })}
+                    </p>
                   ) : null}
+                  <p className="text-sm text-text-2">
+                    {t("posted", { date: new Date(job.created_at).toLocaleDateString(locale) })}
+                  </p>
+                </div>
+
+                {showSummary && job.own_quote ? (
+                  <div className="space-y-2 rounded bg-bg-2 p-3">
+                    <p className="font-mono text-sm text-display-ink">
+                      {t("yourQuote", { amount: formatK(job.own_quote.amount_ngwee) })}
+                    </p>
+                    {job.own_quote.message ? (
+                      <p className="text-sm text-text-2">{job.own_quote.message}</p>
+                    ) : null}
+                    {job.own_quote.status === "submitted" ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        loading={submitting}
+                        loadingLabel={t("quoteForm.withdrawing")}
+                        disabled={submitting}
+                        onClick={() => void handleWithdraw(job.own_quote!.id, job.id)}
+                      >
+                        {t("quoteForm.withdraw")}
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {allowQuoteForm && activeJobId === job.id ? (
+                  <div className="space-y-3 border-t border-border pt-3">
+                    <FormField id={`amount-${job.id}`} label={t("quoteForm.amountLabel")}>
+                      <Input
+                        inputMode="decimal"
+                        placeholder={t("quoteForm.amountPlaceholder")}
+                        value={draft.amount}
+                        onChange={(event) => patchDraft(job.id, { amount: event.target.value })}
+                      />
+                    </FormField>
+                    <FormField id={`message-${job.id}`} label={t("quoteForm.messageLabel")}>
+                      <Input
+                        value={draft.message}
+                        onChange={(event) => patchDraft(job.id, { message: event.target.value })}
+                        placeholder={t("quoteForm.messagePlaceholder")}
+                      />
+                    </FormField>
+                    <FormField id={`validity-${job.id}`} label={t("quoteForm.validityLabel")}>
+                      <Input
+                        inputMode="numeric"
+                        value={draft.validityDays}
+                        onChange={(event) =>
+                          patchDraft(job.id, { validityDays: event.target.value })
+                        }
+                      />
+                    </FormField>
+                    {formError && activeJobId === job.id ? (
+                      <p className="text-sm text-danger">{formError}</p>
+                    ) : null}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        loading={submitting}
+                        loadingLabel={t("quoteForm.submitting")}
+                        disabled={submitting}
+                        onClick={() => void handleSubmitQuote(job.id)}
+                      >
+                        {t("quoteForm.submit")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        loadingLabel={t("quoteForm.cancel")}
+                        disabled={submitting}
+                        onClick={() => {
+                          setActiveJobId(null);
+                          setFormError(null);
+                        }}
+                      >
+                        {t("quoteForm.cancel")}
+                      </Button>
+                    </div>
+                  </div>
+                ) : allowQuoteForm ? (
                   <Button
                     type="button"
-                    variant="secondary"
-                    loading={submitting}
-                    loadingLabel={t("quoteForm.withdrawing")}
-                    disabled={submitting}
-                    onClick={() => void handleWithdraw(job.own_quote!.id)}
+                    loadingLabel={t("quoteForm.open")}
+                    onClick={() => {
+                      setActiveJobId(job.id);
+                      setFormError(null);
+                    }}
                   >
-                    {t("quoteForm.withdraw")}
+                    {t("quoteForm.open")}
                   </Button>
-                </div>
-              ) : activeJobId === job.id ? (
-                <div className="space-y-3 border-t border-border pt-3">
-                  <FormField id={`amount-${job.id}`} label={t("quoteForm.amountLabel")}>
-                    <Input
-                      inputMode="decimal"
-                      placeholder={t("quoteForm.amountPlaceholder")}
-                      value={amount}
-                      onChange={(event) => setAmount(event.target.value)}
-                    />
-                  </FormField>
-                  <FormField id={`message-${job.id}`} label={t("quoteForm.messageLabel")}>
-                    <Input
-                      value={message}
-                      onChange={(event) => setMessage(event.target.value)}
-                      placeholder={t("quoteForm.messagePlaceholder")}
-                    />
-                  </FormField>
-                  <FormField id={`validity-${job.id}`} label={t("quoteForm.validityLabel")}>
-                    <Input
-                      inputMode="numeric"
-                      value={validityDays}
-                      onChange={(event) => setValidityDays(event.target.value)}
-                    />
-                  </FormField>
-                  {formError ? <p className="text-sm text-danger">{formError}</p> : null}
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      loading={submitting}
-                      loadingLabel={t("quoteForm.submitting")}
-                      disabled={submitting}
-                      onClick={() => void handleSubmitQuote(job.id)}
-                    >
-                      {t("quoteForm.submit")}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      loadingLabel={t("quoteForm.cancel")}
-                      disabled={submitting}
-                      onClick={() => {
-                        setActiveJobId(null);
-                        setFormError(null);
-                      }}
-                    >
-                      {t("quoteForm.cancel")}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  loadingLabel={t("quoteForm.open")}
-                  onClick={() => setActiveJobId(job.id)}
-                >
-                  {t("quoteForm.open")}
-                </Button>
-              )}
-            </li>
-          ))}
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
     </VendorPage>

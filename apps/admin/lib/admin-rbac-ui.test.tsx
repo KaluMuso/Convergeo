@@ -33,7 +33,7 @@ vi.mock("../app/[locale]/_components/admin-notification-bell", () => ({
 vi.mock("../app/[locale]/_components/sign-out-button", () => ({
   SignOutButton: () => null,
 }));
-vi.mock("@vergeo/auth", () => ({
+vi.mock("./access-token", () => ({
   getBrowserAccessToken: () => `fixture-${fixture.account}-unchanged-token`,
 }));
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
@@ -128,7 +128,6 @@ beforeEach(() => {
   failMutation = false;
   container = document.createElement("div");
   document.body.append(container);
-  vi.spyOn(window, "confirm").mockReturnValue(true);
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string, init: RequestInit = {}) => {
@@ -138,7 +137,20 @@ beforeEach(() => {
       if (index >= 0) return overrides.splice(index, 1)[0]!.response;
       if (path === "/admin/me/permissions" && method === "GET") return reply(currentGrants());
       if (path.startsWith("/admin/products/canonical") && method === "GET") return reply([]);
-      if (path === "/admin/services" || path === "/admin/inventory") {
+      if (path.startsWith("/admin/accounts/lookup") && method === "GET") {
+        return reply({
+          accounts: [
+            {
+              user_id: targetId,
+              display_name: "Fixture target",
+              email: "target@example.test",
+              roles: [],
+            },
+          ],
+        });
+      }
+      const bare = path.split("?")[0];
+      if (bare === "/admin/services" || bare === "/admin/inventory") {
         if (method !== "GET") throw new Error("Read-only oversight mutation forbidden");
         return reply({ items: [] });
       }
@@ -242,11 +254,46 @@ async function fillRole(key: string, name: string, permissions: string[]) {
     await click(label.querySelector("input")!);
   }
 }
-async function assign(roleKey: string) {
+async function settle(ms = 350) {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  });
+}
+async function pickTarget() {
   const assignForm = form("assignHeading");
-  await change(assignForm.querySelector("input")!, targetId);
+  const search = assignForm.querySelector<HTMLInputElement>('input[type="search"]');
+  if (search) {
+    await change(search, "Fixture");
+    await settle();
+    const match = Array.from(assignForm.querySelectorAll("button")).find((node) =>
+      node.textContent?.includes("Fixture target"),
+    );
+    if (!match) throw new Error("Missing account match");
+    await click(match);
+  }
+}
+async function assign(roleKey: string) {
+  await pickTarget();
+  const assignForm = form("assignHeading");
   await change(assignForm.querySelector("select")!, roleKey);
   await submit(assignForm);
+}
+function modal() {
+  return document.querySelector<HTMLElement>('[data-testid="roles-confirm"]');
+}
+async function confirmModal() {
+  const confirm = document.querySelector<HTMLButtonElement>(
+    '[data-testid="roles-confirm-confirm"]',
+  );
+  if (!confirm) throw new Error("Missing confirmation dialog");
+  await click(confirm);
+}
+async function cancelModal() {
+  const cancel = Array.from(modal()?.querySelectorAll("button") ?? []).find(
+    (node) => node.textContent === "admin.common.cancel",
+  );
+  if (!cancel) throw new Error("Missing dialog cancel");
+  await click(cancel);
 }
 const mutations = () => calls.filter((call) => call.method !== "GET");
 const permissionCalls = () => calls.filter((call) => call.path === "/admin/me/permissions");
@@ -378,6 +425,8 @@ describe("role forms and mutation lifecycle through the current permission shell
       response: pending.promise,
     });
     await click(button("admin.rolesUi.revoke"));
+    expect(mutations()).toHaveLength(0);
+    await confirmModal();
     expect(mutations()).toHaveLength(1);
     expect(mutations()[0]?.path).toBe(`/admin/roles/rbac_finance/users/${targetId}`);
     expect(container.querySelector('[role="status"]')?.textContent).toBe(
@@ -411,6 +460,7 @@ describe("role forms and mutation lifecycle through the current permission shell
       response: Promise.resolve(reply(legacy)),
     });
     await click(button("admin.rolesUi.revoke"));
+    await confirmModal();
     expect(container.querySelector("form")).toBeNull();
     expect(nav()).not.toContain("/en/roles");
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
@@ -470,7 +520,10 @@ describe("role forms and mutation lifecycle through the current permission shell
         );
         await submit(editing);
       } else if (operation === "assign") await assign("rbac_finance");
-      else await click(button(`admin.rolesUi.${operation}`));
+      else {
+        await click(button(`admin.rolesUi.${operation}`));
+        await confirmModal();
+      }
       expect(container.querySelector('[role="alert"]')?.textContent).toBe(
         "admin.rolesUi.mutationFailed",
       );
@@ -512,15 +565,19 @@ describe("role forms and mutation lifecycle through the current permission shell
     await click(button("admin.rolesUi.edit"));
     await click(button("admin.rolesUi.cancel"));
     expect(form("createHeading").querySelector("input")?.value).toBe("");
-    vi.mocked(window.confirm).mockReturnValue(false);
     await click(button("admin.rolesUi.delete"));
+    expect(modal()?.textContent).toContain("admin.rolesUi.confirmDelete");
+    await cancelModal();
     await assign("superadmin");
+    expect(modal()?.textContent).toContain("admin.rolesUi.confirmSuperadmin");
+    await cancelModal();
     expect(mutations()).toHaveLength(1);
-    expect(window.confirm).toHaveBeenCalledWith("admin.rolesUi.confirmDelete");
-    expect(window.confirm).toHaveBeenCalledWith("admin.rolesUi.confirmSuperadmin");
-    vi.mocked(window.confirm).mockReturnValue(true);
     await click(button("admin.rolesUi.delete"));
+    await confirmModal();
     expect(roles).toEqual([]);
+    await assign("superadmin");
+    await confirmModal();
+    expect(assignments).toEqual([{ role: "superadmin", user_id: targetId }]);
   });
 
   it.each([null, legacy, restricted(["finance.read", "products.manage"])])(
@@ -580,7 +637,7 @@ describe("read-only oversight and moderation destinations", () => {
     async (kind) => {
       const pending = deferred<Response>();
       overrides.push({
-        path: `/admin/${kind}`,
+        path: `/admin/${kind}?limit=50`,
         method: "GET",
         response: pending.promise,
       });
@@ -599,7 +656,7 @@ describe("read-only oversight and moderation destinations", () => {
       expect(mutations()).toEqual([]);
       expect(
         calls
-          .filter((call) => call.path === `/admin/${kind}`)
+          .filter((call) => call.path === `/admin/${kind}?limit=50`)
           .every((call) => call.init.cache === "no-store"),
       ).toBe(true);
     },
@@ -608,13 +665,13 @@ describe("read-only oversight and moderation destinations", () => {
   it("rejects an old kind's response and clears its error before showing the new read-only records", async () => {
     const old = deferred<Response>();
     overrides.push({
-      path: "/admin/services",
+      path: "/admin/services?limit=50",
       method: "GET",
       response: old.promise,
     });
     await standalone(<OversightList kind="services" />);
     overrides.push({
-      path: "/admin/inventory",
+      path: "/admin/inventory?limit=50",
       method: "GET",
       response: Promise.resolve(
         reply({
@@ -640,7 +697,7 @@ describe("read-only oversight and moderation destinations", () => {
 
   it("lists each service's packages read-only, with integer ngwee formatted", async () => {
     overrides.push({
-      path: "/admin/services",
+      path: "/admin/services?limit=50",
       method: "GET",
       response: Promise.resolve(
         reply({

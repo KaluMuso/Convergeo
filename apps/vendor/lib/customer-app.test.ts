@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getCustomerAppUrl, getVendorStorefrontUrl } from "./customer-app";
+import { getCustomerAppPathUrl, getCustomerAppUrl, getVendorStorefrontUrl } from "./customer-app";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -16,10 +16,19 @@ describe("customer-app", () => {
     );
   });
 
-  it("fails closed in production without site URL", () => {
+  it("falls back to the public customer origin in production without site URL", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
-    expect(getCustomerAppUrl()).toBeNull();
-    expect(getVendorStorefrontUrl("en", "shop")).toBeNull();
+    expect(getCustomerAppUrl()).toBe("https://www.vergeo5.com");
+    expect(getVendorStorefrontUrl("en", "shop")).toBe("https://www.vergeo5.com/en/v/shop");
+  });
+
+  it("builds an absolute shareable link from the configured site URL", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://vergeo5.com/");
+    expect(getCustomerAppPathUrl("/en/account/event-team/accept")).toBe(
+      "https://vergeo5.com/en/account/event-team/accept",
+    );
+    expect(getCustomerAppPathUrl("en/x")).toBe("https://vergeo5.com/en/x");
   });
 });

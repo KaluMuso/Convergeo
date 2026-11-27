@@ -31,6 +31,11 @@ import {
   type Listing,
   type ProductDetail,
 } from "../../_components/pdp/fetch-product";
+import {
+  LazyAboutThisItem,
+  LazyPdpSectionNav,
+  LazyPdpSpecTable,
+} from "../../_components/pdp/lazy-pdp-fold";
 import { LazyProductQuestions } from "../../_components/pdp/lazy-product-questions";
 import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
 import { PdpDetailsTabs } from "../../_components/pdp/pdp-details-tabs";
@@ -41,7 +46,8 @@ import {
 import { PdpRatingChip } from "../../_components/pdp/pdp-rating-chip";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
-import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
+import { groupSpecRows } from "../../_components/pdp/spec-groups";
+import { specRowsFromJson } from "../../_components/pdp/specs-table";
 
 import {
   productAggregateRatingForJsonLd,
@@ -58,7 +64,7 @@ import type { ListingCondition } from "../../_components/pdp/condition-badge";
 import type { Metadata } from "next";
 
 // Must be a literal for Next.js segment config (imported constants are rejected).
-export const revalidate = 3600;
+export const revalidate = 300;
 
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
@@ -263,16 +269,23 @@ function descriptionParagraphs(description: string | null): string[] {
     .filter((paragraph) => paragraph.length > 0);
 }
 
+function hasUsablePublicId(publicId: string | null | undefined): publicId is string {
+  return typeof publicId === "string" && publicId.trim().length > 0;
+}
+
 function galleryImages(
   product: ProductDetail,
   selectedListing: Listing | null,
   alt: string,
 ): Array<{ publicId: string; alt: string }> {
-  const source =
-    selectedListing && selectedListing.images.length > 0 ? selectedListing.images : product.images;
+  const listingImages = (selectedListing?.images ?? []).filter((image) =>
+    hasUsablePublicId(image.public_id),
+  );
+  const productImages = product.images.filter((image) => hasUsablePublicId(image.public_id));
+  const source = listingImages.length > 0 ? listingImages : productImages;
 
   return source.map((image) => ({
-    publicId: image.public_id,
+    publicId: image.public_id.trim(),
     alt,
   }));
 }
@@ -325,10 +338,12 @@ function toProductListings(
       verified: listing.vendor.verified ?? false,
       memberSince: formatMemberSince(listing.vendor.member_since, locale),
     },
-    images: listing.images.map((image) => ({
-      publicId: image.public_id,
-      alt,
-    })),
+    images: listing.images
+      .filter((image) => hasUsablePublicId(image.public_id))
+      .map((image) => ({
+        publicId: image.public_id.trim(),
+        alt,
+      })),
     optionGroups: (listing.option_groups ?? []).map((group) => ({
       id: group.id,
       name: group.name,
@@ -703,7 +718,10 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   return (
     // Shop layout already provides the page <main> landmark — avoid nesting.
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 py-2 motion-rise md:py-4">
+    <div
+      id="pdp-top"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-5 py-2 motion-rise md:py-4"
+    >
       {productJsonLd ? <JsonLdScript data={productJsonLd} /> : null}
       <JsonLdScript data={breadcrumbJsonLd} />
       <ProductViewTracker
@@ -955,6 +973,22 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         </Suspense>
       ) : null}
 
+      <LazyPdpSectionNav
+        items={[
+          { id: "pdp-top", label: t("pdp.sectionNav.top") },
+          ...(overviewParagraphs.length > 0
+            ? [{ id: "pdp-about", label: t("pdp.sectionNav.about") }]
+            : []),
+          { id: "pdp-specs", label: t("pdp.sectionNav.specs") },
+          { id: "pdp-reviews", label: t("pdp.sectionNav.reviews") },
+          { id: "pdp-similar", label: t("pdp.sectionNav.similar") },
+        ]}
+        productTitle={product.name}
+        thumbnailPublicId={images[0]?.publicId}
+        thumbnailAlt={product.name}
+        cloudName={cloudName}
+      />
+
       <PdpDetailsTabs
         labels={{
           ariaLabel: t("pdp.tabs.ariaLabel"),
@@ -964,18 +998,21 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         }}
         hasOverview={overviewParagraphs.length > 0}
         overviewPanel={
-          <div className="flex flex-col gap-2 text-sm leading-relaxed text-text-2">
-            {overviewParagraphs.map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </div>
+          <LazyAboutThisItem
+            paragraphs={overviewParagraphs}
+            seeMoreLabel={t("pdp.about.seeMore")}
+            seeLessLabel={t("pdp.about.seeLess")}
+          />
         }
         specsPanel={
-          <SpecsTable
-            rows={specRows}
-            heading={t("pdp.specs.heading")}
+          <LazyPdpSpecTable
+            groups={groupSpecRows(specRows, {
+              features: t("pdp.specs.groups.features"),
+              details: t("pdp.specs.groups.details"),
+              measurements: t("pdp.specs.groups.measurements"),
+              materials: t("pdp.specs.groups.materials"),
+            })}
             emptyLabel={t("pdp.specs.empty")}
-            hideHeading
           />
         }
         reviewsPanel={reviewsPanel}
@@ -986,12 +1023,14 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       {/* Founder rule: related items from OTHER shops, not only this one. */}
       {selectedListing ? (
         <Suspense fallback={null}>
-          <OtherShopsRail
-            locale={locale}
-            vendorSlug={selectedListing.vendor.slug}
-            lead="product"
-            focusProductSlug={product.slug}
-          />
+          <div id="pdp-similar">
+            <OtherShopsRail
+              locale={locale}
+              vendorSlug={selectedListing.vendor.slug}
+              lead="product"
+              focusProductSlug={product.slug}
+            />
+          </div>
         </Suspense>
       ) : null}
     </div>

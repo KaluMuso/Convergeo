@@ -16,3 +16,13 @@ export function isVendorPayoutsEnabled(
   const value = raw?.trim().toLowerCase();
   return value === "true" || value === "1";
 }
+
+/** During the pilot, home should not push "add payout method" while payouts are off. */
+export function shouldPromptVendorPayoutMethodOnHome(
+  payoutMissing: boolean | null | undefined,
+): boolean {
+  if (payoutMissing !== true) {
+    return false;
+  }
+  return isVendorPayoutsEnabled();
+}

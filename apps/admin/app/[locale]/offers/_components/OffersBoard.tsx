@@ -1,5 +1,6 @@
 "use client";
 
+import { glassClass } from "@vergeo/ui/src/glass";
 import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -299,12 +300,12 @@ export function PauseDialog({ offer, pause, onClose, onDone }: PauseDialogProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-[2px] sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="offer-pause-title"
     >
-      <div className="w-full max-w-md rounded-lg border border-border bg-surface p-4 shadow-lg">
+      <div className={`${glassClass("overlay")} w-full max-w-md rounded-lg p-4`}>
         <h2 id="offer-pause-title" className="font-serif text-lg text-text">
           {pause ? t("actions.pauseTitle") : t("actions.unpauseTitle")}
         </h2>
@@ -342,8 +343,8 @@ export function PauseDialog({ offer, pause, onClose, onDone }: PauseDialogProps)
           <button
             type="button"
             data-testid="offer-pause-confirm"
-            className={`inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium text-white ${
-              pause ? "bg-danger" : "bg-primary"
+            className={`inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium ${
+              pause ? "bg-danger text-on-danger" : "bg-primary text-[var(--primary-btn-fg)]"
             }`}
             onClick={() => void submit()}
             disabled={submitting}

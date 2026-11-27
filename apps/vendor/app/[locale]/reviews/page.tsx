@@ -32,7 +32,7 @@ export default async function VendorReviewsPage({ params }: PageProps) {
 
   return (
     <VendorPage width="full">
-      <VendorReviewsQueue />
+      <VendorReviewsQueue locale={locale} />
     </VendorPage>
   );
 }

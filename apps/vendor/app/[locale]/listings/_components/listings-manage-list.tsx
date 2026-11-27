@@ -1,13 +1,12 @@
 "use client";
 
 import { useSession } from "@vergeo/auth/use-session";
+import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CloudinaryImage } from "../../../../../../packages/ui/src/media/cloudinary-image";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
-import { VendorGrid } from "../../_components/vendor-page";
 import { VendorRouteHeader } from "../../_components/vendor-route-header";
 import { ListSkeleton } from "../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
@@ -122,7 +121,7 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
       />
 
       <div className="px-1">
-        <PlanUsageCard refreshKey={listings.length} />
+        <PlanUsageCard locale={locale} refreshKey={listings.length} />
       </div>
 
       <div className="px-1">
@@ -148,51 +147,61 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
           <div className="px-1">
             <ListingStatusGuide />
           </div>
-          <VendorGrid cols="cards" className="px-1">
+          <div className="grid grid-cols-1 gap-4 px-1 md:grid-cols-2 2xl:grid-cols-3">
             {listings.map((listing) => {
-              const cover = [...(listing.images ?? [])].sort((a, b) => a.position - b.position)[0]
-                ?.cloudinary_public_id;
+              const coverImage = [...(listing.images ?? [])].sort(
+                (left, right) => left.position - right.position,
+              )[0];
               return (
                 <div
                   key={listing.id}
-                  className="rounded-lg border border-border p-4 shadow-sm lg:p-5"
+                  className="flex min-w-0 flex-col rounded-lg border border-border p-4 shadow-sm lg:p-5"
                 >
                   <div className="flex items-start gap-3">
-                    {cover ? (
+                    {coverImage ? (
                       <CloudinaryImage
-                        publicId={cover}
-                        alt={t("listings.formAside.previewPhotoAlt")}
+                        publicId={coverImage.cloudinary_public_id}
+                        alt={listing.title}
                         width={64}
                         ratio={1}
-                        className="size-16 shrink-0 rounded-lg"
+                        className="size-16 shrink-0 rounded-lg border border-border object-cover"
                       />
                     ) : (
-                      <div
-                        aria-hidden
-                        className="size-16 shrink-0 rounded-lg border border-dashed border-border bg-bg-2"
-                      />
-                    )}
-                    <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-1">
-                        <p className="truncate text-sm font-medium text-text">{listing.title}</p>
-                        <PriceBlock ngwee={listing.price_ngwee} />
-                        <p className="text-xs text-text-2">
-                          <span className="sr-only">{t("listings.manage.statusLabel")}</span>
-                          <span className="font-medium text-text">
-                            {statusLabel(listing.status, statusLabels)}
-                          </span>
-                        </p>
-                        <ListingVisibilityHint status={listing.status} />
-                        <ListingProductStatusChip
-                          listingStatus={listing.status}
-                          productStatus={listing.product_status}
-                        />
+                      <div className="flex size-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-bg-2 p-1 text-center">
+                        <Link
+                          className="text-[0.65rem] font-medium leading-tight text-primary underline-offset-2 hover:underline"
+                          href={`/${locale}/listings/${listing.id}/edit#photos`}
+                        >
+                          {t("listings.manage.addPhotoLink")}
+                        </Link>
                       </div>
+                    )}
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="line-clamp-2 break-words text-sm font-medium text-text">
+                        {listing.title}
+                      </p>
+                      <PriceBlock ngwee={listing.price_ngwee} />
+                    </div>
+                  </div>
+
+                  {/* Status lives on its own full-width row so the hint never wraps in a
+                      narrow column beside the thumbnail (360px phones). */}
+                  <div
+                    className="mt-3 flex flex-col gap-2 border-t border-border pt-3"
+                    data-testid="listing-status-row"
+                  >
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="sr-only">{t("listings.manage.statusLabel")}</span>
                       <Badge
                         variant={statusVariant(listing.status)}
                         label={statusLabel(listing.status, statusLabels)}
                       />
+                      <ListingProductStatusChip
+                        listingStatus={listing.status}
+                        productStatus={listing.product_status}
+                      />
                     </div>
+                    <ListingVisibilityHint status={listing.status} />
                   </div>
 
                   <div className="mt-3 flex items-center justify-between gap-3">
@@ -225,7 +234,7 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
                 </div>
               );
             })}
-          </VendorGrid>
+          </div>
         </>
       )}
     </div>

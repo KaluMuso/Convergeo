@@ -83,7 +83,7 @@
     "cod": "Pay in cash when you receive your order.",
     "strip": {
       "paid": "You paid",
-      "held": "Held by Vergeo5",
+      "held": "Held by Convergeo",
       "released": "Released"
     }
   },
@@ -309,5 +309,15 @@
     "priceChangeTitle": "Prices have changed since your last order",
     "priceChangeLine": "{title}: was {previous}, now {current}",
     "goToCart": "Review cart and checkout"
+  },
+  "error": {
+    "title": "Could not load orders",
+    "body": "Check your connection and try again.",
+    "retry": "Try again"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {total}"
   }
 }

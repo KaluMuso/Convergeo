@@ -1,8 +1,8 @@
 "use client";
 
-import { getBrowserAccessToken } from "@vergeo/auth";
 import { createApiClient } from "@vergeo/config";
 
+import { getBrowserAccessToken } from "../../../lib/access-token";
 import { getApiBaseUrl } from "../../../lib/api-base-url";
 
 const API_BASE = getApiBaseUrl();

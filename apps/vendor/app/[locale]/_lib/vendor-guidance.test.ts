@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import * as payoutsAvailability from "../../../lib/payouts-availability";
 import { buildKycChecklist } from "../onboarding/_lib/kyc-checklist";
 import {
   isBoundByDispatchCutoff,
@@ -310,6 +311,7 @@ describe("buildHomeTasks", () => {
   });
 
   it("prompts for a payout number after KYC blockers and before waiting orders", () => {
+    vi.spyOn(payoutsAvailability, "shouldPromptVendorPayoutMethodOnHome").mockReturnValue(true);
     const tasks = buildHomeTasks({
       kycOverall: "approved",
       payoutMissing: true,
@@ -320,6 +322,20 @@ describe("buildHomeTasks", () => {
     });
     expect(tasks.map((t) => t.key)).toEqual(["payoutMethod", "ordersWaiting", "catalogueProducts"]);
     expect(tasks[0]).toMatchObject({ href: "/payouts/method", tone: "warning" });
+  });
+
+  it("shows payouts pilot info instead of method setup while payouts are off", () => {
+    vi.spyOn(payoutsAvailability, "shouldPromptVendorPayoutMethodOnHome").mockReturnValue(false);
+    const tasks = buildHomeTasks({
+      kycOverall: "approved",
+      payoutMissing: true,
+      needsActionCount: 0,
+      hasDeliveryWaiting: false,
+      cutoff: before,
+      sellerKind: "products",
+    });
+    expect(tasks[0]?.key).toBe("payoutsPilot");
+    expect(tasks[0]?.href).toBe("/payouts");
   });
 
   it("hides the payout prompt when a number is set or payout state is unknown", () => {
@@ -343,19 +359,6 @@ describe("buildHomeTasks", () => {
         sellerKind: "products",
       }).map((t) => t.key),
     ).not.toContain("payoutMethod");
-  });
-
-  it("skips payout setup on home when payouts are disabled for the pilot", () => {
-    const tasks = buildHomeTasks({
-      kycOverall: "approved",
-      payoutMissing: true,
-      payoutsEnabled: false,
-      needsActionCount: 0,
-      hasDeliveryWaiting: false,
-      cutoff: before,
-      sellerKind: "products",
-    });
-    expect(tasks.map((t) => t.key)).not.toContain("payoutMethod");
   });
 
   it("does not show payout setup while ID verification needs a fix", () => {

@@ -6,8 +6,10 @@ import {
   useEffect,
   useRef,
   useState,
+  type HTMLAttributes,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
   type WheelEvent as ReactWheelEvent,
 } from "react";
 
@@ -29,6 +31,7 @@ export type LightboxLabels = {
   zoomOut: string;
   /** ICU-style template with {current} and {total}. */
   indicator: string;
+  imagesTab?: string;
 };
 
 export type LightboxProps = {
@@ -37,6 +40,8 @@ export type LightboxProps = {
   cloudName?: string;
   labels: LightboxLabels;
   onClose: (lastIndex: number) => void;
+  productTitle?: string;
+  variantSummary?: string;
 };
 
 export function clampZoom(value: number): number {
@@ -60,10 +65,7 @@ export function clampPan(
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       return;
     }
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -75,8 +77,7 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-const FOCUSABLE =
-  'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE = 'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
 
 /**
  * Full-screen image viewer with zoom. Dependency-free:
@@ -91,11 +92,11 @@ export function Lightbox({
   cloudName,
   labels,
   onClose,
+  productTitle,
+  variantSummary,
 }: LightboxProps) {
   const total = images.length;
-  const [index, setIndex] = useState(() =>
-    Math.min(Math.max(initialIndex, 0), total - 1),
-  );
+  const [index, setIndex] = useState(() => Math.min(Math.max(initialIndex, 0), total - 1));
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const reducedMotion = usePrefersReducedMotion();
@@ -123,9 +124,7 @@ export function Lightbox({
       const clamped = clampZoom(next);
       setZoom(clamped);
       setPan((current) =>
-        clamped === MIN_ZOOM
-          ? { x: 0, y: 0 }
-          : clampPan(current, clamped, stageBox()),
+        clamped === MIN_ZOOM ? { x: 0, y: 0 } : clampPan(current, clamped, stageBox()),
       );
     },
     [stageBox],
@@ -186,8 +185,7 @@ export function Lightbox({
           applyZoom(MIN_ZOOM);
           return;
         case "Tab": {
-          const nodes =
-            dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
+          const nodes = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
           if (!nodes || nodes.length === 0) {
             return;
           }
@@ -255,10 +253,7 @@ export function Lightbox({
         const [a, b] = points;
         if (a && b) {
           start.moved = true;
-          applyZoom(
-            (start.startZoom * Math.hypot(a.x - b.x, a.y - b.y)) /
-              start.startDistance,
-          );
+          applyZoom((start.startZoom * Math.hypot(a.x - b.x, a.y - b.y)) / start.startDistance);
         }
         return;
       }
@@ -268,13 +263,7 @@ export function Lightbox({
         start.moved = true;
       }
       if (zoom > MIN_ZOOM) {
-        setPan(
-          clampPan(
-            { x: start.startPan.x + dx, y: start.startPan.y + dy },
-            zoom,
-            stageBox(),
-          ),
-        );
+        setPan(clampPan({ x: start.startPan.x + dx, y: start.startPan.y + dy }, zoom, stageBox()));
       }
     },
     [applyZoom, stageBox, zoom],
@@ -306,6 +295,8 @@ export function Lightbox({
     return null;
   }
 
+  const showSidePanel = Boolean(productTitle);
+
   return (
     <div
       ref={dialogRef}
@@ -314,17 +305,10 @@ export function Lightbox({
       aria-label={labels.dialog}
       data-testid="pdp-lightbox"
       onKeyDown={onKeyDown}
-      className="fixed inset-0 z-50 flex flex-col text-bg"
-      style={{
-        backgroundColor: "color-mix(in srgb, var(--text) 94%, transparent)",
-      }}
+      className="fixed inset-0 z-50 flex flex-col bg-surface text-text"
     >
-      <div className="flex items-center justify-between gap-2 px-3 py-2">
-        <p
-          aria-live="polite"
-          data-testid="pdp-lightbox-indicator"
-          className="text-sm"
-        >
+      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+        <p aria-live="polite" data-testid="pdp-lightbox-indicator" className="text-sm text-text-2">
           {formatPdpGalleryIndicator(labels.indicator, index + 1, total)}
         </p>
         <div className="flex items-center gap-1">
@@ -362,65 +346,163 @@ export function Lightbox({
       </div>
 
       <div
-        ref={stageRef}
-        data-testid="pdp-lightbox-stage"
-        data-zoom={zoom.toFixed(2)}
-        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
-        style={{
-          touchAction: "none",
-          cursor: zoom > MIN_ZOOM ? "zoom-out" : "zoom-in",
-        }}
-        onWheel={onWheel}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        className={
+          showSidePanel
+            ? "grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,22rem)]"
+            : "flex min-h-0 flex-1 flex-col"
+        }
       >
         <div
-          className="w-full max-w-3xl"
+          ref={stageRef}
+          data-testid="pdp-lightbox-stage"
+          data-zoom={zoom.toFixed(2)}
+          className="relative flex min-h-0 items-center justify-center overflow-hidden bg-bg-2"
           style={{
-            transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
-            transition: reducedMotion
-              ? "none"
-              : "transform var(--dur, 160ms) var(--ease-out, ease-out)",
+            touchAction: "none",
+            cursor: zoom > MIN_ZOOM ? "zoom-out" : "zoom-in",
           }}
+          onWheel={onWheel}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          <MotionWrap reduced={reducedMotion} pan={pan} zoom={zoom}>
+            <CloudinaryImage
+              publicId={image.publicId}
+              alt={image.alt}
+              ratio="4/3"
+              cloudName={cloudName}
+              width={1600}
+              sizes="100vw"
+              priority
+            />
+          </MotionWrap>
+          {total > 1 ? (
+            <div className="absolute inset-y-0 flex w-full items-center justify-between px-1">
+              <button
+                type="button"
+                aria-label={labels.previous}
+                data-testid="pdp-lightbox-prev"
+                onClick={() => go(-1)}
+                disabled={index === 0}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-surface/90 text-2xl shadow disabled:opacity-40"
+              >
+                <span aria-hidden="true">‹</span>
+              </button>
+              <button
+                type="button"
+                aria-label={labels.next}
+                data-testid="pdp-lightbox-next"
+                onClick={() => go(1)}
+                disabled={index === total - 1}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-surface/90 text-2xl shadow disabled:opacity-40"
+              >
+                <span aria-hidden="true">›</span>
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        {showSidePanel ? (
+          <aside className="hidden min-h-0 flex-col gap-3 overflow-y-auto border-l border-border p-4 lg:flex">
+            {productTitle ? (
+              <h2 className="m-0 text-base font-semibold text-text">{productTitle}</h2>
+            ) : null}
+            {variantSummary ? <p className="m-0 text-sm text-text-2">{variantSummary}</p> : null}
+            {labels.imagesTab ? (
+              <p className="m-0 text-xs font-medium uppercase tracking-wide text-text-3">
+                {labels.imagesTab}
+              </p>
+            ) : null}
+            <MotionGrid
+              images={images}
+              index={index}
+              cloudName={cloudName}
+              pick={setIndex}
+              resetZoom={() => {
+                setZoom(MIN_ZOOM);
+                setPan({ x: 0, y: 0 });
+              }}
+            />
+          </aside>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function MotionWrap({
+  children,
+  pan,
+  zoom,
+  reduced,
+}: {
+  children: ReactNode;
+  pan: { x: number; y: number };
+  zoom: number;
+  reduced: boolean;
+}) {
+  return (
+    <div
+      className="w-full max-w-3xl"
+      style={{
+        transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+        transition: reduced ? "none" : "transform var(--dur, 160ms) var(--ease-out, ease-out)",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function MotionGrid({
+  images,
+  index,
+  cloudName,
+  pick,
+  resetZoom,
+}: {
+  images: Array<{ publicId: string; alt: string }>;
+  index: number;
+  cloudName?: string;
+  pick: (index: number) => void;
+  resetZoom: () => void;
+}) {
+  return (
+    <MotionSafeWrapper data-testid="pdp-lightbox-thumb-grid" className="grid grid-cols-4 gap-2">
+      {images.map((thumb, thumbIndex) => (
+        <button
+          key={`${thumb.publicId}-${thumbIndex}`}
+          type="button"
+          aria-current={thumbIndex === index}
+          onClick={() => {
+            pick(thumbIndex);
+            resetZoom();
+          }}
+          className={[
+            "aspect-square overflow-hidden rounded border bg-surface",
+            thumbIndex === index ? "border-2 border-primary" : "border-border",
+          ].join(" ")}
         >
           <CloudinaryImage
-            publicId={image.publicId}
-            alt={image.alt}
-            ratio="4/3"
+            publicId={thumb.publicId}
+            alt=""
+            width={360}
+            ratio="1/1"
             cloudName={cloudName}
-            width={1600}
-            sizes="100vw"
-            priority
+            className="h-full w-full object-contain"
           />
-        </div>
-      </div>
+        </button>
+      ))}
+    </MotionSafeWrapper>
+  );
+}
 
-      {total > 1 ? (
-        <div className="flex items-center justify-between px-3 py-2">
-          <button
-            type="button"
-            aria-label={labels.previous}
-            data-testid="pdp-lightbox-prev"
-            onClick={() => go(-1)}
-            disabled={index === 0}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-2xl disabled:opacity-40"
-          >
-            <span aria-hidden="true">‹</span>
-          </button>
-          <button
-            type="button"
-            aria-label={labels.next}
-            data-testid="pdp-lightbox-next"
-            onClick={() => go(1)}
-            disabled={index === total - 1}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-2xl disabled:opacity-40"
-          >
-            <span aria-hidden="true">›</span>
-          </button>
-        </div>
-      ) : null}
+function MotionSafeWrapper({ className, children, ...rest }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={["motion-safe", className].filter(Boolean).join(" ")} {...rest}>
+      {children}
     </div>
   );
 }

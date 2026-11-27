@@ -14,6 +14,7 @@ from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -25,6 +26,7 @@ from app.routers.checkout import (
     _fetch_cart_items,
     _int_or_zero,
     _normalize_phone,
+    session_is_ordered,
 )
 from app.services.cart.store import fetch_listings_for_items
 from app.services.coupons.rules import MIN_PAYABLE_NGWEE, CouponError, quote_coupon
@@ -42,8 +44,11 @@ from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-router = APIRouter(prefix="/checkout", tags=["checkout"])
-
+router = APIRouter(
+    prefix="/checkout",
+    tags=["checkout"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 #: Code guessing guard: per user and per IP, short window.
 COUPON_ATTEMPT_LIMIT = 10
 COUPON_ATTEMPT_WINDOW = timedelta(minutes=10)
@@ -131,7 +136,7 @@ def _totals(group: dict[str, Any], *, session_id: str) -> CheckoutTotalsResponse
 
 
 def _require_pending(group: dict[str, Any], session_id: str) -> None:
-    if str(group.get("status") or "") != "pending":
+    if str(group.get("status") or "") != "pending" or session_is_ordered(group):
         raise AppError(
             code="orders.session_already_completed",
             message="Checkout session already completed",

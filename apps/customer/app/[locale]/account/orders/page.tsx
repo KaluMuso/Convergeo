@@ -1,9 +1,16 @@
+import { ApiError } from "@vergeo/config";
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import {
+  BrowsePager,
+  parseBrowsePage,
+  sliceBrowsePage,
+} from "../../(shop)/_components/browse-pager";
 import { AccountListBoundary } from "../_components/account-list-boundary";
 import { getAccountListSession } from "../_components/account-list-server";
 
@@ -13,23 +20,29 @@ import { createOrdersApiClient } from "./_components/orders-api";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
-
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ page?: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const messages = await loadNamespace(locale as Locale, "account");
+  const nav = messages.nav as { orders: string };
+  return {
+    title: nav.orders,
+    robots: { index: false, follow: false },
+  };
+}
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export default async function AccountOrdersPage({ params }: PageProps) {
+export default async function AccountOrdersPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
+  const query = (await searchParams) ?? {};
+  const page = parseBrowsePage(query.page);
 
   if (!LOCALES.includes(locale as Locale)) {
     return null;
@@ -50,9 +63,38 @@ export default async function AccountOrdersPage({ params }: PageProps) {
   const buyAgainLabels = buildBuyAgainLabels(t);
 
   const api = createOrdersApiClient(() => accessToken);
-  const { groups } = await api.listOrders();
+  let groups: Awaited<ReturnType<typeof api.listOrders>>["groups"] = [];
+  try {
+    ({ groups } = await api.listOrders());
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      throw error;
+    }
+    const content = (
+      <section className="py-6" data-testid="orders-list-error">
+        <EmptyState
+          title={t("error.title")}
+          body={t("error.body")}
+          action={
+            <LinkButton
+              href={`/${locale}/account/orders`}
+              variant="primary"
+              className="px-5 text-sm"
+              LinkComponent={Link}
+            >
+              {t("error.retry")}
+            </LinkButton>
+          }
+        />
+      </section>
+    );
+    return <AccountListBoundary accountId={accountId}>{content}</AccountListBoundary>;
+  }
 
-  if (groups.length === 0) {
+  const totalGroups = groups.length;
+  const visibleGroups = sliceBrowsePage(groups, page);
+
+  if (totalGroups === 0) {
     const content = (
       <section className="space-y-4 rounded border border-border bg-surface p-4 py-8 text-center lg:p-5">
         <h2 className="font-display text-h2 text-display-ink">{t("empty.title")}</h2>
@@ -77,7 +119,7 @@ export default async function AccountOrdersPage({ params }: PageProps) {
       </header>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {groups.map((group) => (
+        {visibleGroups.map((group) => (
           <article
             key={group.checkout_group_id}
             className="space-y-3 rounded border border-border bg-surface p-4 lg:p-5"
@@ -162,6 +204,19 @@ export default async function AccountOrdersPage({ params }: PageProps) {
           </article>
         ))}
       </div>
+
+      <BrowsePager
+        locale={locale}
+        pathname="/account/orders"
+        searchParams={{}}
+        page={page}
+        total={totalGroups}
+        labels={{
+          previous: t("pagination.previous"),
+          next: t("pagination.next"),
+          page: t("pagination.page"),
+        }}
+      />
     </section>
   );
   return <AccountListBoundary accountId={accountId}>{content}</AccountListBoundary>;

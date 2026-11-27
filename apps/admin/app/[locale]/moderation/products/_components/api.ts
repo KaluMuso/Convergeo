@@ -1,8 +1,8 @@
 "use client";
 
-import { getBrowserAccessToken } from "@vergeo/auth";
 import { createApiClient } from "@vergeo/config";
 
+import { getBrowserAccessToken } from "../../../../../lib/access-token";
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
 const API_BASE = getApiBaseUrl();
@@ -18,6 +18,7 @@ export type ProductSummary = {
   slug: string;
   brand: string | null;
   category_id: string;
+  category_name?: string | null;
   status: string;
   aliases: string[];
 };

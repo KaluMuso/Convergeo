@@ -60,6 +60,7 @@
     "qtyIncreaseSymbol": "+",
     "qtyValue": "Chiwerengero: {count}",
     "remove": "Chotsani",
+    "untitledItem": "Chinthu",
     "removeLabel": "Chotsani {title} kuchokera ku cart",
     "saveForLater": "Sungeni kwa nthawi ina",
     "saveForLaterLabel": "Sungeni {title} kwa nthawi ina",
@@ -108,6 +109,9 @@
     "codStep1": "⚠ You order",
     "codStep2": "⚠ We deliver",
     "codStep3": "⚠ You pay on arrival",
+    "escrowStep1": "Mwalipira",
+    "escrowStep2": "Ikusungidwa ndi Convergeo",
+    "escrowStep3": "Yatsimikizidwa pa kutumiza",
     "leadTimeWhen": {
       "oneDay": "⚠ within a day",
       "days": "⚠ in about {count} days",
@@ -168,7 +172,10 @@
       "expired": "Code yatha — pemphani code yatsopano",
       "throttled": "Mwayesera kwambiri — dikirani {seconds}s",
       "generic": "Kutsimikiza kwalephera. Yesaninso.",
-      "skippedLoggedIn": "Tikugwiritsa nambala ya phone ya akaunti yanu"
+      "skippedLoggedIn": "Tikugwiritsa nambala ya phone ya akaunti yanu",
+      "needPhone": "Add your phone number so we can send you order updates on WhatsApp or SMS.",
+      "savePhone": "Save number and continue",
+      "saveFailed": "We couldn't continue. Check your network and try again."
     },
     "fulfilment": {
       "title": "Mungafune kutumizira bwanji?",
@@ -184,6 +191,7 @@
       "zoneLabel": "Zone: {zone}",
       "pickupAt": "Pickup pa {landmark}",
       "pickupHours": "Nthawi: {hours}",
+      "pickupClosed": "Kwatsekedwa",
       "outsideZone": "Kunja kwa delivery ya Lusaka — pickup yokha pa adilesi iyi",
       "mixedHint": "Mungasankhe delivery ndi pickup pa ogulitsa osiyanasiyana.",
       "continue": "Pitilizani",
@@ -331,8 +339,8 @@
       "nextCard": "Mudzapitirira pa page ya Lenco. Musatseke pejiyo payment isanathe.",
       "nextCod": "Order yanu yaiyikidwa pa cash on delivery. Lipirani courier ikafika — payment ya online satengedwa tsopano.",
       "qty": "×{qty}",
-      "railAirtel": "Airtel",
-      "railMtn": "MTN",
+      "railAirtel": "Airtel Money (MoMo)",
+      "railMtn": "MTN MoMo",
       "subtitle": "Onani kuti zonse zili bwino musanalipire.",
       "subtotal": "Subtotal yokha",
       "title": "Onani order yanu",
@@ -373,7 +381,7 @@
       "amountLabel": "Amount yotsimikizira",
       "doNotClose": "Sungani peji iyi ili open pamene mukutsimikiza pa phone.",
       "genericHelp": "Mobile money prompt yatumizidwa ku phone yanu. Lembani PIN kuti mutsimikize {amount}.",
-      "mtnHelp": "Tsekulani MTN MoMo prompt pa phone yanu ndi lembani PIN kuti mutsimikize {amount}.",
+      "mtnHelp": "Tsekulani MTN Mobile Money prompt pa phone yanu ndi lembani PIN kuti mutsimikize {amount}.",
       "subtitle": "Tsimikizani prompt ya {amount} pa phone yanu kuti mumalize payment.",
       "title": "Onani phone yanu",
       "waiting": "Tikudikira approval…"

@@ -30,7 +30,9 @@ export function ProductCompareCard({
         </div>
         <div className="flex justify-between gap-2">
           <dt className="text-muted">{t("category")}</dt>
-          <dd className="truncate font-mono text-xs text-text">{product.category_id}</dd>
+          <dd className="truncate text-text">
+            {product.category_name?.trim() || product.category_id}
+          </dd>
         </div>
         <div>
           <dt className="text-muted">{t("aliases")}</dt>

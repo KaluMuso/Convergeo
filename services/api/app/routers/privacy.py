@@ -3,21 +3,29 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import UTC, datetime
-from typing import Annotated, Any, Protocol
+from datetime import UTC, datetime, timedelta
+from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
+from app.core.ratelimit import bump_rate_counter, raise_rate_limited
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.identity import lookup_confirmed_email
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 from supabase import Client, create_client
+from supabase_auth.types import VerifyEmailOtpParams, VerifyMobileOtpParams
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/account", tags=["privacy"])
+router = APIRouter(
+    prefix="/account",
+    tags=["privacy"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 
 
 class ServiceRoleClient(Protocol):
@@ -30,6 +38,8 @@ EXPORT_PATH_PREFIX = "data-exports"
 SIGNED_URL_TTL_SECONDS = 900
 DELETE_CONFIRMATION_PHRASE = "DELETE MY ACCOUNT"
 ANONYMOUS_DISPLAY_NAME = "Deleted User"
+REAUTH_VERIFY_LIMIT_PER_USER = 10
+REAUTH_VERIFY_WINDOW_SECONDS = 900
 
 EXPORT_BUNDLE_KEYS = (
     "profile",
@@ -69,9 +79,13 @@ class ExportResponse(BaseModel):
     expires_in_seconds: int
 
 
+ReauthChannel = Literal["email", "sms"]
+
+
 class DeleteAccountRequest(BaseModel):
     confirmation_phrase: str = Field(min_length=1)
     otp: str = Field(min_length=6, max_length=6)
+    channel: ReauthChannel = "email"
 
     @field_validator("otp")
     @classmethod
@@ -264,20 +278,97 @@ def upload_export_bundle(
     return export_id, download_url
 
 
-def verify_reauth_otp(*, phone: str | None, otp: str, settings: Settings) -> None:
-    if not phone:
+def _phone_confirmed_for_user(service: ServiceRoleClient, user_id: str) -> bool:
+    try:
+        response = service.client.auth.admin.get_user_by_id(user_id)
+    except Exception:
+        logger.warning("reauth.auth_phone_lookup_failed", exc_info=True, extra={"user_id": user_id})
+        return False
+    user = getattr(response, "user", None)
+    return getattr(user, "phone_confirmed_at", None) is not None
+
+
+def _assert_otp_session_user(*, response: Any, expected_user_id: str) -> None:
+    if getattr(response, "session", None) is None and getattr(response, "user", None) is None:
         raise AppError(
-            code="reauth_required",
-            message="Account deletion requires a verified phone number",
+            code="reauth_failed",
+            message="Invalid or expired OTP",
+            http_status=403,
+        )
+    user = getattr(response, "user", None)
+    if user is None:
+        return
+    verified_id = getattr(user, "id", None)
+    if verified_id is not None and str(verified_id) != str(expected_user_id):
+        raise AppError(
+            code="reauth_failed",
+            message="OTP verification failed",
             http_status=403,
         )
 
-    normalized_phone = _normalize_phone(phone)
+
+def verify_reauth_otp(
+    *,
+    user_id: str,
+    token: str,
+    phone: str | None,
+    otp: str,
+    channel: ReauthChannel = "email",
+    settings: Settings,
+    service: ServiceRoleClient,
+) -> None:
+    _ = token
+    allowed, retry_after = bump_rate_counter(
+        scope="reauth_otp_verify",
+        key=user_id,
+        window=timedelta(seconds=REAUTH_VERIFY_WINDOW_SECONDS),
+        limit=REAUTH_VERIFY_LIMIT_PER_USER,
+        client=service.client,
+    )
+    if not allowed:
+        raise_rate_limited(
+            retry_after=retry_after,
+            message_key="auth.errors.rateLimited",
+            message="Too many verification attempts",
+        )
+
     auth_client = create_client(settings.supabase_url, settings.supabase_anon_key)
     try:
-        response = auth_client.auth.verify_otp(
-            {"phone": normalized_phone, "token": otp, "type": "sms"},
-        )
+        if channel == "email":
+            email = lookup_confirmed_email(service, user_id=user_id)
+            if not email:
+                raise AppError(
+                    code="reauth_required",
+                    message="Step-up verification requires a verified email on your account",
+                    http_status=403,
+                )
+            email_payload: VerifyEmailOtpParams = {
+                "email": email,
+                "token": otp,
+                "type": "email",
+            }
+            response = auth_client.auth.verify_otp(email_payload)
+        else:
+            if not phone:
+                raise AppError(
+                    code="reauth_required",
+                    message="Step-up verification requires a verified phone on your account",
+                    http_status=403,
+                )
+            if not _phone_confirmed_for_user(service, user_id):
+                raise AppError(
+                    code="reauth_required",
+                    message="Step-up verification requires a verified phone on your account",
+                    http_status=403,
+                )
+            mobile_payload: VerifyMobileOtpParams = {
+                "phone": _normalize_phone(phone),
+                "token": otp,
+                "type": "sms",
+            }
+            response = auth_client.auth.verify_otp(mobile_payload)
+    except AppError:
+        raise
     except Exception as exc:
         raise AppError(
             code="reauth_failed",
@@ -286,12 +377,7 @@ def verify_reauth_otp(*, phone: str | None, otp: str, settings: Settings) -> Non
             details={"reason": exc.__class__.__name__},
         ) from exc
 
-    if getattr(response, "session", None) is None and getattr(response, "user", None) is None:
-        raise AppError(
-            code="reauth_failed",
-            message="Invalid or expired OTP",
-            http_status=403,
-        )
+    _assert_otp_session_user(response=response, expected_user_id=user_id)
 
 
 def anonymize_and_delete_account(
@@ -459,7 +545,15 @@ async def delete_account(
     if not isinstance(phone, str):
         phone = None
 
-    verify_reauth_otp(phone=phone, otp=body.otp, settings=settings)
+    verify_reauth_otp(
+        user_id=current_user.id,
+        token=current_user.token,
+        phone=phone,
+        otp=body.otp,
+        channel=body.channel,
+        settings=settings,
+        service=service,
+    )
     anonymize_and_delete_account(service, user_id=current_user.id)
 
     return DeleteAccountResponse(status="deleted", user_id=current_user.id)

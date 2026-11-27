@@ -11,16 +11,19 @@ import { TicketTransferClaimBanner } from "./_components/claim-banner";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
-
 type PageProps = {
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const messages = await loadNamespace(locale as Locale, "account");
+  const nav = messages.nav as { tickets: string };
+  return {
+    title: nav.tickets,
+    robots: { index: false, follow: false },
+  };
+}
 
 type WalletTicketSummary = {
   id: string;

@@ -79,3 +79,26 @@ def test_fetch_trending_excludes_demo_and_parses_rows(
 
 def test_min_unique_views_constant_is_substantial() -> None:
     assert MIN_UNIQUE_VIEWS >= 10
+
+
+def test_trending_sql_joins_search_documents_on_uuid_not_text() -> None:
+    """search_documents.entity_id is uuid; comparing it to vl.id::text raised
+    'operator does not exist: uuid = text' in production and emptied the rail."""
+    from app.services.discovery.trending import _trending_sql
+
+    sql = _trending_sql(min_unique_views=10, window_days=7, decay=0.85)
+    assert "sd.entity_id = vl.id\n" in sql
+    assert "sd.entity_id = vl.id::text" not in sql
+
+
+def test_trending_sql_uses_existing_listing_columns() -> None:
+    """vendor_listings has title_override (no title); listing_images has
+    cloudinary_public_id (no public_id). Production raised 'column vl.title
+    does not exist' after the uuid join was fixed."""
+    from app.services.discovery.trending import _trending_sql
+
+    sql = _trending_sql(min_unique_views=10, window_days=7, decay=0.85)
+    assert "vl.title," not in sql
+    assert "vl.title_override" in sql
+    assert "li.cloudinary_public_id" in sql
+    assert "li.public_id" not in sql

@@ -60,6 +60,7 @@
     "qtyIncreaseSymbol": "+",
     "qtyValue": "Ubunji: {count}",
     "remove": "Futeni",
+    "untitledItem": "Icintu",
     "removeLabel": "Futeni {title} ukufuma mu cart",
     "saveForLater": "Sungileni pa nshita iisuma",
     "saveForLaterLabel": "Sungileni {title} pa nshita iisuma",
@@ -108,6 +109,9 @@
     "codStep1": "⚠ You order",
     "codStep2": "⚠ We deliver",
     "codStep3": "⚠ You pay on arrival",
+    "escrowStep1": "Mwalipila",
+    "escrowStep2": "Yikwata bwino na Convergeo",
+    "escrowStep3": "Yasuminishwa pa kufika",
     "leadTimeWhen": {
       "oneDay": "⚠ within a day",
       "days": "⚠ in about {count} days",
@@ -168,7 +172,10 @@
       "expired": "Code yafwile — pepeni code yambi",
       "throttled": "Mwashesha ukucita — lindilileni {seconds}s",
       "generic": "Ukusuminisha kwafilwa. Wesheni limbi.",
-      "skippedLoggedIn": "Tulelanda nambala ya phone ya account yenu"
+      "skippedLoggedIn": "Tulelanda nambala ya phone ya account yenu",
+      "needPhone": "Add your phone number so we can send you order updates on WhatsApp or SMS.",
+      "savePhone": "Save number and continue",
+      "saveFailed": "We couldn't continue. Check your network and try again."
     },
     "fulfilment": {
       "title": "Mufwaya ukufika shani?",
@@ -184,6 +191,7 @@
       "zoneLabel": "Zone: {zone}",
       "pickupAt": "Pickup pa {landmark}",
       "pickupHours": "Inshita: {hours}",
+      "pickupClosed": "Ifyalala",
       "outsideZone": "Kunse kwa delivery ya Lusaka — pickup fye pa address iyi",
       "mixedHint": "Mungasala delivery na pickup pa vendors ayapusana.",
       "continue": "Pitililani",
@@ -331,8 +339,8 @@
       "nextCard": "Mukonka pa page ya Lenco. Musaisale peji ilyo payment tamala.",
       "nextCod": "Order yenu yaisa ku cash on delivery. Lipileni courier ilyo yafika — payment ya online tayapokwa nomba.",
       "qty": "×{qty}",
-      "railAirtel": "Airtel",
-      "railMtn": "MTN",
+      "railAirtel": "Airtel Money (MoMo)",
+      "railMtn": "MTN MoMo",
       "subtitle": "Checkeni fyonse fyabwino pantu mulipila.",
       "subtotal": "Subtotal yafye",
       "title": "Loleni order yenu",
@@ -373,7 +381,7 @@
       "amountLabel": "Amount iyasuminishwa",
       "doNotClose": "Sungileni peji ili open ilyo musuminisha pa phone.",
       "genericHelp": "Mobile money prompt yatuminwa ku phone yenu. Lemeni PIN pakuti musuminishe {amount}.",
-      "mtnHelp": "Isuleni MTN MoMo prompt pa phone yenu no lemeni PIN pakuti musuminishe {amount}.",
+      "mtnHelp": "Isuleni MTN Mobile Money prompt pa phone yenu no lemeni PIN pakuti musuminishe {amount}.",
       "subtitle": "Suminisheni prompt ya {amount} pa phone yenu pakuti mukomplete payment.",
       "title": "Loleni phone yenu",
       "waiting": "Tuletekele approval…"

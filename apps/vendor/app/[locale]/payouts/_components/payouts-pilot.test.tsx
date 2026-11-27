@@ -43,7 +43,7 @@ describe("PayoutsView in the pilot", () => {
     );
     expect(screen.getByTestId("vendor-payouts-pilot")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Payouts aren't switched on during the pilot" }),
+      screen.getByRole("heading", { name: "Automated payouts are not switched on yet" }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/K\d/)).not.toBeInTheDocument();
     expect(screen.queryAllByRole("button")).toHaveLength(0);

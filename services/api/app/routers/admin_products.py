@@ -40,6 +40,7 @@ class ProductSummary(BaseModel):
     slug: str
     brand: str | None = None
     category_id: UUID
+    category_name: str | None = None
     status: str
     aliases: list[str] = Field(default_factory=list)
 
@@ -136,16 +137,25 @@ def pg_trgm_similarity(left: str, right: str) -> float:
     return shared / max(len(left_trigrams), len(right_trigrams))
 
 
-def _serialize_product(row: dict[str, Any]) -> ProductSummary:
+def _serialize_product(
+    row: dict[str, Any],
+    *,
+    category_names: dict[str, str] | None = None,
+) -> ProductSummary:
     aliases_raw = row.get("aliases")
     aliases = [str(alias) for alias in aliases_raw] if isinstance(aliases_raw, list) else []
     brand = row.get("brand")
+    category_id = UUID(str(row["category_id"]))
+    category_name = None
+    if category_names:
+        category_name = category_names.get(str(category_id))
     return ProductSummary(
         id=UUID(str(row["id"])),
         name=str(row["name"]),
         slug=str(row["slug"]),
         brand=str(brand) if isinstance(brand, str) else None,
-        category_id=UUID(str(row["category_id"])),
+        category_id=category_id,
+        category_name=category_name,
         status=str(row["status"]),
         aliases=aliases,
     )
@@ -227,6 +237,18 @@ def find_duplicate_pairs(
             continue
         by_category.setdefault(category_id, []).append(row)
 
+    category_ids = sorted(by_category.keys())
+    category_names: dict[str, str] = {}
+    if category_ids:
+        names_response = (
+            _table(client, "categories")
+            .select("id, name")
+            .in_("id", category_ids)
+            .execute()
+        )
+        for row in _rows(names_response):
+            category_names[str(row["id"])] = str(row.get("name") or "")
+
     pairs: list[DuplicatePairOut] = []
     seen: set[tuple[str, str]] = set()
     for category_rows in by_category.values():
@@ -244,8 +266,8 @@ def find_duplicate_pairs(
                 seen.add(key)
                 pairs.append(
                     DuplicatePairOut(
-                        product_a=_serialize_product(left),
-                        product_b=_serialize_product(right),
+                        product_a=_serialize_product(left, category_names=category_names),
+                        product_b=_serialize_product(right, category_names=category_names),
                         similarity=round(similarity, 4),
                     )
                 )

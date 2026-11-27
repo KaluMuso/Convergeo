@@ -1,10 +1,11 @@
 "use client";
 
-import { getBrowserAccessToken } from "@vergeo/auth";
 import { ApiError } from "@vergeo/config";
 import { decodeJwt } from "jose";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
+
+import { getBrowserAccessToken } from "../../../../lib/access-token";
 
 import {
   CANNED_TEMPLATE_KEYS,
@@ -200,7 +201,7 @@ export function ReplyComposer({ customerId, orderId, onSent }: ReplyComposerProp
 
       <button
         type="button"
-        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
+        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)] disabled:opacity-60"
         disabled={
           submitting ||
           conflict ||

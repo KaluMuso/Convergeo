@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_FETCH_TIMEOUT_MS, FetchHttpError, fetchJson } from "./fetch-json";
 
+const originalAny = AbortSignal.any;
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -10,6 +12,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 afterEach(() => {
+  AbortSignal.any = originalAny;
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
@@ -325,5 +328,44 @@ describe("DEFAULT_FETCH_TIMEOUT_MS", () => {
 
     await vi.advanceTimersByTimeAsync(1);
     await expect(promise).rejects.toMatchObject({ name: "TimeoutError" });
+  });
+});
+
+describe("fetchJson without AbortSignal.any (older Android WebView / Chrome < 116)", () => {
+  it("still fetches when a caller signal is supplied (home stream infinite scroll)", async () => {
+    // @ts-expect-error simulate a browser that predates AbortSignal.any
+    AbortSignal.any = undefined;
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const controller = new AbortController();
+    await expect(
+      fetchJson("https://api.example.test/home/stream", {
+        signal: controller.signal,
+        timeoutMs: 12_000,
+      }),
+    ).resolves.toEqual({ items: [] });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("propagates caller abort through the fallback composition", async () => {
+    // @ts-expect-error simulate a browser that predates AbortSignal.any
+    AbortSignal.any = undefined;
+    const controller = new AbortController();
+    const fetchMock = vi.fn().mockImplementation(
+      (_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal!.reason));
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const promise = fetchJson("https://api.example.test/home/stream", {
+      signal: controller.signal,
+      retryDelayMs: 0,
+    });
+    controller.abort(new DOMException("Caller cancelled", "AbortError"));
+    await expect(promise).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

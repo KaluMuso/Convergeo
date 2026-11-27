@@ -11,6 +11,7 @@ export type AdminNavItemKey =
   | "support"
   | "intake"
   | "orders"
+  | "dispatch"
   | "business"
   | "merch"
   | "homeFeed"
@@ -67,6 +68,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "commerce",
     items: [
       { key: "orders", href: "orders" },
+      { key: "dispatch", href: "orders/dispatch" },
       { key: "business", href: "business" },
       { key: "merch", href: "merch" },
       { key: "homeFeed", href: "home-feed" },
@@ -145,3 +147,29 @@ export function resolveAdminActiveGroup(
   }
   return groups.find((group) => group.items.some((item) => item.key === active))?.key;
 }
+
+/**
+ * Order detail (`/orders/<id>`) is readable by finance roles (`orders`) and by logistics
+ * operators (`dispatch`), because the API grants `GET /admin/orders/{id}` to both. The
+ * search page (`/orders`) and every other route keep their single nav item's permission.
+ */
+export function adminRouteAllowedByAlternateItem(
+  pathRest: string,
+  capabilities: AdminNavCapabilities,
+): boolean {
+  const rest = pathRest.replace(/\/+$/, "");
+  return (
+    /^\/orders\/(?!dispatch$)[^/]+$/.test(rest) && (capabilities.orders || capabilities.dispatch)
+  );
+}
+
+/**
+ * Items the unrestricted `admin` role does not inherit: role management and account
+ * lookup are superadmin-only and the audit log needs an explicit `audit.read`. The
+ * API refuses them to `admin`, so the shell denies the URL as well as hiding the link.
+ */
+export const ADMIN_EXPLICIT_GRANT_ITEMS: ReadonlySet<AdminNavItemKey> = new Set([
+  "roles",
+  "accounts",
+  "auditLog",
+]);

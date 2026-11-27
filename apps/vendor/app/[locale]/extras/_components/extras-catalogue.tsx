@@ -5,9 +5,10 @@ import { createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { VendorPageSkeleton } from "../../_components/page-skeleton";
 import {
   extraPriceLabel,
   openRequestFor,
@@ -20,8 +21,7 @@ type ApiError = { details?: { message_key?: string } };
 
 function errorKey(error: unknown): string {
   const key = (error as ApiError | null)?.details?.message_key;
-  if (key === "vendor.extras.errors.alreadyRequested")
-    return "errors.alreadyRequested";
+  if (key === "vendor.extras.errors.alreadyRequested") return "errors.alreadyRequested";
   if (key === "vendor.extras.errors.rateLimited") return "errors.rateLimited";
   if (key === "vendor.extras.errors.notFound") return "errors.notFound";
   return "errors.generic";
@@ -36,13 +36,14 @@ export function ExtrasCatalogue() {
   const t = useTranslations("vendor.extras");
   const { session } = useSession();
   const token = session?.access_token ?? null;
+  const tokenRef = useRef<string | null>(null);
+  tokenRef.current = token;
   const client = useMemo(
-    () => createApiClient({ baseUrl: getApiBaseUrl(), getToken: () => token }),
-    [token],
+    () => createApiClient({ baseUrl: getApiBaseUrl(), getToken: () => tokenRef.current }),
+    [],
   );
-  const [data, setData] = useState<ExtrasCatalogueResponse | null | "error">(
-    null,
-  );
+  const hasToken = token !== null;
+  const [data, setData] = useState<ExtrasCatalogueResponse | null | "error">(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -54,8 +55,8 @@ export function ExtrasCatalogue() {
   }, [client]);
 
   useEffect(() => {
-    if (token) load();
-  }, [load, token]);
+    if (hasToken) load();
+  }, [load, hasToken]);
 
   const act = useCallback(
     async (key: string, path: string, body?: unknown) => {
@@ -77,10 +78,8 @@ export function ExtrasCatalogue() {
     [client, load, t],
   );
 
-  if (data === null)
-    return <p className="text-sm text-text-2">{t("loading")}</p>;
-  if (data === "error")
-    return <p className="text-sm text-text-2">{t("errors.load")}</p>;
+  if (data === null) return <VendorPageSkeleton rows={3} label={t("loading")} />;
+  if (data === "error") return <p className="text-sm text-text-2">{t("errors.load")}</p>;
 
   return (
     <div className="space-y-3">
@@ -102,12 +101,8 @@ export function ExtrasCatalogue() {
                 extra_key: extra.key,
               })
             }
-            onAccept={(id) =>
-              void act(extra.key, `/vendor/extras/requests/${id}/accept`)
-            }
-            onCancel={(id) =>
-              void act(extra.key, `/vendor/extras/requests/${id}/cancel`)
-            }
+            onAccept={(id) => void act(extra.key, `/vendor/extras/requests/${id}/accept`)}
+            onCancel={(id) => void act(extra.key, `/vendor/extras/requests/${id}/cancel`)}
           />
         ))}
       </ul>
@@ -138,22 +133,15 @@ function ExtraCard({
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="m-0 text-base font-semibold text-text">{extra.name}</h2>
-        <span className="text-sm font-medium text-text">
-          {extraPriceLabel(extra, t)}
-        </span>
+        <span className="text-sm font-medium text-text">{extraPriceLabel(extra, t)}</span>
       </div>
-      {extra.description ? (
-        <p className="m-0 text-sm text-text-2">{extra.description}</p>
-      ) : null}
+      {extra.description ? <p className="m-0 text-sm text-text-2">{extra.description}</p> : null}
       {extra.price_is_placeholder ? (
         <p className="m-0 text-micro text-text-2">{t("indicativePrice")}</p>
       ) : null}
       {request ? (
         <div className="space-y-2">
-          <p
-            className="m-0 text-sm text-text"
-            data-testid={`extra-${extra.key}-status`}
-          >
+          <p className="m-0 text-sm text-text" data-testid={`extra-${extra.key}-status`}>
             {request.status === "quoted" && request.quoted_price_ngwee !== null
               ? t("status.quotedWithPrice", {
                   price: formatK(request.quoted_price_ngwee),
@@ -161,9 +149,7 @@ function ExtraCard({
               : t(`status.${request.status}`)}
           </p>
           {request.admin_note ? (
-            <p className="m-0 text-sm text-text-2">
-              {t("teamNote", { note: request.admin_note })}
-            </p>
+            <p className="m-0 text-sm text-text-2">{t("teamNote", { note: request.admin_note })}</p>
           ) : null}
           <div className="flex flex-wrap gap-2">
             {request.status === "quoted" ? (

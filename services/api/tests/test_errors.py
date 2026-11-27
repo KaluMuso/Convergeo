@@ -11,6 +11,29 @@ from fastapi.testclient import TestClient
 from starlette.requests import Request
 
 
+def test_json_formatter_allowlists_alert_fields() -> None:
+    logger = logging.getLogger("test.logging.allowlist")
+    record = logger.makeRecord(
+        name=logger.name,
+        level=logging.WARNING,
+        fn=__file__,
+        lno=1,
+        msg="webhook rejected",
+        args=(),
+        exc_info=None,
+    )
+    record.alert = "lenco_webhook_invalid_signature"
+    record.event_id = "evt-123"
+    record.flags = ["MALFORMED_JSON"]
+    record.customer_phone = "+260971234567"
+
+    payload = json.loads(JsonFormatter().format(record))
+    assert payload["alert"] == "lenco_webhook_invalid_signature"
+    assert payload["event_id"] == "evt-123"
+    assert payload["flags"] == ["MALFORMED_JSON"]
+    assert "customer_phone" not in payload
+
+
 def test_app_error_envelope(client: TestClient) -> None:
     response = client.get("/test/app-error")
     assert response.status_code == 418

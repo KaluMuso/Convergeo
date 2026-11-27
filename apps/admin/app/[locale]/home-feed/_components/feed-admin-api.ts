@@ -1,8 +1,8 @@
 "use client";
 
-import { getBrowserAccessToken } from "@vergeo/auth";
 import { createApiClient } from "@vergeo/config";
 
+import { getBrowserAccessToken } from "../../../../lib/access-token";
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
 export const feedAdminApi = createApiClient({
@@ -21,6 +21,14 @@ export const SECTION_TYPES = [
   "ad_slot",
 ] as const;
 export type SectionType = (typeof SECTION_TYPES)[number];
+
+/** Fallback labels when a row's English title is unset (avoids raw keys like `for_you`). */
+export const FEED_SECTION_KEY_LABELS: Record<string, string> = {
+  for_you: "For you",
+  services_near_you: "Services near you",
+  ad_slot_1: "Home ad slot",
+  ad_slot_2: "Secondary ad slot",
+};
 
 export const SECTION_LAYOUTS = ["rail", "grid", "banner", "ad"] as const;
 export type SectionLayout = (typeof SECTION_LAYOUTS)[number];

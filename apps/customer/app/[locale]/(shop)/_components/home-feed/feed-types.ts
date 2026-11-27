@@ -3,6 +3,8 @@
  * plus pure mappers shared by the server renderer and the lazy client loader.
  * No server-only imports — this module is bundled into the client chunk.
  */
+import { repairServiceVerticalHref } from "../../../../../lib/shop-internal-href";
+
 import type { OfferBadge, OfferBadgeLabels } from "../offers/offer-badge";
 import type { CatalogListing } from "../plp/listing-grid";
 
@@ -75,17 +77,15 @@ export type AdCreative = {
   cta_href: string;
   external: boolean;
   sponsored: boolean;
+  /** Customer route of the promoted item (product/service/event/listing); null for house/external ads. */
+  target_href?: string | null;
+  /** Customer route of the advertising vendor's storefront (`/v/{slug}`). */
+  vendor_href?: string | null;
+  vendor_name?: string | null;
 };
 
 export type FeedSectionType =
-  | "category"
-  | "collection"
-  | "rule"
-  | "services"
-  | "events"
-  | "vendors"
-  | "for_you"
-  | "ad_slot";
+  "category" | "collection" | "rule" | "services" | "events" | "vendors" | "for_you" | "ad_slot";
 
 export type FeedSection = {
   id: string;
@@ -190,10 +190,7 @@ export function mapFeedListing(item: FeedListingWire): CatalogListing {
 const SECTION_KEY_PREFIX = "home.feed.sections.";
 
 /** Per-locale admin text wins; otherwise the i18n key; otherwise no heading. */
-export function resolveSectionTitle(
-  section: FeedSection,
-  labels: FeedLabels,
-): string | null {
+export function resolveSectionTitle(section: FeedSection, labels: FeedLabels): string | null {
   if (section.title) return section.title;
   if (section.title_key?.startsWith(SECTION_KEY_PREFIX)) {
     const short = section.title_key.slice(SECTION_KEY_PREFIX.length);
@@ -206,9 +203,13 @@ export function resolveSectionTitle(
 export function localizeHref(href: string, locale: string): string {
   if (!href.startsWith("/") || href.startsWith("//")) return href;
   const localePrefix = `/${locale}`;
-  if (href === localePrefix || href.startsWith(`${localePrefix}/`)) return href;
-  if (/^\/(en|bem|nya|fr|zh)(\/|$)/.test(href)) return href;
-  return `${localePrefix}${href === "/" ? "" : href}`;
+  const localized =
+    href === localePrefix || href.startsWith(`${localePrefix}/`)
+      ? href
+      : /^\/(en|bem|nya|fr|zh)(\/|$)/.test(href)
+        ? href
+        : `${localePrefix}${href === "/" ? "" : href}`;
+  return repairServiceVerticalHref(localized, locale);
 }
 
 /** Sections that must render (non-ad sections need content; ad needs a creative). */

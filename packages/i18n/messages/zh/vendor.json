@@ -736,6 +736,8 @@
         "returnWindowRequired": "启用退货时，请输入退货窗口期。"
       },
       "emptyTitle": "暂无商品",
+      "addPhotoFirst": "Add a photo first.",
+      "addPhotoLink": "Add photo",
       "statusLabel": "状态",
       "productStatus": {
         "inReview": "Live, in review: buyers see it once Convergeo approves it",
@@ -1315,7 +1317,7 @@
           "body": "现在无需操作。我们的团队通常会在 1 个工作日内回复。"
         },
         "payoutMethod": {
-          "title": "Add your MoMo number to get paid",
+          "title": "Add your Mobile Money number to get paid",
           "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
         },
         "ordersWaiting": {
@@ -1744,6 +1746,10 @@
       "empty": "暂无活动。",
       "createCta": "创建活动",
       "editCta": "编辑活动",
+      "ticketsCta": "Tickets",
+      "scanCta": "Door scan",
+      "salesCta": "Sales",
+      "rosterCta": "Roster",
       "noVenue": "场地待定",
       "ticketsSold": "{count, plural, one {已售 # 张门票} other {已售 # 张门票}}"
     },
@@ -2291,6 +2297,7 @@
     "loading": "加载任务中…",
     "authRequired": "请登录以查看匹配的任务。",
     "empty": "目前没有与您服务匹配的开放任务。",
+    "viewJob": "View job",
     "posted": "发布于 {date}",
     "yourQuote": "您的报价：{amount}",
     "status": {
@@ -2938,6 +2945,7 @@
     "keepSelling": "我们不会删除任何内容：您的商品保持上架，仍可编辑和补充库存。如需添加新商品，请升级套餐。",
     "option": "{name}：{max} 个商品，{price}/月",
     "optionUnlimited": "{name}：商品数量不限，{price}/月",
+    "seePlans": "See plans",
     "howToUpgrade": "如需升级，请联系我们的团队。不会自动扣费。",
     "limitReachedShort": "您已达到商品数量上限。现有商品保持上架；请查看上方套餐进行升级。",
     "limitReached": "您已达到套餐的商品数量上限。现有商品保持上架；升级后可添加更多。",
@@ -2966,7 +2974,7 @@
     "disabled": "多店铺功能暂未开放。",
     "primary": "主店",
     "acting": "您正在此店操作",
-    "payoutHold": "在我们的团队核实共用的 MoMo 号码之前，此店铺的提现已暂停。",
+    "payoutHold": "在我们的团队核实共用的移动支付号码之前，此店铺的提现已暂停。",
     "reviewNote": "团队备注：{note}",
     "ownerKycNeeded": "添加店铺前，请先完成店主身份验证（KYC）。",
     "switcher": {
@@ -3054,14 +3062,14 @@
       "whatsapp": "WhatsApp 号码（可选）",
       "email": "电子邮箱（可选）",
       "payout": "收款",
-      "payoutNumber": "MoMo 收款号码",
+      "payoutNumber": "移动支付收款号码",
       "payoutHelp": "不能使用其他企业的号码。您自己的多家店铺共用一个号码需经团队审核。",
       "rail": "运营商",
       "reviewNote": "创建店铺后，请上传店面照片和场所证明，然后提交审核。",
       "priceAddon": "此店铺为付费附加项：套餐每月 {price}。",
       "priceIncluded": "此店铺已包含在您的套餐中。",
       "rails": {
-        "mtn": "MTN MoMo",
+        "mtn": "MTN Mobile Money",
         "airtel": "Airtel Money",
         "zamtel": "Zamtel Kwacha"
       }
@@ -3077,7 +3085,7 @@
       "unregisteredLimit": "未注册商户只能经营一家店铺。请先添加 PACRA 注册信息。",
       "planLimit": "您的套餐已无可用店铺名额。请升级后添加分店。",
       "tooClose": "此店铺距离您的另一家店铺仅 {nearest} 米。分店之间至少相距 {min} 米。",
-      "payoutTaken": "该 MoMo 号码属于其他企业，请使用您自己的号码。",
+      "payoutTaken": "该移动支付号码属于其他企业，请使用您自己的号码。",
       "evidenceRequired": "请先上传店面照片和场所证明。",
       "evidenceLocked": "提交审核后不能再修改证明材料。",
       "evidencePath": "该上传无效，请重新上传。",
@@ -3146,6 +3154,48 @@
       "notFound": "该服务已不再提供。",
       "invalidTransition": "该申请当前无法更改。",
       "generic": "出现问题，请重试。"
+    }
+  },
+  "requests": {
+    "home": {
+      "payoutsPilot": {
+        "title": "Payouts start soon",
+        "body": "We are not paying out through the app during the pilot. Your sales are still tracked — open Payouts to see how money works for now."
+      }
+    },
+    "jobs": {
+      "budgetRange": "Buyer budget: {min} – {max}",
+      "budgetFrom": "Buyer budget: from {min}",
+      "budgetUpTo": "Buyer budget: up to {max}",
+      "budgetOpen": "Buyer budget: not specified",
+      "preferredDate": "Preferred date: {date}",
+      "quoteStatus": {
+        "submitted": "Quote waiting on buyer",
+        "accepted": "Quote accepted",
+        "declined": "Quote declined",
+        "expired": "Quote expired",
+        "unknown": "Quote: {status}"
+      }
+    },
+    "rfq": {
+      "buyerRef": "Customer ref: {ref}",
+      "validUntil": "Quote valid until {date}",
+      "unknownListing": "Product (loading name…)",
+      "unknownService": "Service (loading name…)",
+      "declineConfirm": "Decline this quote request? The customer will not hear from you on this thread.",
+      "declining": "Declining…",
+      "status": {
+        "expired": "Expired",
+        "cancelled": "Cancelled",
+        "closed": "Closed",
+        "unknown": "Status: {status}"
+      }
+    },
+    "disputes": {
+      "opened": "Opened {date}"
+    },
+    "reviews": {
+      "posted": "Posted {date}"
     }
   }
 }

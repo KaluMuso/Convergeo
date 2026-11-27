@@ -132,6 +132,7 @@ export type FulfilmentStepLabels = {
   zoneLabel: (zone: string) => string;
   pickupAt: (landmark: string) => string;
   pickupHours: (hours: string) => string;
+  pickupClosed: string;
   outsideZone: string;
   /** Shown when the seller does not offer a hand-over route for an item. */
   notOffered?: string;
@@ -234,6 +235,7 @@ export type CheckoutShellLabels = {
     title: string;
     subtitle: string;
     lineItems: string;
+    untitledItem?: string;
     qtyTemplate: string;
     variantOption?: string;
     variantSeparator?: string;
@@ -345,6 +347,9 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       throttled: messages.contact.throttledTemplate,
       generic: messages.contact.generic,
       skippedLoggedIn: messages.contact.skippedLoggedIn,
+      needPhone: messages.contact.needPhone,
+      savePhone: messages.contact.savePhone,
+      saveFailed: messages.contact.saveFailed,
     },
     fulfilment: {
       title: messages.fulfilment.title,
@@ -360,6 +365,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       zoneLabel: (zone) => fillTemplate(messages.fulfilment.zoneLabelTemplate, { zone }),
       pickupAt: (landmark) => fillTemplate(messages.fulfilment.pickupAtTemplate, { landmark }),
       pickupHours: (hours) => fillTemplate(messages.fulfilment.pickupHoursTemplate, { hours }),
+      pickupClosed: messages.fulfilment.pickupClosed,
       outsideZone: messages.fulfilment.outsideZone,
       notOffered: messages.fulfilment.notOffered,
       mixedHint: messages.fulfilment.mixedHint,
@@ -409,6 +415,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       title: messages.review.title,
       subtitle: messages.review.subtitle,
       lineItems: messages.review.lineItems,
+      untitledItem: messages.review.untitledItem,
       qtyTemplate: messages.review.qtyTemplate,
       variantOption: messages.review.variantOption,
       variantSeparator: messages.review.variantSeparator,

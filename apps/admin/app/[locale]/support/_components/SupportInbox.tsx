@@ -74,7 +74,7 @@ export function SupportInbox({ locale }: SupportInboxProps) {
         <div className="flex items-end">
           <button
             type="submit"
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-white sm:w-auto"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)] sm:w-auto"
             disabled={loading}
           >
             {loading ? t("lookup.searching") : t("lookup.submit")}

@@ -736,6 +736,8 @@
         "returnWindowRequired": "Enter a return window when returns are enabled."
       },
       "emptyTitle": "No listings yet",
+      "addPhotoFirst": "Add a photo first.",
+      "addPhotoLink": "Add photo",
       "statusLabel": "Status",
       "productStatus": {
         "inReview": "Live, in review: buyers see it once Convergeo approves it",
@@ -1067,6 +1069,9 @@
     "title": "Order",
     "loading": "Ikuyenda order…",
     "back": "Bwererani to orders",
+    "detail": {
+      "orderCode": "Order {code}"
+    },
     "status": {
       "placed": "Placed",
       "confirmed": "Tsimikizanied",
@@ -1236,7 +1241,8 @@
       "orders": "Orders",
       "ordersCaption": "30 days",
       "gmv": "Sales",
-      "gmvCaption": "30 days"
+      "gmvCaption": "30 days",
+      "unavailable": "We couldn't load shop stats. Check your connection and pull to refresh."
     },
     "needsAction": {
       "heading": "Do this now",
@@ -1315,7 +1321,7 @@
           "body": "Nothing to do now. Our team usually replies within 1 working day."
         },
         "payoutMethod": {
-          "title": "Add your MoMo number to get paid",
+          "title": "Add your Mobile Money number to get paid",
           "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
         },
         "ordersWaiting": {
@@ -1360,6 +1366,7 @@
       "shopLive": "Shop live",
       "idVerified": "ID verified",
       "payoutSet": "Payout number set",
+      "payoutsStartSoon": "Payouts start soon",
       "yes": "Yes",
       "notYet": "Not yet"
     },
@@ -1499,9 +1506,12 @@
         "airtel": "Airtel",
         "zamtel": "Zamtel"
       },
-      "otpLabel": "Code from your phone",
+      "otpLabel": "Code we sent you",
       "otpPlaceholder": "6 numbers",
-      "otpHelp": "We sent a code to your registered phone. Type it here to confirm this change.",
+      "otpHelp": "We emailed you a 6-digit code. Enter it below to confirm this change.",
+      "sendCode": "⚠ Send code",
+      "sendingCode": "Sending…",
+      "resendIn": "Resend in {seconds}s",
       "submit": "⚠ Save payout method",
       "saving": "Saving…",
       "success": "⚠ Payout method updated. Payouts are paused for 24 hours."
@@ -1511,6 +1521,8 @@
       "statementFailed": "We couldn't download the report. Try again.",
       "methodFailed": "⚠ Could not update payout method. Try again.",
       "otpFailed": "That code is wrong or too old. Ask for a new one.",
+      "otpSendFailed": "We could not send the code. Try again.",
+      "reauthRequired": "Add a verified email to your account before changing payout details.",
       "nameMismatch": "The name on this mobile money number is not your name. Use a number in your name.",
       "kycRequired": "⚠ Complete KYC before changing your payout method.",
       "payoutsPaused": "⚠ Payouts are paused after a payout method change.",
@@ -1563,6 +1575,10 @@
     "pin": {
       "heading": "Enter pickup PIN",
       "intro": "The customer received a 6-digit PIN on WhatsApp. Enter their order ID and PIN.",
+      "pickOrderLabel": "Orders ready for pickup",
+      "pickOrderPlaceholder": "Choose an order (optional)",
+      "pickOrderOption": "{code} — {title}",
+      "loadingReady": "Loading orders ready for pickup…",
       "orderIdLabel": "Order ID",
       "orderIdPlaceholder": "Paste or type order ID",
       "pinLabel": "6-digit PIN",
@@ -1744,6 +1760,10 @@
       "empty": "No events yet.",
       "createCta": "Create event",
       "editCta": "Edit event",
+      "ticketsCta": "Tickets",
+      "scanCta": "Door scan",
+      "salesCta": "Sales",
+      "rosterCta": "Roster",
       "noVenue": "Venue TBD",
       "ticketsSold": "{count, plural, one {# ticket sold} other {# tickets sold}}"
     },
@@ -2241,7 +2261,27 @@
       "order": "Order {id}",
       "refund": "⚠ Refund if accepted: {amount}",
       "evidence": "{count, plural, one {# photo attached} other {# photos attached}}",
+      "evidenceThumb": "Photo {n}",
+      "noEvidence": "No photos attached",
+      "reasonLane1": "The customer says the item is faulty or not what they ordered.",
+      "reasonLane2": "The customer wants to return an unused item under the change-of-mind policy.",
+      "reasonGeneric": "The customer asked to return this item.",
+      "status": "Status: {status}",
+      "lane": "Lane {lane}",
       "viewOrder": "View order"
+    },
+    "confirm": {
+      "acceptTitle": "Accept this return?",
+      "acceptBody": "You will refund {amount} for {title}. This cannot be undone.",
+      "acceptCta": "Yes, refund buyer",
+      "contestTitle": "Contest this return?",
+      "contestBody": "Convergeo will review {title} with your evidence and the buyer's photos.",
+      "contestCta": "Send to admin review",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "accepted": "Refund of {amount} is on its way to the buyer.",
+      "contested": "Return sent for admin review."
     },
     "actions": {
       "accept": "Accept return",
@@ -2291,6 +2331,7 @@
     "loading": "Ikuyenda jobs…",
     "authRequired": "Lowani kuonera matched jobs.",
     "empty": "No open jobs match your services right now.",
+    "viewJob": "View job",
     "posted": "Posted {date}",
     "yourQuote": "⚠ Your quote: {amount}",
     "status": {
@@ -2938,6 +2979,7 @@
     "keepSelling": "Nothing has been removed: your listings stay live, and you can keep editing them and adding stock. To add new products, upgrade your plan.",
     "option": "{name}: {max} listings for {price}/month",
     "optionUnlimited": "{name}: unlimited listings for {price}/month",
+    "seePlans": "See plans",
     "howToUpgrade": "To upgrade, message our team. Nothing is charged automatically.",
     "limitReachedShort": "You've reached your listing limit. Your existing listings stay live; see your plan above to upgrade.",
     "limitReached": "You've reached your plan's listing limit. Your listings stay live; upgrade to add more.",
@@ -2966,7 +3008,7 @@
     "disabled": "Multiple shops are not available yet.",
     "primary": "Main shop",
     "acting": "You are working here",
-    "payoutHold": "Payouts for this shop are on hold until our team checks the shared MoMo number.",
+    "payoutHold": "Payouts for this shop are on hold until our team checks the shared Mobile Money number.",
     "reviewNote": "Note from our team: {note}",
     "ownerKycNeeded": "Finish your owner verification (KYC) before adding shops.",
     "switcher": {
@@ -3054,14 +3096,14 @@
       "whatsapp": "WhatsApp number (optional)",
       "email": "Email (optional)",
       "payout": "Payout",
-      "payoutNumber": "MoMo payout number",
+      "payoutNumber": "Mobile Money payout number",
       "payoutHelp": "A number used by another business is not allowed. Sharing a number between your own shops needs a check by our team.",
       "rail": "Network",
       "reviewNote": "After creating the shop, add the shopfront photo and proof of premises, then send it for review.",
       "priceAddon": "This shop is a paid add-on: {price}/month on your plan.",
       "priceIncluded": "This shop is included in your plan.",
       "rails": {
-        "mtn": "MTN MoMo",
+        "mtn": "MTN Mobile Money",
         "airtel": "Airtel Money",
         "zamtel": "Zamtel Kwacha"
       }
@@ -3077,7 +3119,7 @@
       "unregisteredLimit": "Unregistered traders can run one shop. Add your PACRA registration first.",
       "planLimit": "Your plan has no more shops. Upgrade to add a branch.",
       "tooClose": "This shop is {nearest} m from another of your shops. Branches must be at least {min} m apart.",
-      "payoutTaken": "That MoMo number belongs to another business. Use your own number.",
+      "payoutTaken": "That Mobile Money number belongs to another business. Use your own number.",
       "evidenceRequired": "Add the shopfront photo and proof of premises first.",
       "evidenceLocked": "Evidence can only change before review.",
       "evidencePath": "That upload is not valid. Please upload again.",
@@ -3146,6 +3188,48 @@
       "notFound": "⚠ This extra is no longer available.",
       "invalidTransition": "⚠ This request can't be changed now.",
       "generic": "⚠ Something went wrong. Try again."
+    }
+  },
+  "requests": {
+    "home": {
+      "payoutsPilot": {
+        "title": "Payouts start soon",
+        "body": "We are not paying out through the app during the pilot. Your sales are still tracked — open Payouts to see how money works for now."
+      }
+    },
+    "jobs": {
+      "budgetRange": "Buyer budget: {min} – {max}",
+      "budgetFrom": "Buyer budget: from {min}",
+      "budgetUpTo": "Buyer budget: up to {max}",
+      "budgetOpen": "Buyer budget: not specified",
+      "preferredDate": "Preferred date: {date}",
+      "quoteStatus": {
+        "submitted": "Quote waiting on buyer",
+        "accepted": "Quote accepted",
+        "declined": "Quote declined",
+        "expired": "Quote expired",
+        "unknown": "Quote: {status}"
+      }
+    },
+    "rfq": {
+      "buyerRef": "Customer ref: {ref}",
+      "validUntil": "Quote valid until {date}",
+      "unknownListing": "Product (loading name…)",
+      "unknownService": "Service (loading name…)",
+      "declineConfirm": "Decline this quote request? The customer will not hear from you on this thread.",
+      "declining": "Declining…",
+      "status": {
+        "expired": "Expired",
+        "cancelled": "Cancelled",
+        "closed": "Closed",
+        "unknown": "Status: {status}"
+      }
+    },
+    "disputes": {
+      "opened": "Opened {date}"
+    },
+    "reviews": {
+      "posted": "Posted {date}"
     }
   }
 }

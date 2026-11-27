@@ -168,6 +168,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261124090100",
     # T8 social contacts, requests, blocks and 1:1 chat (additive, documented down).
     "20261124120000",
+    # Ask Vergeo service-role checks use auth.role() (rewrite in place, no down).
+    "20261126190000",
 ]
 
 
@@ -211,7 +213,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 198
+    assert len(sql_files) == len(migrations) == 199
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -263,10 +265,11 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     catalog_control = ["20261123100000"]
     clips_packages = ["20261124090000", "20261124090100"]
     social_contacts = ["20261124120000"]
+    ask_auth_role = ["20261126190000"]
     logistics = ["20261122100000", "20261122100100"]
     area_pricing = ["20261122100200", "20261122100300"]
     web_push = ["20261123090000"]
-    assert actual_versions[-59:] == (
+    assert actual_versions[-60:] == (
         repairs
         + post_repair
         + queued_features
@@ -298,6 +301,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + catalog_control
         + clips_packages
         + social_contacts
+        + ask_auth_role
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 

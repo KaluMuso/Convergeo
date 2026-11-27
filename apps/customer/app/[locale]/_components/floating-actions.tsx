@@ -58,7 +58,7 @@ const SPEECH_LANG: Record<string, string> = {
 
 /** Routes where a sticky mobile add-to-cart bar sits at the bottom. */
 function hasStickyBuyBar(pathname: string): boolean {
-  return /\/(p|l)\/[^/]+/.test(pathname);
+  return /\/(p|l|s|e)\/[^/]+/.test(pathname);
 }
 
 /** Account hub: no mobile tab bar — position the stack so primary actions stay clear. */

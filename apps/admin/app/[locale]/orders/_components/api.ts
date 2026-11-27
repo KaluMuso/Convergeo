@@ -1,8 +1,8 @@
 "use client";
 
-import { getBrowserAccessToken } from "@vergeo/auth";
 import { createApiClient } from "@vergeo/config";
 
+import { getBrowserAccessToken } from "../../../../lib/access-token";
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
 const API_BASE = getApiBaseUrl();
@@ -21,6 +21,8 @@ export type OrderSearchItem = {
   vendor_slug: string;
   customer_id: string;
   customer_phone: string | null;
+  customer_display_name?: string | null;
+  total_ngwee?: number;
   created_at: string;
 };
 

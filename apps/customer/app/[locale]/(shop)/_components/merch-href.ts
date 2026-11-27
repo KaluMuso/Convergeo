@@ -1,3 +1,5 @@
+import { repairServiceVerticalHref } from "../../../../lib/shop-internal-href";
+
 const LOCALES = new Set(["en", "bem", "nya", "fr", "zh"]);
 
 /**
@@ -9,8 +11,6 @@ export function withLocaleHref(locale: string, href: string): string {
     return href;
   }
   const segment = href.split("/").filter(Boolean)[0];
-  if (segment && LOCALES.has(segment)) {
-    return href;
-  }
-  return `/${locale}${href}`;
+  const localized = segment && LOCALES.has(segment) ? href : `/${locale}${href}`;
+  return repairServiceVerticalHref(localized, locale);
 }

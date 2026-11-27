@@ -1,7 +1,4 @@
-/**
- * Slim post-hero trust strip for the customer homepage. COD-only pilot:
- * copy never mentions escrow, mobile money or cards (see docs/plan decisions).
- */
+/** Slim post-hero trust strip for the customer homepage (MoMo escrow + COD cap). */
 
 import { LcRefreshCw, LcShieldCheck, LcTruck, LcWallet } from "@vergeo/ui/src/lucide-icons";
 

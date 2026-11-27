@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 
 import { adminNotificationsApi } from "../../../lib/notifications-client";
+import { AdminPageClient } from "../_components/admin-page-client";
 
 /** Admin notifications — KYC submissions and disputes addressed to this admin. */
 export default function AdminNotificationsPage() {
@@ -19,11 +20,7 @@ export default function AdminNotificationsPage() {
   const copy = useMemo(() => buildNotificationCopy(t), [t]);
 
   return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="font-serif text-xl text-text">{t("center.title")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("center.pageDescription")}</p>
-      </div>
+    <AdminPageClient title={t("center.title")} subtitle={t("center.pageDescription")}>
       <NotificationList
         api={adminNotificationsApi()}
         locale={locale}
@@ -32,6 +29,6 @@ export default function AdminNotificationsPage() {
         variant="page"
         onNavigate={(href) => router.push(href)}
       />
-    </section>
+    </AdminPageClient>
   );
 }

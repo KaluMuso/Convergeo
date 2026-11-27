@@ -28,6 +28,7 @@
       "sqm": "m²"
     },
     "remove": "Retirer",
+    "untitledItem": "Article",
     "removeLabel": "Retirer {title} du panier",
     "saveForLater": "Enregistrer pour plus tard",
     "saveForLaterLabel": "Enregistrer {title} pour plus tard",
@@ -105,6 +106,9 @@
     "codStep1": "Vous commandez",
     "codStep2": "Nous livrons",
     "codStep3": "Vous payez à l'arrivée",
+    "escrowStep1": "Vous payez",
+    "escrowStep2": "Nous le gardons",
+    "escrowStep3": "Le vendeur le reçoit après la livraison",
     "leadTimeWhen": {
       "oneDay": "sous 24 heures",
       "days": "dans environ {count} jours",
@@ -147,7 +151,10 @@
       "expired": "Ce code a expiré. Touchez Envoyer un nouveau code.",
       "throttled": "Trop d'essais. Attendez {seconds} s, puis réessayez.",
       "generic": "Cela n'a pas marché. Vérifiez le code et réessayez.",
-      "skippedLoggedIn": "Utilisation du numéro de téléphone de votre compte"
+      "skippedLoggedIn": "Utilisation du numéro de téléphone de votre compte",
+      "needPhone": "Add your phone number so we can send you order updates on WhatsApp or SMS.",
+      "savePhone": "Save number and continue",
+      "saveFailed": "We couldn't continue. Check your network and try again."
     },
     "fulfilment": {
       "title": "Livraison ou retrait ?",
@@ -163,6 +170,7 @@
       "zoneLabel": "Zone : {zone}",
       "pickupAt": "Retrait à {landmark}",
       "pickupHours": "Ouvert : {hours}",
+      "pickupClosed": "Fermé",
       "outsideZone": "Nous ne livrons pas encore ici. Vous pouvez récupérer chez le vendeur.",
       "mixedHint": "Vous pouvez vous faire livrer par un vendeur et récupérer chez un autre.",
       "continue": "Continuer",
@@ -269,8 +277,8 @@
       "methodMomo": "Mobile money ({rail})",
       "methodCard": "Carte (page sécurisée Lenco)",
       "methodCod": "Payer à l'arrivée (paiement à la livraison)",
-      "railMtn": "MTN",
-      "railAirtel": "Airtel",
+      "railMtn": "MTN Mobile Money",
+      "railAirtel": "Airtel Money",
       "payerNumber": "Téléphone payeur : {number}",
       "escrowTitle": "Comment ça marche",
       "escrowStep1": "Vous payez",
@@ -349,7 +357,7 @@
       "title": "Vérifiez votre téléphone",
       "subtitle": "Un message est sur votre téléphone. Entrez votre PIN pour payer {amount}.",
       "amountLabel": "Montant à payer",
-      "mtnHelp": "Regardez le message MTN MoMo sur votre téléphone. Entrez votre PIN pour payer {amount}.",
+      "mtnHelp": "Regardez le message MTN Mobile Money sur votre téléphone. Entrez votre PIN pour payer {amount}.",
       "airtelHelp": "Regardez le message Airtel Money sur votre téléphone. Entrez votre PIN pour payer {amount}.",
       "genericHelp": "Nous avons envoyé un message mobile money sur votre téléphone. Entrez votre PIN pour payer {amount}.",
       "waiting": "En attente de votre paiement…",

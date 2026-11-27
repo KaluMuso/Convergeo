@@ -127,7 +127,7 @@
         },
         "sell": {
           "title": "Sell to your customers",
-          "description": "Orders flow to your dashboard. During the pilot, customers pay cash on delivery. Online payouts are coming soon."
+          "description": "Orders flow to your dashboard. Customers pay with Mobile Money, card, or cash on delivery. Online payouts are coming soon."
         }
       }
     },
@@ -159,8 +159,8 @@
     },
     "payout": {
       "heading": "Online payouts: coming soon",
-      "promise": "During the pilot, customers pay cash on delivery.",
-      "body": "Mobile-money payouts and buyer protection are coming soon. Until then, orders are paid in cash when they arrive, and we will confirm settlement details with each invited seller."
+      "promise": "Customers pay with Mobile Money, card, or cash on delivery.",
+      "body": "Customer payments are held in escrow until delivery. Payouts to your Mobile Money number are coming soon; until then we will confirm settlement details with each invited seller."
     },
     "faq": {
       "heading": "Frequently asked questions",
@@ -171,7 +171,7 @@
         },
         "payout": {
           "question": "When do I get paid?",
-          "answer": "During the pilot, customers pay cash on delivery. Online payouts are coming soon — we will confirm timing with each invited seller."
+          "answer": "Customers pay with Mobile Money, card, or cash on delivery. Online payouts are coming soon — we will confirm timing with each invited seller."
         },
         "whatCanISell": {
           "question": "What can I sell?",
@@ -736,6 +736,8 @@
         "returnWindowRequired": "Enter a return window when returns are enabled."
       },
       "emptyTitle": "No listings yet",
+      "addPhotoFirst": "Add a photo first.",
+      "addPhotoLink": "Add photo",
       "statusLabel": "Status",
       "productStatus": {
         "inReview": "Live, in review: buyers see it once Convergeo approves it",
@@ -1019,7 +1021,7 @@
       "save": "Save profile",
       "saving": "Saving…",
       "viewStorefront": "View public storefront",
-      "viewStorefrontUnavailable": "Public storefront preview is unavailable in this environment."
+      "viewStorefrontUnavailable": "Your shop link will appear here once your storefront slug is saved."
     },
     "success": {
       "saved": "Profile saved. Changes appear on your public page within a minute."
@@ -1320,7 +1322,7 @@
         },
         "payoutMethod": {
           "title": "Add your Mobile Money number to get paid",
-          "body": "Payouts go to this number. The name on the mobile-money account must match the name on your ID."
+          "body": "Payouts go to this number. The name on the Mobile Money account must match the name on your ID."
         },
         "ordersWaiting": {
           "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",
@@ -1504,9 +1506,12 @@
         "airtel": "Airtel",
         "zamtel": "Zamtel"
       },
-      "otpLabel": "Code from your phone",
+      "otpLabel": "Code we sent you",
       "otpPlaceholder": "6 numbers",
-      "otpHelp": "We sent a code to your registered phone. Type it here to confirm this change.",
+      "otpHelp": "We emailed you a 6-digit code. Enter it below to confirm this change.",
+      "sendCode": "Send code",
+      "sendingCode": "Sending…",
+      "resendIn": "Resend in {seconds}s",
       "submit": "Save number",
       "saving": "Saving…",
       "success": "Number saved. We wait 24 hours before sending money to it."
@@ -1516,6 +1521,8 @@
       "statementFailed": "We couldn't download the report. Try again.",
       "methodFailed": "We couldn't save the number. Try again.",
       "otpFailed": "That code is wrong or too old. Ask for a new one.",
+      "otpSendFailed": "We could not send the code. Try again.",
+      "reauthRequired": "Add a verified email to your account before changing payout details.",
       "nameMismatch": "The name on this mobile money number is not your name. Use a number in your name.",
       "kycRequired": "Finish your ID check (KYC) before changing where we send your money.",
       "payoutsPaused": "You changed your number, so money sending is paused for 24 hours.",
@@ -1525,13 +1532,13 @@
     },
     "pilot": {
       "badge": "Not switched on yet",
-      "title": "Payouts aren't switched on during the pilot",
-      "body": "You won't receive payouts through this app yet, so there's no balance to show here. That's expected — nothing is wrong with your account.",
-      "meanwhileHeading": "How money works during the pilot",
+      "title": "Automated payouts are not switched on yet",
+      "body": "Customers can already pay with mobile money and cards on Convergeo. Automated payouts through this screen are still being turned on, so there is no balance to show here yet.",
+      "meanwhileHeading": "How money works right now",
       "meanwhile": {
         "cod": "Cash on delivery: the customer pays the rider in cash, and Convergeo settles with you.",
-        "prepaid": "Paid orders: Convergeo holds the customer's money safely until the order is delivered.",
-        "questions": "Questions about money owed to you? Ask the Convergeo pilot team."
+        "prepaid": "Paid orders: Convergeo holds the customer's payment in escrow until the order is delivered.",
+        "questions": "Questions about money owed to you? Contact Convergeo vendor support."
       },
       "laterHeading": "What you'll see here later",
       "later": {
@@ -1753,6 +1760,10 @@
       "empty": "No events yet.",
       "createCta": "Create event",
       "editCta": "Edit event",
+      "ticketsCta": "Tickets",
+      "scanCta": "Door scan",
+      "salesCta": "Sales",
+      "rosterCta": "Roster",
       "noVenue": "Venue TBD",
       "ticketsSold": "{count, plural, one {# ticket sold} other {# tickets sold}}"
     },
@@ -2320,6 +2331,7 @@
     "loading": "Loading jobs…",
     "authRequired": "Sign in to view matched jobs.",
     "empty": "No open jobs match your services right now.",
+    "viewJob": "View job",
     "posted": "Posted {date}",
     "yourQuote": "Your quote: {amount}",
     "status": {
@@ -2967,6 +2979,7 @@
     "keepSelling": "Nothing has been removed: your listings stay live, and you can keep editing them and adding stock. To add new products, upgrade your plan.",
     "option": "{name}: {max} listings for {price}/month",
     "optionUnlimited": "{name}: unlimited listings for {price}/month",
+    "seePlans": "See plans",
     "howToUpgrade": "To upgrade, message our team. Nothing is charged automatically.",
     "limitReachedShort": "You've reached your listing limit. Your existing listings stay live; see your plan above to upgrade.",
     "limitReached": "You've reached your plan's listing limit. Your listings stay live; upgrade to add more.",
@@ -3175,6 +3188,48 @@
       "notFound": "This extra is no longer available.",
       "invalidTransition": "This request can't be changed now.",
       "generic": "Something went wrong. Try again."
+    }
+  },
+  "requests": {
+    "home": {
+      "payoutsPilot": {
+        "title": "Payouts start soon",
+        "body": "We are not paying out through the app during the pilot. Your sales are still tracked — open Payouts to see how money works for now."
+      }
+    },
+    "jobs": {
+      "budgetRange": "Buyer budget: {min} – {max}",
+      "budgetFrom": "Buyer budget: from {min}",
+      "budgetUpTo": "Buyer budget: up to {max}",
+      "budgetOpen": "Buyer budget: not specified",
+      "preferredDate": "Preferred date: {date}",
+      "quoteStatus": {
+        "submitted": "Quote waiting on buyer",
+        "accepted": "Quote accepted",
+        "declined": "Quote declined",
+        "expired": "Quote expired",
+        "unknown": "Quote: {status}"
+      }
+    },
+    "rfq": {
+      "buyerRef": "Customer ref: {ref}",
+      "validUntil": "Quote valid until {date}",
+      "unknownListing": "Product (loading name…)",
+      "unknownService": "Service (loading name…)",
+      "declineConfirm": "Decline this quote request? The customer will not hear from you on this thread.",
+      "declining": "Declining…",
+      "status": {
+        "expired": "Expired",
+        "cancelled": "Cancelled",
+        "closed": "Closed",
+        "unknown": "Status: {status}"
+      }
+    },
+    "disputes": {
+      "opened": "Opened {date}"
+    },
+    "reviews": {
+      "posted": "Posted {date}"
     }
   }
 }

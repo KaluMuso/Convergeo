@@ -28,7 +28,7 @@ export function PdpRatingChip({
   return (
     <div className="flex flex-col gap-1" data-testid="pdp-rating-chip">
       <Link
-        href={`/${locale}/p/${encodeURIComponent(productSlug)}#reviews`}
+        href={`/${locale}/p/${encodeURIComponent(productSlug)}#pdp-reviews`}
         className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full border border-border bg-bg px-3 py-1 text-sm font-medium text-text hover:border-primary"
         aria-label={starsAriaLabel}
       >
@@ -41,7 +41,7 @@ export function PdpRatingChip({
       </Link>
       {photoReviewCount > 0 ? (
         <Link
-          href={`/${locale}/p/${encodeURIComponent(productSlug)}#reviews`}
+          href={`/${locale}/p/${encodeURIComponent(productSlug)}#pdp-reviews`}
           className="text-sm text-primary underline-offset-2 hover:underline"
           data-testid="pdp-photo-reviews-link"
         >

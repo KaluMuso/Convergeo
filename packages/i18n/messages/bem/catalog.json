@@ -105,6 +105,7 @@
       "sponsored": "Sponsored",
       "sponsoredBy": "Sponsored by {advertiser}",
       "adCta": "Learn more",
+      "visitVendor": "Visit {vendor}",
       "loadingMore": "Loading more",
       "end": "You're all caught up",
       "retry": "Try again",
@@ -139,7 +140,7 @@
     },
     "trustStrip": {
       "ariaLabel": "⚠ Why shop on Convergeo",
-      "cod": "⚠ Pay on delivery",
+      "cod": "⚠ Mobile Money escrow · COD under K500",
       "verified": "⚠ Verified sellers",
       "lusaka": "⚠ Lusaka delivery",
       "returns": "⚠ Easy returns"
@@ -237,7 +238,12 @@
       "zoomClose": "Isaleni ifithunzi",
       "zoomTitle": "Ifithunzi fya product",
       "zoomIn": "Kukusha icithunzi",
-      "zoomOut": "Bwesheni icithunzi kuti cikwane"
+      "zoomOut": "Bwesheni icithunzi kuti cikwane",
+      "rolloverZoom": "Pitilizani pa cithunzi ukuti mwalishe",
+      "tapToExpand": "Koseni ukufungula",
+      "openLightbox": "Funguleni ifithunzi ifyakwata",
+      "thumbAria": "Picture {current} ya {total}",
+      "moreImages": "{count, plural, one {picture # iyinshi} other {amapictures # ayinshi}}"
     },
     "unavailableTitle": "Icintu tashifikapo",
     "unavailableBody": "Tatwaishibe ukuleta icintu ici nomba. Checkeni connection no wesheni limbi.",
@@ -266,7 +272,15 @@
     },
     "specs": {
       "empty": "Takwaba specifications",
-      "heading": "Ifya specs"
+      "heading": "Ifya specs",
+      "seeMore": "Moneni ukupya",
+      "seeLess": "Moneni ifingi",
+      "groups": {
+        "features": "Ifyakufwaya & ifyakulondolola",
+        "details": "Ifintu fyakulondolola",
+        "measurements": "Ukulinga",
+        "materials": "Ubwali & ukusunga"
+      }
     },
     "tabs": {
       "ariaLabel": "Ifya product",
@@ -379,7 +393,8 @@
       "dialog": "Ukumona amapictures",
       "close": "Isalenipo ukumona amapictures",
       "zoomIn": "Kusheni picture",
-      "zoomOut": "Cefyeni picture"
+      "zoomOut": "Cefyeni picture",
+      "imagesTab": "Amapictures"
     },
     "value": {
       "madeToOrderDays": "Yapangwa muntu, yaba ready mu masiku {days}",
@@ -399,7 +414,7 @@
         "deliveryFree": "Delivery ya bure",
         "total": "Umuyanda wanu wonse",
         "totalUnknown": "Takwaisa",
-        "momo": "Lipileni na MTN nangu Airtel MoMo",
+        "momo": "Lipileni na Mobile Money (MTN nangu Airtel)",
         "codSuffix": "nangu cash pa delivery"
       },
       "priceDrop": {
@@ -413,6 +428,17 @@
         "cta": "⚠ Set price alert",
         "subscribed": "⚠ We'll notify you when the price drops"
       }
+    },
+    "sectionNav": {
+      "top": "Pa mulu",
+      "about": "Ifilondolola icintu",
+      "specs": "Ifyakulondolola",
+      "reviews": "Imilandu",
+      "similar": "Ifyafanana"
+    },
+    "about": {
+      "seeMore": "Moneni ukupya",
+      "seeLess": "Moneni ifingi"
     }
   },
   "plp": {

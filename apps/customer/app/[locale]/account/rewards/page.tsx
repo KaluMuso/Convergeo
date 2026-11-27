@@ -1,4 +1,4 @@
-import { LOCALES, type Locale } from "@vergeo/i18n";
+import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 
@@ -9,7 +9,12 @@ import { fetchPoints, progressPercent } from "./rewards-api";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { robots: { index: false, follow: false } };
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const messages = await loadNamespace(locale as Locale, "account");
+  const nav = messages.nav as { rewards: string };
+  return { title: nav.rewards, robots: { index: false, follow: false } };
+}
 
 type PageProps = {
   params: Promise<{ locale: string }>;

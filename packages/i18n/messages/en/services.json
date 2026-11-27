@@ -16,7 +16,15 @@
     "preferredBadge": "Preferred",
     "verticalLabel": "Category",
     "providerCta": "List your service",
-    "providerPitch": "Reach customers looking for what you offer."
+    "providerPitch": "Reach customers looking for what you offer.",
+    "unavailableTitle": "We couldn't load services",
+    "unavailableBody": "Check your connection and try again.",
+    "unavailableRetry": "Try again",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {total}"
+    }
   },
   "categories": {
     "all": "All",
@@ -142,6 +150,7 @@
       "bookableHint": "Customers can book and pay a deposit at a fixed price, without requesting a quote first.",
       "bookingPriceLabel": "Fixed booking price",
       "bookingPriceHint": "Total price for a direct booking. Customers pay a deposit now and the balance when the job is done.",
+      "photoAlt": "Service photo {position}",
       "statusLabel": "Status",
       "save": "Save",
       "publish": "Publish",
@@ -161,6 +170,8 @@
     "packages": {
       "title": "Packages",
       "intro": "Offer up to three packages so customers can compare them and ask for a quote on exactly what they want.",
+      "count": "{count} of {max} packages offered",
+      "limitReached": "You can offer up to {max} packages per service: one each of Basic, Standard and Premium. Remove one to offer a different one.",
       "codNote": "No payment is taken when a customer picks a package — they send you a quote request, and you agree the final price in the chat.",
       "offer": "Offer this package",
       "notOffered": "Not offered",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { listPendingCanonicalProducts } from "../moderation/products/_components/api";
 
@@ -114,42 +114,51 @@ export function TodayBoard({ locale, placedCount, placedLoading }: TodayBoardPro
   const [products, setProducts] = useState<Loaded>({ state: "loading" });
   const [now, setNow] = useState<Date | null>(null);
 
-  const load = useCallback(async () => {
+  // Each card settles on its own: the first answer paints at once instead of every card
+  // waiting for the slowest of the four requests. `generation` drops answers from a load
+  // that a newer Refresh has already superseded.
+  const generation = useRef(0);
+  const load = useCallback(() => {
+    const current = ++generation.current;
+    const settle =
+      (set: (value: Loaded) => void) =>
+      (value: Loaded): void => {
+        if (current === generation.current) set(value);
+      };
     setKyc({ state: "loading" });
     setDisputes({ state: "loading" });
     setReady({ state: "loading" });
     setProducts({ state: "loading" });
-    const [kycResult, disputeResult, readyResult, productResult] = await Promise.all([
-      loadList("/admin/vendors?status=pending"),
-      loadList("/admin/disputes"),
-      dashboardApi
-        .request<ReadyOrdersResponse>("/admin/dispatch/board")
-        .then((board): Loaded => ({
-          state: "ok",
-          count: board.ready_orders.length,
-          overdue: 0,
-        }))
-        .catch((error: unknown): Loaded =>
-          classifyAdminRequestError(error).kind === "permission"
-            ? { state: "denied" }
-            : { state: "error" },
-        ),
-      listPendingCanonicalProducts()
-        .then((items): Loaded => ({ state: "ok", count: items.length, overdue: 0 }))
-        .catch((error: unknown): Loaded =>
-          classifyAdminRequestError(error).kind === "permission"
-            ? { state: "denied" }
-            : { state: "error" },
-        ),
-    ]);
-    setKyc(kycResult);
-    setDisputes(disputeResult);
-    setReady(readyResult);
-    setProducts(productResult);
+    void loadList("/admin/vendors?status=pending").then(settle(setKyc));
+    void loadList("/admin/disputes").then(settle(setDisputes));
+    void dashboardApi
+      .request<ReadyOrdersResponse>("/admin/dispatch/board")
+      .then((board): Loaded => ({
+        state: "ok",
+        count: board.ready_orders.length,
+        overdue: 0,
+      }))
+      .catch((error: unknown): Loaded =>
+        classifyAdminRequestError(error).kind === "permission"
+          ? { state: "denied" }
+          : { state: "error" },
+      )
+      .then(settle(setReady));
+    void listPendingCanonicalProducts()
+      .then((items): Loaded => ({ state: "ok", count: items.length, overdue: 0 }))
+      .catch((error: unknown): Loaded =>
+        classifyAdminRequestError(error).kind === "permission"
+          ? { state: "denied" }
+          : { state: "error" },
+      )
+      .then(settle(setProducts));
   }, []);
 
   useEffect(() => {
-    void load();
+    load();
+    return () => {
+      generation.current += 1;
+    };
   }, [load]);
 
   useEffect(() => {
@@ -182,7 +191,7 @@ export function TodayBoard({ locale, placedCount, placedLoading }: TodayBoardPro
         </div>
         <button
           type="button"
-          onClick={() => void load()}
+          onClick={() => load()}
           className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
         >
           {t("refresh")}

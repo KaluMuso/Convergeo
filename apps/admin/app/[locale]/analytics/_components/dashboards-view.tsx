@@ -5,7 +5,9 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { AnalyticsExportError, downloadAnalyticsCsv } from "../../../../lib/analytics-export";
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { useAdminPermissions } from "../../../../lib/roles-api";
+import { AdminPageClient } from "../../_components/admin-page-client";
 import { classifyAdminRequestError } from "../../_components/admin-request";
 import { dashboardApi } from "../../_components/api";
 import { TileShell } from "../../_components/TileShell";
@@ -69,6 +71,10 @@ export function DashboardsView({ locale, tab }: { locale: string; tab: Dashboard
       setState({ kind: "permission" });
       return;
     }
+    if (!getApiBaseUrl()) {
+      setState({ kind: "error" });
+      return;
+    }
     if (query === null) {
       setState({ kind: "idle" });
       return;
@@ -107,12 +113,7 @@ export function DashboardsView({ locale, tab }: { locale: string; tab: Dashboard
   const today = lusakaToday();
 
   return (
-    <div className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="font-serif text-xl text-text">{t("title")}</h1>
-        <p className="text-sm text-muted">{t("dash.subtitle")}</p>
-      </header>
-
+    <AdminPageClient title={t("title")} subtitle={t("dash.subtitle")}>
       <AnalyticsTabs locale={locale} active={tab} />
 
       <div className="flex flex-wrap items-end gap-2">
@@ -233,7 +234,7 @@ export function DashboardsView({ locale, tab }: { locale: string; tab: Dashboard
       {state.kind === "ready" ? (
         <DashboardBody tab={tab} data={state.data} locale={locale} />
       ) : null}
-    </div>
+    </AdminPageClient>
   );
 }
 

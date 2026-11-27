@@ -37,25 +37,25 @@ export function ListingFormAside({
         <h2 id="listing-form-preview-heading" className="text-sm font-semibold text-text">
           {t("listings.formAside.previewHeading")}
         </h2>
-        <div className="mt-3 flex gap-3">
+        <div className="mt-3 flex flex-col overflow-hidden rounded-lg border border-border bg-bg">
           {coverPublicId ? (
             <CloudinaryImage
               publicId={coverPublicId}
               alt={t("listings.formAside.previewPhotoAlt")}
-              width={72}
-              ratio={1}
-              className="size-[72px] shrink-0 rounded-lg object-cover"
+              width={480}
+              ratio="4/3"
+              className="aspect-[4/3] w-full rounded-none object-cover"
             />
           ) : (
             <div
               aria-hidden
-              className="flex size-[72px] shrink-0 items-center justify-center rounded-lg border border-dashed border-border bg-bg-2 text-micro text-text-3"
+              className="flex aspect-[4/3] w-full items-center justify-center border-b border-dashed border-border bg-bg-2 text-micro text-text-3"
             >
               {t("listings.formAside.noPhoto")}
             </div>
           )}
-          <div className="min-w-0 space-y-1">
-            <p className="truncate text-sm font-medium text-text">{title}</p>
+          <div className="space-y-1 p-3">
+            <p className="m-0 line-clamp-2 text-sm font-medium text-text">{title}</p>
             <PriceBlock ngwee={priceNgwee} />
             <ListingVisibilityHint status={listingStatus} />
             <ListingProductStatusChip listingStatus={listingStatus} productStatus={productStatus} />

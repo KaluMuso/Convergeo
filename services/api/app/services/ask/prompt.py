@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # Primary: Kimi K2 via OpenRouter (cheap, strong tool/JSON following). Fallback: a
 # cheaper/faster model used only when the primary errors or times out.
 DEFAULT_ANSWER_MODEL = "moonshotai/kimi-k2"
-DEFAULT_FALLBACK_MODEL = "google/gemini-2.0-flash-lite-001"
+DEFAULT_FALLBACK_MODEL = "google/gemini-2.5-flash-lite"
 DEFAULT_ANSWER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_ANSWER_TIMEOUT_SECONDS = 8.0
 DEFAULT_MAX_OUTPUT_TOKENS = 400
@@ -208,7 +208,9 @@ async def call_model(prompt: BuiltPrompt, *, model: str | None = None) -> ModelA
         ],
         "max_tokens": max_output_tokens,
         "temperature": 0.2,
-        "response_format": {"type": "json_object"},
+        # No response_format: Kimi K2's providers reject structured outputs with
+        # HTTP 400. The prompt asks for JSON and _extract_json_object() tolerates
+        # fenced or wrapped JSON, so plain text mode is enough.
     }
 
     async with httpx.AsyncClient(timeout=timeout) as client:

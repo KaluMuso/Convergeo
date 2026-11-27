@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import re
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import Annotated, Any, Literal
 
 from app.core.auth import CurrentUser, get_current_user
+from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.branches.context import scope_owner_vendor_query
@@ -15,6 +17,9 @@ from app.services.kyc.state_machine import (
     KycRecordSnapshot,
     KycStateMachine,
     ServiceRoleClient,
+    VendorSnapshot,
+    _load_latest_kyc_record,
+    derive_application_status,
     transition_resubmit,
     transition_submit,
 )
@@ -22,8 +27,11 @@ from app.services.vendors.slug import is_placeholder_slug, unique_vendor_slug
 from fastapi import APIRouter, Body, Depends
 from pydantic import BaseModel, Field, field_validator
 
-router = APIRouter(prefix="/kyc", tags=["kyc"])
-
+router = APIRouter(
+    prefix="/kyc",
+    tags=["kyc"],
+    dependencies=[Depends(enforce_registered_policy)],
+)
 # Merchandise categories persisted onto the vendor (legacy API field name:
 # archetype). These must match vendors_archetype_check in migration 0037.
 VENDOR_ARCHETYPES = frozenset(
@@ -232,11 +240,12 @@ def _find_vendor_for_owner(
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select(
-            "id, owner_user_id, status, kyc_tier, preferred_badge, archetype, "
-            "business_archetype, display_name, slug"
+            .select(
+                "id, owner_user_id, status, kyc_tier, preferred_badge, archetype, "
+                "business_archetype, display_name, slug"
+            )
+            .eq("owner_user_id", owner_user_id)
         )
-        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )
@@ -259,7 +268,7 @@ def _load_vendor_for_owner(
     return row
 
 
-async def require_vendor_owner(
+def require_vendor_owner(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
@@ -392,13 +401,32 @@ def _status_for_vendor(
     service_client: ServiceRoleClient,
     vendor: dict[str, Any],
 ) -> KycStatusResponse:
-    machine = KycStateMachine(service_client)
-    application_status, kyc_record = machine.get_status(str(vendor["id"]))
+    """Status for an already-loaded owned vendor row.
+
+    The row came from the ownership dependency, so it is not read a second time, and the
+    two kyc_records reads (latest, best approved) are independent: run them together.
+    """
+    from app.services.kyc.eligibility import _load_best_approved_record
+
+    vendor_id = str(vendor["id"])
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        latest_future = pool.submit(_load_latest_kyc_record, service_client, vendor_id)
+        approved_future = pool.submit(_load_best_approved_record, service_client, vendor_id)
+        kyc_record = latest_future.result()
+        approved_record = approved_future.result()
+    snapshot = VendorSnapshot(
+        id=vendor_id,
+        owner_user_id=str(vendor.get("owner_user_id", "")),
+        status=str(vendor.get("status", "draft")),
+        kyc_tier=vendor.get("kyc_tier"),
+    )
+    application_status = derive_application_status(snapshot, kyc_record)
     return _build_status_response(
         vendor,
         application_status,
         kyc_record,
         service_client=service_client,
+        approved_record=approved_record,
     )
 
 
@@ -423,18 +451,25 @@ def _build_status_response(
     kyc_record: KycRecordSnapshot | None,
     *,
     service_client: ServiceRoleClient,
+    approved_record: dict[str, Any] | None | Literal["load"] = "load",
 ) -> KycStatusResponse:
-    from app.services.kyc.eligibility import resolve_vendor_eligibility
+    from app.services.kyc.eligibility import (
+        build_eligibility_from_rows,
+        resolve_vendor_eligibility,
+    )
 
     momo = _serialize_momo_match(kyc_record.momo_name_match if kyc_record else None)
     archetype = vendor.get("archetype")
     business_archetype = vendor.get("business_archetype")
     business_name = vendor.get("display_name")
-    eligibility = resolve_vendor_eligibility(
-        service_client,
-        str(vendor["id"]),
-        vendor_row=vendor,
-    )
+    if approved_record == "load":
+        eligibility = resolve_vendor_eligibility(
+            service_client,
+            str(vendor["id"]),
+            vendor_row=vendor,
+        )
+    else:
+        eligibility = build_eligibility_from_rows(vendor=vendor, approved_record=approved_record)
     # Never surface a bare stored tier as the capability tier when orphaned.
     public_tier = eligibility.effective_tier if eligibility.is_auditable_approved else None
     return KycStatusResponse(
@@ -472,7 +507,7 @@ def _build_status_response(
 
 
 @router.get("/status", response_model=KycStatusResponse)
-async def get_kyc_status(
+def get_kyc_status(
     vendor: Annotated[dict[str, Any], Depends(require_vendor_owner)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> KycStatusResponse:

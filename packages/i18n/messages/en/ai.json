@@ -76,11 +76,11 @@
   "ai.faq.pickup.q": "Can I pick up my order?",
   "ai.faq.pickup.a": "Yes. Choose pickup at checkout and collect from the vendor's branch. Show the pickup code from your order page when you collect.",
   "ai.faq.cod.q": "Can I pay cash on delivery?",
-  "ai.faq.cod.a": "During the pilot every order is cash on delivery: nothing is charged online and you pay when your order arrives. Some orders may not qualify; checkout tells you before you place it.",
+  "ai.faq.cod.a": "Cash on delivery is available for orders up to K500 — you pay the rider when your order arrives. For larger totals, pay with MTN or Airtel Mobile Money or card at checkout.",
   "ai.faq.escrow.q": "Is my money safe?",
-  "ai.faq.escrow.a": "Online payment with escrow buyer protection is coming soon. Until then, you pay cash when your order arrives.",
+  "ai.faq.escrow.a": "When you pay with MTN or Airtel Mobile Money or card, Convergeo holds the money in escrow until you confirm delivery. The seller is paid only after that.",
   "ai.faq.payment.q": "How can I pay?",
-  "ai.faq.payment.a": "During the pilot you pay cash on delivery. Mobile money and card payments are coming soon.",
+  "ai.faq.payment.a": "Pay with MTN or Airtel Mobile Money, debit or credit card, or cash on delivery for orders up to K500. Mobile Money and card payments are held in escrow until you confirm delivery.",
   "ai.faq.returns.q": "What if something goes wrong with my order?",
   "ai.faq.returns.a": "Report a problem from your order page and our team will review it. We will arrange any approved refund with you directly."
 }

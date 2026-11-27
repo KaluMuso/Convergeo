@@ -289,6 +289,120 @@ export function ImageManager({
     [t],
   );
 
+  const runUpload = useCallback(
+    async (filesToUpload: File[]) => {
+      if (filesToUpload.length === 0 || busy) {
+        return;
+      }
+      if (wouldExceedImageCap(localImages.length, filesToUpload.length)) {
+        setRejectNotice(t("listings.images.limit_reached"));
+        return;
+      }
+
+      setBusy(true);
+      setRejectNotice(null);
+      const uploads: PendingUpload[] = filesToUpload.map((file, index) => ({
+        key: `${file.name}-${file.lastModified}-${index}`,
+        file,
+        progress: 0,
+        error: null,
+      }));
+      setPendingUploads(uploads);
+
+      const attached: ListingImageRecord[] = [];
+      try {
+        for (let index = 0; index < filesToUpload.length; index += 1) {
+          const sourceFile = filesToUpload[index];
+          if (!sourceFile) {
+            continue;
+          }
+
+          const updateProgress = (progress: number) => {
+            setPendingUploads((current) =>
+              current.map((item, itemIndex) =>
+                itemIndex === index ? { ...item, progress } : item,
+              ),
+            );
+          };
+
+          try {
+            const downscaled = await downscaleImageFile(sourceFile);
+            // Dedup (flag `shared_canonical_photos`): skip bytes we already hold.
+            const contentSha256 = await sha256Hex(downscaled);
+            let publicId: string | null = null;
+            if (contentSha256) {
+              const dedup = await apiClient
+                .request<DedupCheckResponse>(
+                  `/vendor/listings/${listingId}/images/dedup?sha256=${contentSha256}`,
+                )
+                .catch(() => null);
+              if (dedup?.enabled && (dedup.match === "listing" || dedup.match === "canonical")) {
+                setRejectNotice(
+                  t(
+                    dedup.match === "canonical"
+                      ? "listings.images.dedupCanonical"
+                      : "listings.images.duplicate",
+                  ),
+                );
+                updateProgress(100);
+                continue;
+              }
+              if (dedup?.enabled && dedup.match === "own" && dedup.cloudinary_public_id) {
+                publicId = dedup.cloudinary_public_id;
+                updateProgress(100);
+              }
+            }
+            if (publicId === null) {
+              const signed = await apiClient.request<SignUploadResponse>("/media/sign", {
+                method: "POST",
+                body: JSON.stringify({
+                  resource_kind: "listing",
+                  file_size_bytes: downscaled.size,
+                }),
+              });
+              const uploaded = await uploadWithRetry(downscaled, signed, updateProgress);
+              publicId = uploaded.public_id;
+            }
+            const metadata = await apiClient.request<ListingImageRecord>(
+              `/vendor/listings/${listingId}/images`,
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  cloudinary_public_id: publicId,
+                  ...(contentSha256 ? { content_sha256: contentSha256 } : {}),
+                }),
+              },
+            );
+            attached.push(metadata);
+          } catch (caught) {
+            const limitNotice = imageErrorNotice(caught, t);
+            if (limitNotice) {
+              setRejectNotice(limitNotice);
+              setPendingUploads([]);
+              setPendingFiles([]);
+              if (attached.length > 0) syncImages([...localImages, ...attached]);
+              return;
+            }
+            const message = uploadErrorDetail(caught, sourceFile.name, t);
+            setPendingUploads((current) =>
+              current.map((item, itemIndex) =>
+                itemIndex === index ? { ...item, error: message, progress: 0 } : item,
+              ),
+            );
+            continue;
+          }
+        }
+
+        syncImages([...localImages, ...attached]);
+        setPendingFiles([]);
+        setPendingUploads([]);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [apiClient, busy, listingId, localImages, syncImages, t],
+  );
+
   const handleFilesChange = useCallback(
     (files: File[]) => {
       setRejectNotice(null);
@@ -297,118 +411,27 @@ export function ImageManager({
         return;
       }
       setPendingFiles(files);
+      void runUpload(files);
     },
-    [localImages.length, t],
+    [localImages.length, runUpload, t],
   );
 
-  const uploadPendingFiles = useCallback(async () => {
-    if (pendingFiles.length === 0 || busy) {
-      return;
-    }
-    if (wouldExceedImageCap(localImages.length, pendingFiles.length)) {
-      setRejectNotice(t("listings.images.limit_reached"));
-      return;
-    }
+  const uploadsInFlight =
+    busy ||
+    pendingFiles.length > 0 ||
+    pendingUploads.some((upload) => upload.error === null && upload.progress < 100);
 
-    setBusy(true);
-    setRejectNotice(null);
-    const uploads: PendingUpload[] = pendingFiles.map((file, index) => ({
-      key: `${file.name}-${file.lastModified}-${index}`,
-      file,
-      progress: 0,
-      error: null,
-    }));
-    setPendingUploads(uploads);
-
-    const attached: ListingImageRecord[] = [];
-    try {
-      for (let index = 0; index < pendingFiles.length; index += 1) {
-        const sourceFile = pendingFiles[index];
-        if (!sourceFile) {
-          continue;
-        }
-
-        const updateProgress = (progress: number) => {
-          setPendingUploads((current) =>
-            current.map((item, itemIndex) => (itemIndex === index ? { ...item, progress } : item)),
-          );
-        };
-
-        try {
-          const downscaled = await downscaleImageFile(sourceFile);
-          // Dedup (flag `shared_canonical_photos`): skip bytes we already hold.
-          const contentSha256 = await sha256Hex(downscaled);
-          let publicId: string | null = null;
-          if (contentSha256) {
-            const dedup = await apiClient
-              .request<DedupCheckResponse>(
-                `/vendor/listings/${listingId}/images/dedup?sha256=${contentSha256}`,
-              )
-              .catch(() => null);
-            if (dedup?.enabled && (dedup.match === "listing" || dedup.match === "canonical")) {
-              setRejectNotice(
-                t(
-                  dedup.match === "canonical"
-                    ? "listings.images.dedupCanonical"
-                    : "listings.images.duplicate",
-                ),
-              );
-              updateProgress(100);
-              continue;
-            }
-            if (dedup?.enabled && dedup.match === "own" && dedup.cloudinary_public_id) {
-              publicId = dedup.cloudinary_public_id;
-              updateProgress(100);
-            }
-          }
-          if (publicId === null) {
-            const signed = await apiClient.request<SignUploadResponse>("/media/sign", {
-              method: "POST",
-              body: JSON.stringify({
-                resource_kind: "listing",
-                file_size_bytes: downscaled.size,
-              }),
-            });
-            const uploaded = await uploadWithRetry(downscaled, signed, updateProgress);
-            publicId = uploaded.public_id;
-          }
-          const metadata = await apiClient.request<ListingImageRecord>(
-            `/vendor/listings/${listingId}/images`,
-            {
-              method: "POST",
-              body: JSON.stringify({
-                cloudinary_public_id: publicId,
-                ...(contentSha256 ? { content_sha256: contentSha256 } : {}),
-              }),
-            },
-          );
-          attached.push(metadata);
-        } catch (caught) {
-          const limitNotice = imageErrorNotice(caught, t);
-          if (limitNotice) {
-            setRejectNotice(limitNotice);
-            setPendingUploads([]);
-            setPendingFiles([]);
-            if (attached.length > 0) syncImages([...localImages, ...attached]);
-            return;
-          }
-          const message = uploadErrorDetail(caught, sourceFile.name, t);
-          setPendingUploads((current) =>
-            current.map((item, itemIndex) =>
-              itemIndex === index ? { ...item, error: message, progress: 0 } : item,
-            ),
-          );
-          continue;
-        }
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!uploadsInFlight) {
+        return;
       }
-
-      syncImages([...localImages, ...attached]);
-      setPendingFiles([]);
-      setPendingUploads([]);
-    } finally {
-      setBusy(false);
-    }
-  }, [apiClient, busy, listingId, localImages, pendingFiles, syncImages, t]);
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [uploadsInFlight]);
 
   const moveImage = useCallback(
     async (fromIndex: number, direction: -1 | 1) => {
@@ -472,8 +495,23 @@ export function ImageManager({
     [apiClient, listingId, localImages, minimumImages, syncImages, t],
   );
 
+  const retryFailedUpload = useCallback(() => {
+    const failed = pendingUploads.filter((upload) => upload.error !== null);
+    if (failed.length === 0) {
+      return;
+    }
+    const files = failed.map((upload) => upload.file);
+    setPendingFiles(files);
+    setPendingUploads([]);
+    void runUpload(files);
+  }, [pendingUploads, runUpload]);
+
   return (
-    <section data-testid="listing-image-manager" style={{ display: "grid", gap: "var(--sp-4)" }}>
+    <section
+      id="photos"
+      data-testid="listing-image-manager"
+      style={{ display: "grid", gap: "var(--sp-4)" }}
+    >
       <header style={{ display: "grid", gap: "var(--sp-2)" }}>
         <h2>{t("listings.images.heading")}</h2>
         <p>{t("listings.images.intro", { count: totalCount, max: MAX_LISTING_IMAGES })}</p>
@@ -515,9 +553,6 @@ export function ImageManager({
                   {image.position === 1
                     ? t("listings.images.cover_badge")
                     : t("listings.images.position_label", { position: image.position })}
-                </span>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.875rem" }}>
-                  {image.cloudinary_public_id}
                 </span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)" }}>
@@ -591,54 +626,15 @@ export function ImageManager({
         </p>
       ) : null}
 
-      {pendingFiles.length > 0 ? (
+      {pendingUploads.some((upload) => upload.error) ? (
         <button
           type="button"
-          data-testid="upload-images-button"
-          disabled={busy}
-          onClick={() => void uploadPendingFiles()}
+          data-testid="retry-upload-button"
+          onClick={retryFailedUpload}
           style={{ minHeight: "44px" }}
         >
-          {busy ? t("listings.images.uploading") : t("listings.images.upload")}
+          {t("listings.images.retry")}
         </button>
-      ) : null}
-
-      {pendingUploads.some((upload) => upload.error) ? (
-        <ul
-          data-testid="upload-error-list"
-          style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "var(--sp-2)" }}
-        >
-          {pendingUploads.map((upload, index) =>
-            upload.error ? (
-              <li
-                key={upload.key}
-                style={{
-                  border: "1px solid var(--danger)",
-                  borderRadius: "var(--r)",
-                  padding: "var(--sp-3)",
-                  display: "grid",
-                  gap: "var(--sp-2)",
-                }}
-              >
-                <p role="alert" className="text-sm text-danger">
-                  {upload.error}
-                </p>
-                <button
-                  type="button"
-                  data-testid={`retry-upload-${index}`}
-                  disabled={busy}
-                  onClick={() => {
-                    setPendingFiles([upload.file]);
-                    setPendingUploads([]);
-                  }}
-                  style={{ minHeight: "44px", width: "fit-content" }}
-                >
-                  {t("listings.images.retry_one")}
-                </button>
-              </li>
-            ) : null,
-          )}
-        </ul>
       ) : null}
     </section>
   );

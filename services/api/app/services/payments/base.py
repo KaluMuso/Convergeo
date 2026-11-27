@@ -156,6 +156,7 @@ class PaymentProviderError(Exception):
         reference: str | None = None,
         observation_uncertain: bool = False,
         dispatch_may_have_succeeded: bool = False,
+        definitive_rejection: bool = False,
     ) -> None:
         self.code = code
         self.message = message
@@ -163,6 +164,11 @@ class PaymentProviderError(Exception):
         self.reference = reference
         self.observation_uncertain = observation_uncertain
         self.dispatch_may_have_succeeded = dispatch_may_have_succeeded
+        # Positive proof the provider validated and refused the request before
+        # creating anything. Callers may only treat a failure as terminal (and
+        # allow a fresh collection attempt) when this is explicitly True; the
+        # absence of dispatch_may_have_succeeded is NOT proof of rejection.
+        self.definitive_rejection = definitive_rejection
         super().__init__(message)
 
 

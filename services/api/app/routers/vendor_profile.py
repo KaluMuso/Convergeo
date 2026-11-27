@@ -485,15 +485,17 @@ def _upsert_location(
     ).execute()
 
 
-async def require_vendor_owner(
+def require_vendor_owner(
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
     return _load_vendor_for_owner(service_client, current_user.id)
 
 
+# Plain ``def``: the Supabase client is synchronous, so an ``async def`` handler would
+# stall the event loop for all concurrent requests during its Postgres round-trip.
 @router.get("", response_model=VendorProfileResponse)
-async def get_vendor_profile(
+def get_vendor_profile(
     vendor: Annotated[dict[str, Any], Depends(require_vendor_owner)],
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
 ) -> VendorProfileResponse:

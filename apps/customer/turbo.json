@@ -3,6 +3,13 @@
   "extends": ["//"],
   "tasks": {
     "build": {
+      "outputs": [
+        "$TURBO_EXTENDS$",
+        "public/sw.js",
+        "public/sw.js.map",
+        "public/swe-worker-*.js",
+        "public/swe-worker-*.js.map"
+      ],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/apps/admin/app/**",

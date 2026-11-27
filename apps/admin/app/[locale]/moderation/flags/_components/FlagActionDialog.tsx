@@ -1,5 +1,6 @@
 "use client";
 
+import { glassClass } from "@vergeo/ui/src/glass";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -39,12 +40,12 @@ export function FlagActionDialog({ item, action, onClose, onComplete }: FlagActi
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-[2px] sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="flag-action-title"
     >
-      <div className="w-full max-w-md rounded-lg border border-border bg-surface p-4 shadow-lg">
+      <div className={`${glassClass("overlay")} w-full max-w-md rounded-lg p-4`}>
         <h2 id="flag-action-title" className="font-serif text-lg text-text">
           {t(`${action}.title`)}
         </h2>
@@ -74,8 +75,8 @@ export function FlagActionDialog({ item, action, onClose, onComplete }: FlagActi
           </button>
           <button
             type="button"
-            className={`inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium text-white ${
-              destructive ? "bg-danger" : "bg-primary"
+            className={`inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium ${
+              destructive ? "bg-danger text-on-danger" : "bg-primary text-[var(--primary-btn-fg)]"
             }`}
             onClick={() => void submit()}
             disabled={submitting}

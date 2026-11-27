@@ -31,6 +31,8 @@ from __future__ import annotations
 import os
 from typing import Any, cast
 
+from app.services.db_chunk import chunked_in_query
+
 # Staging synthetic media prefix — aligned with synthetic_contract.SYNTHETIC_IMAGE_PREFIX
 STAGING_SYNTHETIC_PREFIX: str = "staging-synthetic/"
 
@@ -118,16 +120,17 @@ def fetch_demo_listing_ids(
     """
     if not listing_ids:
         return set()
-    # Deduplicate while preserving a stable bound for the IN clause.
-    unique_ids = list(dict.fromkeys(listing_ids))
-    response = (
-        client.table("listing_images")
-        .select("listing_id, cloudinary_public_id")
-        .in_("listing_id", unique_ids)
-        .execute()
+    rows = chunked_in_query(
+        listing_ids,
+        run=lambda chunk: (
+            client.table("listing_images")
+            .select("listing_id, cloudinary_public_id")
+            .in_("listing_id", chunk)
+            .execute()
+        ),
     )
     excluded_ids: set[str] = set()
-    for row in _rows(response):
+    for row in rows:
         listing_id = row.get("listing_id")
         if listing_id and is_non_genuine_public_id(
             row.get("cloudinary_public_id")

@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { formatOrderCode } from "../../_lib/order-code";
 import { Spinner } from "../../listings/new/_lib/ui";
 
 type DisputeSummary = {
@@ -14,6 +15,10 @@ type DisputeSummary = {
   order_id: string;
   status: string;
   created_at: string;
+};
+
+type VendorDisputesListViewProps = {
+  locale?: string;
 };
 
 function statusLabel(status: string, t: (key: string) => string): string {
@@ -25,8 +30,9 @@ function statusLabel(status: string, t: (key: string) => string): string {
   }
 }
 
-export function VendorDisputesListView() {
+export function VendorDisputesListView({ locale = "en" }: VendorDisputesListViewProps) {
   const t = useTranslations("vendor");
+  const tR = useTranslations("vendor.requests.disputes");
   const { session } = useSession();
   const [disputes, setDisputes] = useState<DisputeSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,15 +90,20 @@ export function VendorDisputesListView() {
           {disputes.map((dispute) => (
             <li key={dispute.id}>
               <Link
-                href={`disputes/${dispute.id}`}
+                href={`/${locale}/disputes/${dispute.id}`}
                 className="flex min-h-11 flex-col justify-center rounded border border-border bg-surface px-4 py-3"
               >
                 <span className="text-sm font-medium text-display-ink">
                   {t("disputes.list.order", {
-                    orderId: dispute.order_id.slice(0, 8).toUpperCase(),
+                    orderId: formatOrderCode(dispute.order_id),
                   })}
                 </span>
-                <span className="text-xs text-text-2">
+                <span className="text-sm text-text-2">
+                  {tR("opened", {
+                    date: new Date(dispute.created_at).toLocaleDateString(locale),
+                  })}
+                </span>
+                <span className="text-sm text-text-2">
                   {t("disputes.list.status", {
                     status: statusLabel(dispute.status, t),
                   })}

@@ -1,5 +1,6 @@
 "use client";
 
+import { glassClass } from "@vergeo/ui/src/glass";
 import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -17,14 +18,20 @@ import {
 } from "../../../lib/roles-api";
 
 import { AdminAccountMenu } from "./admin-account-menu";
+import { AdminCommandPalette } from "./admin-command-palette";
+import { AdminDensityProvider } from "./admin-density";
+import { AdminDensityToggle } from "./admin-density-toggle";
 import {
   ADMIN_NAV_GROUPS,
+  ADMIN_EXPLICIT_GRANT_ITEMS,
   adminItemHref,
+  adminRouteAllowedByAlternateItem,
   filterAdminNavGroups,
   flattenAdminNavItems,
   resolveAdminActiveGroup,
   resolveAdminActiveItem,
 } from "./admin-nav-config";
+import { AdminNavIcon } from "./admin-nav-icon";
 import { AdminNotificationBell } from "./admin-notification-bell";
 import { usePendingProductModerationCount } from "./use-pending-product-count";
 
@@ -35,11 +42,11 @@ type AdminShellProps = {
 
 function navLinkClass(active: boolean, compact = false): string {
   return [
-    "inline-flex items-center rounded-md border text-sm",
-    compact ? "min-h-11 shrink-0 px-3 font-medium" : "min-h-9 w-full px-3",
+    "inline-flex items-center gap-2 rounded-md border text-sm transition-colors press-scale",
+    compact ? "min-h-11 shrink-0 px-3 font-medium" : "min-h-11 w-full px-2",
     active
       ? "border-primary bg-primary/10 font-semibold text-primary"
-      : "border-transparent font-medium text-text hover:border-border hover:text-primary",
+      : "border-transparent font-medium text-text hover:border-border hover:bg-bg-2 hover:text-primary",
   ].join(" ");
 }
 
@@ -149,28 +156,43 @@ export function AdminShell({ locale, children }: AdminShellProps) {
   const isPersonalRoute = rest === "/notifications";
   const denied =
     !isPersonalRoute &&
-    ((requested === "roles" && !capabilities.roles) ||
+    ((requested !== undefined &&
+      ADMIN_EXPLICIT_GRANT_ITEMS.has(requested) &&
+      !capabilities[requested]) ||
       (!grants?.unrestricted &&
-        (!requested || !capabilities[requested] || rest.startsWith("/moderation/flags"))));
+        (!requested ||
+          (!capabilities[requested] && !adminRouteAllowedByAlternateItem(rest, capabilities)) ||
+          rest.startsWith("/moderation/flags"))));
 
-  return (
+  const chrome = (
     <div className="flex h-dvh flex-col overflow-hidden bg-bg text-text">
       <header className="shrink-0 border-b border-border bg-panel text-panel-text">
-        <div className="flex w-full items-center justify-between gap-3 px-3 py-1.5">
-          <div className="flex min-w-0 items-baseline gap-2">
-            <h1 className="truncate font-serif text-lg text-panel-text">{t("title")}</h1>
-            <p className="hidden truncate text-xs text-panel-muted sm:block">
-              {t("shell.eyebrow")} · {t("shell.environment")}
-            </p>
+        <div className="flex w-full items-center justify-between gap-3 px-3 py-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="hidden sm:block">
+              <AdminNavIcon itemKey="home" size={40} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="truncate font-display text-lg font-semibold tracking-tight text-panel-text">
+                {t("title")}
+              </h1>
+              <p className="hidden truncate text-xs text-panel-muted sm:block">
+                {t("shell.eyebrow")} · {t("shell.environment")}
+              </p>
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <AdminCommandPalette locale={locale} />
+            <span className="hidden sm:block">
+              <AdminDensityToggle />
+            </span>
             <AdminNotificationBell locale={locale} />
             <ThemeToggle
               label={tCommon("theme.label")}
               lightLabel={tCommon("theme.light")}
               darkLabel={tCommon("theme.dark")}
               systemLabel={tCommon("theme.system")}
-              className="border-panel-muted/40 bg-transparent text-panel-text hover:border-panel-text hover:text-panel-text"
+              className="!border-panel-muted/40 !bg-transparent !text-panel-text hover:!border-panel-text"
             />
             <AdminAccountMenu locale={locale} identity={identity} roleKind={roleKind} />
           </div>
@@ -207,13 +229,14 @@ export function AdminShell({ locale, children }: AdminShellProps) {
                           aria-current={active ? "page" : undefined}
                           className={navLinkClass(active)}
                         >
-                          <span className="flex w-full items-center justify-between gap-2">
-                            <span>{t(`nav.${item.key}` as "nav.home")}</span>
+                          <AdminNavIcon itemKey={item.key} size={32} />
+                          <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                            <span className="truncate">{t(`nav.${item.key}` as "nav.home")}</span>
                             {item.key === "moderation" &&
                             typeof pendingProducts === "number" &&
                             pendingProducts > 0 ? (
                               <span
-                                className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-[var(--primary-btn-fg)]"
+                                className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-[var(--primary-btn-fg)]"
                                 aria-label={t("nav.moderationPendingBadge", {
                                   count: pendingProducts,
                                 })}
@@ -271,29 +294,29 @@ export function AdminShell({ locale, children }: AdminShellProps) {
         <main
           ref={mainRef}
           data-testid="admin-main"
-          className="admin-main min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-bg p-3"
+          className="admin-main min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-bg px-3 py-4 sm:px-4"
         >
-          <div className="rounded-lg border border-border bg-surface p-3 shadow-sm">
-            {grantError ? (
-              <p role="alert">{t("shell.permissionError")}</p>
-            ) : !grants ? (
-              <p role="status">{t("shell.permissionChecking")}</p>
-            ) : denied ? (
-              <p role="alert">{t("shell.permissionDenied")}</p>
-            ) : (
-              <AdminPermissionsContext.Provider value={grants}>
-                <AdminPermissionRefreshContext.Provider value={refresh}>
-                  {children}
-                </AdminPermissionRefreshContext.Provider>
-              </AdminPermissionsContext.Provider>
-            )}
-          </div>
+          {grantError ? (
+            <p role="alert" className="animate-page-in text-sm text-danger">
+              {t("shell.permissionError")}
+            </p>
+          ) : !grants ? (
+            <p role="status" className="animate-page-in text-sm text-muted">
+              {t("shell.permissionChecking")}
+            </p>
+          ) : denied ? (
+            <p role="alert" className="animate-page-in text-sm text-danger">
+              {t("shell.permissionDenied")}
+            </p>
+          ) : (
+            children
+          )}
         </main>
       </div>
 
       {menuOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:hidden"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-[2px] lg:hidden"
           role="presentation"
           onClick={() => setMenuOpen(false)}
         >
@@ -302,7 +325,7 @@ export function AdminShell({ locale, children }: AdminShellProps) {
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${menuId}-title`}
-            className="max-h-[85dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 shadow-xl"
+            className={`${glassClass("overlay")} max-h-[85dvh] w-full overflow-y-auto rounded-t-2xl p-4`}
             onClick={(event) => event.stopPropagation()}
           >
             <header className="mb-4 flex items-center justify-between gap-2">
@@ -346,5 +369,17 @@ export function AdminShell({ locale, children }: AdminShellProps) {
         </div>
       ) : null}
     </div>
+  );
+
+  // Keep provider wrappers mounted across permission reloads so the sidebar DOM
+  // (ref + scroll) survives route changes while grants are null.
+  return (
+    <AdminDensityProvider>
+      <AdminPermissionsContext.Provider value={grants}>
+        <AdminPermissionRefreshContext.Provider value={refresh}>
+          {chrome}
+        </AdminPermissionRefreshContext.Provider>
+      </AdminPermissionsContext.Provider>
+    </AdminDensityProvider>
   );
 }

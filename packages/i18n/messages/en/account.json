@@ -165,7 +165,8 @@
       "otpAria": "One-time code",
       "otpDigit": "Digit {position} of {total}",
       "phoneRequired": "Your account has no verified phone number, so we cannot send a confirmation code. Please contact support to delete your account.",
-      "otpSendFailed": "We could not send the code to your phone. Please try again.",
+      "emailRequired": "Your account has no email address, so we cannot send a confirmation code. Please contact support to delete your account.",
+      "otpSendFailed": "We could not send the code. Please try again.",
       "loading": "Deleting your account…",
       "submit": "Delete my account permanently",
       "success": "Account deleted",
@@ -386,5 +387,11 @@
     "errors": {
       "rateLimited": "Too many requests. Please try again shortly."
     }
+  },
+  "errorPage": {
+    "title": "Something went wrong",
+    "body": "We couldn't load this page.",
+    "retry": "Try again",
+    "back": "Back to account"
   }
 }
