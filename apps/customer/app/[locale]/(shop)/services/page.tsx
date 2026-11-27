@@ -26,6 +26,7 @@ type ServicesApiResponse = {
   items: ServiceBrowseItem[];
   total: number;
   verticals: string[];
+  vertical_names?: Record<string, string>;
 };
 
 type PageProps = {
@@ -47,10 +48,9 @@ function parseCategory(value: string | undefined): string | null {
   if (!value) {
     return null;
   }
-  if ((SERVICE_VERTICALS as readonly string[]).includes(value)) {
-    return value;
-  }
-  return null;
+  // Verticals are admin-managed; the API validates the slug and an unknown one simply
+  // returns no rows. Keep the URL value only when it is a well-formed slug.
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) && value.length <= 80 ? value : null;
 }
 
 async function getServicesTranslator(locale: string): Promise<ServicesTranslator> {
@@ -170,6 +170,7 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
     filterSubmit: t("browse.filterSubmit"),
     preferredBadge: t("browse.preferredBadge"),
     categories: {
+      ...(data.vertical_names ?? {}),
       all: t("categories.all"),
       beauty: t("categories.beauty"),
       "food-catering": t("categories.food-catering"),

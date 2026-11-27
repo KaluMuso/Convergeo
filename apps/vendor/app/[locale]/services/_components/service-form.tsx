@@ -5,7 +5,7 @@ import { ApiError } from "@vergeo/config";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { EventImagePicker } from "../../events/_components/image-picker";
 import { ngweeToZmwInput } from "../../listings/[id]/edit/_lib/money";
@@ -13,6 +13,7 @@ import { isValidZmwDecimal, zmwDecimalToNgwee } from "../../listings/new/_lib/mo
 import {
   createServicesClient,
   SERVICE_VERTICALS,
+  type ServiceCategoryOption,
   type ServiceStatus,
   type ServiceSummary,
   type ServiceVertical,
@@ -81,6 +82,37 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const servicesClient = useMemo(() => createServicesClient(getToken), [getToken]);
+  // Admin-managed verticals: start from the launch list (always usable offline) and replace it
+  // with the published, vendor-visible set once loaded. The service's current category stays
+  // selectable even if an admin later blocked it, so editing never strands an existing listing.
+  const [categoryOptions, setCategoryOptions] = useState<ServiceCategoryOption[]>(() =>
+    SERVICE_VERTICALS.map((slug) => ({ slug, parent_slug: null, name: slug })),
+  );
+  useEffect(() => {
+    let cancelled = false;
+    void servicesClient
+      .listCategories()
+      .then((rows) => {
+        if (cancelled || !Array.isArray(rows)) return;
+        const top = rows.filter((row) => row.parent_slug === null);
+        if (top.length > 0) setCategoryOptions(top);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [servicesClient]);
+  const shownCategories = useMemo(
+    () =>
+      categoryOptions.some((option) => option.slug === category)
+        ? categoryOptions
+        : [...categoryOptions, { slug: category, parent_slug: null, name: category }],
+    [categoryOptions, category],
+  );
+  const categoryLabel = (option: ServiceCategoryOption) =>
+    typeof ts.has === "function" && ts.has(`categories.${option.slug}`)
+      ? ts(`categories.${option.slug}`)
+      : option.name;
 
   async function handleSave(nextStatus?: ServiceStatus) {
     const trimmedTitle = title.trim();
@@ -190,9 +222,9 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
           value={category}
           onChange={(event) => setCategory(event.target.value as ServiceVertical)}
         >
-          {SERVICE_VERTICALS.map((vertical) => (
-            <option key={vertical} value={vertical}>
-              {ts(`categories.${vertical}`)}
+          {shownCategories.map((option) => (
+            <option key={option.slug} value={option.slug}>
+              {categoryLabel(option)}
             </option>
           ))}
         </Select>

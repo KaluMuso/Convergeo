@@ -27,6 +27,7 @@ type ServicesListResponse = {
 type CategoryRow = {
   path: string;
   prohibited: boolean | null;
+  show_in_customer?: boolean | null;
 };
 
 type ListingProjectionRow = {
@@ -51,7 +52,7 @@ export async function fetchCategorySitemapEntries(): Promise<CategorySitemapRow[
     // Anon public read (RLS categories_public_select + search_documents_public_select).
     const client = createBrowserClient();
     const [categoriesResult, listingsResult] = await Promise.all([
-      client.from("categories").select("path, prohibited"),
+      client.from("categories").select("path, prohibited, show_in_customer"),
       client
         .from("search_documents")
         .select("category_path, updated_at")
@@ -66,6 +67,8 @@ export async function fetchCategorySitemapEntries(): Promise<CategorySitemapRow[
 
     const categories = (categoriesResult.data as CategoryRow[])
       .filter((row) => typeof row.path === "string" && row.path.trim().length > 0)
+      // Blocked/draft rows are hidden by RLS; vendor-only nodes have no customer page.
+      .filter((row) => row.show_in_customer !== false)
       .map((row) => ({
         path: row.path.trim(),
         prohibited: row.prohibited === true,

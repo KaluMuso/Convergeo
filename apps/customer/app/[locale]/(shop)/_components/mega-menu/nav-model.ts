@@ -9,7 +9,21 @@ export type MenuLink = {
   slug: string;
   label: string;
   href: string;
+  /** Admin-managed tile image; the tile falls back to the tinted initial when absent. */
+  imageUrl?: string | null;
+  imageAlt?: string | null;
 };
+
+/** Top-level services / event categories from the admin-managed taxonomy. */
+export type GroupItem = {
+  slug: string;
+  name: string;
+  parentSlug: string | null;
+  imageUrl: string | null;
+  imageAlt: string | null;
+};
+
+export type MenuGroups = { services: GroupItem[] | null; events: GroupItem[] | null };
 
 export type MenuDept = MenuLink & {
   group: MenuGroup;
@@ -24,44 +38,83 @@ export function productDepts(tree: readonly NavCategory[], locale: string): Menu
     label: root.name,
     href: `/${locale}/c/${root.slug}`,
     group: "products" as const,
+    imageUrl: root.imageUrl ?? null,
+    imageAlt: root.imageAlt ?? null,
     children: root.children.map((child) => ({
       id: child.id,
       slug: child.slug,
       label: child.name,
       href: `/${locale}/c/${child.slug}`,
+      imageUrl: child.imageUrl ?? null,
+      imageAlt: child.imageAlt ?? null,
     })),
   }));
 }
 
-export function serviceDept(labels: MegaMenuLabels, locale: string): MenuDept {
+/** Top-level published items; empty/absent means "use the built-in launch list". */
+function topLevel(items: readonly GroupItem[] | null | undefined): GroupItem[] {
+  return (items ?? []).filter((item) => item.parentSlug === null);
+}
+
+export function serviceDept(
+  labels: MegaMenuLabels,
+  locale: string,
+  items?: readonly GroupItem[] | null,
+): MenuDept {
+  const live = topLevel(items);
   return {
     id: "group:services",
     slug: "services",
     label: labels.services,
     href: `/${locale}/services`,
     group: "services",
-    children: SERVICE_VERTICAL_SLUGS.map((slug) => ({
-      id: `service:${slug}`,
-      slug,
-      label: labels.serviceVerticals[slug] ?? slug,
-      href: `/${locale}/services?category=${encodeURIComponent(slug)}`,
-    })),
+    children:
+      live.length > 0
+        ? live.map((item) => ({
+            id: `service:${item.slug}`,
+            slug: item.slug,
+            label: labels.serviceVerticals[item.slug] ?? item.name,
+            href: `/${locale}/services?category=${encodeURIComponent(item.slug)}`,
+            imageUrl: item.imageUrl,
+            imageAlt: item.imageAlt,
+          }))
+        : SERVICE_VERTICAL_SLUGS.map((slug) => ({
+            id: `service:${slug}`,
+            slug,
+            label: labels.serviceVerticals[slug] ?? slug,
+            href: `/${locale}/services?category=${encodeURIComponent(slug)}`,
+          })),
   };
 }
 
-export function eventDept(labels: MegaMenuLabels, locale: string): MenuDept {
+export function eventDept(
+  labels: MegaMenuLabels,
+  locale: string,
+  items?: readonly GroupItem[] | null,
+): MenuDept {
+  const live = topLevel(items);
   return {
     id: "group:events",
     slug: "events",
     label: labels.events,
     href: `/${locale}/events`,
     group: "events",
-    children: EVENT_CATEGORY_SLUGS.map((slug) => ({
-      id: `event:${slug}`,
-      slug,
-      label: labels.eventCategories[slug] ?? slug,
-      href: `/${locale}/events?category=${encodeURIComponent(slug)}`,
-    })),
+    children:
+      live.length > 0
+        ? live.map((item) => ({
+            id: `event:${item.slug}`,
+            slug: item.slug,
+            label: labels.eventCategories[item.slug] ?? item.name,
+            href: `/${locale}/events?category=${encodeURIComponent(item.slug)}`,
+            imageUrl: item.imageUrl,
+            imageAlt: item.imageAlt,
+          }))
+        : EVENT_CATEGORY_SLUGS.map((slug) => ({
+            id: `event:${slug}`,
+            slug,
+            label: labels.eventCategories[slug] ?? slug,
+            href: `/${locale}/events?category=${encodeURIComponent(slug)}`,
+          })),
   };
 }
 
@@ -75,11 +128,12 @@ export function buildMenuModel(
   tree: readonly NavCategory[],
   labels: MegaMenuLabels,
   locale: string,
+  groups?: MenuGroups | null,
 ): MenuModel {
   return {
     products: productDepts(tree, locale),
-    services: serviceDept(labels, locale),
-    events: eventDept(labels, locale),
+    services: serviceDept(labels, locale, groups?.services),
+    events: eventDept(labels, locale, groups?.events),
   };
 }
 

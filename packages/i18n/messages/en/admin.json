@@ -3086,6 +3086,101 @@
       "generic": "That did not work. Refresh and try again.",
       "conflict": "Not allowed from its current state (it may already be hidden, or the vendor’s KYC is not approved).",
       "permission": "You do not have permission for this action."
+    },
+    "manageCategories": "Manage categories",
+    "categories": {
+      "title": "Categories",
+      "subtitle": "Control which categories appear on the customer and vendor apps, with images and a publish or block status.",
+      "tabsLabel": "Category areas",
+      "tabs": {
+        "product": "Products",
+        "service": "Services",
+        "event": "Events",
+        "wholesale": "Wholesale"
+      },
+      "hints": {
+        "product": "Shop departments and sub-categories. Blocking hides a category from menus, pickers and its page; existing listings stay readable.",
+        "service": "Service verticals offered by vendors and shown under Services.",
+        "event": "Event categories organisers pick when creating events.",
+        "wholesale": "Bulk and supplies categories for wholesale listings."
+      },
+      "search": "Search categories",
+      "searchButton": "Search",
+      "add": "Add category",
+      "loading": "Loading categories",
+      "loadError": "Categories could not be loaded.",
+      "permissionDenied": "You do not have permission to manage this area.",
+      "retry": "Try again",
+      "empty": "No categories yet",
+      "emptyBody": "Add the first category for this area.",
+      "status": {
+        "published": "Published",
+        "draft": "Draft",
+        "blocked": "Blocked"
+      },
+      "visibility": {
+        "customer": "Customer app",
+        "vendor": "Vendor app"
+      },
+      "actions": {
+        "edit": "Edit",
+        "addChild": "Add sub-category",
+        "publish": "Publish",
+        "unpublish": "Unpublish",
+        "unblock": "Unblock",
+        "block": "Block",
+        "delete": "Delete"
+      },
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down",
+      "form": {
+        "createTitle": "Add category",
+        "editTitle": "Edit category",
+        "summary": "Images are shown on customer menu tiles. Drafts are hidden until published.",
+        "name": "Name",
+        "slug": "Slug (URL)",
+        "parent": "Parent",
+        "noParent": "Top level",
+        "status": "Status",
+        "showCustomer": "Show in customer app",
+        "showVendor": "Show in vendor app",
+        "icon": "Icon token (optional)",
+        "image": "Image",
+        "imageAlt": "Image description",
+        "uploading": "Uploading image",
+        "removeImage": "Remove image",
+        "save": "Save"
+      },
+      "block": {
+        "title": "Block category",
+        "summary": "{name} will disappear from customer menus, category pages and vendor pickers. Existing listings stay visible and are not changed.",
+        "reason": "Reason",
+        "confirm": "Block category"
+      },
+      "delete": {
+        "title": "Delete category",
+        "summary": "Delete {name}? This only works for categories with no listings and no sub-categories. Block it instead to hide it.",
+        "confirm": "Delete category"
+      },
+      "done": {
+        "saved": "Category saved",
+        "created": "Category added",
+        "published": "Category published",
+        "unpublished": "Category moved to draft",
+        "blocked": "Category blocked",
+        "unblocked": "Category published again",
+        "deleted": "Category deleted"
+      },
+      "errors": {
+        "permission": "You do not have permission for this action.",
+        "generic": "Something went wrong. Try again.",
+        "hasListings": "This category has listings. Block it instead of deleting.",
+        "hasChildren": "Move or delete its sub-categories first.",
+        "slugTaken": "That slug is already used.",
+        "cycle": "A category cannot move under itself.",
+        "invalid": "Check the form values and try again.",
+        "upload": "The image could not be uploaded."
+      }
     }
   }
 }

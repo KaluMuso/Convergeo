@@ -1,4 +1,5 @@
 import { LOCALES } from "@vergeo/i18n";
+import Link from "next/link";
 import { setRequestLocale } from "next-intl/server";
 
 import { adminNavPageMetadata } from "../../../lib/admin-page-metadata";
@@ -29,6 +30,15 @@ export default async function CatalogControlPage({ params }: PageProps) {
 
   return (
     <AdminPage title={t("title")} subtitle={t("subtitle")}>
+      <p className="mb-3">
+        <Link
+          href={`/${locale}/catalog/categories`}
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-xs font-medium text-text"
+          data-testid="catalog-categories-link"
+        >
+          {t("manageCategories")}
+        </Link>
+      </p>
       <CatalogControlBoard locale={locale} />
     </AdminPage>
   );
