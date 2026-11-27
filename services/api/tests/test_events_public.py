@@ -819,3 +819,56 @@ def test_neighbourhood_filter_matches_landmark(store: FakeSupabaseStore) -> None
     assert "tonight-gig" in {item.slug for item in hits.items}
     misses = build_browse_response(store, neighbourhood="Woodlands", ref=REF_THURSDAY)
     assert "tonight-gig" not in {item.slug for item in misses.items}
+
+
+def test_detail_and_browse_expose_archetype(store: FakeSupabaseStore) -> None:
+    # Derived from category; details are validated on read.
+    store.events[0]["category_slug"] = "concerts"
+    store.events[0]["archetype_details"] = {"stages": ["Main"]}
+    detail = build_detail_response(store, "tonight-gig")
+    assert detail.archetype == "concert"
+    assert detail.archetype_details == {"stages": ["Main"]}
+    # Organiser override wins over the category.
+    store.events[0]["archetype"] = "religious"
+    store.events[0]["archetype_details"] = {
+        "sponsors": [
+            {"name": "Mosi", "status": "approved"},
+            {"name": "Hidden", "status": "pending"},
+        ]
+    }
+    detail = build_detail_response(store, "tonight-gig")
+    assert detail.archetype == "religious"
+    # Only admin-approved sponsors reach the public payload.
+    assert [s["name"] for s in detail.archetype_details["sponsors"]] == ["Mosi"]
+
+
+def test_detail_degrades_junk_archetype_details(store: FakeSupabaseStore) -> None:
+    store.events[0]["archetype_details"] = {"sponsors": [{"name": "x", "link_url": "javascript:1"}]}
+    assert build_detail_response(store, "tonight-gig").archetype_details == {}
+
+
+def test_detail_without_archetype_columns_is_generic(store: FakeSupabaseStore) -> None:
+    detail = build_detail_response(store, "tonight-gig")
+    assert detail.archetype == "generic"
+    assert detail.archetype_details == {}
+
+
+def test_browse_filters_archetype_free_and_price(store: FakeSupabaseStore) -> None:
+    store.events[0]["category_slug"] = "concerts"  # tonight-gig, K500
+    store.events[1]["category_slug"] = "church"  # weekend-market, K1500
+    kwargs = {"ref": REF_THURSDAY}
+    items = build_browse_response(store, archetype="concert", **kwargs).items
+    assert {i.slug for i in items} == {"tonight-gig"}
+    assert items[0].archetype == "concert"
+    free = build_browse_response(store, free_only=True, **kwargs).items
+    assert {i.slug for i in free} == {"free-meetup"}
+    cheap = build_browse_response(store, price_max_ngwee=60000, **kwargs).items
+    assert "tonight-gig" in {i.slug for i in cheap}
+    assert "weekend-market" not in {i.slug for i in cheap}
+
+
+def test_list_events_endpoint_accepts_new_filters(client: TestClient) -> None:
+    response = client.get("/events?archetype=concert&free=true&price_max=1000")
+    assert response.status_code == 200
+    assert response.json()["archetypes"]
+    assert client.get("/events?archetype=bogus").status_code == 422

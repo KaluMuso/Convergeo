@@ -12,6 +12,12 @@ from app.services.events.access import (
     verify_access_code,
     verify_event_access_proof,
 )
+from app.services.events.archetypes import (
+    ARCHETYPES,
+    EventArchetype,
+    public_details,
+    resolve_archetype,
+)
 from app.services.events.date_windows import (
     DateWindow,
     instance_in_bounds,
@@ -115,6 +121,7 @@ class EventBrowseItem(BaseModel):
     images: list[str] = Field(default_factory=list)
     category: str | None = None
     event_type: str = "standard"
+    archetype: EventArchetype = "generic"
     next_starts_at: datetime | None = None
     min_price_ngwee: int | None = None
     is_free: bool = False
@@ -147,6 +154,7 @@ class EventBrowseResponse(BaseModel):
     items: list[EventBrowseItem]
     total: int
     categories: list[str] = Field(default_factory=lambda: list(EVENT_CATEGORIES))
+    archetypes: list[str] = Field(default_factory=lambda: [str(a) for a in ARCHETYPES])
     calendar_dates: list[str] = Field(default_factory=list)
 
 
@@ -162,6 +170,9 @@ class EventDetailResponse(BaseModel):
     images: list[str] = Field(default_factory=list)
     category: str | None = None
     event_type: str = "standard"
+    # Presentation template + validated optional content (spec: event-type-templates.md).
+    archetype: EventArchetype = "generic"
+    archetype_details: dict[str, Any] = Field(default_factory=dict)
     visibility: Literal["public", "unlisted", "private"] = "public"
     age_restriction: int | None = None
     platform_fee_payer: Literal["organiser", "buyer"] = "organiser"
@@ -492,49 +503,67 @@ def _browse_item_sold_out(
     return _ticket_types_sold_out(ticket_type_rows, tickets_by_type=tickets_by_type)
 
 
+_VENDOR_JOIN = (
+    "organiser_vendor_id, vendors!inner("
+    "id, slug, display_name, preferred_badge, logo_url, description, status, "
+    "vendor_locations(landmark)"
+    ")"
+)
+
+
 def _fetch_published_events(client: Any) -> list[dict[str, Any]]:
-    response = (
-        client.table("events")
-        .select(
-            "id, slug, title, description, venue, lat, lng, images, status, "
-            "category_slug, landmark, event_type, city, "
-            "organiser_vendor_id, vendors!inner("
-            "id, slug, display_name, preferred_badge, logo_url, description, status, "
-            "vendor_locations(landmark)"
-            ")"
-        )
-        .eq("status", "published")
-        # Browse shows only public events; unlisted/private are excluded here and
-        # reachable only by direct slug (detail endpoint, access-gated).
-        .eq("visibility", "public")
-        # D9: no unverified public listings — organiser storefront must be active.
-        .eq("vendors.status", "active")
-        .execute()
+    base = (
+        "id, slug, title, description, venue, lat, lng, images, status, "
+        "category_slug, landmark, event_type, city, "
     )
+
+    def run(extra: str) -> Any:
+        return (
+            client.table("events")
+            .select(f"{base}{extra}{_VENDOR_JOIN}")
+            .eq("status", "published")
+            # Browse shows only public events; unlisted/private are excluded here and
+            # reachable only by direct slug (detail endpoint, access-gated).
+            .eq("visibility", "public")
+            # D9: no unverified public listings — organiser storefront must be active.
+            .eq("vendors.status", "active")
+            .execute()
+        )
+
+    try:
+        response = run("archetype, ")
+    except Exception:
+        # API deployed before the archetype migration: derive from category only.
+        response = run("")
     rows = response.data or []
     return [row for row in rows if isinstance(row, dict)]
 
 
 def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
-    response = (
-        client.table("events")
-        .select(
-            "id, slug, title, description, venue, lat, lng, images, status, "
-            "category_slug, landmark, event_type, visibility, "
-            "age_restriction, platform_fee_payer, id_check_enabled, refund_policy_key, city, "
-            "organiser_vendor_id, vendors!inner("
-            "id, slug, display_name, preferred_badge, logo_url, description, status, "
-            "vendor_locations(landmark)"
-            ")"
-        )
-        .eq("slug", slug)
-        .eq("status", "published")
-        .eq("vendors.status", "active")
-        # No visibility filter: unlisted (direct-link) and private (access-gated)
-        # events are found here; access enforcement happens in build_detail_response.
-        .maybe_single()
-        .execute()
+    base = (
+        "id, slug, title, description, venue, lat, lng, images, status, "
+        "category_slug, landmark, event_type, visibility, "
+        "age_restriction, platform_fee_payer, id_check_enabled, refund_policy_key, city, "
     )
+
+    def run(extra: str) -> Any:
+        return (
+            client.table("events")
+            .select(f"{base}{extra}{_VENDOR_JOIN}")
+            .eq("slug", slug)
+            .eq("status", "published")
+            .eq("vendors.status", "active")
+            # No visibility filter: unlisted (direct-link) and private (access-gated)
+            # events are found here; access enforcement happens in build_detail_response.
+            .maybe_single()
+            .execute()
+        )
+
+    try:
+        response = run("archetype, archetype_details, ")
+    except Exception:
+        # API deployed before the archetype migration: no override, no details.
+        response = run("")
     row = response.data
     return row if isinstance(row, dict) else None
 
@@ -608,6 +637,9 @@ def build_browse_response(
     near_lat: float | None = None,
     near_lng: float | None = None,
     radius_km: float = NEAR_ME_DEFAULT_KM,
+    archetype: EventArchetype | None = None,
+    price_max_ngwee: int | None = None,
+    free_only: bool = False,
 ) -> EventBrowseResponse:
     now = (ref or datetime.now(LUSAKA_TZ)).astimezone(ZoneInfo("UTC"))
     ref_lusaka = (ref or datetime.now(LUSAKA_TZ)).astimezone(LUSAKA_TZ)
@@ -651,6 +683,18 @@ def build_browse_response(
             family=family,
         ):
             continue
+
+        event_archetype, _source = resolve_archetype(
+            event.get("archetype"), event_category, str(event.get("event_type") or "")
+        )
+        if archetype is not None and event_archetype != archetype:
+            continue
+        if free_only and not _event_is_free(event_ticket_types):
+            continue
+        if price_max_ngwee is not None:
+            lowest = _min_price_ngwee(event_ticket_types)
+            if lowest is None or lowest > price_max_ngwee:
+                continue
 
         city_value = event.get("city") if isinstance(event.get("city"), str) else None
         if city and (not city_value or city_value.casefold() != city.casefold()):
@@ -715,6 +759,7 @@ def build_browse_response(
                 images=_parse_images(event.get("images")),
                 category=event_category,
                 event_type=normalize_event_type(event.get("event_type")),
+                archetype=event_archetype,
                 next_starts_at=next_starts_at,
                 min_price_ngwee=_min_price_ngwee(event_ticket_types),
                 is_free=_event_is_free(event_ticket_types),
@@ -903,6 +948,9 @@ def build_detail_response(
 
     now = datetime.now(ZoneInfo("UTC"))
     age_restriction = event.get("age_restriction")
+    archetype, _source = resolve_archetype(
+        event.get("archetype"), category, str(event.get("event_type") or "")
+    )
     return EventDetailResponse(
         id=event_id,
         slug=str(event.get("slug") or ""),
@@ -915,6 +963,8 @@ def build_detail_response(
         images=_parse_images(event.get("images")),
         category=category,
         event_type=normalize_event_type(event.get("event_type")),
+        archetype=archetype,
+        archetype_details=public_details(archetype, event.get("archetype_details")),
         visibility=normalize_visibility(
             event.get("visibility") if isinstance(event.get("visibility"), str) else None
         ),
@@ -955,6 +1005,9 @@ def list_events(
     lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
     radius_km: Annotated[float, Query(gt=0, le=200)] = NEAR_ME_DEFAULT_KM,
     sort: Annotated[EventSort, Query()] = "soonest",
+    archetype: Annotated[EventArchetype | None, Query()] = None,
+    price_max: Annotated[int | None, Query(ge=0, le=1_000_000_000)] = None,
+    free: Annotated[bool, Query()] = False,
 ) -> EventBrowseResponse:
     response = build_browse_response(
         supabase.client,
@@ -966,6 +1019,9 @@ def list_events(
         near_lat=lat,
         near_lng=lng,
         radius_km=radius_km,
+        archetype=archetype,
+        price_max_ngwee=price_max,
+        free_only=free,
     )
     return response.model_copy(update={"items": sort_events(response.items, sort)})
 

@@ -140,6 +140,9 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "POST /admin/catalog/vendors/{entity_id}/moderate",
             "POST /admin/catalog/vendors/{entity_id}/restore",
             # Multi-branch review (#807): mapped to vendors.manage in auth.py.
+            # Event sponsor approval queue (founder decision, 27 Nov).
+            "GET /admin/event-sponsors",
+            "POST /admin/event-sponsors/{event_id}/review",
             "GET /admin/branches",
             "GET /admin/branches/flags",
             "GET /admin/branches/{branch_id}",
