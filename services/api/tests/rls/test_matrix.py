@@ -3489,7 +3489,14 @@ EXPECTATIONS: TableExpectations = {
                 )
             },
         }
-        for table in ("vendor_plans", "vendor_plan_assignments", "vendor_plan_overrides")
+        for table in (
+            "vendor_plans",
+            "vendor_plan_assignments",
+            "vendor_plan_overrides",
+            # Vendor sourcing hub (20261127100000): owner/admin read, API-only writes.
+            "import_requests",
+            "import_request_quotes",
+        )
     },
     # Shared canonical product photos (20261116110100): public read of ACTIVE
     # products' photos (same visibility as the product); no client writes.

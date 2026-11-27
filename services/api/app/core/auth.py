@@ -195,6 +195,10 @@ _ADMIN_ROUTE_PERMISSION_SPEC: dict[tuple[str, str], str | tuple[str, ...]] = {
     ("POST", "/admin/branches/flags/{flag_id}/resolve"): "vendors.manage",
     ("POST", "/admin/branches/businesses/{business_id}/pacra"): "vendors.manage",
     # Extras request queue (catalogue prices + trials stay admin-only).
+    # Import request queue (vendor sourcing hub): data only, no money.
+    ("GET", "/admin/import-requests"): "vendors.manage",
+    ("POST", "/admin/import-requests/{request_id}/status"): "vendors.manage",
+    ("POST", "/admin/import-requests/{request_id}/quotes"): "vendors.manage",
     ("GET", "/admin/extras/requests"): "vendors.manage",
     ("POST", "/admin/extras/requests/{request_id}/transition"): "vendors.manage",
     ("GET", "/admin/vendors"): "vendors.manage",
