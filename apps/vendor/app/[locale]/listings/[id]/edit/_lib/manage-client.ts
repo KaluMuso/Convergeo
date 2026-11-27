@@ -159,6 +159,12 @@ export function createManageClient(getToken: () => string | null | Promise<strin
       return client.request<ListingSummary[]>("/vendor/listings");
     },
 
+    /** Active listings whose canonical product awaits moderation (home dashboard badge). */
+    async countInReview(): Promise<number> {
+      const result = await client.request<{ count: number }>("/vendor/listings/in-review-count");
+      return result.count;
+    },
+
     getListing(listingId: string): Promise<ListingSummary> {
       return client.request<ListingSummary>(`/vendor/listings/${listingId}`);
     },
