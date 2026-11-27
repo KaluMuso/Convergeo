@@ -341,7 +341,6 @@ export function ArchetypeFields({ archetype, draft, onChange, disabled }: Props)
   const tv = useTranslations("vendor");
   const t: Translate = (key) => tv(`events.${key}` as never);
   const sections = ARCHETYPE_SECTIONS[archetype];
-  const has = (section: DetailSection) => sections.includes(section);
 
   return (
     <div className="flex flex-col gap-4" data-testid="archetype-fields" data-archetype={archetype}>
