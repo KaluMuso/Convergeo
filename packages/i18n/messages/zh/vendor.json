@@ -1095,7 +1095,8 @@
       "empty": "没有商品",
       "variantOption": "{group}：{value}",
       "variantSeparator": " · ",
-      "sku": "SKU（商品编码）{sku}"
+      "sku": "SKU（商品编码）{sku}",
+      "untitledItem": "未命名商品"
     },
     "timeline": {
       "heading": "订单进度",

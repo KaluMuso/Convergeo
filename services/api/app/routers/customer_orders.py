@@ -7,6 +7,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.listings.variants import snapshot_options
+from app.services.order_item_titles import display_title, resolve_missing_titles
 from app.services.refunds.constants import AWAITING_PROVIDER_STATUSES
 from fastapi import APIRouter, Depends
 from pydantic import Field
@@ -75,7 +76,8 @@ class OrderItemVariantOption(StrictModel):
 
 class OrderItemSummary(StrictModel):
     id: str
-    title: str
+    #: ``None`` when nothing resolves; the UI renders its translated fallback label.
+    title: str | None = None
     qty: int
     unit_price_ngwee: NgweeInt
     #: Chosen colour/size, from the immutable order-line snapshot.
@@ -260,14 +262,15 @@ def _load_order_items(service_client: _ServiceRoleClient, order_id: str) -> list
         .execute()
     )
     items: list[OrderItemSummary] = []
-    for row in _rows(response):
-        title = row.get("title_snapshot")
+    rows = _rows(response)
+    resolved = resolve_missing_titles(service_client.client, rows)
+    for row in rows:
         snapshot = _variant_snapshot_of(row)
         sku = snapshot.get("sku") if isinstance(snapshot, dict) else None
         items.append(
             OrderItemSummary(
                 id=str(row["id"]),
-                title=str(title).strip() if isinstance(title, str) and title.strip() else "Item",
+                title=display_title(row, resolved),
                 qty=int(row["qty"]),
                 unit_price_ngwee=int(row["unit_price_ngwee"]),
                 variant_options=[
@@ -721,7 +724,7 @@ def get_customer_order(
 
 
 class GiftReceiptItemOut(StrictModel):
-    title: str
+    title: str | None = None
     qty: int
     variant_options: list[OrderItemVariantOption] = Field(default_factory=list)
 
