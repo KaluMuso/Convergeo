@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Only the ephemeral postgres service of the dedicated GitHub Actions job.
 set -euo pipefail
+trap 'echo "ERROR: line $LINENO exited $?: $BASH_COMMAND" >&2' ERR
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
