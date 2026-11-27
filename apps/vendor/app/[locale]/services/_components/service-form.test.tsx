@@ -30,6 +30,13 @@ vi.mock("@vergeo/auth/use-session", () => ({
   }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
+vi.mock("../../events/_components/image-picker", () => ({
+  EventImagePicker: ({ onChange }: { onChange: (images: string[]) => void }) => (
+    <button type="button" onClick={() => onChange(["listings/vendor-1/photo-a"])}>
+      add-photo
+    </button>
+  ),
+}));
 vi.mock("../_lib/services-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../_lib/services-client")>()),
   createServicesClient: () => ({ createService, updateService }),
@@ -377,4 +384,16 @@ it("discards an old save after sign-out even if the same vendor signs in again",
   await act(async () => completeSave({ service: {} }));
   expect(push).not.toHaveBeenCalled();
   expect(refresh).not.toHaveBeenCalled();
+});
+
+it("sends uploaded photos as portfolio_images and opens the edit page to add packages", async () => {
+  createService.mockResolvedValue({ service: { id: "new-service-1" } });
+  mount();
+  fireEvent.click(screen.getByRole("button", { name: "add-photo" }));
+  fireEvent.click(screen.getByRole("button", { name: labels.save }));
+  await waitFor(() => expect(createService).toHaveBeenCalledOnce());
+  expect(createService.mock.calls[0]?.[0]).toMatchObject({
+    portfolio_images: ["listings/vendor-1/photo-a"],
+  });
+  await waitFor(() => expect(push).toHaveBeenCalledWith("/en/services/new-service-1/edit"));
 });

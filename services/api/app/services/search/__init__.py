@@ -72,6 +72,10 @@ class SearchHit(StrictModel):
     #: W8 live offer on this product (any active listing) or listing; flag
     #: `bundles`. Attached by the search router, never part of ranking.
     offer_badge: OfferBadgeOut | None = None
+    #: Cloudinary public id of the hit's first image (listing → its own photo,
+    #: else the canonical product photo; product → canonical photo, else its
+    #: best active listing's photo). Null when the entity has no image.
+    image_public_id: str | None = None
 
 
 class SearchKindTotals(StrictModel):
@@ -554,6 +558,7 @@ async def run_search(
         page_size=normalized_page_size,
     )
     page_items = attach_open_now(client, page_items)
+    page_items = attach_hit_images(client, page_items)
 
     if trimmed:
         # Fire-and-forget analytics: server operational log, written regardless of
@@ -580,6 +585,105 @@ async def run_search(
         facets=facets,
         kind_totals=kind_totals,
     )
+
+
+def _first_image_by(client: Any, table: str, key: str, ids: list[str]) -> dict[str, str]:
+    """Lowest-position ``cloudinary_public_id`` per ``key`` value; fails soft."""
+    if not ids:
+        return {}
+    try:
+        response = (
+            client.table(table)
+            .select(f"{key}, cloudinary_public_id, position")
+            .in_(key, ids)
+            .order("position")
+            .execute()
+        )
+    except Exception:
+        logger.warning("search.image_lookup_failed", extra={"table": table}, exc_info=True)
+        return {}
+    best: dict[str, tuple[int, str]] = {}
+    for row in _rows(response):
+        owner = row.get(key)
+        public_id = row.get("cloudinary_public_id")
+        if not owner or not isinstance(public_id, str) or not public_id.strip():
+            continue
+        raw_position = row.get("position")
+        position = raw_position if isinstance(raw_position, int) else 99
+        current = best.get(str(owner))
+        if current is None or position < current[0]:
+            best[str(owner)] = (position, public_id.strip())
+    return {owner: public_id for owner, (_, public_id) in best.items()}
+
+
+def attach_hit_images(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
+    """Fill ``image_public_id`` on product / listing hits for the result cards.
+
+    ``search_documents`` carries no image, and the customer card used to look for
+    one in ``boost_signals`` (never populated), so every card rendered the
+    placeholder. Only the visible page is enriched (bounded queries).
+    """
+    listing_ids = [hit.entity_id for hit in hits if hit.entity_kind == "listing"]
+    product_ids = [hit.entity_id for hit in hits if hit.entity_kind == "product"]
+    if not listing_ids and not product_ids:
+        return hits
+
+    listing_product: dict[str, str] = {}
+    product_listing: dict[str, str] = {}
+    if listing_ids:
+        try:
+            response = (
+                client.table("vendor_listings")
+                .select("id, product_id")
+                .in_("id", listing_ids)
+                .execute()
+            )
+            for row in _rows(response):
+                if row.get("id") and row.get("product_id"):
+                    listing_product[str(row["id"])] = str(row["product_id"])
+        except Exception:
+            logger.warning("search.image_lookup_failed", extra={"table": "vendor_listings"})
+    if product_ids:
+        try:
+            response = (
+                client.table("vendor_listings")
+                .select("id, product_id")
+                .in_("product_id", product_ids)
+                .eq("status", "active")
+                .execute()
+            )
+            for row in _rows(response):
+                if row.get("id") and row.get("product_id"):
+                    product_listing.setdefault(str(row["product_id"]), str(row["id"]))
+        except Exception:
+            logger.warning("search.image_lookup_failed", extra={"table": "vendor_listings"})
+
+    listing_images = _first_image_by(
+        client,
+        "listing_images",
+        "listing_id",
+        sorted(set(listing_ids) | set(product_listing.values())),
+    )
+    product_images = _first_image_by(
+        client,
+        "product_images",
+        "product_id",
+        sorted(set(product_ids) | set(listing_product.values())),
+    )
+
+    enriched: list[SearchHit] = []
+    for hit in hits:
+        image: str | None = None
+        if hit.entity_kind == "listing":
+            image = listing_images.get(hit.entity_id) or product_images.get(
+                listing_product.get(hit.entity_id, "")
+            )
+        elif hit.entity_kind == "product":
+            image = product_images.get(hit.entity_id) or listing_images.get(
+                product_listing.get(hit.entity_id, "")
+            )
+        enriched.append(hit.model_copy(update={"image_public_id": image}) if image else hit)
+    return enriched
 
 
 def run_suggest(

@@ -115,6 +115,7 @@
       "areaLabel": "Zone de service",
       "fromPriceLabel": "Prix de départ (facultatif)",
       "fromPriceHint": "Laissez vide pour afficher « demander un devis »",
+      "photoAlt": "Photo du service {position}",
       "statusLabel": "Statut",
       "save": "Enregistrer",
       "publish": "Publier",
@@ -133,6 +134,8 @@
     "packages": {
       "title": "Formules",
       "intro": "Proposez jusqu'à trois formules pour que les clients puissent les comparer et demander un devis précis.",
+      "count": "{count} formule(s) sur {max} proposée(s)",
+      "limitReached": "Vous pouvez proposer jusqu'à {max} formules par service : une Basic, une Standard et une Premium. Retirez-en une pour en proposer une autre.",
       "codNote": "Aucun paiement n'est pris quand un client choisit une formule : il vous envoie une demande de devis et vous convenez du prix final dans la discussion.",
       "offer": "Proposer cette formule",
       "notOffered": "Non proposée",

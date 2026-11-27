@@ -54,6 +54,7 @@
     "catalog": "Catalog control",
     "disputes": "Disputes",
     "orders": "Orders",
+    "dispatch": "Dispatch",
     "config": "Configuration",
     "merch": "Merchandising",
     "theme": "Theme presets",

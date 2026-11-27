@@ -26,6 +26,7 @@ from app.routers.checkout import (
     _fetch_cart_items,
     _int_or_zero,
     _normalize_phone,
+    session_is_ordered,
 )
 from app.services.cart.store import fetch_listings_for_items
 from app.services.coupons.rules import MIN_PAYABLE_NGWEE, CouponError, quote_coupon
@@ -135,7 +136,7 @@ def _totals(group: dict[str, Any], *, session_id: str) -> CheckoutTotalsResponse
 
 
 def _require_pending(group: dict[str, Any], session_id: str) -> None:
-    if str(group.get("status") or "") != "pending":
+    if str(group.get("status") or "") != "pending" or session_is_ordered(group):
         raise AppError(
             code="orders.session_already_completed",
             message="Checkout session already completed",

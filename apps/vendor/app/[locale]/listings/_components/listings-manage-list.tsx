@@ -7,7 +7,6 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
-import { VendorGrid } from "../../_components/vendor-page";
 import { VendorRouteHeader } from "../../_components/vendor-route-header";
 import { ListSkeleton } from "../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
@@ -148,7 +147,7 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
           <div className="px-1">
             <ListingStatusGuide />
           </div>
-          <VendorGrid cols="cards" className="px-1">
+          <div className="grid grid-cols-1 gap-4 px-1 md:grid-cols-2 2xl:grid-cols-3">
             {listings.map((listing) => {
               const coverImage = [...(listing.images ?? [])].sort(
                 (left, right) => left.position - right.position,
@@ -156,7 +155,7 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
               return (
                 <div
                   key={listing.id}
-                  className="rounded-lg border border-border p-4 shadow-sm lg:p-5"
+                  className="flex min-w-0 flex-col rounded-lg border border-border p-4 shadow-sm lg:p-5"
                 >
                   <div className="flex items-start gap-3">
                     {coverImage ? (
@@ -177,27 +176,32 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
                         </Link>
                       </div>
                     )}
-                    <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-1">
-                        <p className="truncate text-sm font-medium text-text">{listing.title}</p>
-                        <PriceBlock ngwee={listing.price_ngwee} />
-                        <p className="text-xs text-text-2">
-                          <span className="sr-only">{t("listings.manage.statusLabel")}</span>
-                          <span className="font-medium text-text">
-                            {statusLabel(listing.status, statusLabels)}
-                          </span>
-                        </p>
-                        <ListingVisibilityHint status={listing.status} />
-                        <ListingProductStatusChip
-                          listingStatus={listing.status}
-                          productStatus={listing.product_status}
-                        />
-                      </div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="line-clamp-2 break-words text-sm font-medium text-text">
+                        {listing.title}
+                      </p>
+                      <PriceBlock ngwee={listing.price_ngwee} />
+                    </div>
+                  </div>
+
+                  {/* Status lives on its own full-width row so the hint never wraps in a
+                      narrow column beside the thumbnail (360px phones). */}
+                  <div
+                    className="mt-3 flex flex-col gap-2 border-t border-border pt-3"
+                    data-testid="listing-status-row"
+                  >
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="sr-only">{t("listings.manage.statusLabel")}</span>
                       <Badge
                         variant={statusVariant(listing.status)}
                         label={statusLabel(listing.status, statusLabels)}
                       />
+                      <ListingProductStatusChip
+                        listingStatus={listing.status}
+                        productStatus={listing.product_status}
+                      />
                     </div>
+                    <ListingVisibilityHint status={listing.status} />
                   </div>
 
                   <div className="mt-3 flex items-center justify-between gap-3">
@@ -230,7 +234,7 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
                 </div>
               );
             })}
-          </VendorGrid>
+          </div>
         </>
       )}
     </div>

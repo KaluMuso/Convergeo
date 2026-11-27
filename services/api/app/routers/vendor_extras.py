@@ -11,6 +11,7 @@ Every mutation: vendor role + shop ownership + strict Pydantic + an in-router
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -152,23 +153,35 @@ def _list_requests(client: Any, vendor_id: str) -> list[ExtraRequestOut]:
     return [request_from_row(row) for row in rows]
 
 
-@router.get("", response_model=ExtrasCatalogue)
-async def list_extras(
-    current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
-    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
-) -> ExtrasCatalogue:
-    client: Any = service_client.client
-    vendor = _load_vendor_for_owner(service_client, current_user.id)
-    extras = _rows(
+def _load_active_extras(client: Any) -> list[dict[str, Any]]:
+    return _rows(
         client.table("vendor_extras")
         .select(EXTRA_COLUMNS)
         .eq("active", True)
         .order("position")
         .execute()
     )
+
+
+# Plain ``def`` (not ``async def``): the Supabase client is synchronous, so an async
+# handler would block the event loop for every concurrent request while it waits on
+# Postgres. FastAPI runs a sync handler in its threadpool instead.
+@router.get("", response_model=ExtrasCatalogue)
+def list_extras(
+    current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> ExtrasCatalogue:
+    client: Any = service_client.client
+    # The catalogue does not depend on the vendor, so fetch it while the
+    # vendor -> requests chain runs (3 sequential round-trips become 2).
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        catalogue = pool.submit(_load_active_extras, client)
+        vendor = _load_vendor_for_owner(service_client, current_user.id)
+        requests = _list_requests(client, str(vendor["id"]))
+        extras = catalogue.result()
     return ExtrasCatalogue(
         extras=[extra_from_row(row) for row in extras],
-        requests=_list_requests(client, str(vendor["id"])),
+        requests=requests,
     )
 
 

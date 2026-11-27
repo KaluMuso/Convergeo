@@ -5,14 +5,8 @@ import { Button } from "@vergeo/ui/src/button";
 import { Checkbox } from "@vergeo/ui/src/checkbox";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
-import {
-  isConsentCurrent,
-  saveDeliveryConsent,
-} from "../../../../../lib/delivery-consent";
-import {
-  estimateReadyDate,
-  formatEstimateDate,
-} from "../../../../../lib/delivery-estimate";
+import { isConsentCurrent, saveDeliveryConsent } from "../../../../../lib/delivery-consent";
+import { estimateReadyDate, formatEstimateDate } from "../../../../../lib/delivery-estimate";
 import { CodTrustLine } from "../../../_components/cod-trust-line";
 import { VariantLineLabel } from "../../_components/cart/variant-line-label";
 import {
@@ -27,7 +21,11 @@ import { NextSteps } from "./next-steps";
 import type { CheckoutSession, FulfilmentGroupResult } from "./step-fulfilment";
 import type { PaymentMethod, MomoRail, PaymentOptions } from "./step-payment";
 
+import { cartLineTitle } from "@/lib/cart-line-title";
+
 export type ReviewStepLabels = {
+  /** Translated fallback when a line has no resolvable title (never the listing id). */
+  untitledItem?: string;
   title: string;
   subtitle: string;
   lineItems: string;
@@ -123,8 +121,9 @@ type StepReviewProps = {
 
 function lineTitle(
   item: CheckoutSession["vendor_groups"][number]["items"][number],
+  fallback?: string,
 ): string {
-  return item.title_override?.trim() || item.listing_id;
+  return cartLineTitle(item, fallback);
 }
 
 export function StepReview({
@@ -144,9 +143,7 @@ export function StepReview({
   const [shareConsent, setShareConsent] = useState(false);
   const [shareSaving, setShareSaving] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
-  const hasDelivery =
-    fulfilment?.groups.some((group) => group.fulfilment === "delivery") ??
-    false;
+  const hasDelivery = fulfilment?.groups.some((group) => group.fulfilment === "delivery") ?? false;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -165,8 +162,7 @@ export function StepReview({
     if (payment.method === "card") {
       return labels.methodCard;
     }
-    const railLabel =
-      payment.rail === "airtel" ? labels.railAirtel : labels.railMtn;
+    const railLabel = payment.rail === "airtel" ? labels.railAirtel : labels.railMtn;
     return labels.methodMomo.replace("{rail}", railLabel);
   })();
 
@@ -176,9 +172,7 @@ export function StepReview({
 
   const fulfilmentLine = (vendorId: string): string | null => {
     const guide = labels.codGuide;
-    const group = fulfilment?.groups.find(
-      (entry) => entry.vendor_id === vendorId,
-    );
+    const group = fulfilment?.groups.find((entry) => entry.vendor_id === vendorId);
     if (!guide || !group) {
       return null;
     }
@@ -201,12 +195,9 @@ export function StepReview({
     ) {
       return null;
     }
-    const group = fulfilment?.groups.find(
-      (entry) => entry.vendor_id === vendorId,
-    );
+    const group = fulfilment?.groups.find((entry) => entry.vendor_id === vendorId);
     const kind = group?.fulfilment === "delivery" ? "delivery" : "pickup";
-    const template =
-      kind === "delivery" ? labels.estimatedDelivery : labels.estimatedReady;
+    const template = kind === "delivery" ? labels.estimatedDelivery : labels.estimatedReady;
     if (!template) {
       return null;
     }
@@ -270,9 +261,7 @@ export function StepReview({
   return (
     <div className="space-y-5">
       <div className="space-y-1">
-        <h2 className="font-display text-h2 text-display-ink">
-          {labels.title}
-        </h2>
+        <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
         <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
       </div>
 
@@ -293,9 +282,7 @@ export function StepReview({
             key={group.vendor_id}
             className="space-y-2 rounded-card border border-border bg-surface p-4"
           >
-            <p className="font-body text-sm font-semibold text-text">
-              {group.vendor_name}
-            </p>
+            <p className="font-body text-sm font-semibold text-text">{group.vendor_name}</p>
             {fulfilmentLine(group.vendor_id) ? (
               <p
                 className="font-body text-xs text-text-2"
@@ -312,19 +299,13 @@ export function StepReview({
                   labels.madeToOrderLeadTime,
                   labels.leadTimeWhen,
                 );
-                const estimateLabel = madeToOrderEstimate(
-                  item,
-                  group.vendor_id,
-                );
+                const estimateLabel = madeToOrderEstimate(item, group.vendor_id);
 
                 return (
-                  <li
-                    key={item.id}
-                    className="flex items-start justify-between gap-2 text-sm"
-                  >
+                  <li key={item.id} className="flex items-start justify-between gap-2 text-sm">
                     <span className="min-w-0 break-words font-body text-text-2">
                       <span>
-                        {lineTitle(item)}
+                        {lineTitle(item, labels.untitledItem)}
                         <VariantLineLabel
                           options={item.variant_options}
                           template={labels.variantOption ?? "{value}"}
@@ -408,39 +389,22 @@ export function StepReview({
       <div className="space-y-2 rounded-card border border-border bg-bg-2 px-4 py-3 font-mono text-sm">
         <div className="flex justify-between gap-3">
           <span>{labels.subtotal}</span>
-          <span>
-            {formatK(totals.subtotal_ngwee, { locale: amountLocale })}
-          </span>
+          <span>{formatK(totals.subtotal_ngwee, { locale: amountLocale })}</span>
         </div>
         <div className="flex justify-between gap-3">
           <span>{labels.deliveryFees}</span>
-          <span>
-            {formatK(totals.delivery_fee_ngwee, { locale: amountLocale })}
-          </span>
+          <span>{formatK(totals.delivery_fee_ngwee, { locale: amountLocale })}</span>
         </div>
         {platformFee > 0 && labels.platformFee ? (
-          <div
-            className="flex justify-between gap-3"
-            data-testid="review-platform-fee"
-          >
+          <div className="flex justify-between gap-3" data-testid="review-platform-fee">
             <span>{labels.platformFee}</span>
             <span>{formatK(platformFee, { locale: amountLocale })}</span>
           </div>
         ) : null}
         {totals.discount_ngwee && totals.discount_ngwee > 0 ? (
-          <div
-            className="flex justify-between gap-3 text-success"
-            data-testid="review-discount"
-          >
-            <span>
-              {(labels.discount ?? "{code}").replace(
-                "{code}",
-                totals.coupon_code ?? "",
-              )}
-            </span>
-            <span>
-              −{formatK(totals.discount_ngwee, { locale: amountLocale })}
-            </span>
+          <div className="flex justify-between gap-3 text-success" data-testid="review-discount">
+            <span>{(labels.discount ?? "{code}").replace("{code}", totals.coupon_code ?? "")}</span>
+            <span>−{formatK(totals.discount_ngwee, { locale: amountLocale })}</span>
           </div>
         ) : null}
         <div className="flex justify-between gap-3 font-semibold text-text">
@@ -450,9 +414,7 @@ export function StepReview({
       </div>
 
       <div className="rounded-card border border-border bg-surface px-4 py-3 text-sm">
-        <p className="font-body font-semibold text-text">
-          {labels.paymentMethod}
-        </p>
+        <p className="font-body font-semibold text-text">{labels.paymentMethod}</p>
         <p className="font-body text-text-2">{paymentLabel}</p>
         {payment.method === "momo" && payment.payer_number ? (
           <p className="font-mono text-xs text-text-3">
@@ -485,19 +447,14 @@ export function StepReview({
             className="space-y-2 rounded-card border border-border bg-surface px-4 py-3"
             aria-labelledby={nextId}
           >
-            <p
-              id={nextId}
-              className="font-body text-sm font-semibold text-text"
-            >
+            <p id={nextId} className="font-body text-sm font-semibold text-text">
               {labels.whatHappensNext}
             </p>
             <p className="font-body text-sm text-text-2">{nextCopy}</p>
           </div>
 
           <div className="space-y-2 rounded-card border border-primary/20 bg-primary/5 px-4 py-3">
-            <p className="font-body text-sm font-semibold text-text">
-              {labels.escrowTitle}
-            </p>
+            <p className="font-body text-sm font-semibold text-text">{labels.escrowTitle}</p>
             <ol className="list-decimal space-y-1 pl-5 font-body text-sm text-text-2">
               <li>{labels.escrowStep1}</li>
               <li>{labels.escrowStep2}</li>
@@ -531,15 +488,12 @@ export function StepReview({
               void saveDeliveryConsent(next, "checkout")
                 .then(
                   (saved) => setShareConsent(isConsentCurrent(saved)),
-                  () =>
-                    setShareError(labels.deliveryConsent?.saveFailed ?? null),
+                  () => setShareError(labels.deliveryConsent?.saveFailed ?? null),
                 )
                 .finally(() => setShareSaving(false));
             }}
           />
-          <p className="font-body text-xs text-muted">
-            {labels.deliveryConsent.hint}
-          </p>
+          <p className="font-body text-xs text-muted">{labels.deliveryConsent.hint}</p>
           {shareError ? (
             <p role="alert" className="font-body text-xs text-danger">
               {shareError}
@@ -561,11 +515,7 @@ export function StepReview({
       />
 
       {errorMessage ? (
-        <p
-          ref={errorRef}
-          role="alert"
-          className="font-body text-sm text-danger"
-        >
+        <p ref={errorRef} role="alert" className="font-body text-sm text-danger">
           {errorMessage}
         </p>
       ) : null}

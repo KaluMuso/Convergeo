@@ -11,12 +11,15 @@ export function CategorySelection({
   onChange,
   labels,
   disabled = false,
+  loading = false,
 }: {
   nodes: CategoryNode[];
   value: string;
   onChange: (id: string) => void;
   labels: CategoryLabels;
   disabled?: boolean;
+  /** While the taxonomy is still loading, suppress the "unavailable" alert. */
+  loading?: boolean;
 }) {
   const path = categoryPath(nodes, value);
   const parents: (string | null)[] = [null, ...path.map((node) => node.id)];
@@ -53,7 +56,7 @@ export function CategorySelection({
         );
       })}
       {!disabled && roots.length === 0 ? <p role="status">{labels.empty}</p> : null}
-      {value && path.length === 0 ? <p role="alert">{labels.unavailable}</p> : null}
+      {!loading && value && path.length === 0 ? <p role="alert">{labels.unavailable}</p> : null}
     </div>
   );
 }

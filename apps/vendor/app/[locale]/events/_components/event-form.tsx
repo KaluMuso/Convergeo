@@ -6,7 +6,6 @@ import {
   CategorySelection,
   categoryPath,
   eventCategoryNodes,
-  type CategoryNode,
 } from "@vergeo/ui/src/category-selection";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createEventsClient,
   type EventCategory,
+  type EventCategoryOption,
   type EventCreatePayload,
   type EventDetail,
   type EventType,
@@ -49,7 +49,7 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
   const t = useTranslations("vendor");
   const te = useTranslations("events");
   const taxonomyText = useTranslations("common.categorySelection");
-  const [categoryNodes, setCategoryNodes] = useState<CategoryNode[]>([]);
+  const [categoryRows, setCategoryRows] = useState<EventCategoryOption[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesFailed, setCategoriesFailed] = useState(false);
   const router = useRouter();
@@ -101,6 +101,11 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const eventsClient = useMemo(() => createEventsClient(getToken), [getToken]);
 
+  // Labels are derived from the fetched rows, never inside the fetch effect:
+  // `te` is not referentially stable, and listing it as an effect dependency
+  // re-fired the fetch on every render so "Loading categories..." never cleared.
+  const categoryNodes = useMemo(() => eventCategoryNodes(categoryRows, te), [categoryRows, te]);
+
   useEffect(() => {
     let cancelled = false;
     setCategoriesLoading(true);
@@ -108,7 +113,7 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
     void eventsClient
       .listCategories()
       .then((rows) => {
-        if (!cancelled) setCategoryNodes(eventCategoryNodes(rows, te));
+        if (!cancelled) setCategoryRows(rows);
       })
       .catch(() => {
         if (!cancelled) setCategoriesFailed(true);
@@ -119,7 +124,7 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
     return () => {
       cancelled = true;
     };
-  }, [eventsClient, te]);
+  }, [eventsClient]);
 
   useEffect(() => {
     if (!initialEvent) {
@@ -318,6 +323,7 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
         value={category}
         onChange={setCategory}
         disabled={readOnly || saving || categoriesLoading || categoriesFailed}
+        loading={categoriesLoading}
         labels={{
           category: te("filters.categoryLabel"),
           subcategory: taxonomyText("subcategory"),

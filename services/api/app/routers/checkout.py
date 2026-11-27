@@ -20,6 +20,7 @@ from app.services.cart.grouping import (
     group_by_vendor,
     line_variant_id,
     line_variant_options,
+    listing_display_title,
 )
 from app.services.cart.merge import validate_item_qty_for_listing
 from app.services.cart.read_path import listing_cart_access_conflict, variant_stock_conflict
@@ -56,6 +57,7 @@ from app.services.logistics.delivery_pricing import (
     price_checkout_delivery,
 )
 from app.services.offers.apply import OfferPricing, price_unified
+from app.services.orders.create import checkout_has_orders
 from app.services.payments.state import expire_checkout_group_if_unpaid
 from app.services.rfq.listing_cart_authority import (
     fetch_rfq_threads_for_items,
@@ -963,9 +965,7 @@ def _build_line_views(
                 unit_price_ngwee=unit_price,
                 wholesale=bool(item.get("wholesale", False)),
                 line_total_ngwee=line_total_ngwee(qty, unit_price),
-                title_override=listing.get("title_override")
-                if isinstance(listing.get("title_override"), str)
-                else None,
+                title_override=listing_display_title(listing),
                 product_class=str(listing.get("product_class") or "A"),
                 condition=str(listing.get("condition") or "new"),
                 sale_unit=str(listing.get("sale_unit") or "each"),
@@ -1112,6 +1112,14 @@ COMMIT;
     return released
 
 
+ORDERS_PLACED_KEY = "_orders_placed"
+
+
+def session_is_ordered(group: dict[str, Any]) -> bool:
+    """The session's orders are placed (COD/paid ``completed``, or prepaid awaiting payment)."""
+    return str(group.get("status") or "") == "completed" or bool(group.get(ORDERS_PLACED_KEY))
+
+
 def _ensure_session_active(
     service: ServiceRoleClient, session_id: str, customer_id: str
 ) -> tuple[dict[str, Any], datetime]:
@@ -1134,6 +1142,11 @@ def _ensure_session_active(
                 "session_id": session_id,
             },
         )
+    if status == "pending" and checkout_has_orders(service.client, checkout_group_id=session_id):
+        # A prepaid checkout stays pending (awaiting payment) after its orders are
+        # placed. Its holds are consumed, so the reservation clock no longer
+        # applies; flag it so step guards treat it like a completed session.
+        return {**group, ORDERS_PLACED_KEY: True}, datetime.now(UTC)
 
     expires_at = _session_expires_at(service, session_id)
     if expires_at is None:
@@ -1496,7 +1509,7 @@ async def validate_fulfilment_step(
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> FulfilmentStepResponse:
     active_group, _ = _ensure_session_active(service, body.session_id, current_user.id)
-    if str(active_group.get("status") or "") == "completed":
+    if session_is_ordered(active_group):
         # Totals of an ordered session are what the buyer agreed to pay.
         raise AppError(
             code="orders.session_already_completed",
