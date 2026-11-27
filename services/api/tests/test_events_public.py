@@ -829,11 +829,17 @@ def test_detail_and_browse_expose_archetype(store: FakeSupabaseStore) -> None:
     assert detail.archetype == "concert"
     assert detail.archetype_details == {"stages": ["Main"]}
     # Organiser override wins over the category.
-    store.events[0]["archetype"] = "branded"
-    store.events[0]["archetype_details"] = {"presented_by": {"name": "Mosi"}}
+    store.events[0]["archetype"] = "religious"
+    store.events[0]["archetype_details"] = {
+        "sponsors": [
+            {"name": "Mosi", "status": "approved"},
+            {"name": "Hidden", "status": "pending"},
+        ]
+    }
     detail = build_detail_response(store, "tonight-gig")
-    assert detail.archetype == "branded"
-    assert detail.archetype_details["presented_by"]["name"] == "Mosi"
+    assert detail.archetype == "religious"
+    # Only admin-approved sponsors reach the public payload.
+    assert [s["name"] for s in detail.archetype_details["sponsors"]] == ["Mosi"]
 
 
 def test_detail_degrades_junk_archetype_details(store: FakeSupabaseStore) -> None:

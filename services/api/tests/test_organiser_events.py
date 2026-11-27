@@ -730,12 +730,14 @@ def test_create_derives_archetype_and_validates_details(organiser_client: TestCl
 
 def test_create_override_archetype(organiser_client: TestClient) -> None:
     payload = _create_payload()
-    payload["archetype"] = "branded"
-    payload["archetype_details"] = {"presented_by": {"name": "Mosi"}}
+    payload["archetype"] = "concert"
+    payload["archetype_details"] = {"sponsors": [{"name": "Mosi", "status": "approved"}]}
     body = organiser_client.post("/organiser/events", headers=_auth_headers(), json=payload).json()[
         "event"
     ]
-    assert (body["archetype"], body["archetype_source"]) == ("branded", "override")
+    assert (body["archetype"], body["archetype_source"]) == ("concert", "override")
+    # Client-sent approval is ignored: sponsors start pending until an admin approves.
+    assert body["archetype_details"]["sponsors"][0]["status"] == "pending"
 
 
 def test_create_rejects_details_for_wrong_archetype(
@@ -792,6 +794,6 @@ def test_other_vendor_cannot_write_archetype(
     response = organiser_client.patch(
         f"/organiser/events/{EVENT_A_ID}",
         headers=_auth_headers(TOKEN_B),
-        json={"archetype": "branded"},
+        json={"archetype": "concert"},
     )
     assert response.status_code == 404

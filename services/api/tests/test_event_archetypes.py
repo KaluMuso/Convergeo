@@ -8,7 +8,10 @@ from app.services.events.archetypes import (
     ARCHETYPES,
     CATEGORY_ARCHETYPE,
     derive_archetype,
+    has_pending_sponsor,
+    normalize_sponsors,
     prune_details,
+    public_details,
     read_details,
     resolve_archetype,
     validate_details,
@@ -19,7 +22,7 @@ from app.services.events.archetypes import (
     ("category", "event_type", "expected"),
     [
         ("concerts", "single", "concert"),
-        ("gospel", "single", "concert"),
+        ("gospel", "single", "religious"),
         ("church", "single", "religious"),
         ("religious", "standard", "religious"),
         ("football", "single", "sports_family"),
@@ -38,12 +41,12 @@ def test_derive_archetype(category: str | None, event_type: str | None, expected
 
 def test_category_map_only_targets_known_archetypes() -> None:
     assert set(CATEGORY_ARCHETYPE.values()) <= set(ARCHETYPES)
-    # branded is override-only
-    assert "branded" not in CATEGORY_ARCHETYPE.values()
+    assert "branded" not in ARCHETYPES
 
 
 def test_resolve_prefers_override_and_ignores_junk() -> None:
-    assert resolve_archetype("branded", "church") == ("branded", "override")
+    assert resolve_archetype("concert", "church") == ("concert", "override")
+    assert resolve_archetype("branded", "church") == ("religious", "derived")
     assert resolve_archetype(None, "church") == ("religious", "derived")
     assert resolve_archetype("not-real", "church") == ("religious", "derived")
 
@@ -112,15 +115,40 @@ def test_sports_family_age_groups_and_bounds() -> None:
         validate_details("sports_family", {"activities": [{"name": "x"}] * 21})
 
 
-def test_branded_presented_by_and_activations() -> None:
-    out = validate_details(
-        "branded",
-        {
-            "presented_by": {"name": "Mosi", "logo": "sponsors/mosi"},
-            "activations": [{"title": "Tasting"}],
-        },
-    )
-    assert out["presented_by"]["logo"] == "sponsors/mosi"
+def test_sponsor_status_is_server_controlled() -> None:
+    sponsor = {"name": "Mosi", "logo": "sponsors/mosi", "status": "approved"}
+    fresh = normalize_sponsors(validate_details("concert", {"sponsors": [sponsor]}), None)
+    assert fresh["sponsors"][0]["status"] == "pending"  # client status ignored
+    stored = {"sponsors": [{**sponsor, "status": "approved"}]}
+    same = normalize_sponsors(validate_details("concert", {"sponsors": [sponsor]}), stored)
+    assert same["sponsors"][0]["status"] == "approved"  # unchanged keeps status
+    edited = {**sponsor, "link_url": "https://mosi.example/new"}
+    changed = normalize_sponsors(validate_details("concert", {"sponsors": [edited]}), stored)
+    assert changed["sponsors"][0]["status"] == "pending"  # edit requires re-review
+    assert has_pending_sponsor(changed)
+    assert not has_pending_sponsor(same)
+
+
+def test_public_details_show_approved_sponsors_only() -> None:
+    raw = {
+        "stages": ["Main"],
+        "sponsors": [
+            {"name": "A", "status": "approved"},
+            {"name": "B", "status": "pending"},
+            {"name": "C", "status": "rejected"},
+            {"name": "D"},
+        ],
+    }
+    out = public_details("concert", raw)
+    assert [s["name"] for s in out["sponsors"]] == ["A"]
+    assert out["stages"] == ["Main"]
+    none = public_details("concert", {"sponsors": [{"name": "B", "status": "pending"}]})
+    assert "sponsors" not in none
+
+
+def test_sponsors_allowed_on_every_archetype() -> None:
+    for archetype in ARCHETYPES:
+        assert validate_details(archetype, {"sponsors": [{"name": "Mosi"}]})["sponsors"]
 
 
 def test_private_gathering_and_generic() -> None:

@@ -27,7 +27,6 @@ EventArchetype = Literal[
     "sports_family",
     "restaurant",
     "private_gathering",
-    "branded",
     "generic",
 ]
 
@@ -37,7 +36,6 @@ ARCHETYPES: tuple[EventArchetype, ...] = (
     "sports_family",
     "restaurant",
     "private_gathering",
-    "branded",
     "generic",
 )
 
@@ -47,7 +45,7 @@ CATEGORY_ARCHETYPE: dict[str, EventArchetype] = {
     "music": "concert",
     "concerts": "concert",
     "festivals": "concert",
-    "gospel": "concert",
+    "gospel": "religious",
     "nightlife": "concert",
     "comedy-theatre-parent": "concert",
     "comedy-theatre": "concert",
@@ -130,11 +128,19 @@ Long = Annotated[str, Field(min_length=1, max_length=500)]
 AgePolicy = Literal["all_ages", "guardian_under_12", "16_plus", "18_plus"]
 
 
+SponsorStatus = Literal["pending", "approved", "rejected"]
+
+
 class Sponsor(StrictModel):
+    """Sponsor band entry. ``status`` is server-controlled: organiser input is ignored
+    and re-derived on every write (see ``normalize_sponsors``); only admin review
+    sets ``approved``/``rejected``. The public payload shows approved sponsors only."""
+
     name: Short
     logo: ImageRef | None = None
     link_url: HttpsUrl | None = None
     tagline: Annotated[str, Field(max_length=120)] | None = None
+    status: SponsorStatus = "pending"
 
 
 class Faq(StrictModel):
@@ -193,11 +199,6 @@ class MenuSection(StrictModel):
     items: list[MenuItem] = Field(min_length=1, max_length=12)
 
 
-class Activation(StrictModel):
-    title: Short
-    description: Annotated[str, Field(max_length=200)] | None = None
-
-
 # ---------------------------------------------------------------------------
 # Per-archetype models (extra keys forbidden by StrictModel)
 # ---------------------------------------------------------------------------
@@ -246,13 +247,6 @@ class RestaurantDetails(CommonDetails):
     host_name: Annotated[str, Field(max_length=80)] | None = None
 
 
-class BrandedDetails(CommonDetails):
-    presented_by: Sponsor | None = None
-    activations: list[Activation] = Field(default_factory=list, max_length=8)
-    promo_note: Annotated[str, Field(max_length=200)] | None = None
-    giveaway_note: Annotated[str, Field(max_length=200)] | None = None
-
-
 class PrivateGatheringDetails(CommonDetails):
     host_names: Annotated[str, Field(max_length=120)] | None = None
     occasion: Annotated[str, Field(max_length=80)] | None = None
@@ -271,7 +265,6 @@ _MODELS: dict[EventArchetype, type[CommonDetails]] = {
     "sports_family": SportsFamilyDetails,
     "restaurant": RestaurantDetails,
     "private_gathering": PrivateGatheringDetails,
-    "branded": BrandedDetails,
     "generic": GenericDetails,
 }
 
@@ -281,7 +274,11 @@ def details_model(archetype: EventArchetype) -> type[CommonDetails]:
 
 
 def _dump(model: CommonDetails) -> dict[str, Any]:
-    return model.model_dump(mode="json", exclude_none=True, exclude_defaults=True)
+    out = model.model_dump(mode="json", exclude_none=True, exclude_defaults=True)
+    if isinstance(out.get("sponsors"), list):
+        # exclude_defaults drops status="pending"; sponsors always carry it explicitly.
+        out["sponsors"] = [{**sp, "status": sp.get("status", "pending")} for sp in out["sponsors"]]
+    return out
 
 
 def validate_details(archetype: EventArchetype, raw: object) -> dict[str, Any]:
@@ -334,3 +331,53 @@ def read_details(archetype: EventArchetype, raw: object) -> dict[str, Any]:
         return validate_details(archetype, raw)
     except AppError:
         return {}
+
+
+# ---------------------------------------------------------------------------
+# Sponsor approval (founder decision: logos/links need admin approval)
+# ---------------------------------------------------------------------------
+
+_STATUSES = ("pending", "approved", "rejected")
+
+
+def sponsor_signature(sponsor: dict[str, Any]) -> tuple[str, str, str, str]:
+    return tuple(  # type: ignore[return-value]
+        str(sponsor.get(key) or "") for key in ("name", "logo", "link_url", "tagline")
+    )
+
+
+def normalize_sponsors(new: dict[str, Any], previous: object) -> dict[str, Any]:
+    """Re-derive sponsor status on an organiser write (client-sent status is ignored).
+
+    A sponsor whose name/logo/link/tagline is unchanged keeps its stored status
+    (including ``rejected``); anything new or edited goes back to ``pending``.
+    """
+    sponsors = new.get("sponsors")
+    if not isinstance(sponsors, list) or not sponsors:
+        return new
+    known: dict[tuple[str, str, str, str], str] = {}
+    if isinstance(previous, dict) and isinstance(previous.get("sponsors"), list):
+        for old in previous["sponsors"]:
+            if isinstance(old, dict):
+                status = old.get("status", "pending")
+                known[sponsor_signature(old)] = status if status in _STATUSES else "pending"
+    out = [{**sp, "status": known.get(sponsor_signature(sp), "pending")} for sp in sponsors]
+    return {**new, "sponsors": out}
+
+
+def has_pending_sponsor(details: object) -> bool:
+    if not isinstance(details, dict) or not isinstance(details.get("sponsors"), list):
+        return False
+    return any(
+        isinstance(sp, dict) and sp.get("status", "pending") == "pending"
+        for sp in details["sponsors"]
+    )
+
+
+def public_details(archetype: EventArchetype, raw: object) -> dict[str, Any]:
+    """Public read: validated details with only admin-approved sponsors."""
+    details = read_details(archetype, raw)
+    sponsors = [sp for sp in details.get("sponsors", []) if sp.get("status") == "approved"]
+    if sponsors:
+        return {**details, "sponsors": sponsors}
+    return {key: value for key, value in details.items() if key != "sponsors"}
