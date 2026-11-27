@@ -659,7 +659,7 @@
     "services/api/tests/test_kyc_state.py": "d21615ea47e9b11b9c5ff9f857462d5e1fda75a806d0d92e5383bebe2f4c83ff",
     "services/api/tests/test_listing_below_median.py": "9f7e814f2c4c58f088f6f41ade21790edeede53b32e928e7801ad48db3d08796",
     "services/api/tests/test_listing_create.py": "f35948e2fd024b19e34a4b191b9aec427cf3a727aeaf52a7c9f443c018cba604",
-    "services/api/tests/test_listing_manage.py": "8f2a2472ba15391f652f2cdd6712928e29df9be3fbbe7bf75f8501bbe93466c9",
+    "services/api/tests/test_listing_manage.py": "697af6acecfad9372700b0b65635175d442211852fab597ca9738efca161bd49",
     "services/api/tests/test_listing_pricing.py": "4fd1cff67152052fa9e49f84a69f8011ad058e568affe22cbd03bd87a81bd5ce",
     "services/api/tests/test_location_stock.py": "9695617bfcb9813bd788aaa3b12bf9806895fe5c43ab4cafde8c83332f7d64e8",
     "services/api/tests/test_order_state.py": "4268058cd995e82a2b86d8bea0937ab19892483ff5ee61f61b662cbbe057a703",
