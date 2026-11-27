@@ -216,9 +216,7 @@ _OFFER_ERROR_RE = re.compile(
 )
 
 
-def _offer_item_columns_sql(
-    line: CartLineInput, *, parent_item_id: str | None
-) -> tuple[str, str]:
+def _offer_item_columns_sql(line: CartLineInput, *, parent_item_id: str | None) -> tuple[str, str]:
     """Extra order_items columns that freeze the offer pricing on the line."""
     if line.offer_id is None:
         return "", ""
@@ -319,9 +317,7 @@ $gift$;
 """
 
 
-def _ticket_claims_valid_sql(
-    *, customer_sql: str, line: TicketOrderLineInput
-) -> str:
+def _ticket_claims_valid_sql(*, customer_sql: str, line: TicketOrderLineInput) -> str:
     """Abort unless every claim of the line is still a live, unlinked claim of this
     buyer for this type and instance (row-locked, so issuance / the stale sweeper
     cannot race it). A voided or reused claim -> FIXA_HOLD_INVALID (410)."""
@@ -350,9 +346,7 @@ $tk$;
 """
 
 
-def _consume_ticket_holds_sql(
-    *, session_sql: str, order_sql: str, expected: int
-) -> str:
+def _consume_ticket_holds_sql(*, session_sql: str, order_sql: str, expected: int) -> str:
     return f"""
 DO $th$
 DECLARE
@@ -457,6 +451,13 @@ BEGIN
   END IF;
   IF v_status <> 'pending' THEN
     RAISE EXCEPTION '{_ALREADY_COMPLETED_MARKER}:%', v_status;
+  END IF;
+  -- A prepaid group stays 'pending' after its orders are placed (it completes on
+  -- payment success), so 'pending' alone no longer means "no orders yet".
+  IF EXISTS (
+    SELECT 1 FROM public.orders WHERE checkout_group_id = {session_sql}
+  ) THEN
+    RAISE EXCEPTION '{_ALREADY_COMPLETED_MARKER}:placed';
   END IF;
 END
 $lock$;
@@ -981,6 +982,36 @@ def _result_from_group(group: dict[str, Any], *, client: Any, replayed: bool) ->
     )
 
 
+def checkout_has_orders(client: Any, *, checkout_group_id: str) -> bool:
+    """True once orders exist for the checkout group.
+
+    A COD checkout is marked ``completed`` when its orders are placed, but a
+    prepaid (mobile money / card) checkout stays ``pending`` until the payment
+    succeeds, because ``claim_payable_payment`` only claims a ``pending`` group.
+    So "has this session been ordered" is answered by the orders themselves, not
+    by ``checkout_groups.status`` alone.
+    """
+    response = (
+        client.table("orders")
+        .select("id")
+        .eq("checkout_group_id", checkout_group_id)
+        .limit(1)
+        .execute()
+    )
+    data = getattr(response, "data", None)
+    return isinstance(data, list) and len(data) > 0
+
+
+def _is_ordered(client: Any, group: dict[str, Any]) -> bool:
+    """The group's orders are placed: ``completed`` (COD / paid) or ``pending`` with orders."""
+    status = str(group.get("status"))
+    if status == "completed":
+        return True
+    if status != "pending":
+        return False
+    return checkout_has_orders(client, checkout_group_id=str(group["id"]))
+
+
 def _resolve_completed_after_race(
     client: Any,
     *,
@@ -988,14 +1019,14 @@ def _resolve_completed_after_race(
     customer_id: str,
     idempotency_key: str,
 ) -> CreateOrdersResult:
-    """Return the idempotent result after a concurrent submit completed the group.
+    """Return the idempotent result after a concurrent submit placed the orders.
 
     Applies the same rule as the pre-transaction guard: a submit replaying its own
     idempotency_key gets the existing order set back; a distinct key hitting an
-    already-completed session is a conflict.
+    already-ordered session is a conflict.
     """
     completed = _fetch_checkout_session(client, session_id=session_id, customer_id=customer_id)
-    if str(completed.get("status")) == "completed" and (
+    if _is_ordered(client, completed) and (
         str(completed.get("idempotency_key")) == idempotency_key
     ):
         return _result_from_group(completed, client=client, replayed=True)
@@ -1016,10 +1047,12 @@ def replay_if_completed(
 ) -> CreateOrdersResult | None:
     """Return the existing order set when this session has already been ordered.
 
-    ``None`` means the session is not completed and the caller should carry on.
-    A completed session replayed with its own idempotency key returns the same
-    orders; any other key is a conflict. Callers use this before they read the
-    cart, because a placed COD order has already taken its lines out of it.
+    ``None`` means the session has no orders yet and the caller should carry on.
+    An ordered session replayed with its own idempotency key returns the same
+    orders; any other key is a conflict. "Ordered" is ``completed`` (COD, or a
+    paid prepaid checkout) or ``pending`` with orders (prepaid awaiting payment).
+    Callers use this before they read the cart, because a placed COD order has
+    already taken its lines out of it.
     """
     response = (
         client.table("checkout_groups")
@@ -1030,7 +1063,7 @@ def replay_if_completed(
         .execute()
     )
     row = response.data if response is not None else None
-    if not isinstance(row, dict) or str(row.get("status")) != "completed":
+    if not isinstance(row, dict) or not _is_ordered(client, row):
         return None
     if str(row.get("idempotency_key")) == idempotency_key:
         return _result_from_group(row, client=client, replayed=True)
@@ -1092,10 +1125,7 @@ def _validate_vendor_groups(
             details={"expected": session_delivery_fee, "actual": delivery_sum},
         )
 
-    if (
-        session_subtotal + session_delivery_fee + platform_fee - session_discount
-        != session_total
-    ):
+    if session_subtotal + session_delivery_fee + platform_fee - session_discount != session_total:
         raise AppError(
             code="orders.totals_mismatch",
             message="Checkout session total is inconsistent",
@@ -1203,12 +1233,12 @@ def create_orders_atomic(
     existing = _fetch_existing_by_idempotency_key(
         client, idempotency_key=idempotency_key, customer_id=customer_id
     )
-    if existing is not None and str(existing.get("status")) == "completed":
+    if existing is not None and _is_ordered(client, existing):
         return _result_from_group(existing, client=client, replayed=True)
 
     session = _fetch_checkout_session(client, session_id=session_id, customer_id=customer_id)
     session_status = str(session.get("status") or "")
-    if session_status == "completed":
+    if _is_ordered(client, session):
         if str(session.get("idempotency_key")) == idempotency_key:
             return _result_from_group(session, client=client, replayed=True)
         raise AppError(
@@ -1434,9 +1464,8 @@ INSERT INTO public.orders (
                     f", {_sql_json(line.variant_snapshot or {})}::jsonb"
                 )
             offer_columns, offer_values = _offer_item_columns_sql(
-                line, parent_item_id=parent_item_by_cart_line.get(
-                    line.offer_parent_cart_item_id or ""
-                )
+                line,
+                parent_item_id=parent_item_by_cart_line.get(line.offer_parent_cart_item_id or ""),
             )
             if not line.is_offer_gift:
                 parent_item_by_cart_line.setdefault(line.cart_item_id, item.order_item_id)
@@ -1538,11 +1567,16 @@ INSERT INTO public.notification_outbox (
     statements.append(_consume_reservations_sql(session_id))
     if cod:
         statements.append(_clear_ordered_cart_lines_sql(cart_lines, customer_sql))
+    # COD is final once placed, so its group completes here. A prepaid group must
+    # stay 'pending': claim_payable_payment only claims a pending group, and
+    # apply_prepaid_collection_success completes it when the payment succeeds.
+    # The idempotency key is persisted either way so a retried POST /orders
+    # replays the placed orders.
+    complete_sql = "status = 'completed',\n    " if cod else ""
     statements.append(
         f"""
 UPDATE public.checkout_groups
-SET status = 'completed',
-    idempotency_key = {idem_sql},
+SET {complete_sql}idempotency_key = {idem_sql},
     updated_at = timezone('utc', now())
 WHERE id = {session_sql};
 """
