@@ -3,6 +3,7 @@
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { glassClass } from "./glass";
 import { getFocusableElements, useFocusTrap, useScrollLock } from "./modal";
 
 const DISMISS_THRESHOLD_PX = 80;
@@ -23,7 +24,6 @@ export type BottomSheetProps = {
 const scrimStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  backgroundColor: "color-mix(in srgb, var(--panel) 55%, transparent)",
   zIndex: 50,
   display: "flex",
   alignItems: "flex-end",
@@ -149,10 +149,8 @@ export function BottomSheet({
   }
 
   const sheetStyle: React.CSSProperties = {
-    background: "var(--surface)",
     color: "var(--text)",
     borderRadius: "var(--r-lg) var(--r-lg) 0 0",
-    boxShadow: "var(--shadow-3)",
     width: "100%",
     maxWidth: "40rem",
     maxHeight: snapHeight === "auto" ? "85vh" : snapHeight,
@@ -177,11 +175,13 @@ export function BottomSheet({
       aria-labelledby={titleId}
       onClick={handleScrimClick}
       data-testid={dataTestId}
+      className="v-glass-scrim"
       style={scrimStyle}
       tabIndex={-1}
     >
       <div
         ref={sheetRef}
+        className={glassClass("overlay")}
         style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={handlePointerDown}
