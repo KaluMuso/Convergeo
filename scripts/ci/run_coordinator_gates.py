@@ -351,7 +351,7 @@ def main() -> int:
         runner.execute_gate(args.gate)
     except Exception as exc:
         runner.results.update(accepted=False, error=runner.redact(str(exc)))
-        detail = str(runner.results["error"])[:2000]
+        detail = str(runner.results["error"])[:2200]
         print("::error::coordinator gate failure: " + detail, file=sys.stderr)
     finally:
         runner.finish()

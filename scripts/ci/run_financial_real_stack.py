@@ -267,7 +267,8 @@ class Runner:
             f.write(json.dumps({"step": name, "command": [self.redact(a) for a in args],
                                 "exit": status, "cwd": str(cwd)}) + "\n")
         if checked and status:
-            raise RuntimeError(f"{name} failed with exit {status}; see sanitized log")
+            tail = self.redact(text)[-1500:]
+            raise RuntimeError(f"{name} failed with exit {status}; see sanitized log\n{tail}")
         return status, text
 
     def pull_postgrest_image(self) -> None:
@@ -596,7 +597,7 @@ def main() -> int:
     except Exception as exc:
         runner.results["accepted"] = False
         runner.results["error"] = runner.redact(str(exc))
-        detail = str(runner.results["error"])[:2000]
+        detail = str(runner.results["error"])[:2200]
         print("::error::real-stack failure: " + detail, file=sys.stderr)
     finally:
         runner.finish()
