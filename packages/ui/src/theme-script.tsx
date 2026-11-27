@@ -34,10 +34,10 @@ export function resolveInitialTheme(stored: string | null, prefersDark: boolean)
  * (and body bg/text) paint correctly with no flash. Self-contained, no imports,
  * wrapped in try/catch so a storage exception can never block render.
  *
- * CSP note: this is inline. The customer CSP ships script policy as
- * Content-Security-Policy-Report-Only (nonce placeholder not yet substituted),
- * so it executes and is only reported; vendor/admin set no script CSP. When a
- * live per-request nonce lands, pass it through `nonce` on <ThemeScript/>.
+ * CSP note: this is inline. The customer middleware allows it by `'sha256-…'` hash of
+ * exactly `THEME_SCRIPT` (static bytes, so ISR pages stay static) — change this string
+ * and the hash follows automatically. Pass `nonce` to <ThemeScript/> only where a
+ * per-request nonce is available.
  */
 export const THEME_SCRIPT = `(function(){try{var tk="${THEME_STORAGE_KEY}";var ak="${ACCENT_STORAGE_KEY}";var ts=localStorage.getItem(tk);var d=window.matchMedia("(prefers-color-scheme: dark)").matches;var t=(ts==="light"||ts==="dark")?ts:(d?"dark":"light");document.documentElement.dataset.theme=t;var a=localStorage.getItem(ak);var ac=(a==="mono"||a==="green"||a==="blue"||a==="gold")?a:"mono";document.documentElement.dataset.accent=ac;}catch(e){document.documentElement.dataset.accent="mono";}})();`;
 

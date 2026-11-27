@@ -35,13 +35,15 @@ export function StandaloneListingBody({
 }: StandaloneListingBodyProps) {
   const t = useTranslations("catalog");
   const indicatorLabel = useCallback(
-    (current: number, total: number) =>
-      t("pdp.gallery.indicator", { current, total }),
+    (current: number, total: number) => t("pdp.gallery.indicator", { current, total }),
     [t],
   );
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:items-start">
+    <div
+      data-pdp-zoom-root
+      className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:items-start"
+    >
       <PdpGallery
         images={images}
         cloudName={cloudName}
@@ -50,18 +52,20 @@ export function StandaloneListingBody({
         nextLabel={galleryLabels.next}
         indicatorLabel={indicatorLabel}
       />
-      <BuyBox
-        listing={listing}
-        labels={buyBoxLabels}
-        pickupLabels={pickupLabels}
-        singleVendor={false}
-        seller={{
-          displayName: sellerName,
-          preferred: false,
-          ratingLabel: null,
-        }}
-        locale={locale}
-      />
+      <div data-pdp-zoom-target className="min-w-0">
+        <BuyBox
+          listing={listing}
+          labels={buyBoxLabels}
+          pickupLabels={pickupLabels}
+          singleVendor={false}
+          seller={{
+            displayName: sellerName,
+            preferred: false,
+            ratingLabel: null,
+          }}
+          locale={locale}
+        />
+      </div>
     </div>
   );
 }

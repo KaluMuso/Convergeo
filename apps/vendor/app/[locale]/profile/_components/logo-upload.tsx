@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { cloudinaryPreviewUrl } from "../../../../lib/cloudinary-preview";
 import {
   downscaleImageFile,
   uploadToCloudinaryWithProgress,
@@ -83,7 +84,14 @@ export function LogoUpload({ logoUrl, disabled, getToken, onUploaded }: LogoUplo
       <div className="flex items-center gap-4">
         <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-border bg-surface">
           {logoUrl ? (
-            <img src={logoUrl} alt={t("profile.logo.alt")} className="h-full w-full object-cover" />
+            <img
+              src={cloudinaryPreviewUrl(logoUrl, 160)}
+              alt={t("profile.logo.alt")}
+              width={80}
+              height={80}
+              decoding="async"
+              className="h-full w-full object-cover"
+            />
           ) : (
             <span className="text-xs text-text-3">{t("profile.logo.empty")}</span>
           )}

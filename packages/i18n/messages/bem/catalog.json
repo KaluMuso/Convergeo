@@ -105,6 +105,7 @@
       "sponsored": "Sponsored",
       "sponsoredBy": "Sponsored by {advertiser}",
       "adCta": "Learn more",
+      "visitVendor": "Visit {vendor}",
       "loadingMore": "Loading more",
       "end": "You're all caught up",
       "retry": "Try again",

@@ -1,10 +1,10 @@
 "use client";
 
-import { getBrowserAccessToken } from "@vergeo/auth";
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { createApiClient } from "@vergeo/config";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
+import { getBrowserAccessToken } from "./access-token";
 import { getApiBaseUrl } from "./api-base-url";
 
 export const rolesApi = createApiClient({

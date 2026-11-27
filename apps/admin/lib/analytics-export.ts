@@ -1,7 +1,6 @@
 "use client";
 
-import { getBrowserAccessToken } from "@vergeo/auth";
-
+import { getBrowserAccessToken } from "./access-token";
 import { getApiBaseUrl } from "./api-base-url";
 
 export type ExportFailure = "permission" | "error";

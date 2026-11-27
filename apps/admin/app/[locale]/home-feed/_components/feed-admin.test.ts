@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: async () => null }));
+vi.mock("../../../../lib/access-token", () => ({ getBrowserAccessToken: async () => null }));
 
 import { formatCtr, NEXT_STATUSES } from "../../advertising/_components/AdvertisingBoard";
 

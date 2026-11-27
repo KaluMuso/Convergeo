@@ -372,7 +372,7 @@ type HomeHeroBandProps = {
  */
 export function HomeHeroBand({ locale, brandName, sponsoredSlides }: HomeHeroBandProps) {
   return (
-    <div data-testid="home-hero-band">
+    <div data-testid="home-hero-band" className="v-home-hero-band">
       <HomeHeroCarousel locale={locale} brandName={brandName} sponsoredSlides={sponsoredSlides} />
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { glassClass } from "@vergeo/ui/src/glass";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -115,7 +116,7 @@ export function AdminCommandPalette({ locale }: AdminCommandPaletteProps) {
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${dialogId}-title`}
-            className="animate-page-in w-full max-w-lg overflow-hidden rounded-xl border border-border bg-surface shadow-2"
+            className={`${glassClass("overlay")} animate-page-in w-full max-w-lg overflow-hidden rounded-xl`}
             onClick={(event) => event.stopPropagation()}
             data-testid="admin-command-palette"
           >

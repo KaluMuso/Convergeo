@@ -4,10 +4,11 @@ import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { ThemeScript } from "@vergeo/ui/src/theme-script";
 import { ToastProvider } from "@vergeo/ui/src/toast";
 import { notFound } from "next/navigation";
-import { NextIntlClientProvider } from "next-intl";
+import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { resolveVendorNavCapabilities } from "../../lib/nav-capabilities";
+import { BASE_SPEC, pickMessages, specNamespaces } from "../../lib/route-messages";
 import { SentryInit } from "../sentry-init";
 
 import { VendorShell } from "./_components/vendor-shell";
@@ -45,37 +46,24 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   }
 
   setRequestLocale(locale);
-  // The vendor dashboard's client views call useTranslations("vendor"), so the
-  // namespace must live on the app-wide provider — the shared request config
-  // only ships `common`, which previously left those views rendering raw keys.
-  // Capabilities run in the same batch as the catalogs: they used to start only
-  // after every namespace had loaded, putting the slowest probe on every page's
-  // critical path.
-  const [
-    baseMessages,
-    vendorMessages,
-    serviceMessages,
-    eventMessages,
-    notificationMessages,
-    navCapabilities,
-  ] = await Promise.all([
+  // Only the shell chrome ships here (BASE_SPEC: nav, business switcher, trial banner,
+  // bell). Each route segment layout adds the branches its views read through
+  // <RouteMessages>; shipping every catalog on every page cost ~170KB raw of RSC payload.
+  // Capabilities run in the same batch as the catalogs so the slowest probe is not
+  // serialised behind them.
+  const baseNamespaces = specNamespaces(BASE_SPEC);
+  const [baseMessages, baseLoaded, navCapabilities] = await Promise.all([
     getMessages(),
-    loadNamespace(locale as Locale, "vendor"),
-    loadNamespace(locale as Locale, "services"),
-    loadNamespace(locale as Locale, "events"),
-    loadNamespace(locale as Locale, "notifications"),
+    Promise.all(baseNamespaces.map((namespace) => loadNamespace(locale as Locale, namespace))),
     resolveVendorNavCapabilities(),
   ]);
-  const notificationsAll = notificationMessages as Record<string, unknown>;
-  const messages = {
-    ...baseMessages,
-    vendor: vendorMessages,
-    services: serviceMessages,
-    // Event forms/lists call useTranslations("events") (category labels, pickers).
-    events: eventMessages,
-    // Notification center copy only — not the WhatsApp/SMS/email templates.
-    notifications: { center: notificationsAll.center, inApp: notificationsAll.inApp },
-  };
+  const messages: Record<string, unknown> = { ...baseMessages };
+  baseNamespaces.forEach((namespace, index) => {
+    messages[namespace] = pickMessages(
+      baseLoaded[index] ?? {},
+      BASE_SPEC[namespace as keyof typeof BASE_SPEC],
+    );
+  });
 
   // Translated toast copy for emitToastKey() call sites (common.toast).
   const toastCopy = (
@@ -91,7 +79,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
       </head>
       <body className="font-body antialiased">
         <ThemeProvider>
-          <NextIntlClientProvider messages={messages}>
+          <NextIntlClientProvider messages={messages as AbstractIntlMessages}>
             {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
             <SentryInit />
             {/* Authenticated chrome; header + nav, bare children on the login route. */}
