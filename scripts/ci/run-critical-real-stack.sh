@@ -12,7 +12,7 @@ cp "$manifest" "$evidence/expected-nodes.txt"
 git rev-parse HEAD HEAD^{tree} > "$evidence/source.txt"
 python3 scripts/ci/critical-real-stack-report.py results \
   --manifest "$manifest" --dir "$evidence/junit" --exits "$evidence/exits.tsv" \
-  --output "$evidence/results.json" >/dev/null || true
+  --output "$evidence/results.json" >/dev/null 2>&1 || true
 
 if [[ "${GITHUB_ACTIONS:-}" != true || "${GITHUB_REPOSITORY:-}" != KaluMuso/Convergeo || -z "${RUNNER_TEMP:-}" ]]; then
   echo 'ERROR: this database-creating packet only runs in the repository GitHub Actions service job' >&2
