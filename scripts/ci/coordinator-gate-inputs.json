@@ -630,7 +630,7 @@
     "scripts/ci/run_financial_real_stack.py": "7e61ef3d4e885bec312e315816f7ed86ecad1aabc6e383d9f7184e2d1efda4f5",
     "scripts/drills/f2_collection_manifest.py": "655cdeafbaf6017870dadb9677a3e7315bc7d25f245528440048220ecb8c782e",
     "scripts/drills/f2_real_stack_report.py": "ac274ad1292f6998e17514d268c3c9bc0692730122c2ca2e46c7c76891ca75c8",
-    "scripts/drills/f2_upgrade_probe.py": "d1826a771138a39671e892ed7ab907dace76bac82897c882615c581917f43486",
+    "scripts/drills/f2_upgrade_probe.py": "e475fa8843d5a921755ce8e8f7cdf35a3611a25ad43b45252341948b7ad4cf6c",
     "services/api/tests/lane_d/test_f2_cancellation_postgrest.py": "9d375a03b12843a2500ad99727363f2e888eb24c55e23a6f2657f2c7fa13d79f",
     "services/api/tests/lane_d/test_f2_service_funding_postgrest.py": "fecf76ebce8c8b502c234f6108ffcc43cf25192cf482834e10727a06b54f7668",
     "services/api/tests/real_stack/f3_reconciliation_real_stack.py": "6509b718c2f97e964403c823f4ff9bb5822a7fcbbde4c9bbd8ba401388bba7e4",
