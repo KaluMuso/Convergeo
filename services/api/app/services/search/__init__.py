@@ -36,7 +36,9 @@ from app.services.search.search_facets import (
     compute_search_facets,
     filter_search_hits,
 )
+from app.services.search.signal_filters import SearchSignalFilters, apply_signal_filters
 from app.services.search.synonyms import expand_query
+from app.services.signals import ListingSignals
 from pydantic import Field
 
 logger = logging.getLogger(__name__)
@@ -72,6 +74,8 @@ class SearchHit(StrictModel):
     #: W8 live offer on this product (any active listing) or listing; flag
     #: `bundles`. Attached by the search router, never part of ranking.
     offer_badge: OfferBadgeOut | None = None
+    #: Badges / ribbon / market facts for product + listing hits (attached by the router).
+    signals: ListingSignals | None = None
     #: Cloudinary public id of the hit's first image (listing → its own photo,
     #: else the canonical product photo; product → canonical photo, else its
     #: best active listing's photo). Null when the entity has no image.
@@ -459,6 +463,7 @@ async def run_search(
     user_lng: float | None = None,
     include_kind_totals: bool = False,
     analytics_session_id: str | None = None,
+    signal_filters: SearchSignalFilters | None = None,
 ) -> SearchResponse:
     trimmed = query.strip()
     expanded_query = expand_query(client, trimmed)
@@ -552,6 +557,10 @@ async def run_search(
     # paginating. Ranking is byte-identical when no location is supplied.
     if user_lat is not None and user_lng is not None:
         display_hits = _geo_rerank(display_hits, user_lat=user_lat, user_lng=user_lng)
+    if signal_filters is not None and signal_filters.active:
+        display_hits = apply_signal_filters(
+            client, display_hits, signal_filters, user_lat=user_lat, user_lng=user_lng
+        )
     page_items, total = paginate(
         display_hits,
         page=normalized_page,

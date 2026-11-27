@@ -10,7 +10,8 @@ from app.routers.checkout_payment import DEFAULT_COD_CAP_NGEWEE, _load_cod_cap_n
 from app.routers.products import _aggregate_vendor_ratings, _parse_vendor_row
 from app.services.listings.demo import fetch_demo_listing_ids
 from app.services.logistics.delivery_pricing import RawLine, price_checkout_delivery
-from fastapi import APIRouter, Depends
+from app.services.signals import ListingSignals, build_signals_for_listing_ids
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/products", tags=["comparison"])
@@ -82,6 +83,8 @@ class ComparisonListingItem(BaseModel):
     pickup_available: bool
     delivery_fee_ngwee: int | None = None
     delivery_funding: DeliveryFundingKind | None = None
+    #: Cheapest / near-you / verified-ribbon etc. for this seller's row (fail-soft).
+    signals: ListingSignals | None = None
 
 
 class ComparisonResponse(BaseModel):
@@ -306,5 +309,18 @@ def build_comparison(
 async def get_product_comparison(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
+    lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
 ) -> ComparisonResponse:
-    return build_comparison(supabase.client, slug)
+    response = build_comparison(supabase.client, slug)
+    facts = build_signals_for_listing_ids(
+        supabase.client,
+        [row.id for row in response.listings],
+        # Only a complete pair drives "near you".
+        user_lat=lat if lng is not None else None,
+        user_lng=lng if lat is not None else None,
+    )
+    for row in response.listings:
+        fact = facts.get(row.id.lower())
+        row.signals = fact.to_wire() if fact is not None else None
+    return response

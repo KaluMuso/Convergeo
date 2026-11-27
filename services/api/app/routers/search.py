@@ -20,6 +20,7 @@ from app.services.search.query_builder import (
     MAX_PAGE_SIZE,
     SearchKind,
 )
+from app.services.search.signal_filters import SearchSignalFilters, attach_hit_signals
 from fastapi import APIRouter, Depends, Header, Query, Request
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -65,6 +66,12 @@ async def search(
     lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
     include_kind_totals: Annotated[bool, Query()] = False,
     analytics_session: AnalyticsSessionHeader = None,
+    verified: Annotated[bool, Query()] = False,
+    deals: Annotated[bool, Query()] = False,
+    in_stock: Annotated[bool, Query()] = False,
+    made_in_zambia: Annotated[bool, Query()] = False,
+    min_rating: Annotated[int | None, Query(ge=1, le=5)] = None,
+    radius_km: Annotated[float | None, Query(gt=0, le=500)] = None,
 ) -> SearchResponse:
     if lat is not None and lng is not None:
         _rate_limit_geo_read(request, supabase)
@@ -83,8 +90,22 @@ async def search(
         user_lng=lng if lat is not None else None,
         include_kind_totals=include_kind_totals,
         analytics_session_id=analytics_session,
+        signal_filters=SearchSignalFilters(
+            verified=verified,
+            deals=deals,
+            in_stock=in_stock,
+            made_in_zambia=made_in_zambia,
+            min_rating=min_rating,
+            radius_km=radius_km,
+        ),
     )
     _attach_offer_badges(supabase.client, response)
+    attach_hit_signals(
+        supabase.client,
+        response.results,
+        user_lat=lat if lng is not None else None,
+        user_lng=lng if lat is not None else None,
+    )
     return response
 
 
