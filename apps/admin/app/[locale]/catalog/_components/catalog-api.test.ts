@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: () => "token" }));
+vi.mock("../../../../lib/access-token", () => ({ getBrowserAccessToken: () => "token" }));
 
 import { actionsFor, canAccessTab, catalogPath, type CatalogEntity } from "./catalog-api";
 

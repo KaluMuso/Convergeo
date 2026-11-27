@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: () => null }));
+vi.mock("../../../../lib/access-token", () => ({ getBrowserAccessToken: () => null }));
 
 import {
   adminActions,
@@ -23,11 +23,7 @@ const draft = (patch: Partial<ExtraDraft>): ExtraDraft => ({
 
 describe("extras admin helpers", () => {
   it("mirrors the DB state machine's admin edges", () => {
-    expect(adminActions("requested")).toEqual([
-      "quoted",
-      "approved",
-      "cancelled",
-    ]);
+    expect(adminActions("requested")).toEqual(["quoted", "approved", "cancelled"]);
     expect(adminActions("quoted")).toEqual(["quoted", "approved", "cancelled"]);
     expect(adminActions("approved")).toEqual(["fulfilled", "cancelled"]);
     expect(adminActions("fulfilled")).toEqual([]);
@@ -50,21 +46,15 @@ describe("extras admin helpers", () => {
       price_ngwee: 50000,
       price_max_ngwee: null,
     });
-    expect(
-      extraPayload(draft({ pricing: "range", price: "500", priceMax: "5000" })),
-    ).toMatchObject({
-      price_ngwee: 50000,
-      price_max_ngwee: 500000,
-    });
-    expect(
-      extraPayload(draft({ pricing: "range", price: "500", priceMax: "500" })),
-    ).toBeNull();
-    expect(
-      extraPayload(draft({ pricing: "fixed", priceMax: "10" })),
-    ).toBeNull();
-    expect(
-      extraPayload(draft({ pricing: "pay_as_you_go", price: "" })),
-    ).toMatchObject({
+    expect(extraPayload(draft({ pricing: "range", price: "500", priceMax: "5000" }))).toMatchObject(
+      {
+        price_ngwee: 50000,
+        price_max_ngwee: 500000,
+      },
+    );
+    expect(extraPayload(draft({ pricing: "range", price: "500", priceMax: "500" }))).toBeNull();
+    expect(extraPayload(draft({ pricing: "fixed", priceMax: "10" }))).toBeNull();
+    expect(extraPayload(draft({ pricing: "pay_as_you_go", price: "" }))).toMatchObject({
       price_ngwee: null,
     });
     expect(extraPayload(draft({ price: "abc" }))).toBeNull();
