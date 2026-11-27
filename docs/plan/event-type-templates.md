@@ -111,8 +111,8 @@ vs `tickets_sold`, early-bird fields, `kind`.
 - **Restaurant:** set-menu and table tickets are separate types ("Table for 4",
   "5-course set menu"); `seating_note` explains table assignment. **No seat map and no
   table inventory in MVP** (a table is a ticket type with a `qty_cap`).
-- **Branded:** several price tiers as concert; promo codes are **later** (needs the
-  offers engine to accept event tickets — open question 3).
+- **Branded:** several price tiers as concert; promo codes use the **existing** event promo
+  mechanism at purchase (no change); the page only shows an optional note (open question 3).
 
 ## Archetype-specific optional fields (validated JSON)
 
@@ -185,8 +185,7 @@ tests under `scripts/ci/` and `services/api/tests/`.
 
 1. Is `gospel` a concert or a religious event by default? (Spec: concert, overridable.)
 2. Should `branded` be a page type at all, or only a sponsor band on any archetype?
-3. Promo codes for branded events: extend the offers engine to event tickets, or issue
-   per-event codes inside ticketing? (Needs a money-path review; excluded here.)
+3. Promo codes: event ticketing already has promo-code discounts (`services/events/promo.py`, resolved at purchase). Branded events reuse them unchanged; this series only adds a display `promo_note`. Is that enough, or should the organiser UI surface promo management on the branded form?
 4. Donation tickets: display-only note now, or build pay-what-you-want (a payment change)?
 5. Restaurant "table bookings": is a ticket type with a cap per table size enough, or do
    you need real table/seat selection?
