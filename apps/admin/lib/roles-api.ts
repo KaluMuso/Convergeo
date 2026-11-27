@@ -2,7 +2,7 @@
 
 import { getBrowserAccessToken } from "@vergeo/auth";
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
-import { createApiClient } from "@vergeo/config";
+import { ApiError, createApiClient } from "@vergeo/config";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "./api-base-url";
@@ -105,17 +105,46 @@ type PermissionCheck = {
   error: boolean;
 };
 
+/**
+ * How long the last confirmed grants may paint the next route while a background
+ * recheck runs. Presentation only: every privileged API request reloads current
+ * database roles, so a stale paint can never authorise an action or expose data.
+ */
+export const ADMIN_GRANTS_REUSE_MS = 120_000;
+
+function sameGrants(a: AdminPermissions | null, b: AdminPermissions): boolean {
+  if (!a) return false;
+  return (
+    a.user_id === b.user_id &&
+    a.unrestricted === b.unrestricted &&
+    a.can_manage_roles === b.can_manage_roles &&
+    a.permissions.length === b.permissions.length &&
+    [...a.permissions].sort().join("|") === [...b.permissions].sort().join("|")
+  );
+}
+
+/** A real answer from the API about the caller (401/403, malformed grants), not a transport blip. */
+function isDefinitiveFailure(error: unknown): boolean {
+  if (error instanceof ApiError) return error.status !== 0 && error.status < 500;
+  return true;
+}
+
 export function useAdminPermissionCheck(route: string | null) {
   const [check, setCheck] = useState<PermissionCheck>({
     route: null,
     grants: null,
     error: false,
   });
+  // Last grants the API confirmed for this signed-in account. Lets a route change keep
+  // painting while the recheck runs, instead of making every navigation wait one extra
+  // `/admin/me/permissions` round trip before the new page can even start its own fetch.
+  const confirmedRef = useRef<{ grants: AdminPermissions; at: number } | null>(null);
   const refreshRef = useRef<() => void>(() => {});
   const refresh = useCallback(() => refreshRef.current(), []);
 
   useEffect(() => {
     if (route === null) {
+      confirmedRef.current = null;
       setCheck({ route: null, grants: null, error: false });
       return;
     }
@@ -124,27 +153,59 @@ export function useAdminPermissionCheck(route: string | null) {
     let unsubscribe: (() => void) | undefined;
     let authTimer: number | undefined;
 
-    function reload() {
+    // "hard": drop the grants first (initial load, refocus, explicit refresh after a role
+    // mutation, account switch). "soft": used only when moving to another route within the
+    // same session; keep painting the last confirmed grants while rechecking, and let a
+    // definitive failure or a changed grant set win.
+    function reload(mode: "hard" | "soft" = "hard") {
       if (!active) return;
       const current = ++request;
-      setCheck({ route, grants: null, error: false });
+      const reusable =
+        mode === "soft" &&
+        confirmedRef.current !== null &&
+        Date.now() - confirmedRef.current.at < ADMIN_GRANTS_REUSE_MS
+          ? confirmedRef.current.grants
+          : null;
+      if (reusable) {
+        setCheck((previous) =>
+          previous.route === route && previous.grants && !previous.error
+            ? previous
+            : { route, grants: reusable, error: false },
+        );
+      } else {
+        confirmedRef.current = null;
+        setCheck({ route, grants: null, error: false });
+      }
       void loadAdminPermissions().then(
         (grants) => {
-          if (active && current === request) setCheck({ route, grants, error: false });
+          if (!active || current !== request) return;
+          const previous = confirmedRef.current?.grants ?? null;
+          const next = sameGrants(previous, grants) ? (previous as AdminPermissions) : grants;
+          confirmedRef.current = { grants: next, at: Date.now() };
+          setCheck({ route, grants: next, error: false });
         },
-        () => {
-          if (active && current === request) setCheck({ route, grants: null, error: true });
+        (error: unknown) => {
+          if (!active || current !== request) return;
+          if (reusable && !isDefinitiveFailure(error)) return;
+          confirmedRef.current = null;
+          setCheck({ route, grants: null, error: true });
         },
       );
     }
 
-    function onVisibility() {
-      if (document.visibilityState === "visible") reload();
+    // Refocus stays strict on purpose: a same-route recheck clears the grants first, so a
+    // revoked grant removes the page at once (admin-nav-capabilities.test.ts pins this).
+    function onFocus() {
+      reload("hard");
     }
 
-    refreshRef.current = reload;
-    reload();
-    window.addEventListener("focus", reload);
+    function onVisibility() {
+      if (document.visibilityState === "visible") reload("hard");
+    }
+
+    refreshRef.current = () => reload("hard");
+    reload("soft");
+    window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
     void getBrowserClient().then(
       (client) => {
@@ -156,15 +217,17 @@ export function useAdminPermissionCheck(route: string | null) {
           // Clear old-account grants immediately. Defer auth reads until the
           // Supabase callback releases its session lock.
           ++request;
+          confirmedRef.current = null;
           setCheck({ route, grants: null, error: false });
           window.clearTimeout(authTimer);
-          authTimer = window.setTimeout(reload, 0);
+          authTimer = window.setTimeout(() => reload("hard"), 0);
         });
         unsubscribe = () => subscription.unsubscribe();
       },
       () => {
         if (active) {
           ++request;
+          confirmedRef.current = null;
           setCheck({ route, grants: null, error: true });
         }
       },
@@ -175,14 +238,20 @@ export function useAdminPermissionCheck(route: string | null) {
       refreshRef.current = () => {};
       window.clearTimeout(authTimer);
       unsubscribe?.();
-      window.removeEventListener("focus", reload);
+      window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [route]);
 
-  // Reject a previous route's snapshot before effects run on navigation.
-  return {
-    ...(check.route === route ? check : { route, grants: null, error: false }),
-    refresh,
-  };
+  if (check.route === route) {
+    return { ...check, refresh };
+  }
+  // Reject a previous route's snapshot before effects run on navigation, but paint the
+  // account's recently confirmed grants so the new page mounts (and fetches) at once.
+  const confirmed = confirmedRef.current;
+  const reusable =
+    route !== null && confirmed !== null && Date.now() - confirmed.at < ADMIN_GRANTS_REUSE_MS
+      ? confirmed.grants
+      : null;
+  return { route, grants: reusable, error: false, refresh };
 }
