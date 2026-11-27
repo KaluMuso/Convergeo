@@ -12,6 +12,7 @@ import http.client
 import json
 import re
 import shutil
+import sys
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -350,6 +351,8 @@ def main() -> int:
         runner.execute_gate(args.gate)
     except Exception as exc:
         runner.results.update(accepted=False, error=runner.redact(str(exc)))
+        detail = str(runner.results["error"])[:2200]
+        print("::error::coordinator gate failure: " + detail, file=sys.stderr)
     finally:
         runner.finish()
     return 0 if runner.results["accepted"] else 1

@@ -35,6 +35,7 @@ for attempt in 1 2 3; do
   if (( pull_status == 124 || pull_status == 137 )) || \
       ! printf '%s\n' "$last_error" | grep -Eiq 'toomanyrequests:[[:space:]]*rate exceeded'; then
     echo "PostgREST pull failed (exit $pull_status); see $attempt_log" >&2
+    tail -n 20 "$attempt_log" >&2 || true
     exit "$pull_status"
   fi
   if (( attempt == max_attempts )); then
