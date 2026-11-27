@@ -1278,7 +1278,25 @@
   }
 }
 
+/* Dim + lightly frosted scrim behind glass modals and sheets. */
+.v-glass-scrim {
+  background-color: color-mix(in srgb, var(--panel) 55%, transparent);
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .v-glass-scrim {
+    background-color: color-mix(in srgb, var(--panel) 40%, transparent);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+}
+
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .v-glass-scrim {
+    background-color: color-mix(in srgb, var(--panel) 70%, transparent);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
   .v-glass,
   .v-glass--bar,
   .v-glass--overlay,
@@ -1291,10 +1309,9 @@
 }
 
 /* ── Mobile bottom nav (bottom-nav.tsx) — native-feeling tab bar ─────────── */
+/* Surface comes from .v-glass .v-glass--bar (glassClass("bar-bottom")). */
 .v-bottom-nav {
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  -webkit-backdrop-filter: saturate(1.4) blur(12px);
-  backdrop-filter: saturate(1.4) blur(12px);
+  isolation: isolate;
 }
 
 .v-bottom-nav__icon {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 
+import { glassClass } from "./glass";
 import { IconAccount, IconCart } from "./icons";
 
 export type AppHeaderVariant = "shop" | "auth" | "account" | "marketing";
@@ -309,7 +310,9 @@ export function AppHeader({
       data-variant={variant}
       data-compact={compact ? "true" : "false"}
       className={mergeClasses(
-        "sticky top-0 z-50 border-b border-border bg-surface/95 supports-[backdrop-filter]:bg-surface/90",
+        "sticky top-0 z-50",
+        // Solid at rest; frosted glass once the page scrolls (compact).
+        compact ? glassClass("bar") : "border-b border-border bg-surface",
         className,
       )}
       style={{
