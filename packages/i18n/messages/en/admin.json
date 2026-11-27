@@ -63,6 +63,7 @@
     "intake": "WhatsApp intake",
     "clips": "Clips moderation",
     "events": "High-value events",
+    "eventSponsors": "Event sponsor review",
     "roles": "Admin roles",
     "services": "Services",
     "inventory": "Inventory",
@@ -345,6 +346,35 @@
       "confirmReject": "Confirm reject",
       "cancel": "Cancel",
       "reasonPlaceholder": "Reason (shown to the applicant)"
+    }
+  },
+  "eventSponsors": {
+    "title": "Event sponsor review",
+    "subtitle": "Approve organiser-submitted sponsor bands before logos and links appear on the public event page.",
+    "queue": {
+      "loading": "Loading sponsor queue…",
+      "empty": "No pending sponsors",
+      "emptyHint": "When an organiser adds sponsors that need review, they appear here.",
+      "error": "Could not load the sponsor queue.",
+      "permissionDenied": "You do not have permission to review event sponsors.",
+      "retry": "Retry",
+      "organiser": "Organiser: {name}",
+      "eventStatus": "Event status: {status}",
+      "viewEvent": "View event",
+      "approve": "Approve",
+      "reject": "Reject",
+      "rejectTitle": "Reject sponsor",
+      "rejectHint": "Give the organiser a short reason so they can fix the band.",
+      "noteLabel": "Reason (optional)",
+      "notePlaceholder": "e.g. logo is blurry or the link is broken",
+      "cancel": "Cancel",
+      "confirmReject": "Reject sponsor",
+      "actionError": "Could not save this decision. Try again.",
+      "conflict": "This event changed while you were reviewing. The queue was reloaded.",
+      "decisionSaved": "Decision saved.",
+      "tagline": "Tagline: {text}",
+      "link": "Link: {url}",
+      "logoAlt": "Logo for {name}"
     }
   },
   "events": {
