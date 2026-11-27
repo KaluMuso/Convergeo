@@ -162,3 +162,14 @@ export function adminRouteAllowedByAlternateItem(
     /^\/orders\/(?!dispatch$)[^/]+$/.test(rest) && (capabilities.orders || capabilities.dispatch)
   );
 }
+
+/**
+ * Items the unrestricted `admin` role does not inherit: role management and account
+ * lookup are superadmin-only and the audit log needs an explicit `audit.read`. The
+ * API refuses them to `admin`, so the shell denies the URL as well as hiding the link.
+ */
+export const ADMIN_EXPLICIT_GRANT_ITEMS: ReadonlySet<AdminNavItemKey> = new Set([
+  "roles",
+  "accounts",
+  "auditLog",
+]);

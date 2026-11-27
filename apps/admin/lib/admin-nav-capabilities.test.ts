@@ -617,3 +617,30 @@ describe("logistics.manage reaches the dispatch board and order detail only", ()
     }
   });
 });
+
+describe("explicit-grant destinations are denied by URL, not only hidden", () => {
+  it.each(["/en/roles", "/en/accounts", "/en/audit-log"])(
+    "denies %s to an unrestricted admin who lacks the explicit grant",
+    async (path) => {
+      current = grants([], true);
+      current.can_manage_roles = false;
+      await renderRoute(path);
+      expect(container.querySelector("[data-protected-route]")).toBeNull();
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
+    },
+  );
+
+  it("opens them for a superadmin holding every grant", async () => {
+    current = { permissions: ["audit.read"], unrestricted: true, can_manage_roles: true };
+    for (const path of ["/en/roles", "/en/accounts", "/en/audit-log"]) {
+      await renderRoute(path);
+      expect(container.querySelector(`[data-protected-route="${path}"]`)).not.toBeNull();
+    }
+  });
+
+  it("opens the audit log to a restricted role holding audit.read only", async () => {
+    current = grants(["audit.read"]);
+    await renderRoute("/en/audit-log");
+    expect(container.querySelector('[data-protected-route="/en/audit-log"]')).not.toBeNull();
+  });
+});
