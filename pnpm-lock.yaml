@@ -344,6 +344,9 @@ importers:
       '@vergeo/config':
         specifier: workspace:*
         version: link:../config
+      jose:
+        specifier: 5.10.0
+        version: 5.10.0
     devDependencies:
       '@types/node':
         specifier: 22.20.5
@@ -1909,7 +1912,7 @@ packages:
   '@serwist/utils@9.5.13':
     resolution: {integrity: sha512-jJJSvl0pSc6udJ7pN2u0oduOfQqSY6oJNjbIc82YcVnkpzj1O+qFHYdrR6tu9bspa30Nc8ZVV+VncOcyguvk5w==}
     peerDependencies:
-      browserslist: 4.28.7
+      browserslist: 4.28.8
     peerDependenciesMeta:
       browserslist:
         optional: true

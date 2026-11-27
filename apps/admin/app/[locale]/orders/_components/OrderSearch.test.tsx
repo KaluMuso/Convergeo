@@ -3,7 +3,13 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ORDERS_PAGE_SIZE, OrderSearch, orderSearchParams, shortOrderRef } from "./OrderSearch";
+import {
+  ORDERS_PAGE_SIZE,
+  OrderSearch,
+  orderSearchParams,
+  readFiltersFromSearch,
+  shortOrderRef,
+} from "./OrderSearch";
 
 const mocks = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock("next-intl", () => ({ useTranslations: (ns: string) => (key: string) => `${ns}.${key}` }));
@@ -12,7 +18,7 @@ vi.mock("./api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./api")>();
   return { ...actual, ordersApi: { request: mocks.request } };
 });
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: async () => "t" }));
+vi.mock("../../../../lib/access-token", () => ({ getBrowserAccessToken: async () => "t" }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: ReturnType<typeof createRoot>;
 let host: HTMLDivElement;
@@ -115,5 +121,45 @@ describe("OrderSearch", () => {
     expect(
       orderSearchParams({ orderId: "", phone: "", vendor: "", status: "" }, null).toString(),
     ).toBe("");
+  });
+});
+
+describe("OrderSearch filters in the URL", () => {
+  it("restores every filter from the address bar and runs that search once", async () => {
+    window.history.replaceState({}, "", "/en/orders?phone=0971&vendor=lusaka&status=placed");
+    mocks.request.mockResolvedValue([order(1)]);
+    await act(async () => root.render(<OrderSearch locale="en" />));
+    await vi.waitFor(() =>
+      expect(host.querySelector('[data-testid="orders-results-table"]')).toBeTruthy(),
+    );
+    expect(mocks.request).toHaveBeenCalledTimes(1);
+    expect(mocks.request).toHaveBeenCalledWith(
+      "/admin/orders/search?phone=0971&vendor=lusaka&status=placed",
+    );
+    const inputs = host.querySelectorAll("input");
+    expect((inputs[1] as HTMLInputElement).value).toBe("0971");
+    expect((inputs[2] as HTMLInputElement).value).toBe("lusaka");
+  });
+
+  it("mirrors an applied search into the URL without adding history entries", async () => {
+    mocks.request.mockResolvedValue([order(1)]);
+    const before = window.history.length;
+    await act(async () => root.render(<OrderSearch locale="en" />));
+    await vi.waitFor(() => expect(mocks.request).toHaveBeenCalled());
+    await act(async () => {
+      setInputValue(host.querySelectorAll("input")[1]!, "0970000000");
+      (host.querySelector("form") as HTMLFormElement).requestSubmit();
+    });
+    await vi.waitFor(() => expect(window.location.search).toBe("?phone=0970000000"));
+    expect(window.history.length).toBe(before);
+  });
+
+  it("ignores unknown statuses and caps free text from a hand-edited link", () => {
+    expect(readFiltersFromSearch("?status=bogus&order_id=" + "x".repeat(200))).toEqual({
+      orderId: "x".repeat(80),
+      phone: "",
+      vendor: "",
+      status: "",
+    });
   });
 });

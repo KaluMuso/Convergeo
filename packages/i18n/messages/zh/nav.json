@@ -52,5 +52,53 @@
   "auth": {
     "backToShop": "返回商店",
     "help": "帮助"
+  },
+  "megaMenu": {
+    "railAria": "浏览分类",
+    "groupProducts": "商品",
+    "groupServices": "服务",
+    "groupEvents": "活动",
+    "forYou": "为你推荐的分类",
+    "viewAll": "查看全部",
+    "browseFeatured": "浏览精选",
+    "viewAllIn": "查看{name}全部",
+    "close": "关闭菜单",
+    "menuOpen": "菜单",
+    "drawerAria": "主菜单",
+    "mainMenu": "主菜单",
+    "back": "返回主菜单",
+    "helloGuest": "你好，请登录",
+    "helloUser": "你好，{name}",
+    "signIn": "登录或创建账户",
+    "shopByDepartment": "按分类选购",
+    "services": "服务",
+    "events": "活动",
+    "deals": "优惠",
+    "sell": "在 Convergeo 开店",
+    "helpSettings": "帮助与设置",
+    "account": "我的账户",
+    "orders": "我的订单",
+    "help": "帮助中心",
+    "seeAll": "查看全部",
+    "seeLess": "收起",
+    "allIn": "{name}全部",
+    "serviceVerticals": {
+      "beauty": "美容",
+      "food-catering": "餐饮与外卖",
+      "auto": "汽车与维修",
+      "printing-creative": "印刷与创意",
+      "home-services": "家政服务",
+      "tech-services": "技术服务",
+      "cleaning": "清洁",
+      "tailoring": "裁缝"
+    },
+    "eventCategories": {
+      "workshops": "工作坊与教育",
+      "comedy-theatre": "喜剧与戏剧",
+      "pop-up-dinners": "快闪晚宴",
+      "cultural-arts": "文化与艺术",
+      "lifestyle-community": "生活方式与社区",
+      "free-rsvp": "免费报名"
+    }
   }
 }
