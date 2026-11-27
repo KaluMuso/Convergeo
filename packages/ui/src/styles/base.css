@@ -1167,6 +1167,12 @@
       transparent
     );
   }
+
+  /* A bare gradient on a dark photo was invisible: reveal the chevron on hover so
+     the zone reads as navigation without a permanent arrow button. */
+  .v-hero__zone:hover .v-hero__zone-chevron {
+    opacity: 0.9;
+  }
 }
 
 .v-hero__zone:focus-visible {
@@ -1176,13 +1182,20 @@
 }
 
 .v-hero__zone-chevron {
-  display: none;
+  display: inline-flex;
+  opacity: 0;
+  filter: drop-shadow(0 1px 3px color-mix(in srgb, var(--panel) 70%, transparent));
+  transition: opacity var(--dur) var(--ease-std);
 }
 
 .v-hero__zone:focus-visible .v-hero__zone-chevron {
-  display: inline;
-  font-size: 1.5rem;
-  line-height: 1;
+  opacity: 1;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .v-hero__zone-chevron {
+    display: none;
+  }
 }
 
 .v-hero__dots-pill {
