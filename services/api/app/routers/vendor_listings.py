@@ -436,7 +436,7 @@ def _resolve_listing_status(mode: ListingMode, publish: bool) -> str:
 
 
 @router.get("/categories", response_model=list[CategoryOption])
-async def list_listing_categories(
+def list_listing_categories(
     _current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[CategoryOption]:

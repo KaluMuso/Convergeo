@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { formatSpecValue } from "../../../../../lib/spec-value";
 import { describeListingError } from "../_lib/listing-errors";
 import { Button, Spinner } from "../_lib/ui";
 
@@ -24,10 +25,7 @@ type AttachFormProps = {
   client: ListingClient;
   productId: string;
   wholesaleEnabled: boolean;
-  onSuccess: (
-    response: ListingCreateResponse,
-    requiresEvidence: boolean,
-  ) => void;
+  onSuccess: (response: ListingCreateResponse, requiresEvidence: boolean) => void;
   onError: (message: string) => void;
   labels: {
     specHeading: string;
@@ -55,9 +53,7 @@ export function AttachForm({
 }: AttachFormProps) {
   const [preview, setPreview] = useState<CanonicalPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(true);
-  const [fields, setFields] = useState<ListingFieldValues>(
-    DEFAULT_LISTING_FIELDS,
-  );
+  const [fields, setFields] = useState<ListingFieldValues>(DEFAULT_LISTING_FIELDS);
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -91,9 +87,8 @@ export function AttachForm({
     if (Object.keys(clientErrors).length > 0) {
       setFieldErrors(clientErrors);
       onError(
-        (requiresListingEvidence(fields)
-          ? labels.draftInvalid
-          : labels.publishBlocked) ?? labels.submitError,
+        (requiresListingEvidence(fields) ? labels.draftInvalid : labels.publishBlocked) ??
+          labels.submitError,
       );
       return;
     }
@@ -158,12 +153,8 @@ export function AttachForm({
   return (
     <div className="flex flex-col gap-4">
       <header className="space-y-1">
-        <h2 className="font-display text-h4 text-display-ink">
-          {preview.name}
-        </h2>
-        {preview.brand ? (
-          <p className="text-sm text-text-2">{preview.brand}</p>
-        ) : null}
+        <h2 className="font-display text-h4 text-display-ink">{preview.name}</h2>
+        {preview.brand ? <p className="text-sm text-text-2">{preview.brand}</p> : null}
       </header>
 
       <CommissionBanner
@@ -174,14 +165,12 @@ export function AttachForm({
 
       {specEntries.length > 0 ? (
         <section className="rounded-lg border border-border p-3">
-          <h3 className="mb-2 text-sm font-medium text-text">
-            {labels.specHeading}
-          </h3>
+          <h3 className="mb-2 text-sm font-medium text-text">{labels.specHeading}</h3>
           <dl className="grid grid-cols-2 gap-2 text-sm">
             {specEntries.map(([key, value]) => (
               <div key={key}>
                 <dt className="text-text-3">{key}</dt>
-                <dd className="text-text">{String(value)}</dd>
+                <dd className="text-text">{formatSpecValue(value)}</dd>
               </div>
             ))}
           </dl>
@@ -203,15 +192,11 @@ export function AttachForm({
         className="w-full"
         loading={submitting}
         loadingLabel={
-          requiresListingEvidence(fields)
-            ? labels.fields.savingDraft
-            : labels.publishing
+          requiresListingEvidence(fields) ? labels.fields.savingDraft : labels.publishing
         }
         onClick={() => void handlePublish()}
       >
-        {requiresListingEvidence(fields)
-          ? labels.fields.saveDraft
-          : labels.publish}
+        {requiresListingEvidence(fields) ? labels.fields.saveDraft : labels.publish}
       </Button>
     </div>
   );

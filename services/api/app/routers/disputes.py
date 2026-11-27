@@ -427,7 +427,7 @@ async def admin_resolve_dispute(
 
 
 @router.post("/vendor/orders/{order_id}/evidence/sign", response_model=EvidenceSignResponse)
-async def sign_vendor_evidence_upload(
+def sign_vendor_evidence_upload(
     order_id: str,
     body: EvidenceSignRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],

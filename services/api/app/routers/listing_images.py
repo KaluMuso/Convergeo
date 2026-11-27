@@ -260,7 +260,7 @@ async def _require_owned_listing(
 
 
 @router.post("/{listing_id}/images", response_model=ListingImageResponse)
-async def attach_listing_image(
+def attach_listing_image(
     listing_id: str,
     body: AttachImageRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
@@ -374,7 +374,7 @@ async def check_listing_image_duplicate(
 
 
 @router.delete("/{listing_id}/images/{image_id}", status_code=204)
-async def detach_listing_image(
+def detach_listing_image(
     listing_id: str,
     image_id: str,
     _context: Annotated[tuple[dict[str, Any], dict[str, Any]], Depends(_require_owned_listing)],
@@ -421,7 +421,7 @@ async def detach_listing_image(
 
 
 @router.patch("/{listing_id}/images/reorder", response_model=list[ListingImageResponse])
-async def reorder_listing_images(
+def reorder_listing_images(
     listing_id: str,
     body: ReorderImagesRequest,
     _context: Annotated[tuple[dict[str, Any], dict[str, Any]], Depends(_require_owned_listing)],

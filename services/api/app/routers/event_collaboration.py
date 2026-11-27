@@ -368,7 +368,7 @@ def _stored_pieces(row: dict[str, Any]) -> tuple[EventDraft, Checklist, int | No
 
 # --- Status + organiser opt-in ------------------------------------------------------
 @router.get("/status", response_model=CollabStatus)
-async def collaboration_status(
+def collaboration_status(
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> CollabStatus:
@@ -391,7 +391,7 @@ async def collaboration_status(
 
 
 @router.put("/organiser-settings", response_model=CollabStatus)
-async def set_organiser_settings(
+def set_organiser_settings(
     body: OrganiserSettingsRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -413,7 +413,7 @@ async def set_organiser_settings(
 
 
 @router.get("/organisers", response_model=OrganiserList)
-async def list_organisers(
+def list_organisers(
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     q: Annotated[str | None, Query(max_length=80)] = None,
@@ -461,7 +461,7 @@ async def list_organisers(
 
 # --- Requests ---------------------------------------------------------------------
 @router.post("/requests", response_model=RequestView)
-async def create_request(
+def create_request(
     body: RequestCreate,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -533,7 +533,7 @@ async def create_request(
 
 
 @router.get("/requests", response_model=RequestList)
-async def list_requests(
+def list_requests(
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     role: Annotated[Literal["proposer", "organiser"], Query()] = "proposer",
@@ -571,7 +571,7 @@ async def get_request(
 
 
 @router.patch("/requests/{request_id}", response_model=RequestView)
-async def update_request(
+def update_request(
     request_id: str,
     body: RequestPatch,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
@@ -662,7 +662,7 @@ def _act(
 
 
 @router.post("/requests/{request_id}/submit", response_model=RequestView)
-async def submit_request(
+def submit_request(
     request_id: str,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],

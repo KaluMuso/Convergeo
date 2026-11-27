@@ -249,7 +249,7 @@ def _own(service_client: ServiceRoleClient, user_id: str, audience: str) -> Any:
 
 # --- Endpoints ----------------------------------------------------------------------
 @router.get("/me/notifications", response_model=NotificationPage)
-async def list_notifications(
+def list_notifications(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     audience: Audience = "customer",
@@ -277,7 +277,7 @@ async def list_notifications(
 
 
 @router.get("/me/notifications/unseen-count", response_model=UnseenCount)
-async def unseen_count(
+def unseen_count(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     audience: Audience = "customer",
@@ -297,7 +297,7 @@ async def unseen_count(
 
 
 @router.post("/me/notifications/seen", response_model=MarkResult)
-async def mark_seen(
+def mark_seen(
     body: MarkSeenRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -322,7 +322,7 @@ async def mark_seen(
 
 
 @router.post("/me/notifications/read-all", response_model=MarkResult)
-async def mark_all_read(
+def mark_all_read(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     audience: Audience = "customer",
@@ -347,7 +347,7 @@ async def mark_all_read(
 
 
 @router.post("/me/notifications/{notification_id}/read", response_model=MarkResult)
-async def mark_read(
+def mark_read(
     notification_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -427,7 +427,7 @@ async def web_push_config(
 
 
 @router.put("/me/push-subscriptions", status_code=204)
-async def subscribe_push(
+def subscribe_push(
     body: PushSubscriptionRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -504,7 +504,7 @@ def _endpoint_conflict() -> AppError:
 
 
 @router.post("/me/push-subscriptions/remove", status_code=204)
-async def unsubscribe_push(
+def unsubscribe_push(
     body: PushUnsubscribeRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],

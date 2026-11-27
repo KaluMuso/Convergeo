@@ -129,7 +129,7 @@ def _category_name(service_client: ServiceRoleClient, category_id: str | None) -
 
 
 @router.post("", response_model=ClipCreateResponse)
-async def create_clip(
+def create_clip(
     body: ClipCreateRequest,
     scope: Annotated[VendorScope, Depends(require_vendor_scope)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],

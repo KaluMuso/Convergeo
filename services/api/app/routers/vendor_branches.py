@@ -382,7 +382,7 @@ class BusinessUpdate(StrictModel):
 
 
 @router.patch("/{business_id}", response_model=BusinessOut)
-async def update_business(
+def update_business(
     business_id: UUID,
     body: BusinessUpdate,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
@@ -543,7 +543,7 @@ def _check_sibling_distance(client: Any, business_id: str, location: BranchLocat
 
 
 @router.post("/{business_id}/branches", response_model=BranchCreated, status_code=201)
-async def create_branch(
+def create_branch(
     business_id: UUID,
     body: BranchCreate,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
@@ -690,7 +690,7 @@ class EvidenceOut(BaseModel):
 
 
 @router.put("/{business_id}/branches/{branch_id}/evidence", response_model=EvidenceOut)
-async def record_branch_evidence(
+def record_branch_evidence(
     business_id: UUID,
     branch_id: UUID,
     body: EvidenceRecord,
@@ -742,7 +742,7 @@ async def record_branch_evidence(
 
 
 @router.post("/{business_id}/branches/{branch_id}/submit", response_model=BranchOut)
-async def submit_branch(
+def submit_branch(
     business_id: UUID,
     branch_id: UUID,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
@@ -810,7 +810,7 @@ def _staff_out(row: dict[str, Any]) -> StaffOut:
 
 
 @router.get("/{business_id}/staff", response_model=list[StaffOut])
-async def list_staff(
+def list_staff(
     business_id: UUID,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -830,7 +830,7 @@ async def list_staff(
 
 
 @router.post("/{business_id}/staff", response_model=StaffOut, status_code=201)
-async def invite_staff(
+def invite_staff(
     business_id: UUID,
     body: StaffInvite,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
@@ -875,7 +875,7 @@ async def invite_staff(
 
 
 @router.delete("/{business_id}/staff/{staff_id}", status_code=204)
-async def revoke_staff(
+def revoke_staff(
     business_id: UUID,
     staff_id: UUID,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],

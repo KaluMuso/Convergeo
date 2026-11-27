@@ -504,7 +504,7 @@ def get_vendor_profile(
 
 
 @router.patch("", response_model=VendorProfileResponse)
-async def patch_vendor_profile(
+def patch_vendor_profile(
     body: ProfilePatchRequest,
     vendor: Annotated[dict[str, Any], Depends(require_vendor_owner)],
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],

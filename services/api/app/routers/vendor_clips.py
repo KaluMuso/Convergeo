@@ -252,7 +252,7 @@ def _orders_attributed(service_client: ServiceRoleClient, clip_id: str) -> int:
 
 # --- Routes -----------------------------------------------------------------
 @router.get("", response_model=VendorClipListResponse)
-async def list_my_clips(
+def list_my_clips(
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     scope: Annotated[VendorScope, Depends(require_vendor_scope)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -313,7 +313,7 @@ async def get_my_clip_stats(
 
 
 @router.post("/{clip_id}/listings", response_model=LinkListingResponse)
-async def link_listing(
+def link_listing(
     clip_id: str,
     body: LinkListingRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
@@ -381,7 +381,7 @@ async def link_listing(
 
 
 @router.delete("/{clip_id}/listings/{listing_id}", response_model=LinkListingResponse)
-async def unlink_listing(
+def unlink_listing(
     clip_id: str,
     listing_id: str,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
