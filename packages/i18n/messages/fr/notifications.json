@@ -160,6 +160,10 @@
         "subject": "Votre vérification vendeur Convergeo nécessite votre attention",
         "body": "<p>Nous n'avons pas pu approuver votre vérification vendeur.</p><p><strong>Motif :</strong> {reason}</p><p>Veuillez soumettre à nouveau vos documents depuis l'application vendeur.</p>"
       }
+    },
+    "import_quote_ready": {
+      "subject": "Votre estimation d'importation est prête",
+      "body": "Nous avons préparé une estimation du coût rendu pour votre demande d'importation. Ouvrez Sourcing dans l'application vendeur pour la voir."
     }
   },
   "marketing": {
@@ -243,7 +247,8 @@
       "extras_quoted": "Nous vous avons envoyé un devis pour {name}.",
       "extras_approved": "Votre demande pour {name} est approuvée.",
       "extras_fulfilled": "{name} est terminé.",
-      "extras_cancelled": "Votre demande pour {name} a été annulée."
+      "extras_cancelled": "Votre demande pour {name} a été annulée.",
+      "import_quote_ready": "Votre estimation d'importation est prête. Ouvrez Sourcing pour la voir."
     },
     "admin": {
       "kyc_submitted": "Nouvelle demande KYC en attente d'examen.",

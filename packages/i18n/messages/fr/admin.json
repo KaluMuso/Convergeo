@@ -54,7 +54,8 @@
     "branches": "Vérification des succursales",
     "extras": "Demandes d'options",
     "trials": "Essais gratuits",
-    "importRequests": "Demandes d'importation"
+    "importRequests": "Demandes d'importation",
+    "madeInZambia": "Fabriqué en Zambie"
   },
   "boards": {
     "states": {
@@ -1970,6 +1971,39 @@
       "invalidTransition": "Cette demande ne peut plus changer ainsi.",
       "rateLimited": "Trop de changements. Patientez.",
       "amount": "Saisissez des montants valides en kwacha."
+    },
+    "loading": "Chargement…",
+    "retry": "Réessayer"
+  },
+  "madeInZambia": {
+    "title": "Demandes Fabriqué en Zambie",
+    "intro": "Les vendeurs déclarent qu'un produit est fabriqué en Zambie. Approuvez ou rejetez chaque demande. Seuls les produits approuvés affichent le badge et apparaissent dans l'onglet Fabriqué en Zambie.",
+    "empty": "Aucune demande.",
+    "filterLabel": "Statut",
+    "status": {
+      "claimed": "En attente d'examen",
+      "approved": "Approuvée",
+      "rejected": "Rejetée"
+    },
+    "claim": {
+      "by": "De {vendor}",
+      "reference": "Référence : {ref}",
+      "noReference": "Aucune référence fournie",
+      "claimedAt": "Déclarée le {date}",
+      "reviewedAt": "Examinée le {date}",
+      "note": "Note : {note}"
+    },
+    "actions": {
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "revoke": "Révoquer l'approbation"
+    },
+    "noteLabel": "Note pour le vendeur (facultatif)",
+    "errors": {
+      "load": "Chargement impossible.",
+      "generic": "Enregistrement impossible. Réessayez.",
+      "invalidTransition": "Cette demande ne peut plus changer ainsi.",
+      "rateLimited": "Trop de changements. Patientez."
     },
     "loading": "Chargement…",
     "retry": "Réessayer"

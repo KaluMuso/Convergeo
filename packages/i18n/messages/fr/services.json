@@ -27,7 +27,9 @@
     "home-services": "Services à domicile",
     "tech-services": "Services techniques",
     "cleaning": "Nettoyage",
-    "tailoring": "Couture"
+    "tailoring": "Couture",
+    "logistics": "Logistique",
+    "packaging": "Emballage"
   },
   "badges": {
     "fast": "Réponse rapide",
@@ -190,7 +192,9 @@
       "home_services": "Services à domicile",
       "tech_services": "Services techniques",
       "cleaning": "Nettoyage",
-      "tailoring": "Couture"
+      "tailoring": "Couture",
+      "logistics": "Logistique",
+      "packaging": "Emballage"
     },
     "description": {
       "label": "De quoi avez-vous besoin ?",

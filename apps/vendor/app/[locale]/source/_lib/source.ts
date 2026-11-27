@@ -21,6 +21,8 @@ export type SourcingItem = {
   image_url: string | null;
   price_ngwee: number | null;
   price_tiers: PriceTier[] | null;
+  /** Bulk/tier prices exist but the viewer is below KYC tier 2: the API withheld them. */
+  prices_locked: boolean;
   moq: number | null;
   wholesale: boolean;
   made_in_zambia: boolean;
@@ -36,9 +38,12 @@ export type SourcingItem = {
 
 export type SourcingSearchResponse = {
   tab: "suppliers" | "made_in_zambia" | "services";
+  viewer_verified: boolean;
   items: SourcingItem[];
   next_offset: number | null;
 };
+
+export type MizStatus = "claimed" | "approved" | "rejected";
 
 export type SupplierType = "wholesaler" | "manufacturer" | "importer" | "service_provider";
 export const SUPPLIER_TYPES: readonly SupplierType[] = [

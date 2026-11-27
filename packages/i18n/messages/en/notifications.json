@@ -194,6 +194,10 @@
     "dispatch_stale_alert": {
       "subject": "Dispatch {order_id} not accepted",
       "body": "<p>Dispatch for order {order_id} is still waiting for courier acceptance.</p>"
+    },
+    "import_quote_ready": {
+      "subject": "Your import quote is ready",
+      "body": "We prepared a landed-cost estimate for your import request. Open Source in the vendor app to see it."
     }
   },
   "marketing": {
@@ -277,7 +281,8 @@
       "extras_quoted": "We sent you a quote for {name}.",
       "extras_approved": "Your request for {name} is approved.",
       "extras_fulfilled": "{name} is done.",
-      "extras_cancelled": "Your request for {name} was cancelled."
+      "extras_cancelled": "Your request for {name} was cancelled.",
+      "import_quote_ready": "Your import estimate is ready. Open Source to see it."
     },
     "admin": {
       "kyc_submitted": "New KYC submission waiting for review.",

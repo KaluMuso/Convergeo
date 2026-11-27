@@ -4,7 +4,8 @@ import { formatK } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
 import { Button } from "@vergeo/ui/src/button";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
-import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { sortedTiers, whatsappLink, type SourcingItem } from "../_lib/source";
@@ -13,6 +14,7 @@ import { sourceErrorKey, useSourceApi } from "../_lib/use-source-api";
 /** One supplier listing, supplier shop or business service. */
 export function SourceCard({ item }: { item: SourcingItem }) {
   const t = useTranslations("vendor.source");
+  const locale = useLocale();
   const tiers = sortedTiers(item.price_tiers);
   const link = whatsappLink(item.whatsapp_msisdn, t("card.whatsappText", { title: item.title }));
   return (
@@ -44,7 +46,18 @@ export function SourceCard({ item }: { item: SourcingItem }) {
         {item.kind === "service" ? item.shop_name : null}
         {item.landmark ? ` · ${item.landmark}` : null}
       </p>
-      {item.kind === "listing" ? (
+      {item.kind === "listing" && item.prices_locked ? (
+        <div className="space-y-1 text-sm text-text" data-testid="prices-locked">
+          <p className="m-0 text-text-2">{t("card.pricesLocked")}</p>
+          <Link href={`/${locale}/onboarding`} className="font-medium text-primary underline">
+            {t("card.verifyCta")}
+          </Link>
+          {item.moq && item.moq > 1 ? (
+            <p className="m-0 font-medium">{t("card.moq", { qty: item.moq })}</p>
+          ) : null}
+        </div>
+      ) : null}
+      {item.kind === "listing" && !item.prices_locked ? (
         <div className="space-y-1 text-sm text-text">
           {tiers.length > 0 ? (
             <ul className="m-0 list-none space-y-0.5 p-0">

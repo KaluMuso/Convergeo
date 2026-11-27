@@ -52,6 +52,7 @@ export function resolveAdminNavCapabilities(
     coupons: unrestricted,
     extras: has("vendors.manage"),
     importRequests: has("vendors.manage"),
+    madeInZambia: has("vendors.manage"),
     trials: unrestricted,
   };
 }

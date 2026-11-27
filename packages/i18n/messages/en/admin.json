@@ -75,7 +75,8 @@
     "branches": "Branch verification",
     "extras": "Extras requests",
     "trials": "Free trials",
-    "importRequests": "Import requests"
+    "importRequests": "Import requests",
+    "madeInZambia": "Made in Zambia"
   },
   "boards": {
     "states": {
@@ -3138,6 +3139,39 @@
       "amount": "Enter valid amounts in kwacha."
     },
     "loading": "Loading requests…",
+    "retry": "Retry"
+  },
+  "madeInZambia": {
+    "title": "Made in Zambia claims",
+    "intro": "Vendors claim that a product is made in Zambia. Approve or reject each claim. Only approved products show the badge and appear in the Made in Zambia tab.",
+    "empty": "No claims here.",
+    "filterLabel": "Status",
+    "status": {
+      "claimed": "Awaiting review",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "claim": {
+      "by": "From {vendor}",
+      "reference": "Reference: {ref}",
+      "noReference": "No reference supplied",
+      "claimedAt": "Claimed {date}",
+      "reviewedAt": "Reviewed {date}",
+      "note": "Note: {note}"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "revoke": "Revoke approval"
+    },
+    "noteLabel": "Note for the vendor (optional)",
+    "errors": {
+      "load": "Could not load claims.",
+      "generic": "Could not save. Try again.",
+      "invalidTransition": "This claim can no longer move that way.",
+      "rateLimited": "Too many changes. Wait a moment."
+    },
+    "loading": "Loading claims…",
     "retry": "Retry"
   }
 }

@@ -30,6 +30,7 @@ export type AdminNavItemKey =
   | "coupons"
   | "extras"
   | "importRequests"
+  | "madeInZambia"
   | "trials";
 
 export type AdminNavGroupKey = "overview" | "trust" | "commerce" | "platform";
@@ -81,6 +82,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "coupons", href: "coupons" },
       { key: "extras", href: "extras" },
       { key: "importRequests", href: "import-requests" },
+      { key: "madeInZambia", href: "made-in-zambia" },
       { key: "trials", href: "trials" },
     ],
   },

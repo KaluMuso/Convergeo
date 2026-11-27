@@ -2312,7 +2312,9 @@
       "home_services": "Services à domicile",
       "tech_services": "Services techniques",
       "cleaning": "Nettoyage",
-      "tailoring": "Couture"
+      "tailoring": "Couture",
+      "logistics": "Logistique",
+      "packaging": "Emballage"
     },
     "quoteForm": {
       "open": "Envoyer un devis",
@@ -3234,7 +3236,9 @@
       "service": "Service",
       "whatsapp": "Discuter sur WhatsApp",
       "whatsappText": "Bonjour, j'ai vu {title} sur Vergeo5 et je voudrais des infos sur le stock et le prix.",
-      "requestQuote": "Demander un devis"
+      "requestQuote": "Demander un devis",
+      "pricesLocked": "Les prix de gros sont visibles pour les vendeurs vérifiés.",
+      "verifyCta": "Faites vérifier votre boutique pour voir les prix de gros"
     },
     "supplierTypes": {
       "wholesaler": "Grossiste",
@@ -3301,11 +3305,29 @@
       "saving": "Enregistrement…",
       "saved": "Enregistré.",
       "madeTitle": "Fabriqué en Zambie",
-      "madeIntro": "Marquez les produits que vous fabriquez en Zambie. C'est une déclaration de votre part, vérifiable par notre équipe.",
+      "madeIntro": "Déclarez les produits fabriqués en Zambie. Notre équipe examine chaque demande et seuls les produits approuvés affichent le badge.",
       "noListings": "Vous n'avez pas encore d'annonces.",
       "back": "Retour à Approvisionnement",
       "manage": "Profil fournisseur",
-      "wholesaleTag": "Gros"
+      "wholesaleTag": "Gros",
+      "miz": {
+        "statusLabel": "Statut",
+        "status": {
+          "none": "Non déclaré",
+          "claimed": "En attente d'examen",
+          "approved": "Approuvé",
+          "rejected": "Non approuvé"
+        },
+        "claim": "Déclarer",
+        "send": "Envoyer la demande",
+        "withdraw": "Retirer la demande",
+        "referenceLabel": "Référence PACRA ou ZABS (facultatif)",
+        "referencePlaceholder": "ex. ZABS-2026-114",
+        "reviewNote": "Note de notre équipe : {note}",
+        "claimed": "Demande envoyée pour examen.",
+        "withdrawn": "Demande retirée.",
+        "referenceTooShort": "La référence doit comporter au moins 3 caractères."
+      }
     }
   }
 }

@@ -160,6 +160,10 @@
         "subject": "您的 Convergeo 卖家验证需要处理",
         "body": "<p>我们无法通过您的卖家验证。</p><p><strong>原因：</strong> {reason}</p><p>请在卖家应用中重新提交您的文件。</p>"
       }
+    },
+    "import_quote_ready": {
+      "subject": "您的进口估算已准备好",
+      "body": "我们已为您的进口请求准备了到岸成本估算。请在商家应用的“采购”中查看。"
     }
   },
   "marketing": {
@@ -243,7 +247,8 @@
       "extras_quoted": "我们已为 {name} 向您报价。",
       "extras_approved": "您对 {name} 的申请已获批准。",
       "extras_fulfilled": "{name} 已完成。",
-      "extras_cancelled": "您对 {name} 的申请已取消。"
+      "extras_cancelled": "您对 {name} 的申请已取消。",
+      "import_quote_ready": "您的进口估算已准备好。打开“采购”查看。"
     },
     "admin": {
       "kyc_submitted": "有新的 KYC 申请待审核。",

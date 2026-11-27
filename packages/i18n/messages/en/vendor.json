@@ -2317,7 +2317,9 @@
       "home_services": "Home services",
       "tech_services": "Tech services",
       "cleaning": "Cleaning",
-      "tailoring": "Tailoring"
+      "tailoring": "Tailoring",
+      "logistics": "Logistics",
+      "packaging": "Packaging"
     },
     "quoteForm": {
       "open": "Send quote",
@@ -3239,7 +3241,9 @@
       "service": "Service",
       "whatsapp": "Chat on WhatsApp",
       "whatsappText": "Hi, I found {title} on Vergeo5 and would like to ask about stock and pricing.",
-      "requestQuote": "Request a quote"
+      "requestQuote": "Request a quote",
+      "pricesLocked": "Bulk prices are visible to verified vendors.",
+      "verifyCta": "Verify your shop to see bulk prices"
     },
     "supplierTypes": {
       "wholesaler": "Wholesaler",
@@ -3306,11 +3310,29 @@
       "saving": "Saving…",
       "saved": "Saved.",
       "madeTitle": "Made in Zambia",
-      "madeIntro": "Mark the products you make in Zambia. This is your own declaration and may be checked by our team.",
+      "madeIntro": "Claim the products you make in Zambia. Our team reviews each claim and only approved products show the badge.",
       "noListings": "You have no listings yet.",
       "back": "Back to Source",
       "manage": "Supplier profile",
-      "wholesaleTag": "Wholesale"
+      "wholesaleTag": "Wholesale",
+      "miz": {
+        "statusLabel": "Status",
+        "status": {
+          "none": "Not claimed",
+          "claimed": "Waiting for review",
+          "approved": "Approved",
+          "rejected": "Not approved"
+        },
+        "claim": "Claim",
+        "send": "Send claim",
+        "withdraw": "Withdraw claim",
+        "referenceLabel": "PACRA or ZABS reference (optional)",
+        "referencePlaceholder": "e.g. ZABS-2026-114",
+        "reviewNote": "Note from our team: {note}",
+        "claimed": "Claim sent for review.",
+        "withdrawn": "Claim withdrawn.",
+        "referenceTooShort": "The reference must be at least 3 characters."
+      }
     }
   }
 }

@@ -8,6 +8,7 @@ vi.mock("@vergeo/auth/use-session", () => ({
 }));
 vi.mock("@vergeo/config", () => ({ createApiClient: () => ({ request }) }));
 vi.mock("next-intl", () => ({
+  useLocale: () => "en",
   useTranslations: () => (key: string, values?: Record<string, unknown>) =>
     values ? `${key}:${JSON.stringify(values)}` : key,
 }));
@@ -31,6 +32,7 @@ const LISTING: SourcingItem = {
     { min_qty: 50, price_ngwee: 4000 },
     { min_qty: 10, price_ngwee: 4500 },
   ],
+  prices_locked: false,
   moq: 10,
   wholesale: true,
   made_in_zambia: true,
@@ -64,6 +66,29 @@ describe("SourceCard", () => {
     const link = screen.getByText("card.whatsapp").closest("a");
     expect(link?.getAttribute("href")).toContain("https://wa.me/260977123456?text=");
     expect(link?.getAttribute("rel")).toContain("noopener");
+  });
+
+  it("withholds bulk prices from unverified viewers and links to KYC", () => {
+    render(
+      <ul>
+        <SourceCard
+          item={{
+            ...LISTING,
+            price_ngwee: null,
+            price_tiers: null,
+            prices_locked: true,
+          }}
+        />
+      </ul>,
+    );
+    expect(screen.getByTestId("prices-locked")).toBeTruthy();
+    expect(screen.getByText("card.pricesLocked")).toBeTruthy();
+    expect(screen.getByText("card.verifyCta").closest("a")?.getAttribute("href")).toBe(
+      "/en/onboarding",
+    );
+    expect(screen.getByText("Bulk flour")).toBeTruthy(); // the card itself stays visible
+    expect(document.body.textContent).not.toContain("card.tier");
+    expect(document.body.textContent).not.toContain("card.retail");
   });
 
   it("offers an RFQ on services and posts to the existing /rfq route", async () => {

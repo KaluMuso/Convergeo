@@ -54,7 +54,8 @@
     "branches": "分店审核",
     "extras": "增值服务申请",
     "trials": "免费试用",
-    "importRequests": "进口请求"
+    "importRequests": "进口请求",
+    "madeInZambia": "赞比亚制造"
   },
   "boards": {
     "states": {
@@ -1970,6 +1971,39 @@
       "invalidTransition": "该请求不能再这样变更。",
       "rateLimited": "修改过多，请稍候。",
       "amount": "请输入有效的克瓦金额。"
+    },
+    "loading": "加载中…",
+    "retry": "重试"
+  },
+  "madeInZambia": {
+    "title": "赞比亚制造申请",
+    "intro": "商家申请将产品标记为赞比亚制造。请逐项批准或拒绝。只有通过审核的产品才会显示徽章并出现在“赞比亚制造”标签中。",
+    "empty": "暂无申请。",
+    "filterLabel": "状态",
+    "status": {
+      "claimed": "等待审核",
+      "approved": "已批准",
+      "rejected": "已拒绝"
+    },
+    "claim": {
+      "by": "来自 {vendor}",
+      "reference": "编号：{ref}",
+      "noReference": "未提供编号",
+      "claimedAt": "申请于 {date}",
+      "reviewedAt": "审核于 {date}",
+      "note": "备注：{note}"
+    },
+    "actions": {
+      "approve": "批准",
+      "reject": "拒绝",
+      "revoke": "撤销批准"
+    },
+    "noteLabel": "给商家的备注（选填）",
+    "errors": {
+      "load": "加载失败。",
+      "generic": "保存失败，请重试。",
+      "invalidTransition": "该申请不能再这样变更。",
+      "rateLimited": "修改过多，请稍候。"
     },
     "loading": "加载中…",
     "retry": "重试"

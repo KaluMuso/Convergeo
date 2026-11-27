@@ -27,7 +27,9 @@
     "home-services": "Home services",
     "tech-services": "Tech services",
     "cleaning": "Cleaning",
-    "tailoring": "Tailoring"
+    "tailoring": "Tailoring",
+    "logistics": "Logistics",
+    "packaging": "Packaging"
   },
   "badges": {
     "fast": "Oyankha mwachangu",
@@ -195,7 +197,9 @@
       "home_services": "Home services",
       "tech_services": "Tech services",
       "cleaning": "Cleaning",
-      "tailoring": "Tailoring"
+      "tailoring": "Tailoring",
+      "logistics": "Logistics",
+      "packaging": "Packaging"
     },
     "description": {
       "label": "Chiyani mukufuna kuchita?",
