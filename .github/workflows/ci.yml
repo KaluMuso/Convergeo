@@ -311,14 +311,28 @@ jobs:
   python:
     # Required check context "Python API" (master ruleset). Aggregates the shards.
     name: Python API
-    needs: python-shard
+    needs: [changes, python-shard]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: All API test shards passed
+        # A docs-only change legitimately skips the shards (run_python != true):
+        # that is a pass, not a failure. Any other skipped, cancelled or failed
+        # shard result still fails the required check.
         run: |
+          echo "changes result: ${{ needs.changes.result }}"
+          echo "run_python: ${{ needs.changes.outputs.run_python }}"
           echo "python-shard result: ${{ needs.python-shard.result }}"
-          test "${{ needs.python-shard.result }}" = "success"
+          if [ "${{ needs.python-shard.result }}" = "success" ]; then
+            exit 0
+          fi
+          if [ "${{ needs.python-shard.result }}" = "skipped" ] \
+            && [ "${{ needs.changes.result }}" = "success" ] \
+            && [ "${{ needs.changes.outputs.run_python }}" != "true" ]; then
+            echo "API shards skipped: no Python-affecting change"
+            exit 0
+          fi
+          exit 1
 
   ask-evals:
     name: Ask Vergeo grounding evals
@@ -1289,7 +1303,7 @@ jobs:
     name: RLS isolation matrix
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: pgvector/pgvector:0.8.0-pg17-trixie
@@ -1391,7 +1405,7 @@ jobs:
     name: Critical real-stack execution (88 identities)
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: pgvector/pgvector:0.8.0-pg17-trixie
@@ -1445,7 +1459,7 @@ jobs:
     name: Financial real-stack execution (fresh and upgrade)
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
       contents: read
@@ -1509,7 +1523,7 @@ jobs:
     name: Coordinator acceptance (${{ matrix.gate }})
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
       contents: read
@@ -1584,7 +1598,7 @@ jobs:
     name: Money DB-trigger integration
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Release-accounting, release-idempotency and reconciliation DB tests exercise the
     # SQL-trigger money path (zero-sum, guarded release ordering, recon report uniqueness).
     # They skip without a live Postgres, and each seeds its own platform ledger-account id

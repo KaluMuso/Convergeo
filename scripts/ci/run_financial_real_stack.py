@@ -178,7 +178,12 @@ def nodes_from_collection(text: str) -> list[str]:
 def require_collection(expected: list[str], observed: list[str], status: int) -> None:
     if (status or not expected or len(expected) != len(set(expected))
             or len(observed) != len(set(observed)) or set(observed) != set(expected)):
-        raise RuntimeError("Complete collection differs from reviewed required identities")
+        missing = sorted(set(expected) - set(observed))
+        extra = sorted(set(observed) - set(expected))
+        raise RuntimeError(
+            "Complete collection differs from reviewed required identities "
+            f"(status={status} expected={len(expected)} observed={len(observed)} "
+            f"missing={missing[:5]} extra={extra[:5]})")
 
 
 def financial_identities() -> dict[str, list[str]]:
@@ -269,7 +274,8 @@ class Runner:
             f.write(json.dumps({"step": name, "command": [self.redact(a) for a in args],
                                 "exit": status, "cwd": str(cwd)}) + "\n")
         if checked and status:
-            raise RuntimeError(f"{name} failed with exit {status}; see sanitized log")
+            tail = self.redact(text)[-1500:]
+            raise RuntimeError(f"{name} failed with exit {status}; see sanitized log\n{tail}")
         return status, text
 
     def pull_postgrest_image(self) -> None:
@@ -598,6 +604,8 @@ def main() -> int:
     except Exception as exc:
         runner.results["accepted"] = False
         runner.results["error"] = runner.redact(str(exc))
+        detail = str(runner.results["error"])[:2200]
+        print("::error::real-stack failure: " + detail, file=sys.stderr)
     finally:
         runner.finish()
     print("FINANCIAL_REAL_STACK_PASS" if runner.results["accepted"]
