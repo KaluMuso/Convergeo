@@ -11,7 +11,7 @@ No payments, orders or ledger rows are created from anything in this module.
 from __future__ import annotations
 
 import re
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Final, Literal
 from uuid import UUID
 
@@ -32,9 +32,10 @@ router = APIRouter(prefix="/vendor/sourcing", tags=["vendor-sourcing"])
 
 SupplierType = Literal["wholesaler", "manufacturer", "importer", "service_provider"]
 Tab = Literal["suppliers", "made_in_zambia", "services"]
+MizStatus = Literal["claimed", "approved", "rejected"]
 
-#: Service verticals shown as business services. ``logistics`` and ``packaging``
-#: are not in the shared taxonomy yet (open question 3); they simply match nothing.
+#: Service verticals shown as business services (``logistics`` and ``packaging``
+#: are first-class verticals in ``services_listings.ServiceVertical``).
 BUSINESS_SERVICE_VERTICALS: Final[tuple[str, ...]] = (
     "printing-creative",
     "tech-services",
@@ -44,9 +45,12 @@ BUSINESS_SERVICE_VERTICALS: Final[tuple[str, ...]] = (
 CANDIDATE_CAP: Final = 300
 MAX_PAGE: Final = 24
 VERIFIED_MIN_KYC_TIER: Final = 2
+#: Import requests share the registered ``write_standard`` counter scope (a new scope
+#: would violate rate_counters_scope_check) under a distinct key with a 1-day window.
 IMPORT_DAILY_LIMIT: Final = RateLimitPolicy(
-    scope="import_request_create", limit=5, window=timedelta(days=1)
+    scope=STANDARD_WRITE.scope, limit=5, window=timedelta(days=1)
 )
+MIZ_REFERENCE_MAX: Final = 80
 _UUID_RE: Final = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
 )
@@ -110,6 +114,9 @@ class SourcingItem(BaseModel):
     image_url: str | None = None
     price_ngwee: int | None = None
     price_tiers: list[dict[str, Any]] | None = None
+    #: True when bulk/tier pricing exists but the viewing vendor is not verified
+    #: (kyc_tier < 2): price fields are withheld server-side, not just hidden in the UI.
+    prices_locked: bool = False
     moq: int | None = None
     wholesale: bool = False
     made_in_zambia: bool = False
@@ -125,6 +132,7 @@ class SourcingItem(BaseModel):
 
 class SourcingSearchResponse(BaseModel):
     tab: Tab
+    viewer_verified: bool = False
     items: list[SourcingItem]
     next_offset: int | None = None
 
@@ -147,11 +155,27 @@ class OwnListing(BaseModel):
     title: str
     status: str
     wholesale: bool
-    made_in_zambia: bool
+    #: null = no claim; claimed = awaiting admin; approved = public badge; rejected.
+    made_in_zambia_status: MizStatus | None = None
+    made_in_zambia_reference: str | None = None
+    made_in_zambia_review_note: str | None = None
 
 
 class MadeInZambiaBody(StrictModel):
-    made_in_zambia: bool
+    claim: bool
+    reference: str | None = Field(default=None, max_length=MIZ_REFERENCE_MAX)
+
+    @field_validator("reference")
+    @classmethod
+    def clean_reference(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if len(cleaned) < 3:
+            raise ValueError("reference is too short")
+        return cleaned
 
 
 class ImportRequestBody(StrictModel):
@@ -307,7 +331,7 @@ def _matches(q: str | None, *parts: str | None) -> bool:
     return any(needle in (part or "").lower() for part in parts)
 
 
-def _listing_item(row: dict[str, Any]) -> SourcingItem:
+def _listing_item(row: dict[str, Any], *, viewer_verified: bool) -> SourcingItem:
     vendor = _vendor_embed(row)
     product = row.get("products") if isinstance(row.get("products"), dict) else {}
     images = sorted(
@@ -316,16 +340,23 @@ def _listing_item(row: dict[str, Any]) -> SourcingItem:
     )
     wholesale = bool(row.get("wholesale"))
     tiers = row.get("price_tiers") if wholesale else None
+    has_bulk = wholesale or isinstance(tiers, list)
+    locked = has_bulk and not viewer_verified
+    if locked:
+        tiers = None
     return SourcingItem(
         kind="listing",
         id=str(row["id"]),
         title=str(row.get("title_override") or (product or {}).get("name") or ""),
         image_public_id=images[0].get("cloudinary_public_id") if images else None,
-        price_ngwee=int(row["price_ngwee"]) if row.get("price_ngwee") is not None else None,
+        price_ngwee=(
+            int(row["price_ngwee"]) if row.get("price_ngwee") is not None and not locked else None
+        ),
         price_tiers=tiers if isinstance(tiers, list) else None,
+        prices_locked=locked,
         moq=int(row.get("moq") or 1),
         wholesale=wholesale,
-        made_in_zambia=bool(row.get("made_in_zambia")),
+        made_in_zambia=row.get("made_in_zambia_status") == "approved",
         vendor_id=str(row["vendor_id"]),
         shop_name=str(vendor.get("display_name") or ""),
         shop_slug=vendor.get("slug"),
@@ -373,13 +404,17 @@ def _service_item(row: dict[str, Any]) -> SourcingItem:
     )
 
 
+_OWN_LISTING_COLUMNS = (
+    "id, title_override, status, wholesale, made_in_zambia_status, "
+    "made_in_zambia_reference, made_in_zambia_review_note"
+)
 _VENDOR_EMBED = (
     "vendors!inner(id, slug, display_name, status, kyc_tier, whatsapp_msisdn, "
     "supplier_types, vendor_locations(landmark))"
 )
 _LISTING_SELECT = (
     "id, vendor_id, product_id, title_override, price_ngwee, wholesale, price_tiers, moq, "
-    "made_in_zambia, status, products(name, category_id), "
+    "made_in_zambia_status, status, products(name, category_id), "
     "listing_images(cloudinary_public_id, position), " + _VENDOR_EMBED
 )
 _SERVICE_SELECT = (
@@ -389,7 +424,13 @@ _SERVICE_SELECT = (
 
 
 def _search_listings(
-    client: Any, *, own_vendor_id: str, tab: str, q: str | None, category: str | None
+    client: Any,
+    *,
+    own_vendor_id: str,
+    tab: str,
+    q: str | None,
+    category: str | None,
+    viewer_verified: bool,
 ) -> list[SourcingItem]:
     query = (
         client.table("vendor_listings")
@@ -398,7 +439,11 @@ def _search_listings(
         .eq("vendors.status", "active")
         .neq("vendor_id", own_vendor_id)
     )
-    query = query.eq("wholesale", True) if tab == "suppliers" else query.eq("made_in_zambia", True)
+    query = (
+        query.eq("wholesale", True)
+        if tab == "suppliers"
+        else query.eq("made_in_zambia_status", "approved")
+    )
     rows = rows_of(query.order("updated_at", desc=True).limit(CANDIDATE_CAP).execute())
     demo = fetch_demo_listing_ids(client, [str(r["id"]) for r in rows if r.get("id")])
     out: list[SourcingItem] = []
@@ -408,7 +453,7 @@ def _search_listings(
         product = row.get("products") if isinstance(row.get("products"), dict) else {}
         if category and str((product or {}).get("category_id") or "") != category:
             continue
-        item = _listing_item(row)
+        item = _listing_item(row, viewer_verified=viewer_verified)
         if _matches(q, item.title, item.shop_name):
             out.append(item)
     return out
@@ -467,7 +512,9 @@ def search_sourcing(
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE)] = 12,
 ) -> SourcingSearchResponse:
     client: Any = service_client.client
-    own = str(_load_vendor_for_owner(service_client, current_user.id)["id"])
+    me = _load_vendor_for_owner(service_client, current_user.id)
+    own = str(me["id"])
+    viewer_verified = _verified(me)
     needle = re.sub(r"[%_\\]", "", q.strip()) if q else None
     needle = needle or None
     if category is not None and tab != "services" and not _is_uuid(category):
@@ -475,17 +522,26 @@ def search_sourcing(
     if tab == "services":
         items = _search_services(client, own_vendor_id=own, q=needle, category=category)
     else:
-        shop_kind = "wholesaler" if tab == "suppliers" else "manufacturer"
         # A product category never matches a shop, so shops show only unfiltered.
+        # Made in Zambia is approval-only: no shop-level (manufacturer) fallback.
         items = (
-            _search_shops(client, own_vendor_id=own, kind=shop_kind, q=needle)
-            if category is None
+            _search_shops(client, own_vendor_id=own, kind="wholesaler", q=needle)
+            if tab == "suppliers" and category is None
             else []
         )
-        items += _search_listings(client, own_vendor_id=own, tab=tab, q=needle, category=category)
+        items += _search_listings(
+            client,
+            own_vendor_id=own,
+            tab=tab,
+            q=needle,
+            category=category,
+            viewer_verified=viewer_verified,
+        )
     page = items[offset : offset + limit]
     next_offset = offset + limit if offset + limit < len(items) else None
-    return SourcingSearchResponse(tab=tab, items=page, next_offset=next_offset)
+    return SourcingSearchResponse(
+        tab=tab, viewer_verified=viewer_verified, items=page, next_offset=next_offset
+    )
 
 
 # --- Supplier profile + Made in Zambia ---------------------------------------
@@ -528,7 +584,7 @@ def list_own_listings(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     rows = rows_of(
         service_client.client.table("vendor_listings")
-        .select("id, title_override, status, wholesale, made_in_zambia, products(name)")
+        .select(f"{_OWN_LISTING_COLUMNS}, products(name)")
         .eq("vendor_id", str(vendor["id"]))
         .in_("status", ["draft", "active", "paused"])
         .order("updated_at", desc=True)
@@ -544,7 +600,9 @@ def list_own_listings(
                 title=str(row.get("title_override") or (product or {}).get("name") or ""),
                 status=str(row["status"]),
                 wholesale=bool(row.get("wholesale")),
-                made_in_zambia=bool(row.get("made_in_zambia")),
+                made_in_zambia_status=row.get("made_in_zambia_status"),
+                made_in_zambia_reference=row.get("made_in_zambia_reference"),
+                made_in_zambia_review_note=row.get("made_in_zambia_review_note"),
             )
         )
     return out
@@ -557,28 +615,49 @@ def set_made_in_zambia(
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> OwnListing:
+    """Vendor files (or withdraws) a Made in Zambia CLAIM. Approval is admin-only."""
     client: Any = service_client.client
     _limit(client, current_user.id)
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     rows = rows_of(
         client.table("vendor_listings")
-        .select("id, title_override, status, wholesale, made_in_zambia")
+        .select(f"{_OWN_LISTING_COLUMNS}, products(name)")
         .eq("id", str(listing_id))
         .eq("vendor_id", str(vendor["id"]))
         .execute()
     )
     if not rows:
         raise _not_found("Listing not found")  # not yours = not found (no enumeration)
-    client.table("vendor_listings").update({"made_in_zambia": body.made_in_zambia}).eq(
-        "id", str(listing_id)
-    ).eq("vendor_id", str(vendor["id"])).execute()
-    row = rows[0]
+    row = dict(rows[0])
+    current = row.get("made_in_zambia_status")
+    patch: dict[str, Any] | None = None
+    if not body.claim:
+        if current is not None:
+            patch = {"made_in_zambia_status": None}
+    elif current != "approved":  # an approved claim is already final; claiming again is a no-op
+        patch = {
+            "made_in_zambia_status": "claimed",
+            "made_in_zambia_reference": body.reference,
+            "made_in_zambia_claimed_at": datetime.now(UTC).isoformat(),
+        }
+    if patch is not None:
+        client.table("vendor_listings").update(patch).eq("id", str(listing_id)).eq(
+            "vendor_id", str(vendor["id"])
+        ).execute()
+        row.update(patch)
+        if patch["made_in_zambia_status"] is None:
+            row["made_in_zambia_reference"] = None
+        if patch["made_in_zambia_status"] in (None, "claimed"):
+            row["made_in_zambia_review_note"] = None
+    product = row.get("products") if isinstance(row.get("products"), dict) else {}
     return OwnListing(
         id=str(row["id"]),
-        title=str(row.get("title_override") or ""),
+        title=str(row.get("title_override") or (product or {}).get("name") or ""),
         status=str(row["status"]),
         wholesale=bool(row.get("wholesale")),
-        made_in_zambia=body.made_in_zambia,
+        made_in_zambia_status=row.get("made_in_zambia_status"),
+        made_in_zambia_reference=row.get("made_in_zambia_reference"),
+        made_in_zambia_review_note=row.get("made_in_zambia_review_note"),
     )
 
 
@@ -592,7 +671,7 @@ def create_import_request(
     client: Any = service_client.client
     allowed, retry_after = bump_rate_counter(
         scope=IMPORT_DAILY_LIMIT.scope,
-        key=current_user.id,
+        key=f"import-request:{current_user.id}",
         window=IMPORT_DAILY_LIMIT.window,
         limit=IMPORT_DAILY_LIMIT.limit,
         client=client,

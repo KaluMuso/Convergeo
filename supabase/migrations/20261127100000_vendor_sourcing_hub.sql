@@ -2,7 +2,10 @@
 --
 -- Additive and reversible. NOT applied to any database by the PR that adds it.
 --   * vendors.supplier_types          -- owner-declared supplier kinds (empty = not listed)
---   * vendor_listings.made_in_zambia  -- self-declared flag (default false)
+--   * vendor_listings.made_in_zambia_* -- vendor CLAIM + admin APPROVAL (claimed /
+--     approved / rejected, optional PACRA/ZABS reference, reviewer, timestamp).
+--     Only 'approved' is public in the hub. A guard trigger blocks vendors (RLS
+--     owner-update policy) from approving their own claim.
 --   * import_requests / import_request_quotes -- curated import path. DATA ONLY:
 --     no payment, order, ledger or escrow row is ever created from these tables.
 --
@@ -11,7 +14,13 @@
 --
 -- Reversal (nothing else depends on these objects):
 --   drop table public.import_request_quotes, public.import_requests;
---   alter table public.vendor_listings drop column made_in_zambia;
+--   drop trigger if exists vendor_listings_made_in_zambia_guard on public.vendor_listings;
+--   drop function if exists public.vendor_listings_made_in_zambia_guard();
+--   drop index if exists public.vendor_listings_made_in_zambia_idx;
+--   alter table public.vendor_listings
+--     drop column made_in_zambia_status, drop column made_in_zambia_reference,
+--     drop column made_in_zambia_claimed_at, drop column made_in_zambia_reviewed_by,
+--     drop column made_in_zambia_reviewed_at, drop column made_in_zambia_review_note;
 --   alter table public.vendors drop column supplier_types;
 
 alter table public.vendors
@@ -29,14 +38,82 @@ comment on column public.vendors.supplier_types is
   'Owner-declared supplier kinds for the vendor sourcing hub. Empty = not listed as a supplier.';
 
 alter table public.vendor_listings
-  add column if not exists made_in_zambia boolean not null default false;
+  add column if not exists made_in_zambia_status text
+    check (made_in_zambia_status is null or made_in_zambia_status in ('claimed', 'approved', 'rejected')),
+  add column if not exists made_in_zambia_reference text
+    check (made_in_zambia_reference is null or char_length(btrim(made_in_zambia_reference)) between 3 and 80),
+  add column if not exists made_in_zambia_claimed_at timestamptz,
+  add column if not exists made_in_zambia_reviewed_by uuid references auth.users (id) on delete set null,
+  add column if not exists made_in_zambia_reviewed_at timestamptz,
+  add column if not exists made_in_zambia_review_note text
+    check (made_in_zambia_review_note is null or char_length(made_in_zambia_review_note) <= 500);
 
-comment on column public.vendor_listings.made_in_zambia is
-  'Self-declared Made in Zambia flag (admin may unset). Drives the sourcing hub tab.';
+comment on column public.vendor_listings.made_in_zambia_status is
+  'Made in Zambia claim state. NULL = no claim. Only approved is shown in the sourcing hub.';
+comment on column public.vendor_listings.made_in_zambia_reference is
+  'Optional PACRA / ZABS reference supplied by the vendor with the claim.';
 
 create index if not exists vendor_listings_made_in_zambia_idx
-  on public.vendor_listings (status)
-  where made_in_zambia;
+  on public.vendor_listings (updated_at desc)
+  where made_in_zambia_status = 'approved';
+create index if not exists vendor_listings_made_in_zambia_claimed_idx
+  on public.vendor_listings (made_in_zambia_claimed_at)
+  where made_in_zambia_status = 'claimed';
+
+-- Guard: owners hold an UPDATE policy on vendor_listings, so the database (not only
+-- the API) must stop a vendor approving their own claim. Reviewer fields are written
+-- by the admin API (service role) only.
+create or replace function public.vendor_listings_made_in_zambia_guard()
+returns trigger
+language plpgsql
+as $$
+declare
+  privileged boolean :=
+    coalesce(auth.role(), '') = 'service_role'
+    or current_user in ('postgres', 'supabase_admin', 'service_role');
+  old_status text := case when tg_op = 'UPDATE' then old.made_in_zambia_status end;
+begin
+  if tg_op = 'INSERT' and not privileged and new.made_in_zambia_status is not null then
+    raise exception 'made_in_zambia claim must be filed through the API'
+      using errcode = '42501';
+  end if;
+
+  if not privileged and tg_op = 'UPDATE' then
+    if new.made_in_zambia_reviewed_by is distinct from old.made_in_zambia_reviewed_by
+       or new.made_in_zambia_reviewed_at is distinct from old.made_in_zambia_reviewed_at
+       or new.made_in_zambia_review_note is distinct from old.made_in_zambia_review_note then
+      raise exception 'made_in_zambia review fields are admin-only' using errcode = '42501';
+    end if;
+    if new.made_in_zambia_status is distinct from old_status
+       and new.made_in_zambia_status in ('approved', 'rejected') then
+      raise exception 'made_in_zambia approval is admin-only' using errcode = '42501';
+    end if;
+  end if;
+
+  if new.made_in_zambia_status in ('approved', 'rejected')
+     and (new.made_in_zambia_reviewed_by is null or new.made_in_zambia_reviewed_at is null)
+     and (tg_op = 'INSERT' or new.made_in_zambia_status is distinct from old_status) then
+    raise exception 'made_in_zambia decision needs reviewer and timestamp'
+      using errcode = '23514';
+  end if;
+
+  if new.made_in_zambia_status is null or new.made_in_zambia_status = 'claimed' then
+    new.made_in_zambia_reviewed_by := null;
+    new.made_in_zambia_reviewed_at := null;
+    new.made_in_zambia_review_note := null;
+  end if;
+  if new.made_in_zambia_status is null then
+    new.made_in_zambia_reference := null;
+    new.made_in_zambia_claimed_at := null;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists vendor_listings_made_in_zambia_guard on public.vendor_listings;
+create trigger vendor_listings_made_in_zambia_guard
+  before insert or update on public.vendor_listings
+  for each row execute function public.vendor_listings_made_in_zambia_guard();
 
 -- ---------------------------------------------------------------------------
 -- import_requests

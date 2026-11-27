@@ -7,6 +7,7 @@ nothing here creates an order, a payment or a ledger row.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import Annotated, Any, Final, Literal
 from uuid import UUID
@@ -29,8 +30,11 @@ from app.routers.vendor_sourcing import (
 )
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.kyc.state_machine import ServiceRoleClient
+from app.services.notifications.dedupe import enqueue_outbox_row
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 import_router = APIRouter(prefix="/import-requests", tags=["admin-import-requests"])
 
@@ -81,6 +85,58 @@ def _limit(client: Any, actor_id: str) -> None:
     )
     if not allowed:
         raise_rate_limited(retry_after=retry_after, message_key="admin.common.rateLimited")
+
+
+def _notify_vendor_of_quote(
+    client: Any, *, request: dict[str, Any], quote_id: str, total_ngwee: int
+) -> None:
+    """Tell the vendor owner a quote is ready: in-app row + email via the outbox.
+
+    Best effort and idempotent per quote (dedupe keys): a notification failure must
+    never fail or roll back the admin's quote. No WhatsApp or SMS by decision.
+    """
+    try:
+        vendors = rows_of(
+            client.table("vendors")
+            .select("id, owner_user_id")
+            .eq("id", str(request["vendor_id"]))
+            .execute()
+        )
+        owner = str(vendors[0].get("owner_user_id") or "") if vendors else ""
+        if not owner:
+            return
+        title = str(request.get("title") or "")
+        try:
+            client.table("in_app_notifications").insert(
+                {
+                    "recipient_user_id": owner,
+                    "audience": "vendor",
+                    "type": "import_quote_ready",
+                    "i18n_key": "notifications.inApp.vendor.import_quote_ready",
+                    "params": {"title": title[:120], "total_ngwee": total_ngwee},
+                    "link_path": "/source",
+                    "dedupe_key": f"import_quote_ready:{quote_id}",
+                }
+            ).execute()
+        except Exception as exc:  # unique(recipient, audience, dedupe_key) = already sent
+            if getattr(exc, "code", None) != "23505":
+                raise
+        enqueue_outbox_row(
+            client,
+            event_type="import_quote_ready",
+            entity_id=quote_id,
+            channel="email",
+            template="import_quote_ready",
+            payload={
+                "recipient_id": owner,
+                "request_id": str(request["id"]),
+                "quote_id": quote_id,
+                "title": title,
+                "total_ngwee": total_ngwee,
+            },
+        )
+    except Exception:  # noqa: BLE001 - never fail the audited quote on a notify error
+        logger.warning("import quote notification failed", exc_info=True)
 
 
 def _load(client: Any, request_id: UUID) -> dict[str, Any]:
@@ -229,6 +285,12 @@ def create_import_quote(
             "quote_id": str(quote_row.get("id")),
             "total_ngwee": quote_row["total_ngwee"],
         },
+    )
+    _notify_vendor_of_quote(
+        client,
+        request=before,
+        quote_id=str(quote_row.get("id")),
+        total_ngwee=int(quote_row["total_ngwee"]),
     )
     enriched = _enrich(client, [{**before, "status": "quoted"}])[0]
     return QuoteCreated(request=enriched, quote=quote_from_row(quote_row))

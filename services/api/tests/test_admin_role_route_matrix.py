@@ -156,6 +156,9 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "GET /admin/import-requests",
             "POST /admin/import-requests/{request_id}/quotes",
             "POST /admin/import-requests/{request_id}/status",
+            # Made in Zambia claim review: mapped to vendors.manage in auth.py.
+            "GET /admin/made-in-zambia-claims",
+            "POST /admin/made-in-zambia-claims/{listing_id}/decision",
             "GET /admin/intake",
             "GET /admin/intake/{session_id}",
             "GET /admin/kyc",
@@ -299,6 +302,9 @@ MODERATOR_ROUTES: frozenset[str] = frozenset(
         "GET /admin/import-requests",
         "POST /admin/import-requests/{request_id}/quotes",
         "POST /admin/import-requests/{request_id}/status",
+        # Made in Zambia claims: moderators hold vendors.manage.
+        "GET /admin/made-in-zambia-claims",
+        "POST /admin/made-in-zambia-claims/{listing_id}/decision",
         "DELETE /admin/products/{product_id}/images/{image_id}",
         "GET /admin/products/{product_id}/images",
         "POST /admin/products/{product_id}/images",
