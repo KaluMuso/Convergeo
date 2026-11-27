@@ -74,7 +74,8 @@
     "coupons": "Coupons",
     "branches": "Branch verification",
     "extras": "Extras requests",
-    "trials": "Free trials"
+    "trials": "Free trials",
+    "importRequests": "Import requests"
   },
   "boards": {
     "states": {
@@ -3087,5 +3088,56 @@
       "conflict": "Not allowed from its current state (it may already be hidden, or the vendor’s KYC is not approved).",
       "permission": "You do not have permission for this action."
     }
+  },
+  "importRequests": {
+    "title": "Import requests",
+    "intro": "Vendor requests to import products. Reply with an estimated landed cost. Estimates only: no payment, no order.",
+    "empty": "No import requests.",
+    "filterLabel": "Status",
+    "all": "All",
+    "status": {
+      "submitted": "Sent",
+      "in_review": "In review",
+      "quoted": "Quoted",
+      "closed": "Closed",
+      "cancelled": "Cancelled"
+    },
+    "request": {
+      "qty": "{qty} {unit}",
+      "target": "Target {price} per unit",
+      "link": "Product link",
+      "by": "From {vendor}",
+      "noQuote": "No quote yet",
+      "latest": "Latest estimate: {total}"
+    },
+    "actions": {
+      "review": "Mark in review",
+      "close": "Close request",
+      "quote": "Send estimate",
+      "sending": "Sending…"
+    },
+    "form": {
+      "title": "Landed-cost estimate (ZMW)",
+      "partner": "Partner or importer",
+      "product": "Product (K)",
+      "freight": "Freight (K)",
+      "duty": "Duty and taxes (K)",
+      "clearing": "Clearing (K)",
+      "other": "Other (K)",
+      "leadTime": "Lead time (days)",
+      "validUntil": "Valid until",
+      "notes": "Notes for the vendor",
+      "total": "Total",
+      "estimateOnly": "Always shown to the vendor as an estimate, not an offer."
+    },
+    "errors": {
+      "load": "Could not load requests.",
+      "generic": "Could not save. Try again.",
+      "invalidTransition": "This request can no longer move that way.",
+      "rateLimited": "Too many changes. Wait a moment.",
+      "amount": "Enter valid amounts in kwacha."
+    },
+    "loading": "Loading requests…",
+    "retry": "Retry"
   }
 }

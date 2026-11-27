@@ -2489,7 +2489,8 @@
       "settings": "Paramètres",
       "offers": "Offres",
       "coupons": "Coupons",
-      "extras": "Options"
+      "extras": "Options",
+      "source": "S'approvisionner"
     }
   },
   "intake": {
@@ -3196,6 +3197,115 @@
     },
     "reviews": {
       "posted": "Posted {date}"
+    }
+  },
+  "source": {
+    "title": "S'approvisionner",
+    "intro": "Trouvez quoi vendre : fournisseurs zambiens, produits locaux, importations et services aux entreprises.",
+    "searchLabel": "Rechercher",
+    "searchPlaceholder": "Rechercher produits, boutiques, services",
+    "categoryLabel": "Catégorie",
+    "categoryAll": "Toutes les catégories",
+    "tabsLabel": "Sections d'approvisionnement",
+    "loading": "Chargement…",
+    "empty": "Aucun résultat. Essayez une autre recherche.",
+    "loadMore": "Afficher plus",
+    "tabs": {
+      "suppliers": "Fournisseurs zambiens",
+      "madeInZambia": "Fabriqué en Zambie",
+      "import": "Importation",
+      "services": "Services aux entreprises"
+    },
+    "errors": {
+      "load": "Chargement impossible. Réessayez.",
+      "generic": "Une erreur est survenue. Réessayez.",
+      "rateLimited": "Trop de requêtes. Patientez.",
+      "importRateLimited": "Vous pouvez envoyer 5 demandes d'importation par jour.",
+      "prohibited": "Cet article ne peut pas être importé via Vergeo5."
+    },
+    "card": {
+      "moq": "MOQ {qty}",
+      "tier": "{qty}+ unités : {price}",
+      "retail": "Prix {price}",
+      "from": "À partir de {price}",
+      "verified": "Vérifié",
+      "madeInZambia": "Fabriqué en Zambie",
+      "shop": "Boutique fournisseur",
+      "service": "Service",
+      "whatsapp": "Discuter sur WhatsApp",
+      "whatsappText": "Bonjour, j'ai vu {title} sur Vergeo5 et je voudrais des infos sur le stock et le prix.",
+      "requestQuote": "Demander un devis"
+    },
+    "supplierTypes": {
+      "wholesaler": "Grossiste",
+      "manufacturer": "Fabricant",
+      "importer": "Importateur",
+      "service_provider": "Prestataire de services"
+    },
+    "rfq": {
+      "label": "De quoi avez-vous besoin ?",
+      "placeholder": "Quantité, taille, délai",
+      "send": "Envoyer la demande",
+      "sending": "Envoi…",
+      "sent": "Demande envoyée.",
+      "error": "Envoi impossible."
+    },
+    "import": {
+      "heading": "Importer de l'étranger",
+      "estimateNotice": "Estimations uniquement. Ce n'est pas une offre. Rien n'est facturé et aucune commande n'est passée.",
+      "howItWorks": "Dites-nous ce que vous voulez importer. Notre équipe répond avec un coût estimé en kwacha.",
+      "newRequest": "Nouvelle demande d'importation",
+      "empty": "Aucune demande d'importation.",
+      "submit": "Envoyer la demande",
+      "submitting": "Envoi…",
+      "sent": "Demande envoyée. Nous répondrons avec une estimation.",
+      "cancel": "Annuler la demande",
+      "close": "Fermer",
+      "fields": {
+        "title": "Que voulez-vous importer ?",
+        "description": "Caractéristiques, couleur, taille, notes",
+        "referenceUrl": "Lien du produit (https)",
+        "imageUrls": "Liens photo, un par ligne (https, 5 max)",
+        "quantity": "Quantité",
+        "unit": "Unité",
+        "targetPrice": "Prix cible par unité (K)",
+        "destination": "Ville de livraison"
+      },
+      "status": {
+        "submitted": "Envoyée",
+        "in_review": "En cours d'examen",
+        "quoted": "Estimation prête",
+        "closed": "Clôturée",
+        "cancelled": "Annulée"
+      },
+      "quote": {
+        "title": "Coût estimé rendu sur place",
+        "product": "Produit",
+        "freight": "Fret",
+        "duty": "Droits et taxes",
+        "clearing": "Dédouanement",
+        "other": "Autre",
+        "total": "Total estimé",
+        "leadTime": "Environ {days} jours",
+        "validUntil": "Estimation valable jusqu'au {date}",
+        "partner": "Préparé par {name}",
+        "label": "Estimation"
+      },
+      "qtyLine": "{qty} {unit}",
+      "target": "Cible : {price} par unité"
+    },
+    "profile": {
+      "title": "Profil fournisseur",
+      "intro": "Choisissez comment vous apparaissez dans l'onglet Approvisionnement des autres vendeurs. Laissez tout décoché pour rester masqué.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré.",
+      "madeTitle": "Fabriqué en Zambie",
+      "madeIntro": "Marquez les produits que vous fabriquez en Zambie. C'est une déclaration de votre part, vérifiable par notre équipe.",
+      "noListings": "Vous n'avez pas encore d'annonces.",
+      "back": "Retour à Approvisionnement",
+      "manage": "Profil fournisseur",
+      "wholesaleTag": "Gros"
     }
   }
 }

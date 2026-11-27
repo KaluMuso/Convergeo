@@ -29,6 +29,7 @@ export type AdminNavItemKey =
   | "inventory"
   | "coupons"
   | "extras"
+  | "importRequests"
   | "trials";
 
 export type AdminNavGroupKey = "overview" | "trust" | "commerce" | "platform";
@@ -79,6 +80,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "inventory", href: "inventory" },
       { key: "coupons", href: "coupons" },
       { key: "extras", href: "extras" },
+      { key: "importRequests", href: "import-requests" },
       { key: "trials", href: "trials" },
     ],
   },

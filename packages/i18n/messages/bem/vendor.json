@@ -2494,7 +2494,8 @@
       "settings": "⚠ Settings",
       "offers": "⚠ Offers",
       "coupons": "Amakuponi",
-      "extras": "⚠ Extras"
+      "extras": "⚠ Extras",
+      "source": "Source"
     }
   },
   "intake": {
@@ -3201,6 +3202,115 @@
     },
     "reviews": {
       "posted": "Posted {date}"
+    }
+  },
+  "source": {
+    "title": "Source",
+    "intro": "Find what to stock: Zambian suppliers, locally made products, imports and business services.",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search products, shops, services",
+    "categoryLabel": "Category",
+    "categoryAll": "All categories",
+    "tabsLabel": "Sourcing sections",
+    "loading": "Loading…",
+    "empty": "Nothing found. Try another search.",
+    "loadMore": "Show more",
+    "tabs": {
+      "suppliers": "Zambian suppliers",
+      "madeInZambia": "Made in Zambia",
+      "import": "Import",
+      "services": "Business services"
+    },
+    "errors": {
+      "load": "Could not load this. Try again.",
+      "generic": "Something went wrong. Try again.",
+      "rateLimited": "Too many requests. Wait a moment.",
+      "importRateLimited": "You can send up to 5 import requests a day.",
+      "prohibited": "This item cannot be imported through Vergeo5."
+    },
+    "card": {
+      "moq": "MOQ {qty}",
+      "tier": "{qty}+ units: {price}",
+      "retail": "Price {price}",
+      "from": "From {price}",
+      "verified": "Verified",
+      "madeInZambia": "Made in Zambia",
+      "shop": "Supplier shop",
+      "service": "Service",
+      "whatsapp": "Chat on WhatsApp",
+      "whatsappText": "Hi, I found {title} on Vergeo5 and would like to ask about stock and pricing.",
+      "requestQuote": "Request a quote"
+    },
+    "supplierTypes": {
+      "wholesaler": "Wholesaler",
+      "manufacturer": "Manufacturer",
+      "importer": "Importer",
+      "service_provider": "Service provider"
+    },
+    "rfq": {
+      "label": "What do you need?",
+      "placeholder": "Quantity, size, deadline",
+      "send": "Send request",
+      "sending": "Sending…",
+      "sent": "Request sent. Open Requests to follow it.",
+      "error": "Could not send the request."
+    },
+    "import": {
+      "heading": "Import from abroad",
+      "estimateNotice": "Estimates only. Not an offer. Nothing is charged and no order is placed.",
+      "howItWorks": "Tell us what you want to import. Our team and import partners reply with an estimated landed cost in kwacha.",
+      "newRequest": "New import request",
+      "empty": "No import requests yet.",
+      "submit": "Send request",
+      "submitting": "Sending…",
+      "sent": "Request sent. We will reply with an estimate.",
+      "cancel": "Cancel request",
+      "close": "Close",
+      "fields": {
+        "title": "What do you want to import?",
+        "description": "Specs, colour, size, notes",
+        "referenceUrl": "Product link (https)",
+        "imageUrls": "Photo links, one per line (https, up to 5)",
+        "quantity": "Quantity",
+        "unit": "Unit",
+        "targetPrice": "Target price per unit (K)",
+        "destination": "Delivery town"
+      },
+      "status": {
+        "submitted": "Sent",
+        "in_review": "In review",
+        "quoted": "Estimate ready",
+        "closed": "Closed",
+        "cancelled": "Cancelled"
+      },
+      "quote": {
+        "title": "Estimated landed cost",
+        "product": "Product",
+        "freight": "Freight",
+        "duty": "Duty and taxes",
+        "clearing": "Clearing",
+        "other": "Other",
+        "total": "Estimated total",
+        "leadTime": "About {days} days",
+        "validUntil": "Estimate valid until {date}",
+        "partner": "Prepared by {name}",
+        "label": "Estimate"
+      },
+      "qtyLine": "{qty} {unit}",
+      "target": "Target: {price} per unit"
+    },
+    "profile": {
+      "title": "Supplier profile",
+      "intro": "Choose how you appear in other vendors' Source tab. Leave all unticked to stay hidden.",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "madeTitle": "Made in Zambia",
+      "madeIntro": "Mark the products you make in Zambia. This is your own declaration and may be checked by our team.",
+      "noListings": "You have no listings yet.",
+      "back": "Back to Source",
+      "manage": "Supplier profile",
+      "wholesaleTag": "Wholesale"
     }
   }
 }

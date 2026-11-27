@@ -53,7 +53,8 @@
     "coupons": "优惠券",
     "branches": "分店审核",
     "extras": "增值服务申请",
-    "trials": "免费试用"
+    "trials": "免费试用",
+    "importRequests": "进口请求"
   },
   "boards": {
     "states": {
@@ -1921,5 +1922,56 @@
       "notLater": "新的结束时间必须晚于当前结束时间。",
       "alreadyEnded": "该试用已结束。"
     }
+  },
+  "importRequests": {
+    "title": "进口请求",
+    "intro": "商家的进口请求。请回复估算到岸成本。仅为估算：不收款，不下单。",
+    "empty": "暂无请求。",
+    "filterLabel": "状态",
+    "all": "全部",
+    "status": {
+      "submitted": "已发送",
+      "in_review": "审核中",
+      "quoted": "已估算",
+      "closed": "已关闭",
+      "cancelled": "已取消"
+    },
+    "request": {
+      "qty": "{qty} {unit}",
+      "target": "目标每件 {price}",
+      "link": "商品链接",
+      "by": "来自 {vendor}",
+      "noQuote": "尚无估算",
+      "latest": "最新估算：{total}"
+    },
+    "actions": {
+      "review": "标记为审核中",
+      "close": "关闭请求",
+      "quote": "发送估算",
+      "sending": "发送中…"
+    },
+    "form": {
+      "title": "到岸成本估算（ZMW）",
+      "partner": "合作方或进口商",
+      "product": "商品（K）",
+      "freight": "运费（K）",
+      "duty": "关税和税费（K）",
+      "clearing": "清关（K）",
+      "other": "其他（K）",
+      "leadTime": "交期（天）",
+      "validUntil": "有效期至",
+      "notes": "给商家的备注",
+      "total": "合计",
+      "estimateOnly": "始终向商家显示为估算，而非报价。"
+    },
+    "errors": {
+      "load": "加载失败。",
+      "generic": "保存失败，请重试。",
+      "invalidTransition": "该请求不能再这样变更。",
+      "rateLimited": "修改过多，请稍候。",
+      "amount": "请输入有效的克瓦金额。"
+    },
+    "loading": "加载中…",
+    "retry": "重试"
   }
 }
