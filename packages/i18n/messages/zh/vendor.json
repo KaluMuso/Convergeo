@@ -1870,7 +1870,8 @@
       "not_editable": "此活动已无法编辑。",
       "invalid_transition": "该操作不适用于此活动。",
       "recurrenceRuleRequired": "重复活动需要填写重复规则和时区。",
-      "recurrenceSeedRequired": "重复系列只需一个起始日期，后续日期将自动生成。"
+      "recurrenceSeedRequired": "重复系列只需一个起始日期，后续日期将自动生成。",
+      "invalidArchetypeDetails": "部分详情无效，请检查页面风格部分。"
     },
     "gate": {
       "title": "活动仅限已认证的主办方",
@@ -2065,6 +2066,138 @@
         "highValue": "该活动需要先进行核实通话才能发布，请联系 Convergeo 支持。",
         "generic": "出了点问题，请重试。",
         "pickOrganiser": "请先选择主办方。"
+      }
+    },
+    "archetype": {
+      "heading": "页面风格详情",
+      "help": "显示在活动页面上的附加信息。均为选填，不影响门票与支付。",
+      "styleLabel": "页面风格",
+      "styleHelp": "决定公开活动页面的版式。",
+      "auto": "自动（{name}）",
+      "none": "未设置",
+      "remove": "删除",
+      "onePerLine": "每行一项",
+      "add": {
+        "sponsors": "添加赞助商",
+        "faqs": "添加问题",
+        "lineup": "添加演出嘉宾",
+        "agenda": "添加项目",
+        "speakers": "添加讲者",
+        "activities": "添加活动",
+        "age_groups": "添加年龄组",
+        "activations": "添加现场内容",
+        "menu_sections": "添加菜单分区",
+        "menu_item": "添加菜品"
+      },
+      "sections": {
+        "sponsors": "赞助商",
+        "faqs": "常见问题与须知",
+        "lineup": "演出阵容",
+        "agenda": "活动安排",
+        "speakers": "讲者与主持",
+        "activities": "活动项目",
+        "age_groups": "年龄分组",
+        "activations": "现场内容",
+        "presented_by": "冠名赞助商",
+        "menu_sections": "菜单",
+        "stages": "舞台",
+        "languages": "语言",
+        "bring_list": "请自备"
+      },
+      "fields": {
+        "dress_code": "着装要求",
+        "age_policy": "年龄政策",
+        "doors_open": "开门时间",
+        "merch_note": "周边商品说明",
+        "denomination": "教派",
+        "donation_note": "捐赠说明",
+        "livestream_url": "直播链接（https）",
+        "family_bundle_note": "家庭票说明",
+        "seating_note": "座位说明",
+        "reservation_note": "预订说明",
+        "host_name": "主办人或主厨",
+        "promo_note": "促销说明",
+        "giveaway_note": "抽奖说明",
+        "host_names": "主办人",
+        "occasion": "场合",
+        "rsvp_note": "回复说明",
+        "gift_note": "礼物说明",
+        "sponsors": {
+          "name": "名称",
+          "logo": "标志（Cloudinary 标识或 https 图片）",
+          "link_url": "链接（https）",
+          "tagline": "口号"
+        },
+        "faqs": {
+          "question": "问题",
+          "answer": "回答"
+        },
+        "lineup": {
+          "name": "名称",
+          "role": "角色",
+          "stage": "舞台",
+          "slot": "出场时间",
+          "image": "照片（Cloudinary 或 https）",
+          "bio": "简短介绍"
+        },
+        "agenda": {
+          "time": "时间",
+          "title": "标题",
+          "speaker": "讲者",
+          "notes": "备注"
+        },
+        "speakers": {
+          "name": "名称",
+          "role": "角色",
+          "image": "照片（Cloudinary 或 https）",
+          "bio": "简短介绍"
+        },
+        "activities": {
+          "name": "名称",
+          "age_group": "年龄组",
+          "time": "时间",
+          "area": "区域"
+        },
+        "age_groups": {
+          "label": "标签",
+          "min_age": "最小年龄",
+          "max_age": "最大年龄（选填）"
+        },
+        "activations": {
+          "title": "标题",
+          "description": "说明"
+        },
+        "menu_sections": {
+          "title": "分区标题",
+          "name": "菜品名称",
+          "description": "说明",
+          "price": "价格（K）",
+          "priceHelp": "仅作展示，门票价格以票务为准。",
+          "dietary": "饮食标签（vegetarian, vegan, halal, gluten_free, spicy）"
+        }
+      },
+      "options": {
+        "age_policy": {
+          "all_ages": "欢迎所有年龄",
+          "guardian_under_12": "12 岁以下需由监护人陪同",
+          "16_plus": "16 岁及以上",
+          "18_plus": "18 岁及以上"
+        },
+        "role": {
+          "headliner": "压轴嘉宾",
+          "support": "暖场嘉宾",
+          "dj": "DJ",
+          "mc": "主持人",
+          "guest": "特邀嘉宾"
+        }
+      },
+      "errors": {
+        "requiredField": "请填写必填项。",
+        "invalidTime": "请使用 24 小时制，例如 18:30。",
+        "invalidUrl": "链接必须以 https:// 开头。",
+        "invalidPrice": "请输入价格，例如 120 或 120.50。",
+        "invalidNumber": "年龄必须为整数。",
+        "tooMany": "同一分区的条目过多。"
       }
     }
   },

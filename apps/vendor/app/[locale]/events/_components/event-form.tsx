@@ -7,11 +7,23 @@ import {
   categoryPath,
   eventCategoryNodes,
 } from "@vergeo/ui/src/category-selection";
+import {
+  deriveArchetype,
+  EVENT_ARCHETYPES,
+  isEventArchetype,
+  type EventArchetype as Archetype,
+} from "@vergeo/ui/src/event-archetype";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  detailsToDraft,
+  draftToDetails,
+  validateDraft,
+  type DetailsDraft,
+} from "../_lib/archetype-draft";
 import {
   createEventsClient,
   type EventCategory,
@@ -25,6 +37,7 @@ import {
 import { isNotOrganiserError } from "../_lib/organiser-gate";
 import { Button, FormField, Input, Select, Spinner } from "../_lib/ui";
 
+import { ArchetypeFields } from "./archetype-fields";
 import { EventToolLinks } from "./event-tool-links";
 import { EventImagePicker } from "./image-picker";
 import {
@@ -84,6 +97,15 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
     initialEvent?.platform_fee_payer ?? "organiser",
   );
   const [city, setCity] = useState(initialEvent?.city ?? "");
+  // "auto" = derive the page style from the category; otherwise an organiser override.
+  const [archetypeChoice, setArchetypeChoice] = useState<Archetype | "auto">(
+    initialEvent?.archetype_source === "override" && initialEvent.archetype
+      ? initialEvent.archetype
+      : "auto",
+  );
+  const [detailsDraft, setDetailsDraft] = useState<DetailsDraft>(() =>
+    detailsToDraft(initialEvent?.archetype_details),
+  );
   const [idCheckEnabled, setIdCheckEnabled] = useState(initialEvent?.id_check_enabled ?? false);
   const [instances, setInstances] = useState<InstanceDraft[]>(
     initialEvent?.instances.length
@@ -149,11 +171,22 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
     setRecurrenceHorizonDays(String(initialEvent.recurrence_horizon_days ?? 90));
     setPlatformFeePayer(initialEvent.platform_fee_payer ?? "organiser");
     setCity(initialEvent.city ?? "");
+    setArchetypeChoice(
+      initialEvent.archetype_source === "override" && initialEvent.archetype
+        ? initialEvent.archetype
+        : "auto",
+    );
+    setDetailsDraft(detailsToDraft(initialEvent.archetype_details));
     setIdCheckEnabled(initialEvent.id_check_enabled ?? false);
     setInstances(initialEvent.instances.map((row) => toInstanceDraft(row)));
     setStatus(initialEvent.status);
     setTicketsSold(initialEvent.tickets_sold);
   }, [initialEvent]);
+
+  const effectiveArchetype: Archetype =
+    archetypeChoice === "auto"
+      ? deriveArchetype(category, eventType === "private" ? "private" : null)
+      : archetypeChoice;
 
   const buildPayload = (): EventCreatePayload => ({
     title: title.trim(),
@@ -178,6 +211,8 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
     platform_fee_payer: platformFeePayer,
     city: city.trim() || null,
     id_check_enabled: idCheckEnabled,
+    archetype: archetypeChoice === "auto" ? null : archetypeChoice,
+    archetype_details: draftToDetails(effectiveArchetype, detailsDraft),
     instances: draftToPayload(instances),
   });
 
@@ -198,6 +233,12 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
 
     if (categoriesLoading || categoriesFailed || !categoryPath(categoryNodes, category).length) {
       setError(taxonomyText("unavailable"));
+      return;
+    }
+
+    const draftError = validateDraft(effectiveArchetype, detailsDraft);
+    if (draftError) {
+      setError(t(`events.archetype.errors.${draftError}`));
       return;
     }
 
@@ -233,6 +274,10 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
       }
       if (caught instanceof ApiError) {
         const messageKey = caught.details.message_key;
+        if (messageKey === "vendor.events.errors.invalidArchetypeDetails") {
+          setError(t("events.errors.invalidArchetypeDetails"));
+          return;
+        }
         if (typeof messageKey === "string" && messageKey.startsWith("vendor.events.errors.")) {
           const key = messageKey.replace("vendor.events.", "") as
             | "errors.required"
@@ -352,6 +397,35 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
               {t(`events.form.eventTypes.${value}`)}
             </option>
           ))}
+        </Select>
+      </FormField>
+
+      <FormField
+        label={t("events.archetype.styleLabel")}
+        helpText={t("events.archetype.styleHelp")}
+      >
+        <Select
+          value={archetypeChoice}
+          onChange={(event) => {
+            const next = event.target.value;
+            setArchetypeChoice(isEventArchetype(next) ? next : "auto");
+          }}
+          disabled={readOnly || saving}
+          data-testid="archetype-select"
+        >
+          <option value="auto">
+            {t("events.archetype.auto", {
+              name: te(
+                `archetype.names.${deriveArchetype(category, eventType === "private" ? "private" : null)}`,
+              ),
+            })}
+          </option>
+          {EVENT_ARCHETYPES.filter((value) => value !== "generic").map((value) => (
+            <option key={value} value={value}>
+              {te(`archetype.names.${value}`)}
+            </option>
+          ))}
+          <option value="generic">{te("archetype.names.generic")}</option>
         </Select>
       </FormField>
 
@@ -518,6 +592,13 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
           />
         </FormField>
       </div>
+
+      <ArchetypeFields
+        archetype={effectiveArchetype}
+        draft={detailsDraft}
+        onChange={setDetailsDraft}
+        disabled={readOnly || saving}
+      />
 
       <EventImagePicker
         images={images}

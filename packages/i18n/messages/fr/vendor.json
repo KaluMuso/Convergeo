@@ -1870,7 +1870,8 @@
       "not_editable": "Cet événement ne peut plus être modifié.",
       "invalid_transition": "Cette action n'est pas disponible pour cet événement.",
       "recurrenceRuleRequired": "Les événements récurrents nécessitent une règle de répétition et un fuseau horaire.",
-      "recurrenceSeedRequired": "Une série récurrente nécessite une date de départ. Les dates suivantes sont créées automatiquement."
+      "recurrenceSeedRequired": "Une série récurrente nécessite une date de départ. Les dates suivantes sont créées automatiquement.",
+      "invalidArchetypeDetails": "Certains détails ne sont pas valides. Vérifiez la section du style de page."
     },
     "gate": {
       "title": "Les événements sont réservés aux organisateurs vérifiés",
@@ -2065,6 +2066,138 @@
         "highValue": "Cet événement nécessite un appel de vérification avant publication. Contactez le support Convergeo.",
         "generic": "Un problème est survenu. Réessayez.",
         "pickOrganiser": "Choisissez d'abord un organisateur."
+      }
+    },
+    "archetype": {
+      "heading": "Détails du style de page",
+      "help": "Informations supplémentaires affichées sur la page de l'événement. Tout est facultatif ; les billets et paiements ne sont pas affectés.",
+      "styleLabel": "Style de page",
+      "styleHelp": "Détermine la mise en page de la page publique de l'événement.",
+      "auto": "Automatique ({name})",
+      "none": "Non défini",
+      "remove": "Supprimer",
+      "onePerLine": "Un par ligne",
+      "add": {
+        "sponsors": "Ajouter un partenaire",
+        "faqs": "Ajouter une question",
+        "lineup": "Ajouter un artiste",
+        "agenda": "Ajouter un élément",
+        "speakers": "Ajouter un intervenant",
+        "activities": "Ajouter une activité",
+        "age_groups": "Ajouter une tranche d'âge",
+        "activations": "Ajouter une animation",
+        "menu_sections": "Ajouter une section de menu",
+        "menu_item": "Ajouter un plat"
+      },
+      "sections": {
+        "sponsors": "Partenaires",
+        "faqs": "Questions et conditions",
+        "lineup": "Programmation",
+        "agenda": "Programme",
+        "speakers": "Intervenants et hôtes",
+        "activities": "Activités",
+        "age_groups": "Tranches d'âge",
+        "activations": "Au programme",
+        "presented_by": "Présenté par (partenaire principal)",
+        "menu_sections": "Menu",
+        "stages": "Scènes",
+        "languages": "Langues",
+        "bring_list": "À apporter"
+      },
+      "fields": {
+        "dress_code": "Tenue",
+        "age_policy": "Politique d'âge",
+        "doors_open": "Ouverture des portes",
+        "merch_note": "Note sur les produits dérivés",
+        "denomination": "Confession",
+        "donation_note": "Note sur les dons",
+        "livestream_url": "Lien de diffusion (https)",
+        "family_bundle_note": "Note billets famille",
+        "seating_note": "Note sur le placement",
+        "reservation_note": "Note de réservation",
+        "host_name": "Hôte ou chef",
+        "promo_note": "Note promo",
+        "giveaway_note": "Note concours",
+        "host_names": "Organisateurs",
+        "occasion": "Occasion",
+        "rsvp_note": "Note de réponse",
+        "gift_note": "Note cadeaux",
+        "sponsors": {
+          "name": "Nom",
+          "logo": "Logo (identifiant Cloudinary ou image https)",
+          "link_url": "Lien (https)",
+          "tagline": "Slogan"
+        },
+        "faqs": {
+          "question": "Question",
+          "answer": "Réponse"
+        },
+        "lineup": {
+          "name": "Nom",
+          "role": "Rôle",
+          "stage": "Scène",
+          "slot": "Heure de passage",
+          "image": "Photo (Cloudinary ou https)",
+          "bio": "Courte biographie"
+        },
+        "agenda": {
+          "time": "Heure",
+          "title": "Titre",
+          "speaker": "Intervenant",
+          "notes": "Notes"
+        },
+        "speakers": {
+          "name": "Nom",
+          "role": "Rôle",
+          "image": "Photo (Cloudinary ou https)",
+          "bio": "Courte biographie"
+        },
+        "activities": {
+          "name": "Nom",
+          "age_group": "Tranche d'âge",
+          "time": "Heure",
+          "area": "Zone"
+        },
+        "age_groups": {
+          "label": "Libellé",
+          "min_age": "Âge minimum",
+          "max_age": "Âge maximum (facultatif)"
+        },
+        "activations": {
+          "title": "Titre",
+          "description": "Description"
+        },
+        "menu_sections": {
+          "title": "Titre de la section",
+          "name": "Nom du plat",
+          "description": "Description",
+          "price": "Prix (K)",
+          "priceHelp": "Affichage uniquement. Les billets portent le vrai prix.",
+          "dietary": "Régimes (vegetarian, vegan, halal, gluten_free, spicy)"
+        }
+      },
+      "options": {
+        "age_policy": {
+          "all_ages": "Tous âges bienvenus",
+          "guardian_under_12": "Moins de 12 ans accompagnés",
+          "16_plus": "16 ans et plus",
+          "18_plus": "18 ans et plus"
+        },
+        "role": {
+          "headliner": "Tête d'affiche",
+          "support": "Première partie",
+          "dj": "DJ",
+          "mc": "MC",
+          "guest": "Invité spécial"
+        }
+      },
+      "errors": {
+        "requiredField": "Remplissez les champs obligatoires.",
+        "invalidTime": "Utilisez le format 24 h, par exemple 18:30.",
+        "invalidUrl": "Les liens doivent commencer par https://.",
+        "invalidPrice": "Saisissez un prix comme 120 ou 120.50.",
+        "invalidNumber": "L'âge doit être un nombre entier.",
+        "tooMany": "Trop d'éléments dans une même section."
       }
     }
   },

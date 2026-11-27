@@ -2,13 +2,21 @@ import { createApiClient } from "@vergeo/config";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
+import type { EventArchetype } from "@vergeo/ui/src/event-archetype";
+
 export type EventCategory = string;
-export type EventCategoryOption = { slug: string; parent_slug: string | null; label_key: string };
+export type EventCategoryOption = {
+  slug: string;
+  parent_slug: string | null;
+  label_key: string;
+};
 
 export type EventStatus = "draft" | "published" | "cancelled" | "completed";
 export type EventType = "standard" | "single" | "multi_day" | "recurring" | "free_rsvp" | "private";
 export type EventVisibility = "public" | "unlisted" | "private";
 export type PlatformFeePayer = "organiser" | "buyer";
+export type { EventArchetype };
+export type ArchetypeDetailsJson = Record<string, unknown>;
 
 export type EventInstance = {
   id: string;
@@ -25,6 +33,7 @@ export type EventSummary = {
   status: EventStatus;
   category: EventCategory | null;
   event_type: EventType;
+  archetype?: EventArchetype;
   visibility: EventVisibility;
   recurrence_rule: string | null;
   recurrence_timezone: string | null;
@@ -45,6 +54,9 @@ export type EventDetail = {
   status: EventStatus;
   category: EventCategory | null;
   event_type: EventType;
+  archetype?: EventArchetype;
+  archetype_source?: "derived" | "override";
+  archetype_details?: ArchetypeDetailsJson;
   visibility: EventVisibility;
   has_access_code: boolean;
   recurrence_rule: string | null;
@@ -89,6 +101,9 @@ export type EventCreatePayload = {
   platform_fee_payer?: PlatformFeePayer;
   city?: string | null;
   id_check_enabled?: boolean;
+  /** null clears the override (derive from category). */
+  archetype?: EventArchetype | null;
+  archetype_details?: ArchetypeDetailsJson;
   images: string[];
   instances: EventInstanceInput[];
 };
