@@ -36,7 +36,13 @@
     "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
     "nearMe": "Pepi naine",
     "nearMeDenied": "Location ileikala off — ukufwaya mushi kulebomba.",
-    "subcategoryLabel": "Subcategory"
+    "subcategoryLabel": "Subcategory",
+    "typeLabel": "Event type",
+    "typeAll": "All types",
+    "priceLabel": "Price",
+    "priceAny": "Any price",
+    "priceUpTo": "Up to {price}",
+    "freeOnly": "Free only"
   },
   "categories": {
     "all": "Shonse",
@@ -273,5 +279,83 @@
     "success": "Nomba muli pa door team ya iyi event.",
     "failed": "Iyi invite tauli valid, yaexpira, nangu yatumiwa ku nomba imbi.",
     "loginRequired": "Ingilani ukupoka iyi invite."
+  },
+  "archetype": {
+    "names": {
+      "concert": "Concert & show",
+      "religious": "Faith gathering",
+      "sports_family": "Sports & family fair",
+      "restaurant": "Dining event",
+      "private_gathering": "Private gathering",
+      "branded": "Brand experience",
+      "generic": "Event"
+    },
+    "sections": {
+      "agenda": "Programme",
+      "service": "Order of service",
+      "speakers": "Speakers and hosts",
+      "lineup": "Line-up",
+      "activities": "Activities",
+      "ageGroups": "Age groups",
+      "menu": "Menu",
+      "activations": "What's on",
+      "notes": "Good to know",
+      "sponsors": "Our sponsors",
+      "faqs": "Questions and policies",
+      "gallery": "Gallery"
+    },
+    "roles": {
+      "headliner": "Headliner",
+      "support": "Support act",
+      "dj": "DJ",
+      "mc": "MC",
+      "guest": "Special guest"
+    },
+    "stage": "Stage: {name}",
+    "doorsOpen": "Doors open at {time}",
+    "merch": "Merchandise",
+    "ageRange": "{min}–{max} years",
+    "agePlus": "{min}+ years",
+    "familyBundle": "Family tickets",
+    "bringList": "What to bring",
+    "hostedBy": "Hosted by {name}",
+    "seating": "Seating",
+    "reservation": "Reservations",
+    "presentedBy": "Presented by",
+    "visitSponsor": "Visit {name} (opens in a new tab)",
+    "galleryAlt": "{title}, photo {n}",
+    "dietary": {
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "halal": "Halal",
+      "gluten_free": "Gluten free",
+      "spicy": "Spicy"
+    },
+    "denomination": "Denomination",
+    "languages": "Languages",
+    "livestream": "Livestream",
+    "watchLivestream": "Watch the livestream",
+    "hostNames": "Hosted by",
+    "occasion": "Occasion",
+    "rsvp": "RSVP",
+    "gift": "Gifts",
+    "dressCode": "Dress code: {value}",
+    "agePolicy": {
+      "all_ages": "All ages welcome",
+      "guardian_under_12": "Under 12s with a guardian",
+      "16_plus": "16 and over",
+      "18_plus": "18 and over"
+    },
+    "tier": {
+      "heading": "Ticket options",
+      "vvip": "VVIP",
+      "vip": "VIP",
+      "ga": "General admission",
+      "family": "Family and group",
+      "child": "Children",
+      "table": "Table",
+      "earlyBird": "Early bird {price}",
+      "choose": "Choose your tickets"
+    }
   }
 }

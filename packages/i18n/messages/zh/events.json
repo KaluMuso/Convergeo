@@ -36,7 +36,13 @@
     "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
     "nearMe": "附近",
     "nearMeDenied": "未开启定位 — 仍可用城市搜索。",
-    "subcategoryLabel": "子类别"
+    "subcategoryLabel": "子类别",
+    "typeLabel": "活动类型",
+    "typeAll": "全部类型",
+    "priceLabel": "价格",
+    "priceAny": "不限价格",
+    "priceUpTo": "最高 {price}",
+    "freeOnly": "仅限免费"
   },
   "categories": {
     "all": "全部",
@@ -273,5 +279,83 @@
     "success": "您已加入该活动的检票团队。",
     "failed": "该邀请无效、已过期，或发给了其他手机号。",
     "loginRequired": "请登录以接受此邀请。"
+  },
+  "archetype": {
+    "names": {
+      "concert": "演唱会与演出",
+      "religious": "宗教聚会",
+      "sports_family": "体育与家庭活动日",
+      "restaurant": "餐饮活动",
+      "private_gathering": "私人聚会",
+      "branded": "品牌体验活动",
+      "generic": "活动"
+    },
+    "sections": {
+      "agenda": "活动安排",
+      "service": "礼拜流程",
+      "speakers": "讲者与主持",
+      "lineup": "演出阵容",
+      "activities": "活动项目",
+      "ageGroups": "年龄分组",
+      "menu": "菜单",
+      "activations": "现场内容",
+      "notes": "温馨提示",
+      "sponsors": "赞助商",
+      "faqs": "常见问题与须知",
+      "gallery": "相册"
+    },
+    "roles": {
+      "headliner": "压轴嘉宾",
+      "support": "暖场嘉宾",
+      "dj": "DJ",
+      "mc": "主持人",
+      "guest": "特邀嘉宾"
+    },
+    "stage": "舞台：{name}",
+    "doorsOpen": "{time} 开门",
+    "merch": "周边商品",
+    "ageRange": "{min}–{max} 岁",
+    "agePlus": "{min} 岁以上",
+    "familyBundle": "家庭票",
+    "bringList": "请自备",
+    "hostedBy": "主办：{name}",
+    "seating": "座位",
+    "reservation": "预订",
+    "presentedBy": "冠名",
+    "visitSponsor": "访问 {name}（在新标签页打开）",
+    "galleryAlt": "{title}，第 {n} 张照片",
+    "dietary": {
+      "vegetarian": "素食",
+      "vegan": "纯素",
+      "halal": "清真",
+      "gluten_free": "无麸质",
+      "spicy": "辣"
+    },
+    "denomination": "教派",
+    "languages": "语言",
+    "livestream": "直播",
+    "watchLivestream": "观看直播",
+    "hostNames": "主办人",
+    "occasion": "场合",
+    "rsvp": "回复邀请",
+    "gift": "礼物",
+    "dressCode": "着装要求：{value}",
+    "agePolicy": {
+      "all_ages": "欢迎所有年龄",
+      "guardian_under_12": "12 岁以下需由监护人陪同",
+      "16_plus": "16 岁及以上",
+      "18_plus": "18 岁及以上"
+    },
+    "tier": {
+      "heading": "票务选项",
+      "vvip": "VVIP",
+      "vip": "VIP",
+      "ga": "普通入场",
+      "family": "家庭与团体",
+      "child": "儿童",
+      "table": "餐桌",
+      "earlyBird": "早鸟价 {price}",
+      "choose": "选择门票"
+    }
   }
 }

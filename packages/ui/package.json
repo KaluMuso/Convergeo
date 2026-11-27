@@ -25,6 +25,7 @@
     "./src/icon-hues": "./src/icon-hues.ts",
     "./src/browse-grid": "./src/browse-grid.ts",
     "./src/glass": "./src/glass.ts",
+    "./src/event-archetype": "./src/event-archetype.ts",
     "./src/media/cloudinary-url": "./src/media/cloudinary-url.ts",
     "./src/*": "./src/*.tsx"
   },

@@ -36,7 +36,13 @@
     "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
     "nearMe": "Près de moi",
     "nearMeDenied": "La localisation est désactivée — la recherche par ville reste disponible.",
-    "subcategoryLabel": "Sous-catégorie"
+    "subcategoryLabel": "Sous-catégorie",
+    "typeLabel": "Type d'événement",
+    "typeAll": "Tous les types",
+    "priceLabel": "Prix",
+    "priceAny": "Tous les prix",
+    "priceUpTo": "Jusqu'à {price}",
+    "freeOnly": "Gratuit uniquement"
   },
   "categories": {
     "all": "Tous",
@@ -262,5 +268,83 @@
     "success": "Vous faites maintenant partie de l'équipe d'entrée de cet événement.",
     "failed": "Cette invitation est invalide, expirée, ou a été envoyée à un autre numéro.",
     "loginRequired": "Connectez-vous pour accepter cette invitation."
+  },
+  "archetype": {
+    "names": {
+      "concert": "Concert et spectacle",
+      "religious": "Rassemblement religieux",
+      "sports_family": "Fête sportive et familiale",
+      "restaurant": "Événement gastronomique",
+      "private_gathering": "Réunion privée",
+      "branded": "Expérience de marque",
+      "generic": "Événement"
+    },
+    "sections": {
+      "agenda": "Programme",
+      "service": "Déroulement du culte",
+      "speakers": "Intervenants et hôtes",
+      "lineup": "Programmation",
+      "activities": "Activités",
+      "ageGroups": "Tranches d'âge",
+      "menu": "Menu",
+      "activations": "Au programme",
+      "notes": "Bon à savoir",
+      "sponsors": "Nos partenaires",
+      "faqs": "Questions et conditions",
+      "gallery": "Galerie"
+    },
+    "roles": {
+      "headliner": "Tête d'affiche",
+      "support": "Première partie",
+      "dj": "DJ",
+      "mc": "MC",
+      "guest": "Invité spécial"
+    },
+    "stage": "Scène : {name}",
+    "doorsOpen": "Ouverture des portes à {time}",
+    "merch": "Produits dérivés",
+    "ageRange": "{min}–{max} ans",
+    "agePlus": "{min} ans et plus",
+    "familyBundle": "Billets famille",
+    "bringList": "À apporter",
+    "hostedBy": "Organisé par {name}",
+    "seating": "Placement",
+    "reservation": "Réservations",
+    "presentedBy": "Présenté par",
+    "visitSponsor": "Visiter {name} (s'ouvre dans un nouvel onglet)",
+    "galleryAlt": "{title}, photo {n}",
+    "dietary": {
+      "vegetarian": "Végétarien",
+      "vegan": "Végan",
+      "halal": "Halal",
+      "gluten_free": "Sans gluten",
+      "spicy": "Épicé"
+    },
+    "denomination": "Confession",
+    "languages": "Langues",
+    "livestream": "Diffusion en direct",
+    "watchLivestream": "Suivre la diffusion en direct",
+    "hostNames": "Organisé par",
+    "occasion": "Occasion",
+    "rsvp": "Réponse souhaitée",
+    "gift": "Cadeaux",
+    "dressCode": "Tenue : {value}",
+    "agePolicy": {
+      "all_ages": "Tous âges bienvenus",
+      "guardian_under_12": "Moins de 12 ans accompagnés",
+      "16_plus": "16 ans et plus",
+      "18_plus": "18 ans et plus"
+    },
+    "tier": {
+      "heading": "Options de billets",
+      "vvip": "VVIP",
+      "vip": "VIP",
+      "ga": "Entrée générale",
+      "family": "Famille et groupe",
+      "child": "Enfants",
+      "table": "Table",
+      "earlyBird": "Prévente {price}",
+      "choose": "Choisir vos billets"
+    }
   }
 }

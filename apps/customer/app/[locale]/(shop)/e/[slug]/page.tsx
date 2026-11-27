@@ -1,5 +1,11 @@
 import { formatK, loadNamespace, type Locale } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
+import {
+  ARCHETYPE_THEME,
+  isEventArchetype,
+  sanitiseDetails,
+  type EventArchetype,
+} from "@vergeo/ui/src/event-archetype";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import {
   buildCanonicalAlternates,
@@ -20,6 +26,12 @@ import { ApiUnavailablePanel } from "../../_components/api-unavailable";
 import { fetchEventDetail } from "../../_components/detail-fetch/fetch-event";
 import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 
+import { FactChips } from "./_components/archetype/archetype-blocks";
+import {
+  ArchetypeBody,
+  ArchetypeLead,
+  archetypeChips,
+} from "./_components/archetype/archetype-body";
 import { EventCalendarLinks } from "./_components/event-calendar-links";
 import { EventCountdown } from "./_components/event-countdown";
 import { EventJsonLd, isEventIndexable, type EventJsonLdInput } from "./_components/event-jsonld";
@@ -93,6 +105,8 @@ type EventDetail = {
   platform_fee_bps?: number;
   visibility?: "public" | "unlisted" | "private";
   age_restriction?: number | null;
+  archetype?: string;
+  archetype_details?: unknown;
   refund_policy_key?: string | null;
   organiser: {
     id: string;
@@ -315,13 +329,26 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
       ? t("detail.fromPrice", { price: formatK(event.min_price_ngwee) })
       : t("detail.getTickets");
 
+  const archetype: EventArchetype = isEventArchetype(event.archetype) ? event.archetype : "generic";
+  const theme = ARCHETYPE_THEME[archetype];
+  const details = sanitiseDetails(event.archetype_details);
+  const heroChips = archetypeChips(details, t);
   const heroImage = event.images[0];
   const featuredInstance =
     event.instances.find((instance) => !isPastEventInstance(instance)) ??
     event.instances[event.instances.length - 1];
 
   return (
-    <article className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 pb-28 lg:pb-10">
+    <article
+      className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 pb-28 lg:pb-10"
+      data-archetype={archetype}
+      style={
+        {
+          "--arch-tint": theme.tint,
+          "--arch-accent": theme.accent,
+        } as React.CSSProperties
+      }
+    >
       <EventJsonLd event={toEventJsonLdInput(event, locale)} />
 
       <Link
@@ -345,12 +372,29 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
         ) : (
           <div
             className="absolute inset-0 bg-gradient-to-br from-primary/30 via-panel-2 to-panel"
+            style={
+              archetype === "generic"
+                ? undefined
+                : {
+                    backgroundImage:
+                      "linear-gradient(135deg, var(--arch-tint), var(--panel-2) 70%, var(--panel))",
+                  }
+            }
             aria-hidden="true"
           />
         )}
 
         <div className="absolute inset-0 flex items-end bg-gradient-to-t from-panel via-panel/80 to-transparent p-6 md:p-10 lg:p-12">
           <div className="max-w-4xl space-y-4">
+            {archetype !== "generic" ? (
+              <p
+                className="w-fit border-l-4 pl-3 text-xs font-semibold uppercase tracking-[0.14em] text-panel-muted"
+                style={{ borderColor: "var(--arch-accent)" }}
+                data-testid="archetype-kicker"
+              >
+                {t(`archetype.names.${archetype}`)}
+              </p>
+            ) : null}
             <div className="flex flex-wrap items-center gap-2">
               {event.is_sold_out ? <Badge variant="sold_out" label={t("detail.soldOut")} /> : null}
               {event.is_free ? <Badge variant="free" label={t("detail.free")} /> : null}
@@ -362,6 +406,7 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
               ) : null}
             </div>
             <h1 className="font-display text-hero text-panel-text">{event.title}</h1>
+            <FactChips chips={heroChips} />
             <div className="flex flex-col gap-1 text-sm text-panel-muted sm:flex-row sm:flex-wrap sm:gap-x-5">
               {featuredInstance ? (
                 <>
@@ -392,6 +437,8 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
         </div>
       </header>
 
+      <ArchetypeLead archetype={archetype} rawDetails={event.archetype_details} t={t} />
+
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:gap-12">
         <div className="flex min-w-0 flex-col gap-8">
           {event.description ? (
@@ -402,6 +449,25 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
               <p className="max-w-3xl text-body leading-relaxed text-text-2">{event.description}</p>
             </section>
           ) : null}
+
+          <ArchetypeBody
+            archetype={archetype}
+            rawDetails={event.archetype_details}
+            images={event.images}
+            title={event.title}
+            tickets={event.ticket_types.map((ticket) => ({
+              id: ticket.id,
+              name: ticket.name,
+              price_ngwee: ticket.price_ngwee,
+              is_free: ticket.is_free,
+              is_sold_out: ticket.is_sold_out,
+              qty_cap: ticket.qty_cap,
+              tickets_sold: ticket.tickets_sold,
+              perks: ticket.perks,
+              early_bird_price_ngwee: ticket.early_bird_price_ngwee,
+            }))}
+            t={t}
+          />
 
           <section className="flex flex-col gap-4" aria-labelledby="event-dates-heading">
             <h2 id="event-dates-heading" className="font-display text-h2 text-display-ink">
@@ -489,15 +555,17 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
               unknown: t("detail.refund.unknown"),
             }}
           />
-          <TicketPicker
-            eventSlug={event.slug}
-            instances={event.instances}
-            ticketTypes={event.ticket_types}
-            isSoldOut={event.is_sold_out}
-            eventAccessProof={eventAccessProof}
-            platformFeePayer={event.platform_fee_payer === "buyer" ? "buyer" : "organiser"}
-            platformFeeBps={event.platform_fee_bps ?? null}
-          />
+          <div id="tickets" className="scroll-mt-24">
+            <TicketPicker
+              eventSlug={event.slug}
+              instances={event.instances}
+              ticketTypes={event.ticket_types}
+              isSoldOut={event.is_sold_out}
+              eventAccessProof={eventAccessProof}
+              platformFeePayer={event.platform_fee_payer === "buyer" ? "buyer" : "organiser"}
+              platformFeeBps={event.platform_fee_bps ?? null}
+            />
+          </div>
 
           <section className="rounded-lg border border-border bg-bg-2 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-3">
