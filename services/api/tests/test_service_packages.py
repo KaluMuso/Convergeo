@@ -421,7 +421,7 @@ def test_a_package_from_the_old_tier_era_still_works_end_to_end(
             "status": "active",
         }
         db.rows("service_packages").append(row)
-        ids[tier] = row["id"]
+        ids[tier] = str(row["id"])
 
     listed = vendor.get(f"/vendor/services/{SERVICE_ID}/packages").json()["items"]
     assert [p["tier"] for p in listed] == ["basic", "standard", "premium"]
