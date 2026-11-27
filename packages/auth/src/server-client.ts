@@ -1,10 +1,11 @@
 import { createServerClient as createSupabaseServerClient } from "@supabase/ssr";
+
+import { mergeSecureCookieOptions } from "./cookie-security";
+import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
+
 import type { CookieMethodsServer, SetAllCookies } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { cookies } from "next/headers";
-
-import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
-import { mergeSecureCookieOptions } from "./cookie-security";
 
 type CookieStore = Awaited<ReturnType<typeof cookies>>;
 
