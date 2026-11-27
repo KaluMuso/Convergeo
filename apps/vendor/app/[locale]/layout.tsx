@@ -48,21 +48,34 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   // The vendor dashboard's client views call useTranslations("vendor"), so the
   // namespace must live on the app-wide provider — the shared request config
   // only ships `common`, which previously left those views rendering raw keys.
-  const [baseMessages, vendorMessages, serviceMessages, notificationMessages] = await Promise.all([
+  // Capabilities run in the same batch as the catalogs: they used to start only
+  // after every namespace had loaded, putting the slowest probe on every page's
+  // critical path.
+  const [
+    baseMessages,
+    vendorMessages,
+    serviceMessages,
+    eventMessages,
+    notificationMessages,
+    navCapabilities,
+  ] = await Promise.all([
     getMessages(),
     loadNamespace(locale as Locale, "vendor"),
     loadNamespace(locale as Locale, "services"),
+    loadNamespace(locale as Locale, "events"),
     loadNamespace(locale as Locale, "notifications"),
+    resolveVendorNavCapabilities(),
   ]);
   const notificationsAll = notificationMessages as Record<string, unknown>;
   const messages = {
     ...baseMessages,
     vendor: vendorMessages,
     services: serviceMessages,
+    // Event forms/lists call useTranslations("events") (category labels, pickers).
+    events: eventMessages,
     // Notification center copy only — not the WhatsApp/SMS/email templates.
     notifications: { center: notificationsAll.center, inApp: notificationsAll.inApp },
   };
-  const navCapabilities = await resolveVendorNavCapabilities();
 
   // Translated toast copy for emitToastKey() call sites (common.toast).
   const toastCopy = (

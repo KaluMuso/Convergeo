@@ -139,6 +139,11 @@ export function ServicePackagesEditor({ serviceId }: Props) {
     PACKAGE_TIERS.map((tier) => tiers[tier].pkg).filter((p): p is ServicePackage => Boolean(p)),
   );
 
+  const activeCount = PACKAGE_TIERS.filter(
+    (tier) => tiers[tier].pkg?.status === "active" || tiers[tier].draft !== null,
+  ).length;
+  const limitReached = activeCount >= PACKAGE_TIERS.length;
+
   if (loadFailed) {
     return <p className="text-sm text-danger">{t("errors.loadFailed")}</p>;
   }
@@ -159,6 +164,14 @@ export function ServicePackagesEditor({ serviceId }: Props) {
         <p className="text-sm text-text-2">{t("intro")}</p>
         <p className="text-xs text-text-3">{t("codNote")}</p>
         <p className="text-xs text-text-3">{t("guidance.fromPrice")}</p>
+        <p role="status" className="text-sm font-medium text-text" data-testid="packages-count">
+          {t("count", { count: activeCount, max: PACKAGE_TIERS.length })}
+        </p>
+        {limitReached ? (
+          <p role="status" className="text-sm text-text-2" data-testid="packages-limit-reached">
+            {t("limitReached", { max: PACKAGE_TIERS.length })}
+          </p>
+        ) : null}
       </div>
 
       {warnings.map((w) => (

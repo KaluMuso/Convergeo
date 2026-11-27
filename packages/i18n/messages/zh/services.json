@@ -115,6 +115,7 @@
       "areaLabel": "服务区域",
       "fromPriceLabel": "起价（可选）",
       "fromPriceHint": "留空以显示“请求报价”",
+      "photoAlt": "服务照片 {position}",
       "statusLabel": "状态",
       "save": "保存",
       "publish": "发布",
@@ -133,6 +134,8 @@
     "packages": {
       "title": "套餐",
       "intro": "最多提供三个套餐，方便客户比较并就所需内容索取报价。",
+      "count": "已提供 {count} / {max} 个套餐",
+      "limitReached": "每项服务最多可提供 {max} 个套餐：基础、标准和高级各一个。移除一个后才能提供其他套餐。",
       "codNote": "客户选择套餐时不会在线付款——他们会向您发送报价请求，最终价格在对话中商定。",
       "offer": "提供此套餐",
       "notOffered": "未提供",

@@ -30,6 +30,11 @@ export type EventImagePickerProps = {
   getToken: () => string | null | Promise<string | null>;
   onChange: (images: string[]) => void;
   disabled?: boolean;
+  /**
+   * Alt text per photo. Defaults to the event copy; the service form passes its
+   * own so the picker can be shared (same Cloudinary signed-upload flow).
+   */
+  getAlt?: (position: number) => string;
 };
 
 export function EventImagePicker({
@@ -37,6 +42,7 @@ export function EventImagePicker({
   getToken,
   onChange,
   disabled = false,
+  getAlt,
 }: EventImagePickerProps) {
   const t = useTranslations("vendor");
   const te = useTranslations("events");
@@ -116,7 +122,7 @@ export function EventImagePicker({
             >
               <CloudinaryImage
                 publicId={publicId}
-                alt={te("organiser.imageAlt", { position: index + 1 })}
+                alt={getAlt ? getAlt(index + 1) : te("organiser.imageAlt", { position: index + 1 })}
                 width={160}
                 ratio="1/1"
                 className="aspect-square h-full w-full object-cover"

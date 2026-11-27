@@ -5,16 +5,17 @@ import { ApiError } from "@vergeo/config";
 import { notify } from "@vergeo/ui/src/toast";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getVendorStorefrontUrl } from "../../../../lib/customer-app";
 import { VendorErrorState } from "../../_components/async-state";
 import { buildLocationPayload } from "../../_components/location-picker/build-location-payload";
 import { LocationPicker } from "../../_components/location-picker/location-picker";
+import { VendorPageSkeleton } from "../../_components/page-skeleton";
 import { VendorFormLayout } from "../../_components/vendor-page";
 import { shouldShowPreferredBadge } from "../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
-import { Button, FormField, Input, Spinner, Switch, Textarea } from "../../listings/new/_lib/ui";
+import { Button, FormField, Input, Switch, Textarea } from "../../listings/new/_lib/ui";
 import { createProfileClient } from "../_lib/profile-client";
 
 import { BrandThemeEditor } from "./brand-theme-editor";
@@ -65,11 +66,16 @@ export function ProfileEditor() {
   const [success, setSuccess] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const hasSession = Boolean(session?.access_token);
+  // Read the token through a ref so a silent token refresh does not rebuild the
+  // client and re-run the load (which would flash the skeleton and drop edits).
+  const tokenRef = useRef<string | null>(null);
+  tokenRef.current = session?.access_token ?? null;
+  const getToken = useCallback(() => tokenRef.current, []);
   const profileClient = useMemo(() => createProfileClient(getToken), [getToken]);
 
   const loadProfile = useCallback(async () => {
-    if (!session) {
+    if (!hasSession) {
       setLoading(false);
       return;
     }
@@ -95,18 +101,18 @@ export function ProfileEditor() {
     } finally {
       setLoading(false);
     }
-  }, [profileClient, session]);
+  }, [profileClient, hasSession]);
 
   useEffect(() => {
     if (sessionLoading) {
       return;
     }
-    if (!session) {
+    if (!hasSession) {
       setLoading(false);
       return;
     }
     void loadProfile();
-  }, [loadProfile, reloadKey, session, sessionLoading]);
+  }, [loadProfile, reloadKey, hasSession, sessionLoading]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -161,11 +167,7 @@ export function ProfileEditor() {
   };
 
   if (sessionLoading || loading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Spinner label={t("profile.loading")} />
-      </div>
-    );
+    return <VendorPageSkeleton rows={4} label={t("profile.loading")} />;
   }
 
   if (!session) {

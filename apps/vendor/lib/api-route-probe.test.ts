@@ -71,3 +71,30 @@ describe("probeApiRoute", () => {
     ).resolves.toBe(true);
   });
 });
+
+describe("probeApiRoute latency guards", () => {
+  it("passes an abort signal and an ISR revalidate window instead of no-store", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ status: 401 });
+    vi.stubGlobal("fetch", fetchMock);
+    await probeApiRoute("/rfq", {
+      NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com",
+      NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
+      NODE_ENV: "production",
+    });
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit & { next?: { revalidate?: number } };
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(init.next?.revalidate).toBeGreaterThan(0);
+    expect(init.cache).toBeUndefined();
+  });
+
+  it("fails closed when the probe is aborted by the timeout", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new DOMException("timeout", "TimeoutError")));
+    await expect(
+      probeApiRoute("/rfq", {
+        NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
+        NODE_ENV: "production",
+      }),
+    ).resolves.toBe(false);
+  });
+});

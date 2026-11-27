@@ -74,4 +74,19 @@ describe("ListingsManageList", () => {
     const addPhoto = screen.getByRole("link", { name: "listings.manage.addPhotoLink" });
     expect(addPhoto).toHaveAttribute("href", "/en/listings/no-photo/edit#photos");
   });
+
+  it("gives status its own full-width row instead of a narrow column beside the thumbnail", async () => {
+    render(<ListingsManageList locale="en" />);
+    await screen.findByTestId("listing-cover");
+    const rows = screen.getAllByTestId("listing-status-row");
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      // The row is a direct child of the card, a sibling of (never inside) the
+      // image + title row, so it spans the card's full width at 360px.
+      const card = row.parentElement;
+      expect(card).not.toBeNull();
+      expect(row.closest(".items-start")).toBeNull();
+      expect(row.className).toContain("flex-col");
+    }
+  });
 });
