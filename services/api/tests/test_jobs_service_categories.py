@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import pytest
-
-from app.routers.jobs import SERVICE_CATEGORIES, _validate_category
 from app.errors import AppError
+from app.routers.jobs import SERVICE_CATEGORIES, _validate_category
 
 NEW_VERTICALS = frozenset(
     {
@@ -31,4 +30,4 @@ def test_validate_category_accepts_new_verticals() -> None:
 def test_validate_category_rejects_unknown() -> None:
     with pytest.raises(AppError) as exc:
         _validate_category("not-a-vertical")
-    assert exc.value.code == "invalid_request"
+    assert exc.value.code == "validation_error"
