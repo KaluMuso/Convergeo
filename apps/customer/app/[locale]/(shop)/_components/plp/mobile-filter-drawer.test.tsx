@@ -5,6 +5,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { testFilterLabels } from "../filters/test-labels";
+
 import { MobileFilterDrawer } from "./mobile-filter-drawer";
 
 vi.mock("next/navigation", () => ({
@@ -17,31 +19,10 @@ afterEach(() => {
   cleanup();
 });
 
-const labels = {
-  heading: "Filters",
-  price: "Price",
-  minPrice: "Min",
-  maxPrice: "Max",
-  condition: "Condition",
-  conditionNew: "New",
-  conditionRefurbished: "Refurbished",
-  conditionUsed: "Used",
-  availability: "Availability",
-  inStock: "In stock",
-  outOfStock: "Out of stock",
-  rating: "Rating",
-  rating4Plus: "4+",
-  rating3Plus: "3+",
-  location: "Near me",
-  radiusKm: "Within {km} km",
-  apply: "Apply",
-  clear: "Clear",
-  openFilters: "Filters",
-  filtersActive: "Filters (active)",
-};
+const labels = { ...testFilterLabels, openFilters: "Filters", filtersActive: "Filters (active)" };
 
 describe("MobileFilterDrawer", () => {
-  it("opens the filter modal from the mobile control", async () => {
+  it("opens the filter boxes from the mobile control", async () => {
     const user = userEvent.setup();
     render(
       <MobileFilterDrawer
@@ -59,7 +40,8 @@ describe("MobileFilterDrawer", () => {
     await user.click(screen.getByTestId("plp-open-filters"));
     expect(screen.getByTestId("plp-filter-drawer")).toBeInTheDocument();
     expect(screen.getByTestId("plp-facet-panel")).toBeInTheDocument();
-    expect(screen.getByText("Used (3)")).toBeInTheDocument();
+    expect((await screen.findAllByTestId("filter-box")).length).toBeGreaterThan(3);
+    expect(screen.getByText("Used")).toBeInTheDocument();
   });
 
   it("shows active label when filters are applied", () => {
@@ -70,8 +52,6 @@ describe("MobileFilterDrawer", () => {
         initialState={{ condition: ["new"], availability: [] }}
       />,
     );
-    expect(screen.getByTestId("plp-open-filters")).toHaveTextContent(
-      "Filters (active)",
-    );
+    expect(screen.getByTestId("plp-open-filters")).toHaveTextContent("Filters (active)");
   });
 });

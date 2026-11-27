@@ -11,6 +11,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { offerBadgeLabel, type OfferBadge, type OfferBadgeLabels } from "../offers/offer-badge";
+import {
+  inShopsLine,
+  signalSlots,
+  type ListingSignalsWire,
+  type SignalLabels,
+} from "../plp/signals";
 import { useLocalWishlist } from "../plp/use-local-wishlist";
 import {
   ProgressiveLoadControls,
@@ -52,6 +58,7 @@ export type SearchHit = {
   is_open_now?: boolean | null;
   /** W8 live offer on this product / listing (flag `bundles`), from the API. */
   offer_badge?: OfferBadge | null;
+  signals?: ListingSignalsWire | null;
   /** Cloudinary public id of the hit's first image, resolved by the search API. */
   image_public_id?: string | null;
 };
@@ -114,6 +121,8 @@ export type ResultsTabsLabels = ProgressiveLoadControlsLabels & {
   reviewCount: string;
   /** catalog.offers.badge.* — W8 offer pill on product cards. */
   offerBadge?: OfferBadgeLabels;
+  /** catalog.signals.* — badges, ribbon and "In N shops" on product cards. */
+  signals?: SignalLabels;
 };
 
 export type ResultsTabsProps = {
@@ -287,6 +296,8 @@ export function SearchProductCard({
     hit.offer_badge && labels.offerBadge
       ? offerBadgeLabel(hit.offer_badge, labels.offerBadge)
       : null;
+  const slots = signalSlots(hit.signals, labels.signals);
+  const inShops = inShopsLine(hit.signals, labels.signals);
   const [wishlistStatusAnnouncement, setWishlistStatusAnnouncement] = useState("");
   const wishlistMountedRef = useRef(false);
 
@@ -315,6 +326,9 @@ export function SearchProductCard({
       isWishlisted={isWishlisted}
       onWishlistToggle={enabled ? toggleWishlist : undefined}
       badge={offerLabel ? <Badge variant="promotion" label={offerLabel} /> : undefined}
+      ribbon={slots.ribbon}
+      signals={slots.badges}
+      meta={inShops ? <span data-testid="search-in-shops">{inShops}</span> : undefined}
       media={
         imagePublicId ? (
           <CloudinaryImageStatic

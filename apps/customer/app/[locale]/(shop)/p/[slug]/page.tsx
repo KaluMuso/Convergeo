@@ -48,6 +48,7 @@ import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
 import { groupSpecRows } from "../../_components/pdp/spec-groups";
 import { specRowsFromJson } from "../../_components/pdp/specs-table";
+import { buildSignalLabels, type ListingSignalsWire } from "../../_components/plp/signals";
 
 import {
   productAggregateRatingForJsonLd,
@@ -95,6 +96,7 @@ type ComparisonApiListing = {
   pickup_available: boolean;
   delivery_fee_ngwee?: number | null;
   delivery_funding?: "customer" | "vendor" | "platform" | null;
+  signals?: ListingSignalsWire | null;
 };
 
 type ComparisonApiResponse = {
@@ -391,6 +393,7 @@ function toComparisonListings(
       pickupAvailable: listing.pickup_available,
       deliveryFeeNgwee: listing.delivery_fee_ngwee ?? null,
       deliveryFunding: listing.delivery_funding ?? null,
+      signals: listing.signals ?? null,
     }));
   }
 
@@ -822,6 +825,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             conditionUsed: t("comparison.conditionUsed"),
             usingFallbackLocation: t("comparison.usingFallbackLocation"),
             lowestPriceBadge: t("comparison.lowestPriceBadge"),
+            signals: buildSignalLabels((key) => String(t.raw(key))),
             sortTotal: t("comparison.sortTotal"),
             deliveryFeeFree: t("comparison.deliveryFeeFree"),
             deliveryFeePlus: t.raw("comparison.deliveryFeePlus"),

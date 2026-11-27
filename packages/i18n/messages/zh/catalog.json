@@ -45,7 +45,23 @@
       "apply": "应用筛选",
       "clear": "清除筛选",
       "openFilters": "筛选",
-      "filtersActive": "筛选（已启用）"
+      "filtersActive": "筛选（已启用）",
+      "categories": "分类",
+      "allCategories": "全部分类",
+      "priceBands": "价格",
+      "bandUnder500": "K500 以下",
+      "band500to2000": "K500–K2,000",
+      "band2000to5000": "K2,000–K5,000",
+      "bandOver5000": "K5,000 以上",
+      "seller": "卖家",
+      "verified": "认证卖家",
+      "madeInZambia": "赞比亚制造",
+      "nearby": "附近",
+      "nearMe": "离我近 (5 公里)",
+      "deals": "仅看优惠",
+      "dealsBox": "优惠",
+      "allRatings": "不限评分",
+      "applyPrice": "设置价格"
     },
     "filters": {
       "appliedAria": "已应用的筛选",
@@ -628,5 +644,30 @@
       "months": "约 {count} 个月内"
     },
     "badge": "按订单制作 · {when}备妥"
+  },
+  "signals": {
+    "badge": {
+      "cheapest": "最低价",
+      "near_you": "离您近",
+      "near_you_km": "距您 {km} 公里",
+      "made_in_zambia": "赞比亚制造",
+      "top_rated": "高评分",
+      "fast_delivery": "快速配送",
+      "low_stock": "库存紧张",
+      "new": "新品"
+    },
+    "ribbon": {
+      "preferred": "优选卖家",
+      "verified_business": "认证商家",
+      "verified_id": "身份已验证"
+    },
+    "inShops": "{count} 家店铺有售，低至 {price}",
+    "compare": "比较店铺",
+    "tiers": {
+      "heading": "买得越多越便宜",
+      "range": "{min}–{max}",
+      "open": "{min}+",
+      "each": "每件"
+    }
   }
 }

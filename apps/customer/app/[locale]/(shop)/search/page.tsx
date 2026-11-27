@@ -12,8 +12,10 @@ import { Suspense } from "react";
 import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
+import { buildFilterBoxLabels } from "../_components/filters/labels";
 import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
 import { buildOfferBadgeLabels } from "../_components/offers/offer-badge";
+import { buildSignalLabels } from "../_components/plp/signals";
 import { buildTopCategorySuggestions } from "../_components/search/category-suggestions";
 import { NearMeToggle } from "../_components/search/near-me-toggle";
 import { PopularSearches } from "../_components/search/popular-searches";
@@ -342,17 +344,10 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       : `/${locale}/search`;
 
   const filterPanelLabels = {
+    ...buildFilterBoxLabels((key) => String(tCatalog.raw(key))),
     heading: t("filters.heading"),
-    price: t("filters.price"),
-    minPrice: t("filters.minPrice"),
-    maxPrice: t("filters.maxPrice"),
-    category: t("filters.category"),
-    categoryAll: t("filters.categoryAll"),
-    apply: t("filters.apply"),
-    clear: t("filters.clear"),
     openFilters: t("filters.openFilters"),
     filtersActive: t("filters.filtersActive"),
-    facetCount: t.raw("filters.facetCount"),
   };
 
   const appliedFilterLabels = {
@@ -362,6 +357,14 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     priceRange: t.raw("filters.priceRange"),
     minPriceOnly: t.raw("filters.minPriceOnly"),
     maxPriceOnly: t.raw("filters.maxPriceOnly"),
+    signal: {
+      verified: String(tCatalog.raw("plp.facets.verified")),
+      deals: String(tCatalog.raw("plp.facets.deals")),
+      inStock: String(tCatalog.raw("plp.facets.inStock")),
+      madeInZambia: String(tCatalog.raw("plp.facets.madeInZambia")),
+      minRating: String(tCatalog.raw("plp.facets.rating4Plus")),
+      radiusKm: String(tCatalog.raw("plp.facets.nearMe")),
+    },
   };
 
   const searchPathname = `/${locale}/search`;
@@ -397,6 +400,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     noReviews: tCatalog("plp.card.noReviews"),
     reviewCount: String(tCatalog.raw("plp.card.reviewCount")),
     offerBadge: buildOfferBadgeLabels((key) => tCatalog.raw(key)),
+    signals: buildSignalLabels((key) => String(tCatalog.raw(key))),
     productGridAria: t("results.productGridAria"),
     loadMore: t("pagination.loadMore"),
     loading: t("pagination.loading"),

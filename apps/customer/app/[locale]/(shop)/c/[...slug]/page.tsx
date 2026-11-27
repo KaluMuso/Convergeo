@@ -17,6 +17,7 @@ import { fetchJson } from "../../../../../lib/fetch-json";
 import { categoryPlpRobots } from "../../../../../lib/seo/category-listing-eligibility";
 import { BackToTop } from "../../_components/back-to-top";
 import { buildCategoryTree, categoryDisplayName } from "../../_components/category-tree";
+import { buildFilterBoxLabels } from "../../_components/filters/labels";
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { attachOfferBadges } from "../../_components/offers/attach-offer-badges";
 import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
@@ -31,6 +32,7 @@ import { type CatalogListing } from "../../_components/plp/listing-grid";
 import { PlpBrowseClient } from "../../_components/plp/load-more";
 import { MobileFilterDrawer } from "../../_components/plp/mobile-filter-drawer";
 import { decodePlpFilters } from "../../_components/plp/plp-filters";
+import { buildSignalLabels } from "../../_components/plp/signals";
 import { type CatalogSort, SortBar } from "../../_components/plp/sort-bar";
 
 import type { Metadata } from "next";
@@ -57,6 +59,7 @@ type CatalogApiResponse = {
     sale_unit?: string;
     unit_step_milli?: number;
     min_steps?: number;
+    signals?: import("../../_components/plp/signals").ListingSignalsWire | null;
   }>;
   facets: FacetCounts;
   total: number;
@@ -153,6 +156,7 @@ function mapListing(item: CatalogApiResponse["items"][number]): CatalogListing {
     saleUnit: item.sale_unit,
     unitStepMilli: item.unit_step_milli,
     minSteps: item.min_steps,
+    signals: item.signals ?? undefined,
   };
 }
 
@@ -249,26 +253,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
       : []);
   const childParentParts = activeNav ? [activeNav.slug] : [];
 
-  const facetLabels = {
-    heading: t("plp.facets.heading"),
-    price: t("plp.facets.price"),
-    minPrice: t("plp.facets.minPrice"),
-    maxPrice: t("plp.facets.maxPrice"),
-    condition: t("plp.facets.condition"),
-    conditionNew: t("plp.facets.conditionNew"),
-    conditionRefurbished: t("plp.facets.conditionRefurbished"),
-    conditionUsed: t("plp.facets.conditionUsed"),
-    availability: t("plp.facets.availability"),
-    inStock: t("plp.facets.inStock"),
-    outOfStock: t("plp.facets.outOfStock"),
-    rating: t("plp.facets.rating"),
-    rating4Plus: t("plp.facets.rating4Plus"),
-    rating3Plus: t("plp.facets.rating3Plus"),
-    location: t("plp.facets.location"),
-    radiusKm: t.raw("plp.facets.radiusKm"),
-    apply: t("plp.facets.apply"),
-    clear: t("plp.facets.clear"),
-  };
+  const facetLabels = buildFilterBoxLabels((key) => t(key), { withCondition: true });
 
   const gridLabels = {
     vendor: t.raw("plp.card.vendor"),
@@ -293,6 +278,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     },
     delivery: catalogDeliveryLabels((key) => t.raw(key)),
     madeToOrder: catalogMadeToOrderLabels((key) => t.raw(key)),
+    signals: buildSignalLabels((key) => String(t.raw(key))),
     offerBadge: {
       bxgy: String(t.raw("offers.badge.bxgy")),
       bundlePercent: String(t.raw("offers.badge.bundlePercent")),

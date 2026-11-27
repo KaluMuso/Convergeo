@@ -47,7 +47,23 @@
       "apply": "Apply filters",
       "clear": "Clear filters",
       "openFilters": "Filters",
-      "filtersActive": "Filters (active)"
+      "filtersActive": "Filters (active)",
+      "categories": "Category",
+      "allCategories": "All categories",
+      "priceBands": "Price",
+      "bandUnder500": "Under K500",
+      "band500to2000": "K500–K2,000",
+      "band2000to5000": "K2,000–K5,000",
+      "bandOver5000": "Over K5,000",
+      "seller": "Seller",
+      "verified": "Verified sellers",
+      "madeInZambia": "Made in Zambia",
+      "nearby": "Nearby",
+      "nearMe": "Near me (5 km)",
+      "deals": "Deals only",
+      "dealsBox": "Deals",
+      "allRatings": "Any rating",
+      "applyPrice": "Set price"
     },
     "filters": {
       "appliedAria": "Applied filters",
@@ -724,5 +740,30 @@
       "months": "in about {count} months"
     },
     "badge": "Made to order · ready {when}"
+  },
+  "signals": {
+    "badge": {
+      "cheapest": "Cheapest",
+      "near_you": "Near you",
+      "near_you_km": "{km} km away",
+      "made_in_zambia": "Made in Zambia",
+      "top_rated": "Top rated",
+      "fast_delivery": "Fast delivery",
+      "low_stock": "Low stock",
+      "new": "New"
+    },
+    "ribbon": {
+      "preferred": "Preferred seller",
+      "verified_business": "Verified business",
+      "verified_id": "ID verified"
+    },
+    "inShops": "In {count} shops from {price}",
+    "compare": "Compare shops",
+    "tiers": {
+      "heading": "Buy more, pay less",
+      "range": "{min}–{max}",
+      "open": "{min}+",
+      "each": "each"
+    }
   }
 }

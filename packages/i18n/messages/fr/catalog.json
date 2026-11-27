@@ -45,7 +45,23 @@
       "apply": "Appliquer les filtres",
       "clear": "Effacer les filtres",
       "openFilters": "Filtres",
-      "filtersActive": "Filtres (actifs)"
+      "filtersActive": "Filtres (actifs)",
+      "categories": "Catégorie",
+      "allCategories": "Toutes les catégories",
+      "priceBands": "Prix",
+      "bandUnder500": "Moins de K500",
+      "band500to2000": "K500–K2 000",
+      "band2000to5000": "K2 000–K5 000",
+      "bandOver5000": "Plus de K5 000",
+      "seller": "Vendeur",
+      "verified": "Vendeurs vérifiés",
+      "madeInZambia": "Fabriqué en Zambie",
+      "nearby": "À proximité",
+      "nearMe": "Près de moi (5 km)",
+      "deals": "Promotions uniquement",
+      "dealsBox": "Promotions",
+      "allRatings": "Toutes les notes",
+      "applyPrice": "Définir le prix"
     },
     "filters": {
       "appliedAria": "Filtres appliqués",
@@ -628,5 +644,30 @@
       "months": "dans environ {count} mois"
     },
     "badge": "Fabriqué sur commande · prêt {when}"
+  },
+  "signals": {
+    "badge": {
+      "cheapest": "Le moins cher",
+      "near_you": "Près de vous",
+      "near_you_km": "à {km} km",
+      "made_in_zambia": "Fabriqué en Zambie",
+      "top_rated": "Très bien noté",
+      "fast_delivery": "Livraison rapide",
+      "low_stock": "Stock limité",
+      "new": "Nouveau"
+    },
+    "ribbon": {
+      "preferred": "Vendeur préféré",
+      "verified_business": "Entreprise vérifiée",
+      "verified_id": "Identité vérifiée"
+    },
+    "inShops": "Dans {count} boutiques dès {price}",
+    "compare": "Comparer les boutiques",
+    "tiers": {
+      "heading": "Achetez plus, payez moins",
+      "range": "{min}–{max}",
+      "open": "{min}+",
+      "each": "l’unité"
+    }
   }
 }

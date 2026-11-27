@@ -1,74 +1,103 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { testFilterLabels } from "../filters/test-labels";
 
 const push = vi.fn();
+let search = "q=phone";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
   usePathname: () => "/en/search",
-  useSearchParams: () => new URLSearchParams("q=phone"),
+  useSearchParams: () => new URLSearchParams(search),
 }));
 
 import { SearchFilterPanel } from "./search-filter-panel";
 
-const labels = {
-  heading: "Filter products",
-  price: "Price",
-  minPrice: "Min",
-  maxPrice: "Max",
-  category: "Category",
-  categoryAll: "All categories",
-  apply: "Apply filters",
-  clear: "Clear filters",
-  facetCount: "{label} ({count})",
-};
-
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  search = "q=phone";
 });
 
-describe("SearchFilterPanel", () => {
-  beforeEach(() => {
-    cleanup();
-  });
+async function mount(ui: React.ReactElement) {
+  const result = render(ui);
+  await screen.findByTestId("filter-boxes");
+  return result;
+}
 
-  it("pushes filter params on apply", async () => {
-    const user = userEvent.setup();
-    render(
+const categories = [{ path: "electronics", label: "Electronics" }];
+
+describe("SearchFilterPanel (filter boxes)", () => {
+  it("renders titled boxes, with counts beside category chips", async () => {
+    await mount(
       <SearchFilterPanel
-        labels={labels}
-        categories={[{ path: "electronics", label: "Electronics" }]}
-        initialState={{}}
-      />,
-    );
-
-    await user.type(screen.getByLabelText("Min"), "100");
-    await user.selectOptions(screen.getByLabelText("Category"), "electronics");
-    await user.click(screen.getByRole("button", { name: "Apply filters" }));
-
-    expect(push).toHaveBeenCalledWith(
-      "/en/search?q=phone&min_price=100&category_path=electronics",
-      expect.objectContaining({ scroll: false }),
-    );
-  });
-
-  it("shows facet counts beside category options", () => {
-    render(
-      <SearchFilterPanel
-        labels={labels}
-        categories={[{ path: "electronics", label: "Electronics" }]}
-        initialState={{}}
+        labels={testFilterLabels}
+        categories={categories}
         categoryCounts={{ electronics: 4 }}
       />,
     );
+    const boxes = screen.getAllByTestId("filter-box");
+    expect(boxes.length).toBeGreaterThanOrEqual(6);
+    const category = boxes[0]!;
+    expect(within(category).getByText("Electronics")).toBeInTheDocument();
+    expect(within(category).getByText("4")).toBeInTheDocument();
+    // Search has no Made in Zambia facet yet: hidden unless already selected.
+    expect(screen.queryByText("Made in Zambia")).toBeNull();
+  });
 
-    expect(
-      screen.getByRole("option", { name: "Electronics (4)" }),
-    ).toBeInTheDocument();
+  it("toggles URL params instantly and resets pagination", async () => {
+    search = "q=phone&page=3";
+    const user = userEvent.setup();
+    await mount(<SearchFilterPanel labels={testFilterLabels} categories={categories} />);
+    await user.click(screen.getByText("Verified sellers"));
+    expect(push).toHaveBeenCalledWith("/en/search?q=phone&verified=1", { scroll: false });
+    await user.click(screen.getByText("In stock"));
+    expect(push).toHaveBeenLastCalledWith("/en/search?q=phone&in_stock=1", {
+      scroll: false,
+    });
+  });
+
+  it("applies a price band and category chip", async () => {
+    const user = userEvent.setup();
+    await mount(<SearchFilterPanel labels={testFilterLabels} categories={categories} />);
+    await user.click(screen.getByText("K500–K2,000"));
+    expect(push).toHaveBeenCalledWith("/en/search?q=phone&min_price=500&max_price=2000", {
+      scroll: false,
+    });
+    await user.click(screen.getByText("Electronics"));
+    expect(push).toHaveBeenLastCalledWith("/en/search?q=phone&category_path=electronics", {
+      scroll: false,
+    });
+  });
+
+  it("marks selected chips from the URL and clears filters but keeps the query", async () => {
+    search = "q=phone&verified=1&deals=1&min_price=500&max_price=2000";
+    const user = userEvent.setup();
+    await mount(<SearchFilterPanel labels={testFilterLabels} categories={categories} />);
+    const verified = screen.getByText("Verified sellers").closest("a")!;
+    expect(verified).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("K500–K2,000").closest("a")).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByTestId("filter-boxes-clear"));
+    expect(push).toHaveBeenCalledWith("/en/search?q=phone", { scroll: false });
+  });
+
+  it("submits custom min/max price", async () => {
+    const user = userEvent.setup();
+    await mount(<SearchFilterPanel labels={testFilterLabels} categories={[]} />);
+    await user.type(screen.getByLabelText("Min"), "100");
+    await user.click(screen.getByText("Set price"));
+    expect(push).toHaveBeenCalledWith("/en/search?q=phone&min_price=100", { scroll: false });
+  });
+
+  it("hides price boxes for non-commerce tabs", async () => {
+    await mount(
+      <SearchFilterPanel labels={testFilterLabels} categories={[]} showPriceFilters={false} />,
+    );
+    expect(screen.queryByText("K500–K2,000")).toBeNull();
   });
 });

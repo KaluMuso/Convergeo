@@ -27,6 +27,7 @@ export type FeedListingWire = {
   sale_unit?: string;
   unit_step_milli?: number;
   min_steps?: number;
+  signals?: import("../plp/signals").ListingSignalsWire | null;
   product_class?: string;
   /** W8 live offer (flag `bundles`), attached server-side by the API. */
   offer_badge?: OfferBadge | null;
@@ -159,6 +160,7 @@ export type FeedLabels = {
     };
     /** catalog.offers.badge.* — W8 offer pill on feed cards. */
     offerBadge?: OfferBadgeLabels;
+    signals?: import("../plp/signals").SignalLabels;
   };
 };
 
@@ -182,6 +184,7 @@ export function mapFeedListing(item: FeedListingWire): CatalogListing {
     saleUnit: item.sale_unit,
     unitStepMilli: item.unit_step_milli,
     minSteps: item.min_steps,
+    signals: item.signals ?? undefined,
     productClass: item.product_class,
     offerBadge: item.offer_badge ?? undefined,
   };
