@@ -15,7 +15,7 @@ from app.services.events.access import (
 from app.services.events.archetypes import (
     ARCHETYPES,
     EventArchetype,
-    read_details,
+    public_details,
     resolve_archetype,
 )
 from app.services.events.date_windows import (
@@ -964,7 +964,7 @@ def build_detail_response(
         category=category,
         event_type=normalize_event_type(event.get("event_type")),
         archetype=archetype,
-        archetype_details=read_details(archetype, event.get("archetype_details")),
+        archetype_details=public_details(archetype, event.get("archetype_details")),
         visibility=normalize_visibility(
             event.get("visibility") if isinstance(event.get("visibility"), str) else None
         ),
