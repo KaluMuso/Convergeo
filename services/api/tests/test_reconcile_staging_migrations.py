@@ -157,6 +157,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261124120000",
     # Ask Vergeo service-role checks use auth.role() (rewrite in place, no down).
     "20261126190000",
+    # Event archetype templates: events.archetype + archetype_details (additive, documented down).
+    "20261127150000",
 }
 
 
