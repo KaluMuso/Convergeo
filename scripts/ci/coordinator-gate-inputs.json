@@ -627,7 +627,7 @@
     "scripts/ci/critical-real-stack-nodes.txt": "19b1ce00d621f4fe39c521e799f31f23fdbd6d8a736e07525bee5b4444abb496",
     "scripts/ci/migration-replay.sh": "9556f94d0ab002c8eb3e2f7e200d52ccf72e56d7479489ecd7fecf2281dedaed",
     "scripts/ci/run-critical-real-stack.sh": "cd904fc1a974e33ccb6c043440ff99b5367d4e83bcde62572d5e4ecd908f73f5",
-    "scripts/ci/run_financial_real_stack.py": "7689887811d4b95da99e18818d1979d8923ef1b0811d7fedf2d306200eecdbc7",
+    "scripts/ci/run_financial_real_stack.py": "fe46ef2b35d185bafba8caf4b9ac57df97a09aab52fbb0be921ff4bd72dfbfc9",
     "scripts/drills/f2_collection_manifest.py": "655cdeafbaf6017870dadb9677a3e7315bc7d25f245528440048220ecb8c782e",
     "scripts/drills/f2_real_stack_report.py": "ac274ad1292f6998e17514d268c3c9bc0692730122c2ca2e46c7c76891ca75c8",
     "scripts/drills/f2_upgrade_probe.py": "d1826a771138a39671e892ed7ab907dace76bac82897c882615c581917f43486",
