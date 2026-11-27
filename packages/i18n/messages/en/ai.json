@@ -36,6 +36,7 @@
   "ai.ask.viewOrder": "View order",
   "ai.ask.viewVendor": "View shop",
   "ai.ask.viewService": "View service",
+  "ai.ask.soldBy": "Sold by {vendor}",
   "ai.ask.faqTitle": "Good to know",
   "ai.ask.inStock": "In stock",
   "ai.ask.outOfStock": "Out of stock",

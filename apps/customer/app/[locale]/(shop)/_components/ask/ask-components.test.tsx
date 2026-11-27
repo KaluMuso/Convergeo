@@ -11,8 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const request = vi.fn();
 
 vi.mock("@vergeo/config", async () => {
-  const actual =
-    await vi.importActual<typeof import("@vergeo/config")>("@vergeo/config");
+  const actual = await vi.importActual<typeof import("@vergeo/config")>("@vergeo/config");
   return { ...actual, createApiClient: () => ({ request }) };
 });
 
@@ -65,8 +64,7 @@ function installSpeechRecognition(): { instances: FakeRecognition[] } {
       instances.push(this);
     }
   }
-  (window as unknown as Record<string, unknown>).webkitSpeechRecognition =
-    FakeSpeechRecognition;
+  (window as unknown as Record<string, unknown>).webkitSpeechRecognition = FakeSpeechRecognition;
   return { instances };
 }
 
@@ -92,8 +90,7 @@ const aiMessages = {
       emptyHint: "Type a question to search across Convergeo.",
       citationsTitle: "Related on Convergeo",
       signupCta: "Sign up",
-      networkError:
-        "Couldn't reach Ask Vergeo. Check your connection and try again.",
+      networkError: "Couldn't reach Ask Vergeo. Check your connection and try again.",
       viewProduct: "View product",
       viewEvent: "View event",
       viewVendor: "View shop",
@@ -150,21 +147,13 @@ const aiMessages = {
 
 function renderThread(initialQuery = "") {
   return render(
-    <NextIntlClientProvider
-      locale="en"
-      messages={aiMessages}
-      onError={() => {}}
-    >
+    <NextIntlClientProvider locale="en" messages={aiMessages} onError={() => {}}>
       <AskThread locale="en" initialQuery={initialQuery} />
     </NextIntlClientProvider>,
   );
 }
 
-function apiError(
-  details: Record<string, unknown>,
-  code = "ai_quota",
-  message = "err",
-): ApiError {
+function apiError(details: Record<string, unknown>, code = "ai_quota", message = "err"): ApiError {
   return new ApiError(code, message, { status: 429, details });
 }
 
@@ -181,17 +170,13 @@ describe("extractErrorState", () => {
   });
 
   it("prefers details.message_key for rate-limit envelopes", () => {
-    const state = extractErrorState(
-      apiError({ message_key: "ai.quota.rateLimited" }),
-    );
+    const state = extractErrorState(apiError({ message_key: "ai.quota.rateLimited" }));
     expect(state.messageKey).toBe("ai.quota.rateLimited");
     expect(state.signupPromptKey).toBeNull();
   });
 
   it("maps network_error code to the network banner", () => {
-    const state = extractErrorState(
-      new ApiError("network_error", "boom", { status: 0 }),
-    );
+    const state = extractErrorState(new ApiError("network_error", "boom", { status: 0 }));
     expect(state.messageKey).toBe("ai.ask.networkError");
   });
 
@@ -204,9 +189,7 @@ describe("extractErrorState", () => {
 describe("QuotaBanner", () => {
   it("renders message only", () => {
     render(<QuotaBanner message="Slow down" />);
-    expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
-      "Slow down",
-    );
+    expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent("Slow down");
     expect(screen.queryByTestId("ask-signup-cta")).not.toBeInTheDocument();
   });
 
@@ -221,10 +204,7 @@ describe("QuotaBanner", () => {
         }}
       />,
     );
-    expect(screen.getByTestId("ask-signup-cta")).toHaveAttribute(
-      "href",
-      "/en/login",
-    );
+    expect(screen.getByTestId("ask-signup-cta")).toHaveAttribute("href", "/en/login");
   });
 });
 
@@ -269,6 +249,82 @@ describe("CitationCard", () => {
   });
 });
 
+describe("CitationCard vendor link", () => {
+  const base = {
+    entity_kind: "listing",
+    entity_id: "lst-1",
+    title: "Solar fridge",
+    price_display: "K4,500.00",
+    slug: "solar-fridge",
+    vendor_id: "ven-1",
+    vendor_name: "Sun Traders",
+    vendor_slug: "sun-traders",
+  };
+
+  it("links the item AND its seller, as sibling anchors", () => {
+    render(
+      <CitationCard
+        locale="en"
+        viewLabel="View product"
+        vendorLabel="Sold by Sun Traders"
+        citation={base}
+      />,
+    );
+    const item = screen.getByTestId("ask-citation-card");
+    const vendor = screen.getByTestId("ask-citation-vendor");
+    expect(item).toHaveAttribute("href", "/en/p/solar-fridge?listing=lst-1");
+    expect(vendor).toHaveAttribute("href", "/en/v/sun-traders");
+    expect(vendor).toHaveTextContent("Sold by Sun Traders");
+    expect(item.contains(vendor)).toBe(false);
+  });
+
+  it("links a service to /s and an event to /e, each with its seller", () => {
+    const { rerender } = render(
+      <CitationCard
+        locale="en"
+        viewLabel="View service"
+        vendorLabel="Sold by Sun Traders"
+        citation={{ ...base, entity_kind: "service", entity_id: "svc-1", slug: null }}
+      />,
+    );
+    expect(screen.getByTestId("ask-citation-card")).toHaveAttribute("href", "/en/s/svc-1");
+    expect(screen.getByTestId("ask-citation-vendor")).toHaveAttribute("href", "/en/v/sun-traders");
+
+    rerender(
+      <CitationCard
+        locale="en"
+        viewLabel="View event"
+        vendorLabel="Sold by Sun Traders"
+        citation={{ ...base, entity_kind: "event", entity_id: "evt-1", slug: "expo" }}
+      />,
+    );
+    expect(screen.getByTestId("ask-citation-card")).toHaveAttribute("href", "/en/e/expo");
+    expect(screen.getByTestId("ask-citation-vendor")).toHaveAttribute("href", "/en/v/sun-traders");
+  });
+
+  it("shows no seller link when the seller is unknown or the card is the vendor", () => {
+    const { rerender } = render(
+      <CitationCard
+        locale="en"
+        viewLabel="View product"
+        citation={{ ...base, vendor_id: null, vendor_name: null, vendor_slug: null }}
+      />,
+    );
+    expect(screen.queryByTestId("ask-citation-vendor")).toBeNull();
+
+    rerender(
+      <CitationCard
+        locale="en"
+        viewLabel="View shop"
+        vendorLabel="Sold by Sun Traders"
+        citation={{ ...base, entity_kind: "vendor", entity_id: "ven-1", slug: "sun-traders" }}
+      />,
+    );
+    expect(screen.queryByTestId("ask-citation-vendor")).toBeNull();
+    expect(screen.getByTestId("ask-citation-card")).toHaveAttribute("href", "/en/v/sun-traders");
+  });
+});
+
 describe("AskThread", () => {
   it("renders answer text and maps citations to product/event cards", async () => {
     const user = userEvent.setup();
@@ -300,26 +356,19 @@ describe("AskThread", () => {
     await user.type(screen.getByLabelText("Your question"), "fridge");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId("ask-answer")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId("ask-answer")).toBeInTheDocument());
     expect(request).toHaveBeenCalledWith(
       "/ask",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ query: "fridge" }),
+        body: JSON.stringify({ query: "fridge", locale: "en" }),
       }),
     );
     const cards = screen.getAllByTestId("ask-citation-card");
     expect(cards).toHaveLength(2);
-    expect(cards[0]).toHaveAttribute(
-      "href",
-      "/en/p/solar-fridge?listing=lst-1",
-    );
+    expect(cards[0]).toHaveAttribute("href", "/en/p/solar-fridge?listing=lst-1");
     expect(cards[1]).toHaveAttribute("href", "/en/e/expo");
-    expect(screen.getByTestId("ask-answer")).toHaveTextContent(
-      "AI answers are suggestions",
-    );
+    expect(screen.getByTestId("ask-answer")).toHaveTextContent("AI answers are suggestions");
   });
 
   it("shows the refusal copy with no citation cards", async () => {
@@ -337,9 +386,7 @@ describe("AskThread", () => {
     await user.type(screen.getByLabelText("Your question"), "spaceship");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId("ask-refusal")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId("ask-refusal")).toBeInTheDocument());
     expect(screen.getByTestId("ask-refusal")).toHaveTextContent(
       "I couldn't find that on Convergeo.",
     );
@@ -359,31 +406,22 @@ describe("AskThread", () => {
     await user.type(screen.getByLabelText("Your question"), "phones");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument());
     expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
       "You've used your free guest questions.",
     );
-    expect(screen.getByTestId("ask-signup-cta")).toHaveAttribute(
-      "href",
-      "/en/login?next=/en/ask",
-    );
+    expect(screen.getByTestId("ask-signup-cta")).toHaveAttribute("href", "/en/login?next=/en/ask");
   });
 
   it("renders the rate-limit banner from details.message_key", async () => {
     const user = userEvent.setup();
-    request.mockRejectedValueOnce(
-      apiError({ message_key: "ai.quota.rateLimited" }),
-    );
+    request.mockRejectedValueOnce(apiError({ message_key: "ai.quota.rateLimited" }));
 
     renderThread();
     await user.type(screen.getByLabelText("Your question"), "phones");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument());
     expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
       "Too many questions too quickly.",
     );
@@ -400,12 +438,8 @@ describe("AskThread", () => {
     await user.type(screen.getByLabelText("Your question"), "phones");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
-      "Couldn't reach Ask Vergeo.",
-    );
+    await waitFor(() => expect(screen.getByTestId("ask-quota-banner")).toBeInTheDocument());
+    expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent("Couldn't reach Ask Vergeo.");
   });
 
   it("auto-submits the seeded ?q= query once", async () => {
@@ -422,7 +456,7 @@ describe("AskThread", () => {
     await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
     expect(request).toHaveBeenCalledWith(
       "/ask",
-      expect.objectContaining({ body: JSON.stringify({ query: "solar" }) }),
+      expect.objectContaining({ body: JSON.stringify({ query: "solar", locale: "en" }) }),
     );
   });
 });
@@ -455,9 +489,7 @@ describe("ZeroResults Ask Vergeo entry", () => {
 describe("AskVoiceButton", () => {
   it("renders nothing when the Web Speech API is unsupported", () => {
     removeSpeechRecognition();
-    const { container } = render(
-      <AskVoiceButton labels={voiceLabels} onTranscript={() => {}} />,
-    );
+    const { container } = render(<AskVoiceButton labels={voiceLabels} onTranscript={() => {}} />);
     expect(screen.queryByTestId("ask-voice-button")).not.toBeInTheDocument();
     expect(container).toBeEmptyDOMElement();
   });
@@ -476,10 +508,7 @@ describe("AskVoiceButton", () => {
     const recognition = instances[0]!;
     expect(recognition.start).toHaveBeenCalled();
     expect(["en-GB", "en-US"]).toContain(recognition.lang);
-    expect(screen.getByTestId("ask-voice-button")).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(screen.getByTestId("ask-voice-button")).toHaveAttribute("aria-pressed", "true");
 
     recognition.onresult?.({
       resultIndex: 0,
@@ -520,9 +549,7 @@ describe("Quota display", () => {
   it("parseQuota rejects malformed payloads", () => {
     expect(parseQuota(null)).toBeNull();
     expect(parseQuota({ tier: "guest", daily_limit: "3" })).toBeNull();
-    expect(
-      parseQuota({ tier: "guest", daily_limit: 3, used: 4, remaining: -1 }),
-    ).toEqual({
+    expect(parseQuota({ tier: "guest", daily_limit: 3, used: 4, remaining: -1 })).toEqual({
       tier: "guest",
       daily_limit: 3,
       used: 4,
@@ -548,12 +575,8 @@ describe("Quota display", () => {
     await user.type(screen.getByLabelText("Your question"), "phones");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId("ask-quota-meter")).toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("ask-quota-meter")).toHaveTextContent(
-      "2 AI questions left today",
-    );
+    await waitFor(() => expect(screen.getByTestId("ask-quota-meter")).toBeInTheDocument());
+    expect(screen.getByTestId("ask-quota-meter")).toHaveTextContent("2 AI questions left today");
   });
 });
 
@@ -583,29 +606,15 @@ describe("Workflow + fallback rendering", () => {
     });
 
     renderThread();
-    await user.type(
-      screen.getByLabelText("Your question"),
-      "how much is the itel a70",
-    );
+    await user.type(screen.getByLabelText("Your question"), "how much is the itel a70");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId("ask-answer")).toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("ask-answer")).toHaveAttribute(
-      "data-source",
-      "workflow",
-    );
-    expect(screen.getByTestId("ask-answer")).toHaveTextContent(
-      "Itel A70 costs K4,500.00.",
-    );
-    expect(screen.getByTestId("ask-citation-card")).toHaveTextContent(
-      "In stock",
-    );
+    await waitFor(() => expect(screen.getByTestId("ask-answer")).toBeInTheDocument());
+    expect(screen.getByTestId("ask-answer")).toHaveAttribute("data-source", "workflow");
+    expect(screen.getByTestId("ask-answer")).toHaveTextContent("Itel A70 costs K4,500.00.");
+    expect(screen.getByTestId("ask-citation-card")).toHaveTextContent("In stock");
     // Disclaimer is only for model-written answers.
-    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent(
-      "AI answers are suggestions",
-    );
+    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent("AI answers are suggestions");
   });
 
   it("renders the AI-unavailable fallback: note, ranked results and FAQ", async () => {
@@ -634,22 +643,15 @@ describe("Workflow + fallback rendering", () => {
       message_key: null,
       source: "fallback",
       notice_key: "ai.fallback.aiUnavailable",
-      faq: [
-        { id: "cod", question_key: "ai.faq.cod.q", answer_key: "ai.faq.cod.a" },
-      ],
+      faq: [{ id: "cod", question_key: "ai.faq.cod.q", answer_key: "ai.faq.cod.a" }],
       quota: { tier: "guest", daily_limit: 3, used: 0, remaining: 3 },
     });
 
     renderThread();
-    await user.type(
-      screen.getByLabelText("Your question"),
-      "phone cash on delivery",
-    );
+    await user.type(screen.getByLabelText("Your question"), "phone cash on delivery");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId("ask-answer")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId("ask-answer")).toBeInTheDocument());
     expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
       "Our AI assistant is resting right now.",
     );
@@ -657,19 +659,11 @@ describe("Workflow + fallback rendering", () => {
     const cards = screen.getAllByTestId("ask-citation-card");
     expect(cards).toHaveLength(2);
     expect(cards[1]).toHaveAttribute("href", "/en/v/kabwata-phones");
-    expect(screen.getByTestId("ask-faq")).toHaveTextContent(
-      "Can I pay cash on delivery?",
-    );
-    expect(screen.getByTestId("ask-faq")).toHaveTextContent(
-      "Cash on delivery up to K500.",
-    );
+    expect(screen.getByTestId("ask-faq")).toHaveTextContent("Can I pay cash on delivery?");
+    expect(screen.getByTestId("ask-faq")).toHaveTextContent("Cash on delivery up to K500.");
     // The fallback note replaces the model text; no AI disclaimer.
-    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent(
-      "closest matches on Vergeo5",
-    );
-    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent(
-      "AI answers are suggestions",
-    );
+    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent("closest matches on Vergeo5");
+    expect(screen.getByTestId("ask-answer")).not.toHaveTextContent("AI answers are suggestions");
   });
 
   it("renders the guest daily-quota fallback with a signup CTA", async () => {
@@ -691,15 +685,11 @@ describe("Workflow + fallback rendering", () => {
     await user.type(screen.getByLabelText("Your question"), "phones");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId("ask-signup-cta")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId("ask-signup-cta")).toBeInTheDocument());
     expect(screen.getByTestId("ask-quota-banner")).toHaveTextContent(
       "You've used today's free guest questions.",
     );
-    expect(screen.getByTestId("ask-quota-meter")).toHaveTextContent(
-      "No AI questions left today",
-    );
+    expect(screen.getByTestId("ask-quota-meter")).toHaveTextContent("No AI questions left today");
   });
 
   it("offers 'Use my location' for near-me questions and re-asks with rounded coords", async () => {
@@ -746,6 +736,7 @@ describe("Workflow + fallback rendering", () => {
       expect.objectContaining({
         body: JSON.stringify({
           query: "phones near me",
+          locale: "en",
           lat: -15.417,
           lng: 28.283,
         }),
