@@ -611,8 +611,7 @@
     "20261124090000_clip_pilot_allowlist.sql": "4c78506fea388711bd07a435c74763886e501523b060412f1c9fee3ed70ec818",
     "20261124090100_service_packages.sql": "403ac82fdb529979119e2bcb07e297841e4e737b317ed6d66a16579d92544f1f",
     "20261124120000_social_contacts.sql": "4b4605706cd4ca837b7354c3fce3891ef00cd46f4b76f0c45025fa531a9ec04e",
-    "20261126190000_ask_service_role_auth_role.sql": "a77904aab6ba3e1600467dda12763c29398e95180c0c166f2b42440b5b44ec35",
-    "20261127090000_ask_answer_log_audit.sql": "b7ca232c2057dd1e79214f178d4ecc77d7c41106c3f3171b1f3f473c025fa648"
+    "20261126190000_ask_service_role_auth_role.sql": "a77904aab6ba3e1600467dda12763c29398e95180c0c166f2b42440b5b44ec35"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
@@ -659,7 +658,7 @@
     "services/api/tests/test_kyc_state.py": "d21615ea47e9b11b9c5ff9f857462d5e1fda75a806d0d92e5383bebe2f4c83ff",
     "services/api/tests/test_listing_below_median.py": "9f7e814f2c4c58f088f6f41ade21790edeede53b32e928e7801ad48db3d08796",
     "services/api/tests/test_listing_create.py": "f35948e2fd024b19e34a4b191b9aec427cf3a727aeaf52a7c9f443c018cba604",
-    "services/api/tests/test_listing_manage.py": "697af6acecfad9372700b0b65635175d442211852fab597ca9738efca161bd49",
+    "services/api/tests/test_listing_manage.py": "473a37d63b121e55a3a874296065de924b06b3c3fe26175f1fd50b9c97550557",
     "services/api/tests/test_listing_pricing.py": "4fd1cff67152052fa9e49f84a69f8011ad058e568affe22cbd03bd87a81bd5ce",
     "services/api/tests/test_location_stock.py": "9695617bfcb9813bd788aaa3b12bf9806895fe5c43ab4cafde8c83332f7d64e8",
     "services/api/tests/test_order_state.py": "4268058cd995e82a2b86d8bea0937ab19892483ff5ee61f61b662cbbe057a703",
