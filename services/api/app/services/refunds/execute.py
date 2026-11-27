@@ -442,6 +442,86 @@ def _compute_lane_amounts(
     return lane2.refund_ngwee, None, lane2
 
 
+_NON_COUNTING_REFUND_STATUSES = frozenset({"failed", "cancelled"})
+
+
+def _refunded_total_ngwee(service_client: ServiceRoleClient, order_id: str) -> int:
+    """Cash + platform promo already committed to refunds on this order (integer ngwee).
+
+    Every refund row that is not ``failed``/``cancelled`` counts: a pending,
+    processing, awaiting-payout or completed refund has (or will have) drained
+    money for this order.
+    """
+    response = (
+        service_client.client.table("refunds")
+        .select("status, amount_ngwee, breakdown")
+        .eq("order_id", order_id)
+        .execute()
+    )
+    total = 0
+    for row in _rows(response):
+        if str(row.get("status") or "") in _NON_COUNTING_REFUND_STATUSES:
+            continue
+        amount = row.get("amount_ngwee")
+        if isinstance(amount, int) and not isinstance(amount, bool) and amount > 0:
+            total += amount
+        breakdown = row.get("breakdown")
+        if isinstance(breakdown, dict):
+            promo = breakdown.get("promo_return_ngwee")
+            if isinstance(promo, int) and not isinstance(promo, bool) and promo > 0:
+                total += promo
+    return total
+
+
+def _paid_ceiling_ngwee(
+    service_client: ServiceRoleClient, *, order: dict[str, Any], order_id: str
+) -> int:
+    """Most money refunds on this order may ever return (what was paid for it).
+
+    Source: ledger money collected for the order (same ``charge_received`` /
+    ``escrow_hold`` / ``coupon_funding`` legs the PRE_RELEASE escrow cap trusts).
+    When the charge is booked only against the checkout group (no order-linked
+    legs), fall back to the order's own items + delivery fee.
+    """
+    summary = summarize_order_release_ledger(order_id)
+    if summary.charge_received_ngwee > 0:
+        return summary.charge_received_ngwee
+    delivery = order.get("delivery_fee_ngwee")
+    delivery_ngwee = delivery if isinstance(delivery, int) and not isinstance(delivery, bool) else 0
+    return _order_item_total_ngwee(service_client, order_id) + delivery_ngwee
+
+
+def _assert_within_paid_cap(
+    service_client: ServiceRoleClient,
+    *,
+    order: dict[str, Any],
+    order_id: str,
+    new_refund_ngwee: int,
+    new_promo_return_ngwee: int,
+) -> None:
+    """Reject a refund that would push cumulative refunds above what was paid.
+
+    Applies to BOTH phases (migration 0065 dropped the one-refund-per-order unique
+    index, so distinct source keys on one order are legal and must be bounded here).
+    ``new_*`` are 0 when re-verifying after our own row was inserted.
+    """
+    refunded = _refunded_total_ngwee(service_client, order_id)
+    ceiling = _paid_ceiling_ngwee(service_client, order=order, order_id=order_id)
+    requested = new_refund_ngwee + new_promo_return_ngwee
+    if refunded + requested > ceiling:
+        raise AppError(
+            "refund_exceeds_paid",
+            "Refund would exceed the amount paid for this order",
+            409,
+            {
+                "order_id": order_id,
+                "requested_ngwee": requested,
+                "already_refunded_ngwee": refunded,
+                "paid_ngwee": ceiling,
+            },
+        )
+
+
 def _complete_refund_money_path(
     *,
     service_client: ServiceRoleClient,
@@ -616,6 +696,7 @@ def execute_refund(
     idempotency_key: str | None = None,
     item_ngwee_override: int | None = None,
     delivery_fee_ngwee_override: int | None = None,
+    ignore_coupon_share: bool = False,
 ) -> RefundExecutionResult:
     """Execute or return an existing refund for a caller source_key (double-execution guarded).
 
@@ -673,11 +754,17 @@ def execute_refund(
     def _amounts() -> tuple[
         CouponRefundShare, int, Lane1RefundAmount | None, Lane2RefundBreakdown | None
     ]:
-        share = _coupon_share(
-            service_client,
-            order=order,
-            order_id=order_id,
-            refunded_items_ngwee=refunded_items_ngwee,
+        # ``ignore_coupon_share``: refunding a late collection returns the cash that
+        # actually arrived, which never included a coupon share.
+        share = (
+            CouponRefundShare()
+            if ignore_coupon_share
+            else _coupon_share(
+                service_client,
+                order=order,
+                order_id=order_id,
+                refunded_items_ngwee=refunded_items_ngwee,
+            )
         )
         amount, l1, l2 = _compute_lane_amounts(
             service_client=service_client,
@@ -788,6 +875,17 @@ def execute_refund(
                     },
                 )
 
+    # Cumulative cap, both phases: refunds already committed on this order plus this
+    # one must not exceed what the customer paid (double refund on a released order,
+    # return + dispute on the same order, ...).
+    _assert_within_paid_cap(
+        service_client,
+        order=order,
+        order_id=order_id,
+        new_refund_ngwee=refund_amount,
+        new_promo_return_ngwee=coupon_share.promo_return_ngwee,
+    )
+
     refund_id = str(uuid.uuid4())
     breakdown: dict[str, Any]
     if lane == 1:
@@ -848,6 +946,26 @@ def execute_refund(
     inserted = _single_row(insert_response)
     if inserted is not None:
         refund_id = str(inserted.get("id", refund_id))
+
+    # Re-verify the cap now that our row is visible. The phase gate's advisory lock
+    # is released when it commits, so two concurrent refunds with different source
+    # keys can both pass the pre-check; each now sees the other and the loser fails
+    # closed BEFORE any ledger leg or payout is written.
+    try:
+        _assert_within_paid_cap(
+            service_client,
+            order=order,
+            order_id=order_id,
+            new_refund_ngwee=0,
+            new_promo_return_ngwee=0,
+        )
+    except AppError:
+        failed_breakdown = dict(breakdown)
+        failed_breakdown["rejected_reason"] = "refund_exceeds_paid"
+        service_client.client.table("refunds").update(
+            {"status": "failed", "breakdown": failed_breakdown}
+        ).eq("id", refund_id).execute()
+        raise
 
     return _complete_refund_money_path(
         service_client=service_client,
