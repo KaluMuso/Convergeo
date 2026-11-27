@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from app.core.ttl_cache import clear_ttl_cache_store
@@ -492,12 +492,13 @@ def candidate(
 
 
 def test_catalog_filters_round_trip_through_url_params() -> None:
-    state = decode_plp_filters({"verified": "1", "deals": "true", "made_in_zambia": "yes"})
+    on_params = {"verified": "1", "deals": "true", "made_in_zambia": "yes"}
+    state = decode_plp_filters(cast(dict[str, str | list[str] | None], on_params))
     assert state.verified and state.deals and state.made_in_zambia
     encoded = encode_plp_filters(state)
     assert encoded["verified"] == "1" and encoded["deals"] == "1"
-    assert decode_plp_filters(encoded) == state
-    off = decode_plp_filters({"verified": "0"})
+    assert decode_plp_filters(cast(dict[str, str | list[str] | None], encoded)) == state
+    off = decode_plp_filters(cast(dict[str, str | list[str] | None], {"verified": "0"}))
     assert not off.verified
     assert "verified" not in encode_plp_filters(off)
 
