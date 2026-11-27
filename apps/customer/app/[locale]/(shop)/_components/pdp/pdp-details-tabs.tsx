@@ -40,7 +40,7 @@ export function PdpDetailsTabs({
         const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
         document
           .getElementById("pdp-reviews")
-          ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+          ?.scrollIntoView?.({ behavior: reduce ? "auto" : "smooth", block: "start" });
       });
     };
     openFromHash();
