@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterator
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -121,6 +122,35 @@ class TestCancelUnpaid:
         if payment_status == "success":
             return
         # The attempt dies (expired): the next run picks the order up again.
+        db.run(
+            f"UPDATE public.payments SET status = 'expired' WHERE checkout_group_id = '{group_id}';"
+        )
+        assert _run(jobs_client)["cancelled"] == 1
+        assert _status(db, order_id) == "cancelled"
+
+    @pytest.mark.parametrize("payment_status", ["initiated", "ussd_pushed", "pay_offline"])
+    def test_attempt_started_after_listing_is_skipped_not_failed(
+        self,
+        db: PgConn,
+        jobs_client: TestClient,
+        payment_status: str,
+    ) -> None:
+        """Race: the order was listed as unpaid, then the customer started paying.
+
+        The locked cancel refuses (order_payment_in_flight); the job counts a skip,
+        still answers 200, leaves the order placed, and cancels it on a later run
+        once the attempt has expired.
+        """
+        order_id, group_id = _place(db, age_hours=14)
+        _pay(db, group_id, payment_status)
+        with patch(
+            "app.routers.internal_order_jobs._list_unpaid_prepaid_candidates",
+            return_value=[order_id],
+        ):
+            body = _run(jobs_client)
+        assert body["cancelled"] == 0
+        assert body["skipped"] == 1
+        assert _status(db, order_id) == "placed"
         db.run(
             f"UPDATE public.payments SET status = 'expired' WHERE checkout_group_id = '{group_id}';"
         )

@@ -12,6 +12,7 @@ from app.services.orders.state import (
     OrderEvent,
     OrderStatus,
     OrderTransitionError,
+    PaymentInFlightError,
     RefundPathRequiredError,
     all_matrix_cases,
     count_audit_events,
@@ -412,6 +413,74 @@ class TestCancellationPaymentRules:
 
 
 @pytest.mark.usefixtures("db", "db_url_env")
+class TestCancelBlockedWhilePaymentInFlight:
+    """A cancel must never race a live MoMo attempt (late success => unmatched money)."""
+
+    @pytest.mark.parametrize("status", ["initiated", "ussd_pushed", "pay_offline"])
+    @pytest.mark.parametrize(
+        ("role", "actor_id"),
+        [(ActorRole.CUSTOMER, CUSTOMER_ID), (ActorRole.SYSTEM, SYSTEM_ACTOR_ID)],
+    )
+    def test_customer_and_system_cancel_refused(
+        self, db: PgConn, status: str, role: ActorRole, actor_id: str
+    ) -> None:
+        order_id, group_id = str(uuid.uuid4()), str(uuid.uuid4())
+        _insert_order(db, order_id=order_id, checkout_group_id=group_id, status="placed")
+        _insert_payment(db, payment_id=str(uuid.uuid4()), checkout_group_id=group_id, status=status)
+
+        with pytest.raises(PaymentInFlightError) as exc:
+            transition_order(
+                order_id=order_id,
+                event=OrderEvent.CANCEL,
+                actor_role=role,
+                actor_id=actor_id,
+                note="cancel while paying",
+            )
+        assert exc.value.code == "order_payment_in_flight"
+        assert exc.value.http_status == 409
+        assert _order_status(db, order_id) == "placed"
+
+    def test_failed_without_terminal_verdict_still_blocks(self, db: PgConn) -> None:
+        order_id, group_id = str(uuid.uuid4()), str(uuid.uuid4())
+        _insert_order(db, order_id=order_id, checkout_group_id=group_id, status="placed")
+        _insert_payment(db, payment_id=str(uuid.uuid4()), checkout_group_id=group_id, status="failed")
+        with pytest.raises(PaymentInFlightError):
+            transition_order(
+                order_id=order_id,
+                event=OrderEvent.CANCEL,
+                actor_role=ActorRole.CUSTOMER,
+                actor_id=CUSTOMER_ID,
+                note="x",
+            )
+
+    @pytest.mark.parametrize("status", ["expired", "cancelled"])
+    def test_finished_attempts_do_not_block(self, db: PgConn, status: str) -> None:
+        order_id, group_id = str(uuid.uuid4()), str(uuid.uuid4())
+        _insert_order(db, order_id=order_id, checkout_group_id=group_id, status="placed")
+        _insert_payment(db, payment_id=str(uuid.uuid4()), checkout_group_id=group_id, status=status)
+        transition_order(
+            order_id=order_id,
+            event=OrderEvent.CANCEL,
+            actor_role=ActorRole.CUSTOMER,
+            actor_id=CUSTOMER_ID,
+            note="attempt already over",
+        )
+        assert _order_status(db, order_id) == "cancelled"
+
+    def test_cod_order_is_never_blocked(self, db: PgConn) -> None:
+        order_id, group_id = str(uuid.uuid4()), str(uuid.uuid4())
+        _insert_order(db, order_id=order_id, checkout_group_id=group_id, status="placed", cod=True)
+        _insert_payment(db, payment_id=str(uuid.uuid4()), checkout_group_id=group_id, status="initiated")
+        transition_order(
+            order_id=order_id,
+            event=OrderEvent.CANCEL,
+            actor_role=ActorRole.CUSTOMER,
+            actor_id=CUSTOMER_ID,
+            note="cod",
+        )
+        assert _order_status(db, order_id) == "cancelled"
+
+
 class TestConcurrentTransitions:
     def test_row_lock_one_winner_one_loser(self, db: PgConn) -> None:
         order_id = str(uuid.uuid4())
