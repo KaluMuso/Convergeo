@@ -106,7 +106,7 @@ def _titles(items: list[Any]) -> list[str | None]:
 def test_customer_and_vendor_serializers_resolve_titles() -> None:
     for loader in (customer_items, vendor_items):
         client = _Client({"order_items": ITEMS, "order_item_products": LINKS})
-        items = loader(client, "order-1")  # type: ignore[arg-type]
+        items = loader(client, "order-1")
         assert _titles(items) == ["Solar lamp", "Override title", "Snapshot wins", None, None]
         assert client.calls.count("order_item_products") == 1
 
@@ -114,7 +114,7 @@ def test_customer_and_vendor_serializers_resolve_titles() -> None:
 def test_vendor_queue_preview_resolves_titles_in_one_query() -> None:
     rows = [{**ITEMS[0], "order_id": "o1"}, {**ITEMS[1], "order_id": "o2"}]
     client = _Client({"order_items": rows, "order_item_products": LINKS})
-    grouped = _load_items_by_order(client, ["o1", "o2"])  # type: ignore[arg-type]
+    grouped = _load_items_by_order(client, ["o1", "o2"])
     assert grouped["o1"][0]["title_snapshot"] == "Solar lamp"
     assert grouped["o2"][0]["title_snapshot"] == "Override title"
     assert client.calls.count("order_item_products") == 1
@@ -136,6 +136,6 @@ def test_customer_list_loader_resolves_titles_once_for_many_orders() -> None:
     ]
     links = [_link(f"i{i}", None, f"Product {i}") for i in range(20)]
     client = _Client({"order_items": rows, "order_item_products": links})
-    grouped = _load_order_items_many(client, order_ids)  # type: ignore[arg-type]
+    grouped = _load_order_items_many(client, order_ids)
     assert [grouped[o][0].title for o in order_ids] == [f"Product {i}" for i in range(20)]
     assert client.calls == ["order_items", "order_item_products"]
