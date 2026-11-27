@@ -12,6 +12,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { glassClass } from "./glass";
+
 /**
  * Modal uses native `<dialog>` with `showModal()` when available (browser).
  * jsdom does not fully implement the dialog top layer / `showModal`, so tests
@@ -162,7 +164,6 @@ export type ModalProps = {
 const scrimStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  backgroundColor: "color-mix(in srgb, var(--panel) 55%, transparent)",
   border: "none",
   padding: 0,
   margin: 0,
@@ -177,10 +178,8 @@ const scrimStyle: React.CSSProperties = {
 };
 
 const panelStyle: React.CSSProperties = {
-  background: "var(--surface)",
   color: "var(--text)",
   borderRadius: "var(--r-lg)",
-  boxShadow: "var(--shadow-3)",
   width: "min(100% - var(--sp-8), 28rem)",
   maxHeight: "min(90vh, 40rem)",
   overflow: "auto",
@@ -255,7 +254,7 @@ export function Modal({
     "aria-labelledby": titleId,
     onClick: handleScrimClick,
     "data-testid": dataTestId,
-    className,
+    className: className ? `v-glass-scrim ${className}` : "v-glass-scrim",
     style: {
       ...scrimStyle,
       ...(useNativeModal ? {} : { border: "none" }),
@@ -265,7 +264,11 @@ export function Modal({
 
   return createPortal(
     <dialog {...dialogProps}>
-      <div style={{ ...panelStyle, ...panelStyleOverride }} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={glassClass("overlay")}
+        style={{ ...panelStyle, ...panelStyleOverride }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2
           id={titleId}
           style={{

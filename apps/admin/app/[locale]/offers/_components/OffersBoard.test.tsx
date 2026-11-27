@@ -26,7 +26,7 @@ vi.mock("./api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./api")>();
   return { ...actual, listOffers: mocks.listOffers, setOfferPaused: mocks.setOfferPaused };
 });
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: vi.fn(async () => "t") }));
+vi.mock("../../../../lib/access-token", () => ({ getBrowserAccessToken: vi.fn(async () => "t") }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 

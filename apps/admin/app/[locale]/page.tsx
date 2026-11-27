@@ -6,6 +6,7 @@ import { getAdminTranslator } from "../../lib/admin-translator";
 
 import { AdminPage } from "./_components/admin-page";
 import { DashboardBoard } from "./_components/DashboardBoard";
+import { RouteMessages } from "./_components/route-messages";
 
 import type { Metadata } from "next";
 
@@ -28,8 +29,10 @@ export default async function HomePage({ params }: PageProps) {
   const t = await getAdminTranslator(locale, "admin.dashboard");
 
   return (
-    <AdminPage title={t("title")} subtitle={t("subtitle")}>
-      <DashboardBoard locale={locale} />
-    </AdminPage>
+    <RouteMessages locale={locale} route="home">
+      <AdminPage title={t("title")} subtitle={t("subtitle")}>
+        <DashboardBoard locale={locale} />
+      </AdminPage>
+    </RouteMessages>
   );
 }

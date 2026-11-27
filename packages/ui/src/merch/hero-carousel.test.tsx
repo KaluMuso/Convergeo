@@ -170,4 +170,36 @@ describe("HeroCarousel", () => {
     expect(screen.getByTestId("hero-carousel-prev")).toHaveStyle({ minHeight: "44px" });
     expect(screen.getByTestId("hero-carousel-next")).toHaveStyle({ minWidth: "44px" });
   });
+
+  it("uses invisible edge zones (not visible arrow buttons) that stay focusable and labelled", () => {
+    render(<HeroCarousel slides={slides} labels={labels} />);
+
+    const prev = screen.getByTestId("hero-carousel-prev");
+    const next = screen.getByTestId("hero-carousel-next");
+    expect(prev).toHaveClass("v-hero__zone", "v-hero__zone--prev");
+    expect(next).toHaveClass("v-hero__zone", "v-hero__zone--next");
+    expect(prev).toHaveAccessibleName("Previous slide");
+    expect(next).toHaveAccessibleName("Next slide");
+    // Not removed from the tab order or the a11y tree.
+    expect(prev).not.toHaveAttribute("tabindex", "-1");
+    expect(prev).not.toHaveAttribute("aria-hidden");
+    // The visible glyph is decorative.
+    expect(prev.querySelector('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it("fades its bottom into the page background token", () => {
+    render(<HeroCarousel slides={slides} labels={labels} />);
+    const fade = screen.getByTestId("hero-carousel-fade");
+    expect(fade.style.background).toContain("var(--bg)");
+    expect(fade.style.background).not.toContain("var(--panel)");
+  });
+
+  it("supports ArrowLeft/ArrowRight on the region", () => {
+    HTMLElement.prototype.scrollTo = vi.fn() as unknown as HTMLElement["scrollTo"];
+    render(<HeroCarousel slides={slides} labels={labels} />);
+    fireEvent.keyDown(screen.getByTestId("hero-carousel"), { key: "ArrowRight" });
+    expect(screen.getByTestId("hero-carousel-live")).toHaveTextContent("Slide 2 of 3");
+    fireEvent.keyDown(screen.getByTestId("hero-carousel"), { key: "ArrowLeft" });
+    expect(screen.getByTestId("hero-carousel-live")).toHaveTextContent("Slide 1 of 3");
+  });
 });

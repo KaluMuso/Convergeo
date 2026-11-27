@@ -662,3 +662,39 @@ def test_admin_placement_lifecycle_uses_guarded_transition(
     listed = http.get("/admin/ads/placements", headers=headers)
     assert listed.json()[0]["paid_amount_ngwee"] == 250000
     assert "ads.placement.transition" in [row["action"] for row in fake.table("audit_log").rows]
+
+
+def test_carousel_sponsored_slides_carry_item_and_vendor_links() -> None:
+    vendor_id = "00000000-0000-4000-8000-0000000000a1"
+    product_id = "00000000-0000-4000-8000-0000000000b1"
+    client = _feed_client(
+        [],
+        [
+            _placement(
+                "item-slide",
+                placement_type="carousel_slide",
+                advertiser_kind="vendor",
+                advertiser_vendor_id=vendor_id,
+                target_kind="product",
+                target_id=product_id,
+                priority=5,
+            ),
+            _placement("house-slide", placement_type="carousel_slide"),
+        ],
+    )
+    client.table("vendors").rows = [
+        {"id": vendor_id, "status": "active", "slug": "acme-shop", "display_name": "Acme Shop"}
+    ]
+    client.table("products").rows = [
+        {"id": product_id, "status": "active", "name": "Kettle", "slug": "steel-kettle"}
+    ]
+    page = _page(client, page_size=8)
+    by_id = {slide.placement_id: slide for slide in page.carousel}
+    item = by_id["item-slide"]
+    assert item.target_href == "/p/steel-kettle"
+    assert item.vendor_href == "/v/acme-shop"
+    assert item.vendor_name == "Acme Shop"
+    house = by_id["house-slide"]
+    assert house.target_href is None
+    assert house.vendor_href is None
+    assert "paid_amount_ngwee" not in str(page.model_dump())

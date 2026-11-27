@@ -3,7 +3,7 @@ import { setRequestLocale } from "next-intl/server";
 
 import { VendorPage } from "../_components/vendor-page";
 
-import { OrdersQueueView } from "./_components/order-card";
+import { OrdersQueueView } from "./_components/orders-queue-view";
 
 import type { Metadata } from "next";
 

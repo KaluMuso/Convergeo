@@ -26,6 +26,21 @@ export const CSP_ORIGINS = {
   apiStaging: "https://api.staging.vergeo5.com",
 } as const;
 
+/**
+ * CSP hash-source (`'sha256-…'`) for a static inline script body. Hashes are honoured
+ * alongside `'strict-dynamic'`, so a byte-stable inline script (e.g. the pre-paint theme
+ * bootstrap) can run without a per-request nonce — which would force every ISR page
+ * dynamic. Web Crypto only (Edge-runtime safe); callers should memoise the result.
+ */
+export async function cspSha256Source(scriptBody: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(scriptBody));
+  let binary = "";
+  for (const byte of new Uint8Array(digest)) {
+    binary += String.fromCharCode(byte);
+  }
+  return `'sha256-${btoa(binary)}'`;
+}
+
 export const PERMISSIONS_POLICY_DEFAULT =
   "camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=()";
 

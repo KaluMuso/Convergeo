@@ -33,7 +33,7 @@ vi.mock("../app/[locale]/_components/admin-notification-bell", () => ({
 vi.mock("../app/[locale]/_components/sign-out-button", () => ({
   SignOutButton: () => null,
 }));
-vi.mock("@vergeo/auth", () => ({
+vi.mock("./access-token", () => ({
   getBrowserAccessToken: () => `fixture-${fixture.account}-unchanged-token`,
 }));
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({

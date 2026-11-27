@@ -1107,14 +1107,87 @@
   flex-direction: column;
   align-self: end;
   gap: var(--sp-3);
-  padding: var(--sp-12) var(--sp-5) var(--sp-14);
+  padding: var(--sp-12) var(--sp-5) calc(var(--sp-14) + var(--hero-overlap, 0px));
 }
 
 @media (min-width: 64rem) {
   .v-hero__content {
     gap: var(--sp-4);
-    padding: var(--sp-16) var(--sp-12) var(--sp-18);
+    padding: var(--sp-16) var(--sp-12) calc(var(--sp-18) + var(--hero-overlap, 0px));
   }
+}
+
+/* Invisible edge navigation: full-height hover zones on the left/right edges of the
+   hero. The buttons stay in the DOM, focusable and labelled (keyboard + screen
+   readers); pointers get a directional cursor and a subtle gradient on hover. Touch
+   devices swipe the strip instead, so the zones never intercept taps there. */
+.v-hero__zone {
+  position: absolute;
+  top: 0;
+  bottom: var(--hero-overlap, 0px);
+  z-index: 2;
+  width: 3rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--panel-text);
+  opacity: 1;
+  transition: background var(--dur) var(--ease-std);
+}
+
+.v-hero__zone--prev {
+  left: 0;
+  cursor: w-resize;
+}
+
+.v-hero__zone--next {
+  right: 0;
+  cursor: e-resize;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .v-hero__zone {
+    pointer-events: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .v-hero__zone--prev:hover {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--panel) 55%, transparent),
+      transparent
+    );
+  }
+
+  .v-hero__zone--next:hover {
+    background: linear-gradient(
+      270deg,
+      color-mix(in srgb, var(--panel) 55%, transparent),
+      transparent
+    );
+  }
+}
+
+.v-hero__zone:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--panel) 45%, transparent);
+}
+
+.v-hero__zone-chevron {
+  display: none;
+}
+
+.v-hero__zone:focus-visible .v-hero__zone-chevron {
+  display: inline;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.v-hero__dots-pill {
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
 }
 
 .v-hero__brand {
@@ -1278,7 +1351,25 @@
   }
 }
 
+/* Dim + lightly frosted scrim behind glass modals and sheets. */
+.v-glass-scrim {
+  background-color: color-mix(in srgb, var(--panel) 55%, transparent);
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .v-glass-scrim {
+    background-color: color-mix(in srgb, var(--panel) 40%, transparent);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+}
+
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .v-glass-scrim {
+    background-color: color-mix(in srgb, var(--panel) 70%, transparent);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
   .v-glass,
   .v-glass--bar,
   .v-glass--overlay,
@@ -1291,10 +1382,9 @@
 }
 
 /* ── Mobile bottom nav (bottom-nav.tsx) — native-feeling tab bar ─────────── */
+/* Surface comes from .v-glass .v-glass--bar (glassClass("bar-bottom")). */
 .v-bottom-nav {
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  -webkit-backdrop-filter: saturate(1.4) blur(12px);
-  backdrop-filter: saturate(1.4) blur(12px);
+  isolation: isolate;
 }
 
 .v-bottom-nav__icon {
