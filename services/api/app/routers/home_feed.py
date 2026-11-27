@@ -38,6 +38,8 @@ router = APIRouter(prefix="/home", tags=["home-feed"])
 FEED_CACHE_TTL_SECONDS = 30
 FEED_CACHE_PREFIX = "home:feed:v1:"
 STREAM_CACHE_PREFIX = "home:stream:v1:"
+#: Ordered-stream snapshot shared by every cursor page (see services/home_feed/stream.py).
+STREAM_SNAPSHOT_TTL_SECONDS = 60
 SUPPORTED_LOCALES = frozenset({"en", "bem", "nya", "fr", "zh"})
 
 
@@ -147,7 +149,7 @@ async def home_feed(
 
 
 @router.get("/stream", response_model=HomeStreamPage)
-async def home_stream(
+def home_stream(
     request: Request,
     response: Response,
     supabase: Annotated[Any, Depends(get_supabase_client)],
@@ -176,7 +178,12 @@ async def home_stream(
             return page
         except Exception:
             pass
-    page = build_stream_page(supabase.client, cursor=cursor, limit=limit)
+    page = build_stream_page(
+        supabase.client,
+        cursor=cursor,
+        limit=limit,
+        snapshot_ttl_seconds=STREAM_SNAPSHOT_TTL_SECONDS,
+    )
     _attach_offer_badges(supabase.client, list(page.items))
     set_cached_json(cache_key, page.model_dump(mode="json"), ttl_seconds=FEED_CACHE_TTL_SECONDS)
     response.headers["Cache-Control"] = cache_control
