@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal, Protocol
 from zoneinfo import ZoneInfo
@@ -185,20 +187,45 @@ def _load_vendor_orders(service_client: _ServiceRoleClient, vendor_id: str) -> l
     return _rows(response)
 
 
+# PostgREST carries `in.(...)` lists in the URL; a vendor with hundreds of orders produced
+# query strings tens of KB long, past common proxy limits. Keep each request small and
+# fetch the chunks concurrently.
+IN_CHUNK_SIZE = 100
+IN_CHUNK_WORKERS = 4
+
+
+def _fetch_in_chunks(
+    ids: list[str],
+    fetch: Callable[[list[str]], list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    chunks = [ids[i : i + IN_CHUNK_SIZE] for i in range(0, len(ids), IN_CHUNK_SIZE)]
+    if not chunks:
+        return []
+    if len(chunks) == 1:
+        return fetch(chunks[0])
+    with ThreadPoolExecutor(max_workers=min(IN_CHUNK_WORKERS, len(chunks))) as pool:
+        return [row for rows in pool.map(fetch, chunks) for row in rows]
+
+
 def _paid_checkout_group_ids(
     service_client: _ServiceRoleClient,
     checkout_group_ids: list[str],
 ) -> set[str]:
-    if not checkout_group_ids:
+    unique_ids = sorted(set(checkout_group_ids))
+    if not unique_ids:
         return set()
-    response = (
-        service_client.client.table("payments")
-        .select("checkout_group_id")
-        .in_("checkout_group_id", checkout_group_ids)
-        .eq("status", "success")
-        .execute()
-    )
-    return {str(row["checkout_group_id"]) for row in _rows(response)}
+
+    def fetch(chunk: list[str]) -> list[dict[str, Any]]:
+        response = (
+            service_client.client.table("payments")
+            .select("checkout_group_id")
+            .in_("checkout_group_id", chunk)
+            .eq("status", "success")
+            .execute()
+        )
+        return _rows(response)
+
+    return {str(row["checkout_group_id"]) for row in _fetch_in_chunks(unique_ids, fetch)}
 
 
 def _load_items_by_order(
@@ -207,14 +234,18 @@ def _load_items_by_order(
 ) -> dict[str, list[dict[str, Any]]]:
     if not order_ids:
         return {}
-    response = (
-        service_client.client.table("order_items")
-        .select("order_id, qty, unit_price_ngwee, title_snapshot, created_at")
-        .in_("order_id", order_ids)
-        .execute()
-    )
+
+    def fetch(chunk: list[str]) -> list[dict[str, Any]]:
+        response = (
+            service_client.client.table("order_items")
+            .select("order_id, qty, unit_price_ngwee, title_snapshot, created_at")
+            .in_("order_id", chunk)
+            .execute()
+        )
+        return _rows(response)
+
     grouped: dict[str, list[dict[str, Any]]] = {order_id: [] for order_id in order_ids}
-    for row in _rows(response):
+    for row in _fetch_in_chunks(order_ids, fetch):
         grouped.setdefault(str(row["order_id"]), []).append(row)
     return grouped
 
@@ -222,18 +253,32 @@ def _load_items_by_order(
 def _load_confirm_events(
     service_client: _ServiceRoleClient,
     order_ids: list[str],
+    *,
+    window: tuple[datetime, datetime] | None = None,
 ) -> list[dict[str, Any]]:
+    """Confirm events for the given orders, optionally only inside [start, end).
+
+    The dashboard only needs today's confirmations, so it passes the Lusaka day window;
+    without it every confirm event the vendor ever had is read (and silently truncated
+    at the PostgREST row cap for busy vendors).
+    """
     if not order_ids:
         return []
-    response = (
-        service_client.client.table("order_events")
-        .select("order_id, created_at, to_status")
-        .in_("order_id", order_ids)
-        .eq("to_status", "confirmed")
-        .order("created_at", desc=False)
-        .execute()
-    )
-    return _rows(response)
+
+    def fetch(chunk: list[str]) -> list[dict[str, Any]]:
+        query = (
+            service_client.client.table("order_events")
+            .select("order_id, created_at, to_status")
+            .in_("order_id", chunk)
+            .eq("to_status", "confirmed")
+        )
+        if window is not None:
+            query = query.gte("created_at", window[0].isoformat()).lt(
+                "created_at", window[1].isoformat()
+            )
+        return _rows(query.order("created_at", desc=False).execute())
+
+    return sorted(_fetch_in_chunks(order_ids, fetch), key=lambda row: str(row["created_at"]))
 
 
 def _build_queue_item(
@@ -306,6 +351,29 @@ def _filter_orders(
     return [order for order in orders if order.status == status]
 
 
+DASHBOARD_NEEDS_ACTION_LIMIT = 10
+
+
+def _payment_matters(row: dict[str, Any], *, courier_dispatch: bool) -> bool:
+    """True when this order's available actions can change with its payment state.
+
+    Payment status only ever removes actions, so an order with no actions even when
+    paid (terminal statuses, COD, no checkout group) never needs the payments lookup.
+    """
+    if row.get("cod") or not row.get("checkout_group_id"):
+        return False
+    fulfilment = str(row["fulfilment"])
+    return bool(
+        _available_vendor_actions(
+            status=str(row["status"]),
+            fulfilment=fulfilment,
+            paid=True,
+            cod=False,
+            courier_dispatch=courier_dispatch and fulfilment == "delivery",
+        )
+    )
+
+
 def _build_dashboard(
     service_client: _ServiceRoleClient,
     vendor_id: str,
@@ -319,26 +387,57 @@ def _build_dashboard(
 
     order_rows = _load_vendor_orders(service_client, vendor_id)
     order_ids = [str(row["id"]) for row in order_rows]
-    items_by_order = _load_items_by_order(service_client, order_ids)
-    paid_checkout_ids = _paid_checkout_group_ids(
-        service_client,
-        [str(row["checkout_group_id"]) for row in order_rows if row.get("checkout_group_id")],
-    )
-
     courier_dispatch = courier_dispatch_owns_shipping()
-    queue_items = [
-        _build_queue_item(
+
+    # The payments lookup and today's confirmations are independent: run them together.
+    # Only orders whose actions depend on payment are looked up, and only today's
+    # confirm events are read, instead of every id the vendor ever had.
+    payment_group_ids = [
+        str(row["checkout_group_id"])
+        for row in order_rows
+        if _payment_matters(row, courier_dispatch=courier_dispatch)
+    ]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        paid_future = pool.submit(_paid_checkout_group_ids, service_client, payment_group_ids)
+        confirm_future = pool.submit(
+            _load_confirm_events, service_client, order_ids, window=(day_start, day_end)
+        )
+        paid_checkout_ids = paid_future.result()
+        confirm_events = confirm_future.result()
+
+    # Counts and ordering need no line items, so build the whole queue item-less first.
+    lite_items = {
+        str(row["id"]): _build_queue_item(
             order_row=row,
-            items=items_by_order.get(str(row["id"]), []),
+            items=[],
             now=now,
             paid_checkout_ids=paid_checkout_ids,
             courier_dispatch=courier_dispatch,
         )
         for row in order_rows
-    ]
+    }
+    needs_action = sort_needs_action(
+        [item for item in lite_items.values() if _queue_item_needs_action(item)]
+    )
+    shown_ids = [item.id for item in needs_action[:DASHBOARD_NEEDS_ACTION_LIMIT]]
 
-    order_totals = {item.id: item.total_ngwee for item in queue_items}
-    confirm_events = _load_confirm_events(service_client, order_ids)
+    # Line items are only needed for the cards shown and the orders confirmed today.
+    confirmed_today_ids = {str(event["order_id"]) for event in confirm_events}
+    items_by_order = _load_items_by_order(
+        service_client, sorted(set(shown_ids) | confirmed_today_ids)
+    )
+    rows_by_id = {str(row["id"]): row for row in order_rows}
+
+    def _full_item(order_id: str) -> OrderQueueItem:
+        return _build_queue_item(
+            order_row=rows_by_id[order_id],
+            items=items_by_order.get(order_id, []),
+            now=now,
+            paid_checkout_ids=paid_checkout_ids,
+            courier_dispatch=courier_dispatch,
+        )
+
+    order_totals = {order_id: _full_item(order_id).total_ngwee for order_id in confirmed_today_ids}
     takings = compute_takings_ngwee(
         confirmed_events=confirm_events,
         order_totals=order_totals,
@@ -346,15 +445,11 @@ def _build_dashboard(
         day_end_utc=day_end,
     )
 
-    needs_action = sort_needs_action(
-        [item for item in queue_items if _queue_item_needs_action(item)]
-    )
-
     return VendorDashboardResponse(
         takings_ngwee=takings,
         takings_date=lusaka_today,
-        needs_action=needs_action[:10],
-        queue_counts=_queue_counts(queue_items),
+        needs_action=[_full_item(order_id) for order_id in shown_ids],
+        queue_counts=_queue_counts(list(lite_items.values())),
         archetype=archetype,
         business_archetype=business_archetype,
     )
@@ -387,33 +482,32 @@ def list_vendor_orders_queue(
     status: Annotated[QueueStatusFilter, Query()] = "needs_action",
 ) -> list[OrderQueueItem]:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
-    all_orders_response = (
-        service_client.client.table("orders")
-        .select("id, status, fulfilment, delivery_fee_ngwee, created_at, cod, checkout_group_id")
-        .eq("vendor_id", str(vendor["id"]))
-        .order("created_at", desc=True)
-        .execute()
-    )
-    order_rows = _rows(all_orders_response)
-    order_ids = [str(row["id"]) for row in order_rows]
-    items_by_order = _load_items_by_order(service_client, order_ids)
-    paid_checkout_ids = _paid_checkout_group_ids(
-        service_client,
-        [str(row["checkout_group_id"]) for row in order_rows if row.get("checkout_group_id")],
-    )
+    order_rows = _load_vendor_orders(service_client, str(vendor["id"]))
     now = datetime.now(tz=UTC)
     courier_dispatch = courier_dispatch_owns_shipping()
-    queue_items = [
-        _build_queue_item(
+    paid_checkout_ids = _paid_checkout_group_ids(
+        service_client,
+        [
+            str(row["checkout_group_id"])
+            for row in order_rows
+            if _payment_matters(row, courier_dispatch=courier_dispatch)
+        ],
+    )
+
+    def build(row: dict[str, Any], items: list[dict[str, Any]]) -> OrderQueueItem:
+        return _build_queue_item(
             order_row=row,
-            items=items_by_order.get(str(row["id"]), []),
+            items=items,
             now=now,
             paid_checkout_ids=paid_checkout_ids,
             courier_dispatch=courier_dispatch,
         )
-        for row in order_rows
-    ]
-    filtered = _filter_orders(queue_items, status=status)
+
+    # Filtering and ordering need no line items, so load them only for what is returned.
+    lite_items = [build(row, []) for row in order_rows]
+    filtered = _filter_orders(lite_items, status=status)
     if status == "needs_action":
-        return sort_needs_action(filtered)
-    return filtered
+        filtered = sort_needs_action(filtered)
+    rows_by_id = {str(row["id"]): row for row in order_rows}
+    items_by_order = _load_items_by_order(service_client, [item.id for item in filtered])
+    return [build(rows_by_id[item.id], items_by_order.get(item.id, [])) for item in filtered]
