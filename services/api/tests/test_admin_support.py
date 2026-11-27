@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
@@ -452,7 +451,7 @@ def test_concurrent_reuse_has_one_atomic_outbox_reservation(
             }
         )
         try:
-            return asyncio.run(
+            return (
                 support_send(
                     body,
                     request,

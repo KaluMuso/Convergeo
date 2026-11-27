@@ -110,7 +110,7 @@ def _count_events(service_client: ServiceRoleClient, event_type: str) -> int:
 
 
 @analytics_router.get("", response_model=ClipAnalyticsResponse)
-async def get_clip_analytics(
+def get_clip_analytics(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ClipAnalyticsResponse:
     counts = _count_by_status(service_client)
@@ -138,7 +138,7 @@ async def get_clip_analytics(
 
 
 @analytics_router.post("/reset-kill-switch", response_model=KillSwitchResetResponse)
-async def reset_clip_kill_switch(
+def reset_clip_kill_switch(
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],

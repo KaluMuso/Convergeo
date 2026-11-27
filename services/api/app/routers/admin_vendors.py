@@ -154,7 +154,7 @@ def _find_reviewable_kyc_record(
 
 
 @vendors_router.get("", response_model=list[VendorQueueItem])
-async def list_vendors_for_moderation(
+def list_vendors_for_moderation(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     status: Annotated[str, Query(min_length=1, max_length=40)] = "pending",
 ) -> list[VendorQueueItem]:
@@ -209,7 +209,7 @@ async def list_vendors_for_moderation(
 
 
 @vendors_router.get("/{vendor_id}/kyc")
-async def get_vendor_kyc_detail(
+def get_vendor_kyc_detail(
     vendor_id: UUID,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> JSONResponse:
@@ -253,7 +253,7 @@ async def get_vendor_kyc_detail(
 
 
 @vendors_router.patch("/{vendor_id}/status", response_model=KycDecisionResponse)
-async def patch_vendor_kyc_status(
+def patch_vendor_kyc_status(
     vendor_id: UUID,
     body: VendorStatusPatch,
     background_tasks: BackgroundTasks,

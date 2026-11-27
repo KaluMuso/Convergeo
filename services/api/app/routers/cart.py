@@ -766,7 +766,7 @@ def _enforce_listing_cart_rules(
 
 
 @router.get("", response_model=CartResponse)
-async def get_cart(
+def get_cart(
     owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
     settings: Annotated[Settings, Depends(get_settings)],
     request: Request,
@@ -953,7 +953,7 @@ def _keyed_add_result(
 
 
 @router.post("/items", response_model=CartResponse)
-async def add_cart_item(
+def add_cart_item(
     body: CartItemInput,
     owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -1134,7 +1134,7 @@ async def add_cart_item(
 
 
 @router.patch("/items/{listing_id}", response_model=CartResponse)
-async def update_cart_item(
+def update_cart_item(
     listing_id: str,
     body: CartItemUpdate,
     owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
@@ -1245,7 +1245,7 @@ async def update_cart_item(
 
 
 @router.delete("/items/{listing_id}", response_model=CartResponse)
-async def remove_cart_item(
+def remove_cart_item(
     listing_id: str,
     owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -1318,7 +1318,7 @@ def _notice_responses_for_items(items: list[dict[str, Any]]) -> list[ChangeNotic
 
 
 @router.post("/revalidate", response_model=RevalidateResponse)
-async def revalidate_cart(
+def revalidate_cart(
     owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
     settings: Annotated[Settings, Depends(get_settings)],
     request: Request,
@@ -1336,7 +1336,7 @@ async def revalidate_cart(
 
 
 @router.post("/items/{listing_id}/save-for-later", response_model=SaveForLaterResponse)
-async def save_cart_item_for_later(
+def save_cart_item_for_later(
     listing_id: str,
     owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -1680,7 +1680,7 @@ def _validate_merge_resolution(
 
 
 @router.post("/merge", response_model=CartResponse)
-async def merge_cart_on_login(
+def merge_cart_on_login(
     response: Response,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -1877,7 +1877,7 @@ async def merge_cart_on_login(
 
 
 @router.post("/rfq/{rfq_id}/accept", response_model=CartResponse)
-async def accept_rfq_into_cart(
+def accept_rfq_into_cart(
     rfq_id: str,
     body: AcceptRfqCartRequest,
     owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
@@ -2076,7 +2076,7 @@ def _load_owned_reorder_lines(service: Any, *, order_id: str, user_id: str) -> l
 
 
 @router.post("/reorder/{order_id}", response_model=ReorderResponse)
-async def reorder_into_cart(
+def reorder_into_cart(
     order_id: str,
     owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
     settings: Annotated[Settings, Depends(get_settings)],

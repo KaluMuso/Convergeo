@@ -81,7 +81,7 @@ def _to_item(signal: VendorGovernanceSignal) -> VendorGovernanceItem:
 
 
 @governance_router.get("/vendors", response_model=VendorGovernanceResponse)
-async def list_vendor_governance(
+def list_vendor_governance(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     severity: Annotated[SeverityFilter, Query()] = "warn",
 ) -> VendorGovernanceResponse:

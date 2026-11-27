@@ -84,7 +84,7 @@ async def get_zero_result_terms(
 
 
 @search_insights_router.get("/ask-cost", response_model=list[DailyAskCostOut])
-async def get_ask_cost(days: int = WindowDays) -> list[DailyAskCostOut]:
+def get_ask_cost(days: int = WindowDays) -> list[DailyAskCostOut]:
     return [
         DailyAskCostOut(
             day=row.day,

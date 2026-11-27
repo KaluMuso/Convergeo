@@ -29,14 +29,14 @@ class AdminEchoRequest(BaseModel):
 
 
 @router.get("/health")
-async def admin_health(
+def admin_health(
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
 ) -> dict[str, str]:
     return {"status": "ok", "actor": current_user.id}
 
 
 @router.post("/echo")
-async def admin_echo(
+def admin_echo(
     body: AdminEchoRequest,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
 ) -> dict[str, str]:

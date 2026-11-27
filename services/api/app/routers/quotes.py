@@ -456,7 +456,7 @@ def _clean_pre_acceptance_message(
 
 
 @router.get("/provider/jobs", response_model=MatchedJobsResponse)
-async def list_matched_jobs(
+def list_matched_jobs(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
 ) -> MatchedJobsResponse:
@@ -508,7 +508,7 @@ async def list_matched_jobs(
 
 
 @router.post("/jobs/{job_id}/quotes", response_model=SubmitQuoteResponse)
-async def submit_quote(
+def submit_quote(
     job_id: str,
     body: SubmitQuoteRequest,
     request: Request,
@@ -587,7 +587,7 @@ async def submit_quote(
 
 
 @router.get("/jobs/{job_id}/quotes", response_model=JobQuotesResponse)
-async def list_job_quotes(
+def list_job_quotes(
     job_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
@@ -627,7 +627,7 @@ async def list_job_quotes(
 
 
 @router.post("/quotes/{quote_id}/withdraw", response_model=QuoteActionResponse)
-async def withdraw_quote(
+def withdraw_quote(
     quote_id: str,
     request: Request,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
@@ -672,7 +672,7 @@ async def withdraw_quote(
 
 
 @router.post("/quotes/{quote_id}/decline", response_model=QuoteActionResponse)
-async def decline_quote(
+def decline_quote(
     quote_id: str,
     body: DeclineQuoteRequest,
     request: Request,

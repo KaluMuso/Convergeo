@@ -98,7 +98,7 @@ def _serialize(row: dict[str, Any]) -> BusinessBuyerOut:
 
 
 @router.get("", response_model=list[BusinessBuyerOut])
-async def list_business_buyers(
+def list_business_buyers(
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     status: Annotated[
         Literal["pending", "verified", "rejected", "suspended"] | None, Query()
@@ -121,7 +121,7 @@ async def list_business_buyers(
 
 
 @router.post("/{buyer_id}/verify", response_model=BusinessBuyerOut)
-async def verify_business_buyer(
+def verify_business_buyer(
     buyer_id: str,
     body: VerifyBusinessRequest,
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -149,7 +149,7 @@ async def verify_business_buyer(
 
 
 @router.post("/{buyer_id}/reject", response_model=BusinessBuyerOut)
-async def reject_business_buyer(
+def reject_business_buyer(
     buyer_id: str,
     body: RejectBusinessRequest,
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],

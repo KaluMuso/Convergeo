@@ -491,14 +491,14 @@ def transition_product_merge(
 
 
 @products_router.get("/duplicates", response_model=list[DuplicatePairOut])
-async def list_duplicate_products(
+def list_duplicate_products(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[DuplicatePairOut]:
     return find_duplicate_pairs(service_client)
 
 
 @products_router.post("/merge", response_model=MergeProductsResponse)
-async def merge_products(
+def merge_products(
     body: MergeProductsRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -533,7 +533,7 @@ async def merge_products(
 
 
 @products_router.get("/search", response_model=list[ProductSummary])
-async def search_products(
+def search_products(
     q: Annotated[str, Query(min_length=1, max_length=120)],
     _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -558,7 +558,7 @@ async def search_products(
 
 
 @products_router.get("/{product_id}/relations", response_model=ProductRelationsResponse)
-async def get_product_relations(
+def get_product_relations(
     product_id: UUID,
     _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -571,7 +571,7 @@ async def get_product_relations(
 
 
 @products_router.put("/{product_id}/relations", response_model=ProductRelationsResponse)
-async def set_product_relations(
+def set_product_relations(
     product_id: UUID,
     body: SetProductRelationsRequest,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -891,7 +891,7 @@ def transition_canonical_moderation(
 
 
 @canonical_router.get("", response_model=list[CanonicalQueueItem])
-async def list_pending_canonical_products(
+def list_pending_canonical_products(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     status: Annotated[str, Query(min_length=1, max_length=40)] = "pending_moderation",
 ) -> list[CanonicalQueueItem]:
@@ -962,7 +962,7 @@ def _seed_canonical_photos(service_client: ServiceRoleClient, product_id: str) -
 
 
 @canonical_router.patch("/{product_id}/status", response_model=CanonicalStatusResponse)
-async def patch_canonical_product_status(
+def patch_canonical_product_status(
     product_id: UUID,
     body: CanonicalStatusPatch,
     current_user: Annotated[CurrentUser, Depends(require_moderator())],

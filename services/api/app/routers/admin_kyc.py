@@ -634,7 +634,7 @@ def _upsert_verified_licence_on_approve(
 
 
 @kyc_router.get("/orphaned-tiers", response_model=list[OrphanedTierItem])
-async def list_orphaned_kyc_tiers(
+def list_orphaned_kyc_tiers(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[OrphanedTierItem]:
     """Report vendors with bare kyc_tier and no approved kyc_records. No auto-repair."""
@@ -670,7 +670,7 @@ async def list_orphaned_kyc_tiers(
 
 
 @kyc_router.get("", response_model=list[KycQueueItem])
-async def list_kyc_queue(
+def list_kyc_queue(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[KycQueueItem]:
     response = (
@@ -705,7 +705,7 @@ async def list_kyc_queue(
 
 
 @kyc_router.get("/{kyc_record_id}")
-async def get_kyc_detail(
+def get_kyc_detail(
     kyc_record_id: UUID,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> JSONResponse:
@@ -757,7 +757,7 @@ async def get_kyc_detail(
 
 
 @kyc_router.post("/{kyc_record_id}/start-review", response_model=KycDecisionResponse)
-async def start_kyc_review(
+def start_kyc_review(
     kyc_record_id: UUID,
     body: StartReviewRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -794,7 +794,7 @@ async def start_kyc_review(
 
 
 @kyc_router.post("/{kyc_record_id}/approve", response_model=KycDecisionResponse)
-async def approve_kyc(
+def approve_kyc(
     kyc_record_id: UUID,
     body: ApproveKycRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -849,7 +849,7 @@ async def approve_kyc(
 
 
 @kyc_router.post("/{kyc_record_id}/reject", response_model=KycDecisionResponse)
-async def reject_kyc(
+def reject_kyc(
     kyc_record_id: UUID,
     body: RejectKycRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -892,7 +892,7 @@ async def reject_kyc(
 
 
 @kyc_router.post("/{kyc_record_id}/request-resubmit", response_model=KycDecisionResponse)
-async def request_kyc_resubmit(
+def request_kyc_resubmit(
     kyc_record_id: UUID,
     body: RequestResubmitRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -937,7 +937,7 @@ async def request_kyc_resubmit(
 
 
 @kyc_router.post("/{kyc_record_id}/suspend", response_model=KycDecisionResponse)
-async def suspend_kyc(
+def suspend_kyc(
     kyc_record_id: UUID,
     body: SuspendKycRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -975,7 +975,7 @@ async def suspend_kyc(
 
 
 @kyc_router.post("/{kyc_record_id}/revoke", response_model=KycDecisionResponse)
-async def revoke_kyc(
+def revoke_kyc(
     kyc_record_id: UUID,
     body: RevokeKycRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],

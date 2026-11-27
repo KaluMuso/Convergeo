@@ -274,7 +274,7 @@ class OkResponse(StrictModel):
 
 
 @router.get("/me/handle", response_model=HandleView)
-async def get_my_handle(
+def get_my_handle(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> HandleView:
@@ -298,7 +298,7 @@ async def get_my_handle(
 
 
 @router.put("/me/handle", response_model=HandleView)
-async def put_my_handle(
+def put_my_handle(
     body: HandleBody,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -327,12 +327,12 @@ async def put_my_handle(
 
 
 @router.get("/me/qr", response_model=QrView)
-async def get_my_qr(
+def get_my_qr(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> QrView:
     _require_flag(service_client)
-    view = await get_my_handle(current_user, service_client)
+    view = get_my_handle(current_user, service_client)
     payload = f"{_QR_PREFIX}{view.handle}"
     return QrView(
         handle=view.handle,
@@ -342,7 +342,7 @@ async def get_my_qr(
 
 
 @router.get("/people/{handle}", response_model=PeopleCard)
-async def get_people_card(
+def get_people_card(
     handle: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -375,7 +375,7 @@ async def get_people_card(
 
 
 @router.post("/contacts/requests", response_model=ContactRequestSent)
-async def create_contact_request(
+def create_contact_request(
     body: ContactRequestCreate,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -431,7 +431,7 @@ def _find_thread_for_users(
 
 
 @router.get("/contacts/requests", response_model=ContactRequestList)
-async def list_contact_requests(
+def list_contact_requests(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     box: Annotated[Literal["in", "out", "all"], Query()] = "all",
@@ -485,7 +485,7 @@ def _load_request_for_party(
 
 
 @router.post("/contacts/requests/{request_id}/accept", response_model=ContactRequestSent)
-async def accept_contact_request(
+def accept_contact_request(
     request_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -510,7 +510,7 @@ async def accept_contact_request(
 
 
 @router.post("/contacts/requests/{request_id}/ignore", response_model=ContactRequestSent)
-async def ignore_contact_request(
+def ignore_contact_request(
     request_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -537,7 +537,7 @@ async def ignore_contact_request(
 
 
 @router.get("/contacts", response_model=ContactList)
-async def list_contacts(
+def list_contacts(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ContactList:
@@ -659,7 +659,7 @@ def _thread_map(
 
 
 @router.delete("/contacts/{user_id}", status_code=204, response_model=None)
-async def remove_contact(
+def remove_contact(
     user_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -681,7 +681,7 @@ async def remove_contact(
 
 
 @router.post("/contacts/{user_id}/block", response_model=OkResponse)
-async def block_contact(
+def block_contact(
     user_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -704,7 +704,7 @@ async def block_contact(
 
 
 @router.post("/contacts/{user_id}/report", response_model=ReportResponse)
-async def report_contact(
+def report_contact(
     user_id: str,
     body: ReportBody,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
@@ -749,7 +749,7 @@ async def report_contact(
 
 
 @router.get("/me/phone-discovery", response_model=PhoneDiscoveryView)
-async def get_phone_discovery(
+def get_phone_discovery(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -772,7 +772,7 @@ async def get_phone_discovery(
 
 
 @router.put("/me/phone-discovery", response_model=PhoneDiscoveryView)
-async def put_phone_discovery(
+def put_phone_discovery(
     body: PhoneDiscoveryBody,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -823,7 +823,7 @@ async def put_phone_discovery(
 
 
 @router.post("/contacts/discover-phones", response_model=DiscoverMatches)
-async def discover_phones(
+def discover_phones(
     body: DiscoverPhonesBody,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -898,7 +898,7 @@ def _require_thread_party(
 
 
 @router.get("/chats", response_model=ChatThreadList)
-async def list_chats(
+def list_chats(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ChatThreadList:
@@ -935,7 +935,7 @@ async def list_chats(
 
 
 @router.get("/chats/{thread_id}/messages", response_model=ChatMessageList)
-async def list_chat_messages(
+def list_chat_messages(
     thread_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -971,7 +971,7 @@ async def list_chat_messages(
 
 
 @router.post("/chats/{thread_id}/messages", response_model=ChatMessageSent)
-async def send_chat_message(
+def send_chat_message(
     thread_id: str,
     body: ChatMessageCreate,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],

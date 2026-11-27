@@ -234,7 +234,7 @@ def _fetch_profile(client: Client, user_id: str) -> ProfileResponse:
 
 
 @router.get("/profile", response_model=ProfileResponse)
-async def get_profile(
+def get_profile(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> ProfileResponse:
     client = _user_client(current_user)
@@ -242,7 +242,7 @@ async def get_profile(
 
 
 @router.patch("/profile", response_model=ProfileResponse)
-async def patch_profile(
+def patch_profile(
     body: ProfilePatchRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> ProfileResponse:
@@ -272,7 +272,7 @@ async def patch_profile(
 
 
 @router.get("/addresses", response_model=list[AddressResponse])
-async def list_addresses(
+def list_addresses(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> list[AddressResponse]:
     client = _user_client(current_user)
@@ -290,7 +290,7 @@ async def list_addresses(
 
 
 @router.post("/addresses", response_model=AddressResponse, status_code=201)
-async def create_address(
+def create_address(
     body: AddressCreateRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> AddressResponse:
@@ -319,7 +319,7 @@ async def create_address(
 
 
 @router.get("/addresses/{address_id}", response_model=AddressResponse)
-async def get_address(
+def get_address(
     address_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> AddressResponse:
@@ -343,7 +343,7 @@ async def get_address(
 
 
 @router.patch("/addresses/{address_id}", response_model=AddressResponse)
-async def patch_address(
+def patch_address(
     address_id: str,
     body: AddressPatchRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
@@ -415,7 +415,7 @@ _ADDRESS_LOCKING_ORDER_STATUSES: tuple[str, ...] = (
 
 
 @router.delete("/addresses/{address_id}", status_code=204)
-async def delete_address(
+def delete_address(
     address_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> None:
@@ -454,7 +454,7 @@ async def delete_address(
 
 
 @router.get("/preferences", response_model=PreferencesResponse)
-async def get_preferences(
+def get_preferences(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> PreferencesResponse:
     client = _user_client(current_user)
@@ -476,7 +476,7 @@ async def get_preferences(
 
 
 @router.patch("/preferences", response_model=PreferencesResponse)
-async def patch_preferences(
+def patch_preferences(
     body: PreferencesPatchRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> PreferencesResponse:
@@ -524,7 +524,7 @@ async def patch_preferences(
 
 
 @router.patch("/onboarding", response_model=PreferencesResponse)
-async def complete_onboarding(
+def complete_onboarding(
     body: OnboardingCompleteRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> PreferencesResponse:
@@ -607,7 +607,7 @@ class RecentlyViewedPostRequest(BaseModel):
 
 
 @router.get("/wishlist", response_model=WishlistResponse)
-async def get_wishlist(
+def get_wishlist(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> WishlistResponse:
     client = _user_client(current_user)
@@ -639,7 +639,7 @@ async def get_wishlist(
 
 
 @router.put("/wishlist", response_model=WishlistResponse)
-async def put_wishlist(
+def put_wishlist(
     body: WishlistPutRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> WishlistResponse:
@@ -659,11 +659,11 @@ async def put_wishlist(
         client.table("user_wishlist").insert(
             [{"user_id": current_user.id, "product_id": pid} for pid in product_ids]
         ).execute()
-    return await get_wishlist(current_user)
+    return get_wishlist(current_user)
 
 
 @router.get("/recently-viewed", response_model=RecentlyViewedResponse)
-async def get_recently_viewed(
+def get_recently_viewed(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> RecentlyViewedResponse:
     client = _user_client(current_user)
@@ -696,7 +696,7 @@ async def get_recently_viewed(
 
 
 @router.post("/recently-viewed", response_model=RecentlyViewedResponse)
-async def post_recently_viewed(
+def post_recently_viewed(
     body: RecentlyViewedPostRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> RecentlyViewedResponse:
@@ -731,4 +731,4 @@ async def post_recently_viewed(
                 "product_id", drop_ids
             ).execute()
 
-    return await get_recently_viewed(current_user)
+    return get_recently_viewed(current_user)
