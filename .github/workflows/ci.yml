@@ -311,14 +311,28 @@ jobs:
   python:
     # Required check context "Python API" (master ruleset). Aggregates the shards.
     name: Python API
-    needs: python-shard
+    needs: [changes, python-shard]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: All API test shards passed
+        # A docs-only change legitimately skips the shards (run_python != true):
+        # that is a pass, not a failure. Any other skipped, cancelled or failed
+        # shard result still fails the required check.
         run: |
+          echo "changes result: ${{ needs.changes.result }}"
+          echo "run_python: ${{ needs.changes.outputs.run_python }}"
           echo "python-shard result: ${{ needs.python-shard.result }}"
-          test "${{ needs.python-shard.result }}" = "success"
+          if [ "${{ needs.python-shard.result }}" = "success" ]; then
+            exit 0
+          fi
+          if [ "${{ needs.python-shard.result }}" = "skipped" ] \
+            && [ "${{ needs.changes.result }}" = "success" ] \
+            && [ "${{ needs.changes.outputs.run_python }}" != "true" ]; then
+            echo "API shards skipped: no Python-affecting change"
+            exit 0
+          fi
+          exit 1
 
   ask-evals:
     name: Ask Vergeo grounding evals
