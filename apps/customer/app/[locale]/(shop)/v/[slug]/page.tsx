@@ -2,6 +2,7 @@ import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { brandThemeStyle } from "@vergeo/ui/src/brand-theme";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
+import { cldUrl } from "@vergeo/ui/src/media/cloudinary-url";
 import {
   buildCanonicalAlternates,
   buildLocaleCanonical,
@@ -199,6 +200,11 @@ function isCloudinaryPublicId(value: string): boolean {
   return !value.startsWith("http://") && !value.startsWith("https://");
 }
 
+/** Absolute image URL for social previews: external URLs pass through, public ids resolve via Cloudinary. */
+function vendorOgImageUrl(value: string): string {
+  return isCloudinaryPublicId(value) ? cldUrl(value, { width: 1200 }) : value;
+}
+
 function VendorCover({ coverUrl, className }: { coverUrl: string; className?: string }) {
   if (isCloudinaryPublicId(coverUrl)) {
     return (
@@ -306,6 +312,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   });
   const canonicalPath = buildLocaleCanonical(locale, "v", profile.vendor.slug);
   const ogParams = new URLSearchParams({ name: profile.vendor.display_name });
+  const signImage =
+    (profile.vendor.logo_url ? vendorOgImageUrl(profile.vendor.logo_url) : "") ||
+    (profile.vendor.cover_url ? vendorOgImageUrl(profile.vendor.cover_url) : "");
 
   return {
     title: t("profile.shareTitle", { name: profile.vendor.display_name }),
@@ -318,15 +327,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       locale,
       url: canonicalPath,
       // The business's own sign comes first on a shared link (§8.5).
-      images: profile.vendor.logo_url
-        ? [profile.vendor.logo_url]
-        : profile.vendor.cover_url
-          ? [profile.vendor.cover_url]
-          : [
-              {
-                url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}`,
-              },
-            ],
+      images: signImage
+        ? [signImage]
+        : [
+            {
+              url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}`,
+            },
+          ],
     },
     twitter: {
       card: "summary_large_image",
