@@ -2,7 +2,7 @@ import { LOCALES } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
 import { VendorPage } from "./_components/vendor-page";
-import { VendorHomeView } from "./orders/_components/order-card";
+import { VendorHomeView } from "./orders/_components/vendor-home-view";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
