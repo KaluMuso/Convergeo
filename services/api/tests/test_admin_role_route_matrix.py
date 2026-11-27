@@ -152,6 +152,10 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "GET /admin/business",
             # Paid extras requests (20261117020000): mapped to vendors.manage in auth.py.
             "GET /admin/extras/requests",
+            # Vendor sourcing hub import requests: mapped to vendors.manage in auth.py.
+            "GET /admin/import-requests",
+            "POST /admin/import-requests/{request_id}/quotes",
+            "POST /admin/import-requests/{request_id}/status",
             "GET /admin/intake",
             "GET /admin/intake/{session_id}",
             "GET /admin/kyc",
@@ -291,6 +295,10 @@ MODERATOR_ROUTES: frozenset[str] = frozenset(
         # Paid extras requests: moderators hold vendors.manage.
         "GET /admin/extras/requests",
         "POST /admin/extras/requests/{request_id}/transition",
+        # Import requests: moderators hold vendors.manage.
+        "GET /admin/import-requests",
+        "POST /admin/import-requests/{request_id}/quotes",
+        "POST /admin/import-requests/{request_id}/status",
         "DELETE /admin/products/{product_id}/images/{image_id}",
         "GET /admin/products/{product_id}/images",
         "POST /admin/products/{product_id}/images",
