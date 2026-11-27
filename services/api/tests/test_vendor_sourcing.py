@@ -16,7 +16,7 @@ import pytest
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.main import create_app
-from app.routers import admin_import_requests, vendor_sourcing
+from app.routers import admin_import_requests, admin_made_in_zambia, vendor_sourcing
 from fastapi.testclient import TestClient
 
 ADMIN_ID = "00000000-0000-0000-0000-0000000a0001"
@@ -160,7 +160,7 @@ def _listing(lid: str, vendor: dict[str, Any], **kw: Any) -> dict[str, Any]:
     return {
         "id": lid, "vendor_id": vendor["id"], "status": "active", "vendors": vendor,
         "title_override": kw.pop("title", "Bulk sugar"), "price_ngwee": 5000,
-        "wholesale": False, "price_tiers": None, "moq": 1, "made_in_zambia": False,
+        "wholesale": False, "price_tiers": None, "moq": 1, "made_in_zambia_status": None,
         "products": {"name": "Sugar", "category_id": CATEGORY}, "listing_images": [],
         **kw,
     }  # fmt: skip
@@ -179,8 +179,10 @@ def make_db() -> FakeDb:
         _listing("l-own", a, wholesale=True, price_tiers=tiers, title="Own wholesale"),
         _listing("l-b", b, wholesale=True, price_tiers=tiers, moq=10, title="Bravo flour"),
         _listing("l-c-retail", c, title="Charlie retail"),
-        _listing("l-c-mz", c, made_in_zambia=True, wholesale=True, price_tiers=tiers,
-                 title="Zambian honey"),
+        _listing("l-c-mz", c, made_in_zambia_status="approved", wholesale=True,
+                 price_tiers=tiers, title="Zambian honey"),
+        _listing("l-c-claimed", c, made_in_zambia_status="claimed", title="Claimed jam"),
+        _listing("l-c-rejected", c, made_in_zambia_status="rejected", title="Rejected tea"),
         _listing("l-demo", c, wholesale=True, price_tiers=tiers, title="Demo item",
                  listing_images=[{"cloudinary_public_id": "demo/x", "position": 0}]),
     ]  # fmt: skip
@@ -226,6 +228,7 @@ def h(monkeypatch: pytest.MonkeyPatch) -> Generator[Harness, None, None]:
 
     monkeypatch.setattr(vendor_sourcing, "bump_rate_counter", fake_bump)
     monkeypatch.setattr(admin_import_requests, "bump_rate_counter", fake_bump)
+    monkeypatch.setattr(admin_made_in_zambia, "bump_rate_counter", fake_bump)
     monkeypatch.setattr(
         "app.core.admin_audit.get_supabase_service_client", lambda: FakeService(holder["h"].db)
     )
@@ -298,15 +301,37 @@ def test_suppliers_tab_lists_other_vendors_wholesale_with_tiers_and_hides_own_an
     bravo = next(i for i in data["items"] if i["id"] == "l-b")
     assert bravo["price_tiers"] == [{"min_qty": 10, "price_ngwee": 4000}]
     assert bravo["moq"] == 10 and bravo["verified"] is False
+    assert bravo["prices_locked"] is False and data["viewer_verified"] is True
     shop = next(i for i in data["items"] if i["kind"] == "shop")
     assert shop["id"] == VENDOR_C and shop["verified"] is True
 
 
-def test_made_in_zambia_tab_has_flagged_listings_and_manufacturer_shops(h: Harness) -> None:
+def test_made_in_zambia_tab_shows_approved_only_and_no_shops(h: Harness) -> None:
     data = search(h, tab="made_in_zambia")
-    kinds = {(i["kind"], i["id"]) for i in data["items"]}
-    assert ("listing", "l-c-mz") in kinds and ("shop", VENDOR_C) in kinds
-    assert all(i["id"] != "l-b" for i in data["items"])
+    ids = {i["id"] for i in data["items"]}
+    assert ids == {"l-c-mz"}  # claimed / rejected / unclaimed and manufacturer shops hidden
+    assert data["items"][0]["made_in_zambia"] is True
+    # the badge is approved-only on the suppliers tab too
+    sup = {i["id"]: i for i in search(h, tab="suppliers")["items"]}
+    assert sup["l-c-mz"]["made_in_zambia"] is True and sup["l-b"]["made_in_zambia"] is False
+
+
+def test_unverified_viewer_gets_locked_prices_server_side(h: Harness) -> None:
+    h.as_role(USER_B, "vendor")  # Bravo is kyc_tier 1
+    data = search(h, tab="suppliers")
+    assert data["viewer_verified"] is False
+    listings = [i for i in data["items"] if i["kind"] == "listing"]
+    assert listings
+    for item in listings:
+        assert item["prices_locked"] is True
+        assert item["price_ngwee"] is None and item["price_tiers"] is None  # not just hidden in UI
+        assert item["title"]  # the card itself is still visible
+    assert (
+        "4000"
+        not in h.client.get(
+            "/vendor/sourcing/search", params={"tab": "made_in_zambia"}, headers=AUTH
+        ).text
+    )
 
 
 def test_search_text_and_category_filters(h: Harness) -> None:
@@ -314,6 +339,19 @@ def test_search_text_and_category_filters(h: Harness) -> None:
     other = "d0000000-0000-0000-0000-0000000000ff"
     assert search(h, tab="suppliers", category=other)["items"] == []
     assert search(h, tab="suppliers", category="not-a-uuid")["items"]  # ignored, not an error
+
+
+def test_services_tab_includes_logistics_and_packaging(h: Harness) -> None:
+    b = h.db.tables["vendors"][1]
+    for sid, cat in (("s-log", "logistics"), ("s-pack", "packaging")):
+        h.db.tables["services"].append(
+            {"id": sid, "vendor_id": VENDOR_B, "category": cat, "status": "active", "title": cat,
+             "description": None, "service_area": "Lusaka", "from_price_ngwee": None,
+             "portfolio_images": [], "vendors": b}
+        )  # fmt: skip
+    ids = {i["id"] for i in search(h, tab="services")["items"]}
+    assert {"s-log", "s-pack", "s-print"} <= ids and "s-beauty" not in ids
+    assert [i["id"] for i in search(h, tab="services", category="logistics")["items"]] == ["s-log"]
 
 
 def test_services_tab_only_business_verticals(h: Harness) -> None:
@@ -354,28 +392,52 @@ def test_profile_roundtrip_and_validation(h: Harness) -> None:
     )
 
 
-def test_made_in_zambia_only_on_own_listing(h: Harness) -> None:
-    ok = h.client.put(
-        "/vendor/sourcing/listings/00000000-0000-0000-0000-000000000000/made-in-zambia",
-        json={"made_in_zambia": True},
-        headers=AUTH,
-    )
-    assert ok.status_code == 404
-    h.db.tables["vendor_listings"][0]["id"] = "e0000000-0000-0000-0000-000000000001"
-    r = h.client.put(
-        "/vendor/sourcing/listings/e0000000-0000-0000-0000-000000000001/made-in-zambia",
-        json={"made_in_zambia": True},
-        headers=AUTH,
-    )
-    assert r.status_code == 200 and r.json()["made_in_zambia"] is True
-    h.db.tables["vendor_listings"][1]["id"] = "e0000000-0000-0000-0000-000000000002"
-    other = h.client.put(
-        "/vendor/sourcing/listings/e0000000-0000-0000-0000-000000000002/made-in-zambia",
-        json={"made_in_zambia": True},
-        headers=AUTH,
-    )
-    assert other.status_code == 404  # a rival's listing looks absent
-    assert h.db.tables["vendor_listings"][1]["made_in_zambia"] is False
+def _miz(h: Harness, lid: str, body: dict[str, Any]) -> Any:
+    return h.client.put(f"/vendor/sourcing/listings/{lid}/made-in-zambia", json=body, headers=AUTH)
+
+
+def test_made_in_zambia_claim_only_on_own_listing(h: Harness) -> None:
+    assert _miz(h, "00000000-0000-0000-0000-000000000000", {"claim": True}).status_code == 404
+    own = "e0000000-0000-0000-0000-000000000001"
+    h.db.tables["vendor_listings"][0]["id"] = own
+    r = _miz(h, own, {"claim": True, "reference": " ZABS-2026-114 "})
+    assert r.status_code == 200
+    assert r.json()["made_in_zambia_status"] == "claimed"  # a claim, never an approval
+    assert r.json()["made_in_zambia_reference"] == "ZABS-2026-114"
+    stored = h.db.tables["vendor_listings"][0]
+    assert stored["made_in_zambia_status"] == "claimed" and stored["made_in_zambia_claimed_at"]
+    assert "made_in_zambia_reviewed_by" not in stored  # reviewer fields are admin-only
+    rival = "e0000000-0000-0000-0000-000000000002"
+    h.db.tables["vendor_listings"][1]["id"] = rival
+    assert _miz(h, rival, {"claim": True}).status_code == 404  # a rival's listing looks absent
+    assert h.db.tables["vendor_listings"][1]["made_in_zambia_status"] is None
+    withdrawn = _miz(h, own, {"claim": False})
+    assert withdrawn.json()["made_in_zambia_status"] is None
+
+
+def test_vendor_cannot_overwrite_an_approved_claim(h: Harness) -> None:
+    own = "e0000000-0000-0000-0000-000000000001"
+    row = h.db.tables["vendor_listings"][0]
+    row.update(id=own, made_in_zambia_status="approved", made_in_zambia_reference="PACRA-1")
+    r = _miz(h, own, {"claim": True, "reference": "PACRA-2"})
+    assert r.status_code == 200 and r.json()["made_in_zambia_status"] == "approved"
+    assert row["made_in_zambia_reference"] == "PACRA-1"
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"made_in_zambia": True},
+        {"claim": True, "status": "approved"},
+        {"claim": True, "reference": "ab"},
+        {"claim": "yes"},
+    ],
+)
+def test_made_in_zambia_claim_validation(h: Harness, body: dict[str, Any]) -> None:
+    own = "e0000000-0000-0000-0000-000000000001"
+    h.db.tables["vendor_listings"][0]["id"] = own
+    assert _miz(h, own, body).status_code == 422
+    assert h.db.tables["vendor_listings"][0]["made_in_zambia_status"] is None
 
 
 def test_writes_are_rate_limited(h: Harness) -> None:
@@ -392,7 +454,7 @@ def test_create_and_list_own_import_requests_only(h: Harness) -> None:
     r = h.client.post("/vendor/sourcing/import-requests", json=BODY, headers=AUTH)
     assert r.status_code == 201
     assert r.json()["status"] == "submitted" and r.json()["target_unit_price_ngwee"] == 3500
-    assert "import_request_create" in h.rate_scopes
+    assert "write_standard" in h.rate_scopes  # registered scope, 1-day window
     h.as_role(USER_B, "vendor")
     assert h.client.get("/vendor/sourcing/import-requests", headers=AUTH).json() == []
     h.as_role(USER_A, "vendor")
@@ -548,3 +610,130 @@ def test_no_money_tables_are_ever_touched(h: Harness) -> None:
     touched = {t for t, _ in h.db.calls}
     forbidden = {"orders", "payments", "ledger_transactions", "payouts", "refunds", "order_items"}
     assert not touched & forbidden
+
+
+# --- import quote notifications ----------------------------------------------------------
+def test_quote_notifies_vendor_in_app_and_email_only(h: Harness) -> None:
+    rid = _submit(h)
+    h.as_role(ADMIN_ID, "admin")
+    r = h.client.post(f"/admin/import-requests/{rid}/quotes", json=QUOTE, headers=AUTH)
+    assert r.status_code == 201
+    qid = r.json()["quote"]["id"]
+    (note,) = h.db.rows("in_app_notifications")
+    assert note["recipient_user_id"] == USER_A and note["audience"] == "vendor"
+    assert note["i18n_key"] == "notifications.inApp.vendor.import_quote_ready"
+    assert note["dedupe_key"] == f"import_quote_ready:{qid}" and note["link_path"] == "/source"
+    (mail,) = h.db.rows("notification_outbox")
+    assert mail["channel"] == "email" and mail["template"] == "import_quote_ready"
+    assert mail["payload"]["recipient_id"] == USER_A and mail["payload"]["total_ngwee"] == 1_000_000
+    assert mail["status"] == "pending"
+    # no WhatsApp / SMS rows are ever queued for this event
+    assert {row["channel"] for row in h.db.rows("notification_outbox")} == {"email"}
+
+
+def test_quote_succeeds_even_if_notification_fails(
+    h: Harness, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom(*_a: Any, **_k: Any) -> None:
+        raise RuntimeError("outbox down")
+
+    monkeypatch.setattr(admin_import_requests, "enqueue_outbox_row", boom)
+    rid = _submit(h)
+    h.as_role(ADMIN_ID, "admin")
+    assert (
+        h.client.post(f"/admin/import-requests/{rid}/quotes", json=QUOTE, headers=AUTH).status_code
+        == 201
+    )
+
+
+def test_import_quote_email_template_renders() -> None:
+    from app.services.notifications.adapters.email import render_email_html
+    from app.services.notifications.dispatcher import TEMPLATE_CLASSIFICATION, TemplateClass
+
+    subject, html_body, subject_key, _ = render_email_html(
+        "import_quote_ready",
+        payload={"title": "LED <b>strips</b>", "total_ngwee": 1_000_000},
+    )
+    assert subject_key == "notifications.email.import_quote_ready.subject"
+    assert "K10000.00" in html_body or "K10,000.00" in html_body
+    assert "<b>strips" not in html_body  # html-escaped
+    assert TEMPLATE_CLASSIFICATION["import_quote_ready"] is TemplateClass.TRANSACTIONAL
+
+
+# --- admin Made in Zambia claim queue -------------------------------------------------------
+def _claimed(h: Harness) -> str:
+    lid = "e0000000-0000-0000-0000-0000000000c1"
+    h.db.tables["vendor_listings"][0].update(
+        id=lid, made_in_zambia_status="claimed", made_in_zambia_reference="ZABS-9",
+        made_in_zambia_claimed_at="2026-11-26T08:00:00+00:00",
+    )  # fmt: skip
+    return lid
+
+
+@pytest.mark.parametrize("role", ["vendor", "customer"])
+def test_claims_queue_is_admin_only(h: Harness, role: str) -> None:
+    lid = _claimed(h)
+    h.as_role(USER_A, role)
+    assert h.client.get("/admin/made-in-zambia-claims", headers=AUTH).status_code == 403
+    r = h.client.post(
+        f"/admin/made-in-zambia-claims/{lid}/decision", json={"decision": "approve"}, headers=AUTH
+    )
+    assert r.status_code == 403
+    assert h.db.tables["vendor_listings"][0]["made_in_zambia_status"] == "claimed"
+
+
+def test_admin_approves_claim_with_reviewer_timestamp_and_audit(h: Harness) -> None:
+    lid = _claimed(h)
+    h.as_role(ADMIN_ID, "admin")
+    queue = h.client.get("/admin/made-in-zambia-claims", headers=AUTH).json()
+    mine = [c for c in queue if c["listing_id"] == lid]
+    assert [(c["reference"], c["vendor_name"]) for c in mine] == [("ZABS-9", "Alpha")]
+    assert {c["status"] for c in queue} == {"claimed"}
+    r = h.client.post(
+        f"/admin/made-in-zambia-claims/{lid}/decision",
+        json={"decision": "approve", "note": "Checked certificate"},
+        headers=AUTH,
+    )
+    assert r.status_code == 200 and r.json()["status"] == "approved"
+    row = h.db.tables["vendor_listings"][0]
+    assert row["made_in_zambia_reviewed_by"] == ADMIN_ID and row["made_in_zambia_reviewed_at"]
+    assert h.db.rows("audit_log")[-1]["action"] == "made_in_zambia.approved"
+    left = h.client.get("/admin/made-in-zambia-claims", headers=AUTH).json()
+    assert lid not in {c["listing_id"] for c in left}
+    # an approved claim can be revoked, but not approved twice
+    again = h.client.post(
+        f"/admin/made-in-zambia-claims/{lid}/decision", json={"decision": "approve"}, headers=AUTH
+    )
+    assert again.status_code == 409
+    revoked = h.client.post(
+        f"/admin/made-in-zambia-claims/{lid}/decision", json={"decision": "reject"}, headers=AUTH
+    )
+    assert revoked.status_code == 200 and revoked.json()["status"] == "rejected"
+
+
+def test_claim_decision_validation_and_missing(h: Harness) -> None:
+    lid = _claimed(h)
+    h.as_role(ADMIN_ID, "admin")
+    path = f"/admin/made-in-zambia-claims/{lid}/decision"
+    assert h.client.post(path, json={"decision": "maybe"}, headers=AUTH).status_code == 422
+    assert (
+        h.client.post(path, json={"decision": "approve", "x": 1}, headers=AUTH).status_code == 422
+    )
+    missing = f"/admin/made-in-zambia-claims/{uuid4()}/decision"
+    assert h.client.post(missing, json={"decision": "approve"}, headers=AUTH).status_code == 404
+    h.rate_allowed = False
+    assert h.client.post(path, json={"decision": "reject"}, headers=AUTH).status_code == 429
+    assert h.db.tables["vendor_listings"][0]["made_in_zambia_status"] == "claimed"
+
+
+def test_migration_guards_self_approval_and_is_reversible() -> None:
+    from pathlib import Path
+
+    sql = next(
+        p for p in Path(__file__).parents[3].glob("supabase/migrations/*_vendor_sourcing_hub.sql")
+    ).read_text()
+    assert "vendor_listings_made_in_zambia_guard" in sql
+    assert "made_in_zambia approval is admin-only" in sql  # owners hold an UPDATE policy
+    assert "made_in_zambia_status in ('claimed', 'approved', 'rejected')" in sql
+    assert "drop column made_in_zambia_status" in sql  # documented reversal
+    assert "logistics" not in sql  # service categories are free text: no DB seed needed

@@ -442,6 +442,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     # itself; admin routes are enforced in-router (un-prefixed admin keys).
     "POST /import-requests/{request_id}/status": ADMIN_WRITE,
     "POST /import-requests/{request_id}/quotes": ADMIN_WRITE,
+    "POST /made-in-zambia-claims/{listing_id}/decision": ADMIN_WRITE,
     "POST /vendor/extras/requests": STANDARD_WRITE,
     "POST /vendor/extras/requests/{request_id}/cancel": STANDARD_WRITE,
     "POST /vendor/extras/requests/{request_id}/accept": STANDARD_WRITE,

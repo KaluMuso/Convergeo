@@ -199,6 +199,9 @@ _ADMIN_ROUTE_PERMISSION_SPEC: dict[tuple[str, str], str | tuple[str, ...]] = {
     ("GET", "/admin/import-requests"): "vendors.manage",
     ("POST", "/admin/import-requests/{request_id}/status"): "vendors.manage",
     ("POST", "/admin/import-requests/{request_id}/quotes"): "vendors.manage",
+    # Made in Zambia claim review (vendor sourcing hub): claimed -> approved/rejected.
+    ("GET", "/admin/made-in-zambia-claims"): "vendors.manage",
+    ("POST", "/admin/made-in-zambia-claims/{listing_id}/decision"): "vendors.manage",
     ("GET", "/admin/extras/requests"): "vendors.manage",
     ("POST", "/admin/extras/requests/{request_id}/transition"): "vendors.manage",
     ("GET", "/admin/vendors"): "vendors.manage",
