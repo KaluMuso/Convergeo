@@ -69,21 +69,21 @@ afterEach(() => {
 describe("PlanUsageCard", () => {
   it("renders nothing while the vendor_plans flag is off", async () => {
     request.mockResolvedValue({ enabled: false });
-    const { container } = render(<PlanUsageCard />);
+    const { container } = render(<PlanUsageCard locale="en" />);
     await waitFor(() => expect(request).toHaveBeenCalledWith("/vendor/plan"));
     expect(container.innerHTML).toBe("");
   });
 
   it("renders nothing if the plan cannot be read (never blocks listings)", async () => {
     request.mockRejectedValue(new Error("down"));
-    const { container } = render(<PlanUsageCard />);
+    const { container } = render(<PlanUsageCard locale="en" />);
     await waitFor(() => expect(request).toHaveBeenCalled());
     expect(container.innerHTML).toBe("");
   });
 
   it("shows usage without an upgrade prompt below the limit", async () => {
     request.mockResolvedValue(status({}));
-    render(<PlanUsageCard />);
+    render(<PlanUsageCard locale="en" />);
     expect(await screen.findByText('plans.usageActive:{"count":3,"max":25}')).toBeTruthy();
     expect(screen.queryByTestId("vendor-plan-upgrade")).toBeNull();
     expect(screen.getByText("plans.free")).toBeTruthy();
@@ -99,7 +99,7 @@ describe("PlanUsageCard", () => {
         upgrade_options: [STARTER, { ...STARTER, key: "pro", name: "Pro", max_listings: null }],
       }),
     );
-    render(<PlanUsageCard />);
+    render(<PlanUsageCard locale="en" />);
     const prompt = await screen.findByTestId("vendor-plan-upgrade");
     expect(prompt.textContent).toContain("plans.overLimit");
     expect(prompt.textContent).toContain("plans.keepSelling");
@@ -110,7 +110,7 @@ describe("PlanUsageCard", () => {
 
   it("explains a KYC cap without offering paid upgrades", async () => {
     request.mockResolvedValue(status({ limited_by: "kyc", at_limit: true, listing_count: 30 }));
-    render(<PlanUsageCard />);
+    render(<PlanUsageCard locale="en" />);
     expect(await screen.findByText("plans.kycLimit")).toBeTruthy();
     expect(screen.queryByTestId("vendor-plan-upgrade")).toBeNull();
   });
