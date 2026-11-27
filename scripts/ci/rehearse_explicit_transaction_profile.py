@@ -147,6 +147,10 @@ IMAGE = "public.ecr.aws/supabase/postgres:17.6.1.143"
 # unreachable; same tag, same bytes, different registry name.
 IMAGE_MIRROR = "ghcr.io/supabase/postgres:17.6.1.143"
 ACCEPTED_IMAGES = (IMAGE, IMAGE_MIRROR)
+# Both registries serve this exact manifest-list digest for the pinned tag
+# (verified 2026-11-27). The mirror name is accepted only when the pulled image
+# resolves to it, so a name/tag match alone is never enough.
+IMAGE_DIGEST = "sha256:80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453"
 URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 LOCK = Path("/tmp/convergeo-typegen-explicit-window.lock")
 OWNERSHIP_MARKER = ".owned-typegen-stack"
@@ -529,6 +533,31 @@ def assert_native_reference_rows(
         )
 
 
+def require_pinned_digest(details: dict) -> None:
+    """The ECR name is the pin; the ghcr mirror must resolve to the same digest."""
+    image = details.get("Config", {}).get("Image")
+    if image == IMAGE:
+        return
+    digests = json.loads(
+        checked(
+            [
+                "docker",
+                "image",
+                "inspect",
+                details["Image"],
+                "--format",
+                "{{json .RepoDigests}}",
+            ]
+        )
+    )
+    if image != IMAGE_MIRROR or not any(
+        str(item).endswith("@" + IMAGE_DIGEST) for item in digests or []
+    ):
+        raise RehearsalError(
+            "mirror image digest is not the pinned digest", code="IMAGE_MISMATCH"
+        )
+
+
 def target_container() -> str:
     matches = (
         checked(
@@ -551,6 +580,7 @@ def target_container() -> str:
             f"typegen image changed: {details['Config']['Image']}",
             code="IMAGE_MISMATCH",
         )
+    require_pinned_digest(details)
     if (
         details["Name"] != f"/{CONTAINER}"
         or not details["State"]["Running"]
@@ -661,6 +691,7 @@ def started_container_on_network(network_id: str) -> str:
             f"new disposable image changed: {details.get('Config', {}).get('Image')}",
             code="IMAGE_MISMATCH",
         )
+    require_pinned_digest(details)
     if (
         not details.get("Id", "").startswith(matches[0])
         or details.get("Name") != f"/{CONTAINER}"
