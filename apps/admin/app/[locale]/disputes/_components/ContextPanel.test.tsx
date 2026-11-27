@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 
 import { ContextPanel } from "./ContextPanel";
+
 import type { OrderContext } from "./api";
 
 vi.mock("next-intl", () => ({
