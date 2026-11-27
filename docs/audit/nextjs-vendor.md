@@ -74,14 +74,14 @@ Numbers marked "measured" come from a local `next build` (fonts mocked, no netwo
 - Fix (not done, larger): add a Serwist worker for the vendor app that precaches the `/scan` and `/events/[id]/scan` shells and merges `sw-scanner.ts`, plus a manifest. Needs the camera Permissions-Policy and CSP worker-src checks already in `next.config.ts`.
 
 ### Bundle sizes per route (measured, First Load JS, kB; shared 103)
-`/` 148, `/orders` 148, `/listings/[id]/edit` 149, `/listings/new` 141, `/profile` 140, `/services/[id]/edit` 137, `/events/[id]/edit` 137, `/events/new` 136, `/services/new` 134, `/onboarding` 132, `/orders/[id]` 132, `/listings` 131, `/events/[id]/tickets` 129, `/settings` 128, `/payouts` 127, `/analytics` 125, `/notifications` 125 (was 194), `/plan` 123, `/returns` 123, `/reviews` 122, `/extras` 121. All under the 150 KB gzip budget in CLAUDE.md; `/listings/[id]/edit` and `/` are 1 kB from it.
+`/` 148, `/orders` 148, `/listings/[id]/edit` 149, `/listings/new` 141, `/profile` 140, `/services/[id]/edit` 137, `/events/[id]/edit` 137, `/events/new` 136, `/services/new` 134, `/onboarding` 132, `/orders/[id]` 132, `/listings` 131, `/events/[id]/tickets` 129, `/settings` 128, `/payouts` 127, `/analytics` 125, `/notifications` 125 (was 194), `/plan` 123, `/returns` 123, `/reviews` 122, `/extras` 121. The 150 KB budget in CLAUDE.md is written for customer routes, but applied here every vendor route is under it; `/listings/[id]/edit` (149) and `/` (148) are within 2 kB.
 
 ## Debug sweep
 
 - Raw i18n keys: covered by the new route test. One real dependency surfaced: `service-form` reads `vendor.listings.fields.priceInvalid` (now shipped to the services routes).
 - Accept-invite: the `auth` gap in the brief is already closed by `accept-invite/layout.tsx`; keys verified.
 - Dead links: scanned every `href` and `` `/${locale}/...` `` against the 54 routes. None dead. `event-ops-panel` shows `/{locale}/account/event-team/accept` as share text; that route exists in the customer app, but the text is a bare path without the customer origin, so a recipient who pastes it has no host. Worth using `customer-app.ts` to build an absolute link.
-- Hydration: no `Date.now()`/`Math.random()` in server-rendered paths found by grep; `suppressHydrationWarning` is on `<html>` for the theme script only.
+- Hydration: every `Date.now()`/`Math.random()` use is inside a client component that renders after its client-side fetch or on a user action (`vendor-reviews-queue`, `instance-editor`, `scanner-view`, `pricing-editor`), so no SSR/CSR mismatch was found. `suppressHydrationWarning` is on `<html>` for the theme script only. `scanner-view` computes `Date.now()` during render; it is only reached after the event sync, but should move into an effect if the scanner is ever server-rendered with data.
 - Stale comment: `protected-dynamic-routes.test.ts` says capability probes use `cache: "no-store"`; they use `next.revalidate: 300`. Behaviour is correct, the comment is wrong.
 
 ## Slow API endpoints (from code, not measured)
