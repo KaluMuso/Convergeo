@@ -11,7 +11,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 
 import { formatPdpGalleryIndicator } from "./gallery-labels";
@@ -211,13 +210,24 @@ export function Lightbox({
     [applyZoom, close, go, zoom],
   );
 
-  const onWheel = useCallback(
-    (event: ReactWheelEvent<HTMLDivElement>) => {
+  // Wheel zoom needs preventDefault to stop the page scrolling, but React attaches
+  // wheel listeners as passive (preventDefault is ignored and logs a warning), so
+  // bind a native non-passive listener. zoomRef keeps the handler stable.
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const hasImage = Boolean(images[index]);
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+    const onWheel = (event: WheelEvent) => {
       event.preventDefault();
-      applyZoom(zoom * (event.deltaY < 0 ? 1.2 : 1 / 1.2));
-    },
-    [applyZoom, zoom],
-  );
+      applyZoom(zoomRef.current * (event.deltaY < 0 ? 1.2 : 1 / 1.2));
+    };
+    stage.addEventListener("wheel", onWheel, { passive: false });
+    return () => stage.removeEventListener("wheel", onWheel);
+  }, [applyZoom, hasImage]);
 
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -399,9 +409,9 @@ export function Lightbox({
             className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
             style={{
               touchAction: "none",
+              overscrollBehavior: "contain",
               cursor: zoom > MIN_ZOOM ? "zoom-out" : "zoom-in",
             }}
-            onWheel={onWheel}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
