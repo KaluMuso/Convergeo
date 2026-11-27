@@ -9,7 +9,7 @@ const api = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) => (key: string) => `${namespace}.${key}`,
 }));
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: () => "token" }));
+vi.mock("../../../../lib/access-token", () => ({ getBrowserAccessToken: () => "token" }));
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({ getBrowserClient: async () => ({}) }));
 vi.mock("@vergeo/ui/src/toast", () => ({ notify: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("./catalog-api", async (importOriginal) => {

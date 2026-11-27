@@ -1,4 +1,3 @@
-import { getBrowserAccessToken } from "@vergeo/auth";
 import { createApiClient } from "@vergeo/config";
 import {
   createNotificationsApi,
@@ -6,6 +5,7 @@ import {
   type NotificationsApi,
 } from "@vergeo/ui/src/notification-center";
 
+import { getBrowserAccessToken } from "./access-token";
 import { getApiBaseUrl } from "./api-base-url";
 
 /** Admin notification-center transport: admin-audience rows fanned out per admin user. */

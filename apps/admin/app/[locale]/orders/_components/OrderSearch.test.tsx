@@ -12,7 +12,7 @@ vi.mock("./api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./api")>();
   return { ...actual, ordersApi: { request: mocks.request } };
 });
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: async () => "t" }));
+vi.mock("../../../../lib/access-token", () => ({ getBrowserAccessToken: async () => "t" }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: ReturnType<typeof createRoot>;
 let host: HTMLDivElement;
