@@ -1,8 +1,9 @@
 import { LOCALES } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
+import { RouteMessages } from "./_components/route-messages";
 import { VendorPage } from "./_components/vendor-page";
-import { VendorHomeView } from "./orders/_components/order-card";
+import { VendorHomeView } from "./orders/_components/vendor-home-view";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -17,8 +18,10 @@ export default async function HomePage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <VendorPage width="full">
-      <VendorHomeView locale={locale} />
-    </VendorPage>
+    <RouteMessages locale={locale} route="home">
+      <VendorPage width="full">
+        <VendorHomeView locale={locale} />
+      </VendorPage>
+    </RouteMessages>
   );
 }

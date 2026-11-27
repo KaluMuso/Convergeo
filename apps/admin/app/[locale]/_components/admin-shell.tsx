@@ -22,7 +22,9 @@ import { AdminDensityProvider } from "./admin-density";
 import { AdminDensityToggle } from "./admin-density-toggle";
 import {
   ADMIN_NAV_GROUPS,
+  ADMIN_EXPLICIT_GRANT_ITEMS,
   adminItemHref,
+  adminRouteAllowedByAlternateItem,
   filterAdminNavGroups,
   flattenAdminNavItems,
   resolveAdminActiveGroup,
@@ -153,9 +155,13 @@ export function AdminShell({ locale, children }: AdminShellProps) {
   const isPersonalRoute = rest === "/notifications";
   const denied =
     !isPersonalRoute &&
-    ((requested === "roles" && !capabilities.roles) ||
+    ((requested !== undefined &&
+      ADMIN_EXPLICIT_GRANT_ITEMS.has(requested) &&
+      !capabilities[requested]) ||
       (!grants?.unrestricted &&
-        (!requested || !capabilities[requested] || rest.startsWith("/moderation/flags"))));
+        (!requested ||
+          (!capabilities[requested] && !adminRouteAllowedByAlternateItem(rest, capabilities)) ||
+          rest.startsWith("/moderation/flags"))));
 
   const chrome = (
     <div className="flex h-dvh flex-col overflow-hidden bg-bg text-text">
