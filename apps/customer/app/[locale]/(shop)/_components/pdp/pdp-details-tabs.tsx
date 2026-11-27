@@ -1,8 +1,9 @@
 "use client";
 
 import { Tabs, type TabItem } from "@vergeo/ui/src/tabs";
+import { useEffect, useState, type ReactNode } from "react";
 
-import type { ReactNode } from "react";
+const REVIEWS_HASHES = new Set(["#pdp-reviews", "#reviews"]);
 
 export type PdpDetailsTabsLabels = {
   ariaLabel: string;
@@ -27,6 +28,25 @@ export function PdpDetailsTabs({
   reviewsPanel,
 }: PdpDetailsTabsProps) {
   const items: TabItem[] = [];
+  const [active, setActive] = useState(hasOverview ? "overview" : "specs");
+
+  useEffect(() => {
+    const openFromHash = () => {
+      if (!REVIEWS_HASHES.has(window.location.hash)) {
+        return;
+      }
+      setActive("reviews");
+      requestAnimationFrame(() => {
+        const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        document
+          .getElementById("pdp-reviews")
+          ?.scrollIntoView?.({ behavior: reduce ? "auto" : "smooth", block: "start" });
+      });
+    };
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, []);
 
   if (hasOverview) {
     items.push({
@@ -52,7 +72,8 @@ export function PdpDetailsTabs({
   return (
     <Tabs
       ariaLabel={labels.ariaLabel}
-      defaultValue={hasOverview ? "overview" : "specs"}
+      value={active}
+      onValueChange={setActive}
       mountInactivePanels
       items={items}
       panelClassName="pt-4"
