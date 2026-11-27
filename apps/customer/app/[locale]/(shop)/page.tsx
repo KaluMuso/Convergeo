@@ -47,6 +47,7 @@ import { loadHomeMerchData, pickSlot, type HomeSectionKey } from "./_components/
 import { MerchPreviewBanner } from "./_components/merch-preview-banner";
 import { buildOfferBadgeLabels } from "./_components/offers/offer-badge";
 import { catalogDeliveryLabels, catalogMadeToOrderLabels } from "./_components/plp/delivery-labels";
+import { buildSignalLabels } from "./_components/plp/signals";
 
 import type { Metadata } from "next";
 
@@ -239,6 +240,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
       pickup: t("plp.card.pill.pickup"),
     },
     offerBadge: buildOfferBadgeLabels(raw),
+    signals: buildSignalLabels(raw),
   };
 
   // Admin-governed feed (home_feed_sections) supersedes the hard-coded default

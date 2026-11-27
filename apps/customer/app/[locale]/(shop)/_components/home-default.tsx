@@ -60,6 +60,7 @@ type CatalogApiItem = {
   sale_unit?: string;
   unit_step_milli?: number;
   min_steps?: number;
+  signals?: import("./plp/signals").ListingSignalsWire | null;
 };
 
 type CatalogApiResponse = {
@@ -125,6 +126,7 @@ function mapListing(item: CatalogApiItem): CatalogListing {
     saleUnit: item.sale_unit,
     unitStepMilli: item.unit_step_milli,
     minSteps: item.min_steps,
+    signals: item.signals ?? undefined,
   };
 }
 

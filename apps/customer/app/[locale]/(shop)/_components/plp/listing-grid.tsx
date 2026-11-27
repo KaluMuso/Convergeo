@@ -6,6 +6,7 @@ import { shouldShowSampleListingBadge } from "../demo-listing";
 
 import { ListingCard, type ListingCardLabels } from "./listing-card";
 
+import type { ListingSignalsWire } from "./signals";
 import type { OfferBadge } from "../offers/offer-badge";
 import type { ReactNode } from "react";
 
@@ -34,6 +35,8 @@ export type CatalogListing = {
   leadTimeDays?: number | null;
   /** W8 offers: live offer this listing takes part in (flag `bundles`). */
   offerBadge?: OfferBadge;
+  /** Server-computed badges / ribbon / market facts (optional). */
+  signals?: ListingSignalsWire;
   /** Product-level seller count when the catalogue API exposes it (optional). */
   productSellerCount?: number;
   /** Lowest listing price for the product in ngwee (optional, with seller count). */

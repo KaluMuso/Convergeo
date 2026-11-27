@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { catalogDeliveryLabels } from "../plp/delivery-labels";
 import { FulfillmentLogisticsPills, type LogisticsPillLabels } from "../plp/logistics-pills";
+import { signalSlots, type ListingSignalsWire, type SignalLabels } from "../plp/signals";
 
 import { type BuyBoxLabels } from "./buy-box";
 import { buildComparisonValueRow, mergeComparisonListings } from "./comparison-enrichment";
@@ -21,6 +22,33 @@ export { shouldShowComparison } from "./comparison-visibility";
 
 export const LUSAKA_CBD_LAT = -15.4167;
 export const LUSAKA_CBD_LNG = 28.2833;
+
+/**
+ * Seller-row signals. "Preferred" is already drawn by the vendor ribbon and
+ * "cheapest" by the lowest-price badge, so neither repeats here.
+ */
+function SellerSignals({
+  signals,
+  labels,
+}: {
+  signals?: ListingSignalsWire | null;
+  labels?: SignalLabels;
+}) {
+  if (!signals || !labels) return null;
+  const trimmed: ListingSignalsWire = {
+    ...signals,
+    ribbon: signals.ribbon === "preferred" ? null : signals.ribbon,
+    badges: (signals.badges ?? []).filter((kind) => kind !== "cheapest"),
+  };
+  const slots = signalSlots(trimmed, labels);
+  if (!slots.ribbon && !slots.badges) return null;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1" data-testid="comparison-signals">
+      {slots.ribbon}
+      {slots.badges}
+    </span>
+  );
+}
 
 export type ComparisonListing = {
   id: string;
@@ -44,6 +72,8 @@ export type ComparisonListing = {
   valueStockLabel?: string;
   valueEtaLabel?: string | null;
   valueChips?: ComparisonValueChip[];
+  /** Server signals for this seller row (ribbon + up to two badges). */
+  signals?: ListingSignalsWire | null;
 };
 
 export type ComparisonLabels = {
@@ -76,6 +106,8 @@ export type ComparisonLabels = {
   chipCod: string;
   chipEscrow: string;
   readyIn: string;
+  /** catalog.signals.* — seller-row ribbon and badges. */
+  signals?: SignalLabels;
 };
 
 type ComparisonSort = "price" | "distance" | "total";
@@ -452,6 +484,7 @@ export function Comparison({
                       {listing.vendor.preferredBadge ? (
                         <CornerRibbon trust="preferred" trustLabel={labels.preferredBadge} />
                       ) : null}
+                      <SellerSignals signals={listing.signals} labels={labels.signals} />
                       {lowestPriceNgwee !== null && listing.priceNgwee === lowestPriceNgwee ? (
                         <span data-testid={`comparison-lowest-${listing.id}`}>
                           <Badge variant="public" label={labels.lowestPriceBadge} />
@@ -529,6 +562,7 @@ export function Comparison({
                         {listing.vendor.preferredBadge ? (
                           <CornerRibbon trust="preferred" trustLabel={labels.preferredBadge} />
                         ) : null}
+                        <SellerSignals signals={listing.signals} labels={labels.signals} />
                       </div>
                       <span className="text-xs text-text-2">{ratingLabel}</span>
                     </div>

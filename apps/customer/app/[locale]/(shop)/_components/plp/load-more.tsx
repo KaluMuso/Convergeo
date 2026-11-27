@@ -30,6 +30,7 @@ type CatalogApiResponse = {
     sale_unit?: string;
     unit_step_milli?: number;
     min_steps?: number;
+    signals?: import("./signals").ListingSignalsWire | null;
   }>;
   next_cursor: string | null;
 };
@@ -54,6 +55,7 @@ function mapListing(item: CatalogApiResponse["items"][number]): CatalogListing {
     saleUnit: item.sale_unit,
     unitStepMilli: item.unit_step_milli,
     minSteps: item.min_steps,
+    signals: item.signals ?? undefined,
   };
 }
 
@@ -86,12 +88,9 @@ export function PlpBrowseClient({
       const params = new URLSearchParams(queryString);
       params.delete("cursor");
       params.set("cursor", cursor);
-      const response = await fetch(
-        `${apiBaseUrl}/catalog/listings?${params.toString()}`,
-        {
-          signal,
-        },
-      );
+      const response = await fetch(`${apiBaseUrl}/catalog/listings?${params.toString()}`, {
+        signal,
+      });
       if (!response.ok) {
         throw new Error(`Catalog load failed (${response.status})`);
       }
@@ -116,12 +115,7 @@ export function PlpBrowseClient({
 
   return (
     <>
-      <ListingGrid
-        locale={locale}
-        listings={items}
-        labels={gridLabels}
-        density="compact"
-      />
+      <ListingGrid locale={locale} listings={items} labels={gridLabels} density="compact" />
       <ProgressiveLoadControls
         status={status}
         hasMore={hasMore}

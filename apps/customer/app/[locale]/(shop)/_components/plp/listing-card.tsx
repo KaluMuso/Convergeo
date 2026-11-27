@@ -18,6 +18,7 @@ import { offerBadgeLabel, type OfferBadgeLabels } from "../offers/offer-badge";
 import { formatMadeToOrderBadge, type MadeToOrderLabels } from "../sale-quantity";
 
 import { ListingLogisticsPills, type LogisticsPillLabels } from "./logistics-pills";
+import { inShopsLine, signalSlots, type SignalLabels } from "./signals";
 import { useLocalWishlist } from "./use-local-wishlist";
 
 import type { CatalogListing } from "./listing-grid";
@@ -71,6 +72,8 @@ export type ListingCardLabels = {
   sellersFrom?: string;
   /** common.value.listing.deliversToday — short pill when ETA is today in Lusaka. */
   deliversTodayPill?: string;
+  /** catalog.signals.* — badges, ribbon and "In N shops" (docs/plan/product-signals.md). */
+  signals?: SignalLabels;
 };
 
 /** Map listing.condition to a label; unknown values render nothing (no invention). */
@@ -254,8 +257,11 @@ export function ListingCard({
     ? formatDeliveryEstimate(deliveryEstimate, labels.delivery)
     : null;
 
+  const signalLine = inShopsLine(listing.signals, labels.signals);
+  const slots = signalSlots(listing.signals, labels.signals);
   const sellersFromLine =
-    labels.sellersFrom &&
+    signalLine ??
+    (labels.sellersFrom &&
     typeof listing.productSellerCount === "number" &&
     listing.productSellerCount > 1 &&
     typeof listing.productLowestPriceNgwee === "number" &&
@@ -263,7 +269,7 @@ export function ListingCard({
       ? labels.sellersFrom
           .replace("{count}", String(listing.productSellerCount))
           .replace("{price}", formatK(listing.productLowestPriceNgwee))
-      : null;
+      : null);
 
   const deliversTodayPill =
     labels.deliversTodayPill &&
@@ -296,6 +302,8 @@ export function ListingCard({
         wishlistLabel={wishlistLabel}
         wishlistStatusAnnouncement={wishlistStatusAnnouncement}
         badge={badge}
+        ribbon={slots.ribbon}
+        signals={slots.badges}
         density={density}
         unavailable={!listing.inStock}
         mediaEmptyLabel={labels.mediaEmpty}
