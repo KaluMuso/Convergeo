@@ -69,7 +69,7 @@ JOIN public.vendor_listings vl ON vl.id = scored.listing_id
 JOIN public.vendors v ON v.id = vl.vendor_id
 LEFT JOIN public.products p ON p.id = vl.product_id
 LEFT JOIN public.search_documents sd
-  ON sd.entity_kind = 'listing' AND sd.entity_id = vl.id::text
+  ON sd.entity_kind = 'listing' AND sd.entity_id = vl.id
 WHERE vl.status = 'active'
   AND v.status = 'active'
   AND coalesce(vl.wholesale, false) = false
