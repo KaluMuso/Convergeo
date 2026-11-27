@@ -92,7 +92,7 @@ describe("admin navigation from current API permissions", () => {
     ["support.manage", ["disputes", "support"]],
     ["services.manage", ["services"]],
     ["audit.read", ["auditLog"]],
-    ["logistics.manage", []],
+    ["logistics.manage", ["dispatch"]],
   ])("bounds %s to its current destinations", (permission, expected) => {
     expect(visible([permission as string])).toEqual(expected);
   });
@@ -123,7 +123,7 @@ describe("admin navigation from current API permissions", () => {
     expect(keys).toContain("config");
     expect(keys).toContain("disputes");
     expect(keys).toContain("coupons");
-    expect(keys).toHaveLength(25);
+    expect(keys).toHaveLength(26);
     expect(keys).not.toContain("roles");
     expect(visible([], true, true)).toContain("roles");
   });
@@ -577,4 +577,43 @@ describe("platform shell admission preserves existing auth routes", () => {
       expect(calls).toEqual([]);
     },
   );
+});
+
+describe("logistics.manage reaches the dispatch board and order detail only", () => {
+  it("shows a Dispatch nav item and opens /orders/dispatch", async () => {
+    current = grants(["logistics.manage"]);
+    await renderRoute("/en/orders/dispatch");
+    expect(container.querySelector('[data-protected-route="/en/orders/dispatch"]')).not.toBeNull();
+    expect(navHrefs()).toEqual(["/en/orders/dispatch"]);
+  });
+
+  it("opens an order detail page, but not order search", async () => {
+    current = grants(["logistics.manage"]);
+    await renderRoute("/en/orders/some-order");
+    expect(
+      container.querySelector('[data-protected-route="/en/orders/some-order"]'),
+    ).not.toBeNull();
+    await renderRoute("/en/orders");
+    expect(container.querySelector("[data-protected-route]")).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
+  });
+
+  it("does not hand finance roles the dispatch board the API refuses them", async () => {
+    current = grants(["finance.read", "finance.operate"]);
+    await renderRoute("/en/orders/dispatch");
+    expect(container.querySelector("[data-protected-route]")).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
+    await renderRoute("/en/orders/some-order");
+    expect(
+      container.querySelector('[data-protected-route="/en/orders/some-order"]'),
+    ).not.toBeNull();
+  });
+
+  it("keeps every other destination closed to a logistics-only role", async () => {
+    current = grants(["logistics.manage"]);
+    for (const path of ["/en", "/en/config", "/en/kyc", "/en/disputes", "/en/analytics"]) {
+      await renderRoute(path);
+      expect(container.querySelector("[data-protected-route]")).toBeNull();
+    }
+  });
 });

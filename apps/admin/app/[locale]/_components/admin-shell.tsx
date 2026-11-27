@@ -23,6 +23,7 @@ import { AdminDensityToggle } from "./admin-density-toggle";
 import {
   ADMIN_NAV_GROUPS,
   adminItemHref,
+  adminRouteAllowedByAlternateItem,
   filterAdminNavGroups,
   flattenAdminNavItems,
   resolveAdminActiveGroup,
@@ -155,7 +156,9 @@ export function AdminShell({ locale, children }: AdminShellProps) {
     !isPersonalRoute &&
     ((requested === "roles" && !capabilities.roles) ||
       (!grants?.unrestricted &&
-        (!requested || !capabilities[requested] || rest.startsWith("/moderation/flags"))));
+        (!requested ||
+          (!capabilities[requested] && !adminRouteAllowedByAlternateItem(rest, capabilities)) ||
+          rest.startsWith("/moderation/flags"))));
 
   const chrome = (
     <div className="flex h-dvh flex-col overflow-hidden bg-bg text-text">

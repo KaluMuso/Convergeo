@@ -15,7 +15,7 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params;
-  return adminNavPageMetadata(locale, "orders");
+  return adminNavPageMetadata(locale, "dispatch");
 }
 
 export function generateStaticParams() {

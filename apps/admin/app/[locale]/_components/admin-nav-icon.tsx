@@ -46,6 +46,7 @@ const NAV_ICON_MAP: Record<AdminNavItemKey, NavIconEntry> = {
   support: { hue: "pink", Icon: LcUsers },
   intake: { hue: "green", Icon: LcMessageCircle },
   orders: { hue: "blue", Icon: LcShoppingBag },
+  dispatch: { hue: "teal", Icon: LcTruck },
   business: { hue: "slate", Icon: LcBanknote },
   merch: { hue: "amber", Icon: LcGift },
   homeFeed: { hue: "cyan", Icon: LcLayoutGrid },

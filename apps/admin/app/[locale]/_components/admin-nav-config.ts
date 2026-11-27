@@ -11,6 +11,7 @@ export type AdminNavItemKey =
   | "support"
   | "intake"
   | "orders"
+  | "dispatch"
   | "business"
   | "merch"
   | "homeFeed"
@@ -67,6 +68,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "commerce",
     items: [
       { key: "orders", href: "orders" },
+      { key: "dispatch", href: "orders/dispatch" },
       { key: "business", href: "business" },
       { key: "merch", href: "merch" },
       { key: "homeFeed", href: "home-feed" },
@@ -144,4 +146,19 @@ export function resolveAdminActiveGroup(
     return undefined;
   }
   return groups.find((group) => group.items.some((item) => item.key === active))?.key;
+}
+
+/**
+ * Order detail (`/orders/<id>`) is readable by finance roles (`orders`) and by logistics
+ * operators (`dispatch`), because the API grants `GET /admin/orders/{id}` to both. The
+ * search page (`/orders`) and every other route keep their single nav item's permission.
+ */
+export function adminRouteAllowedByAlternateItem(
+  pathRest: string,
+  capabilities: AdminNavCapabilities,
+): boolean {
+  const rest = pathRest.replace(/\/+$/, "");
+  return (
+    /^\/orders\/(?!dispatch$)[^/]+$/.test(rest) && (capabilities.orders || capabilities.dispatch)
+  );
 }
