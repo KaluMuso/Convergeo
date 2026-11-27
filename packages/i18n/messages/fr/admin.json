@@ -45,6 +45,7 @@
     "translations": "Traductions",
     "support": "Support",
     "events": "Événements à haute valeur",
+    "eventSponsors": "Revue des sponsors d'événement",
     "homeFeed": "Home feed",
     "advertising": "Advertising",
     "accounts": "Comptes admin",
@@ -289,6 +290,35 @@
       "confirmReject": "Confirmer le rejet",
       "cancel": "Annuler",
       "reasonPlaceholder": "Motif (visible par le demandeur)"
+    }
+  },
+  "eventSponsors": {
+    "title": "Revue des sponsors d'événement",
+    "subtitle": "Validez les bandes sponsor avant publication des logos et liens sur la page événement.",
+    "queue": {
+      "loading": "Chargement de la file sponsors…",
+      "empty": "Aucun sponsor en attente",
+      "emptyHint": "Les sponsors soumis par un organisateur apparaissent ici.",
+      "error": "Impossible de charger la file sponsors.",
+      "permissionDenied": "Vous n'avez pas la permission de revoir les sponsors.",
+      "retry": "Réessayer",
+      "organiser": "Organisateur : {name}",
+      "eventStatus": "Statut de l'événement : {status}",
+      "viewEvent": "Voir l'événement",
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "rejectTitle": "Rejeter le sponsor",
+      "rejectHint": "Donnez une courte raison à l'organisateur.",
+      "noteLabel": "Motif (optionnel)",
+      "notePlaceholder": "p. ex. logo flou ou lien cassé",
+      "cancel": "Annuler",
+      "confirmReject": "Rejeter le sponsor",
+      "actionError": "Impossible d'enregistrer la décision. Réessayez.",
+      "conflict": "L'événement a changé pendant la revue. File rechargée.",
+      "decisionSaved": "Décision enregistrée.",
+      "tagline": "Slogan : {text}",
+      "link": "Lien : {url}",
+      "logoAlt": "Logo de {name}"
     }
   },
   "events": {

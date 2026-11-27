@@ -37,6 +37,7 @@ export const ROUTE_SPEC = {
   coupons: { admin: ["coupons"] },
   disputes: { admin: ["common", "disputes"] },
   events: { admin: ["common", "events"] },
+  "event-sponsors": { admin: ["common", "eventSponsors"] },
   extras: { admin: ["extras"] },
   "home-feed": { admin: ["homeFeed"] },
   intake: { admin: ["intake"] },

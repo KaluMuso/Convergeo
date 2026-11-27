@@ -39,6 +39,7 @@ export function resolveAdminNavCapabilities(
     offers: has("ads.manage"),
     clips: unrestricted,
     events: has("events.manage"),
+    eventSponsors: has("vendors.manage"),
     config: unrestricted,
     translations: unrestricted,
     theme: unrestricted,

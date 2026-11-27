@@ -19,6 +19,7 @@ export type AdminNavItemKey =
   | "offers"
   | "clips"
   | "events"
+  | "eventSponsors"
   | "config"
   | "translations"
   | "theme"
@@ -62,6 +63,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "support", href: "support" },
       { key: "intake", href: "intake" },
       { key: "events", href: "events" },
+      { key: "eventSponsors", href: "event-sponsors" },
     ],
   },
   {

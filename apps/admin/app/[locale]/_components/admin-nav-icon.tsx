@@ -54,6 +54,7 @@ const NAV_ICON_MAP: Record<AdminNavItemKey, NavIconEntry> = {
   offers: { hue: "pink", Icon: LcTag },
   clips: { hue: "purple", Icon: LcImage },
   events: { hue: "amber", Icon: LcCalendar },
+  eventSponsors: { hue: "orange", Icon: LcTicket },
   config: { hue: "slate", Icon: LcSettings },
   translations: { hue: "teal", Icon: LcClipboardList },
   theme: { hue: "purple", Icon: LcWrench },

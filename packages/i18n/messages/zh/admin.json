@@ -45,6 +45,7 @@
     "translations": "翻译",
     "support": "客服",
     "events": "高价值活动",
+    "eventSponsors": "活动赞助商审核",
     "homeFeed": "Home feed",
     "advertising": "Advertising",
     "accounts": "管理员账户",
@@ -289,6 +290,35 @@
       "confirmReject": "确认拒绝",
       "cancel": "取消",
       "reasonPlaceholder": "原因（将显示给申请人）"
+    }
+  },
+  "eventSponsors": {
+    "title": "活动赞助商审核",
+    "subtitle": "在赞助商标志和链接显示在活动页之前，审核主办方提交的赞助商信息。",
+    "queue": {
+      "loading": "正在加载赞助商队列…",
+      "empty": "暂无待审核赞助商",
+      "emptyHint": "主办方提交需审核的赞助商后会显示在这里。",
+      "error": "无法加载赞助商队列。",
+      "permissionDenied": "您无权审核活动赞助商。",
+      "retry": "重试",
+      "organiser": "主办方：{name}",
+      "eventStatus": "活动状态：{status}",
+      "viewEvent": "查看活动",
+      "approve": "批准",
+      "reject": "拒绝",
+      "rejectTitle": "拒绝赞助商",
+      "rejectHint": "请给主办方一个简短原因以便修改。",
+      "noteLabel": "原因（可选）",
+      "notePlaceholder": "例如标志模糊或链接失效",
+      "cancel": "取消",
+      "confirmReject": "拒绝赞助商",
+      "actionError": "无法保存此决定。请重试。",
+      "conflict": "审核期间活动已变更，队列已重新加载。",
+      "decisionSaved": "决定已保存。",
+      "tagline": "标语：{text}",
+      "link": "链接：{url}",
+      "logoAlt": "{name} 的标志"
     }
   },
   "events": {
