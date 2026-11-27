@@ -80,14 +80,16 @@ export function HoverZoomPane({
               }}
             >
               {hiResUrl ? (
-                // Plain <img>: hi-res Cloudinary source positioned by the lens maths (next/image cannot express this).
-                <img
+                // Background-image layer: hi-res Cloudinary source positioned by the
+                // lens maths (next/image cannot express this; raw <img> is lint-banned).
+                <div
                   data-testid="pdp-gallery-zoom-image"
-                  src={hiResUrl}
-                  alt=""
-                  draggable={false}
-                  className="absolute left-0 top-0 max-w-none select-none object-contain"
+                  role="presentation"
+                  className="absolute left-0 top-0 select-none bg-no-repeat"
                   style={{
+                    backgroundImage: `url("${hiResUrl}")`,
+                    backgroundSize: "contain",
+                    backgroundPosition: "center",
                     width: box.width * layout.zoom,
                     height: box.height * layout.zoom,
                     transform: `translate(${offsetX}px, ${offsetY}px)`,
