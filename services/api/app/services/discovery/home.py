@@ -124,7 +124,7 @@ async def build_home_feed(
         trending_limit=trending_limit,
     )
     if use_cache:
-        cached = get_cached_json(cache_key)
+        cached = await asyncio.to_thread(get_cached_json, cache_key)
         if isinstance(cached, dict):
             try:
                 return HomeFeedPayload.model_validate(cached)
@@ -206,7 +206,8 @@ async def build_home_feed(
     )
 
     if use_cache:
-        set_cached_json(
+        await asyncio.to_thread(
+            set_cached_json,
             cache_key,
             payload.model_dump(mode="json"),
             ttl_seconds=HOME_CACHE_TTL_SECONDS,
