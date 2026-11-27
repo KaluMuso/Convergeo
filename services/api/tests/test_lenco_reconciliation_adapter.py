@@ -120,12 +120,8 @@ def _page(number: int, count: int, total: int, rows: list[dict[str, Any]]) -> di
 async def test_adapter_selects_configured_account_and_walks_every_declared_page() -> None:
     responses = {
         ("/accounts", None): _accounts(),
-        ("/transactions", "1"): _page(
-            1, 2, 2, [_transaction("txn-1", "lenco-one", "10.00")]
-        ),
-        ("/transactions", "2"): _page(
-            2, 2, 2, [_transaction("txn-2", "lenco-two", "15.00")]
-        ),
+        ("/transactions", "1"): _page(1, 2, 2, [_transaction("txn-1", "lenco-one", "10.00")]),
+        ("/transactions", "2"): _page(2, 2, 2, [_transaction("txn-2", "lenco-two", "15.00")]),
     }
     with _provider_server(responses) as (base_url, requests):
         adapter = LencoReconciliationAdapter(
@@ -150,8 +146,7 @@ async def test_adapter_selects_configured_account_and_walks_every_declared_page(
     assert [movement.running_balance_ngwee for movement in movements] == [12500, 12500]
     assert all(movement.merchant_reference is None for movement in movements)
     assert all(
-        movement.provider_reference_source == "transaction.narration"
-        for movement in movements
+        movement.provider_reference_source == "transaction.narration" for movement in movements
     )
     assert all(movement.evidence_origin == EvidenceOrigin.SYNTHETIC for movement in movements)
     assert [request["query"].get("page") for request in requests[1:]] == [["1"], ["2"]]
@@ -251,3 +246,79 @@ async def test_schema_error_is_retained_on_the_page_and_cannot_certify() -> None
     assert not collected.complete
     assert any("transaction.accountId" in issue for issue in collected.issues)
     assert any("total mismatch" in issue for issue in collected.issues)
+
+
+def _empty_day(current: int, count: int, total: int) -> dict[str, Any]:
+    return {
+        "status": True,
+        "message": "ok",
+        "data": [],
+        "meta": {"total": total, "perPage": 100, "currentPage": current, "pageCount": count},
+    }
+
+
+@pytest.mark.asyncio
+async def test_empty_day_page_count_zero_is_one_complete_empty_page() -> None:
+    # Live Lenco shape for a day with no movements: page 1 of 0, total 0.
+    responses = {
+        ("/accounts", None): _accounts(),
+        ("/transactions", "1"): _empty_day(1, 0, 0),
+    }
+    with _provider_server(responses) as (base_url, requests):
+        adapter = LencoReconciliationAdapter(
+            configured_account_id="account-configured",
+            token="synthetic-token",
+            base_url=base_url,
+            trust_env=False,
+            evidence_origin=EvidenceOrigin.SYNTHETIC,
+        )
+        evidence = await adapter.collect(report_date=date(2026, 9, 29))
+        await adapter.aclose()
+
+    assert len(evidence.pages) == 1
+    assert evidence.pages[0].error is None
+    assert evidence.pages[0].page_count == 1
+    assert evidence.pages[0].total == 0
+    assert [request["query"].get("page") for request in requests[1:]] == [["1"]]
+    collected = collect_provider_pages(
+        evidence.pages,
+        configured_account_id="account-configured",
+        currency="ZMW",
+        cutoff_utc=datetime.fromisoformat("2026-09-29T23:59:59+00:00"),
+    )
+    assert collected.complete
+    assert collected.stop_reason == "complete"
+    assert collected.movements == ()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("current", "count", "total"),
+    [(1, 0, 3), (0, 0, 0), (2, 0, 0)],
+)
+async def test_zero_page_count_with_rows_or_odd_page_stays_incomplete(
+    current: int, count: int, total: int
+) -> None:
+    responses = {
+        ("/accounts", None): _accounts(),
+        ("/transactions", "1"): _empty_day(current, count, total),
+    }
+    with _provider_server(responses) as (base_url, _requests):
+        adapter = LencoReconciliationAdapter(
+            configured_account_id="account-configured",
+            token="synthetic-token",
+            base_url=base_url,
+            trust_env=False,
+            evidence_origin=EvidenceOrigin.SYNTHETIC,
+        )
+        evidence = await adapter.collect(report_date=date(2026, 9, 29))
+        await adapter.aclose()
+
+    collected = collect_provider_pages(
+        evidence.pages,
+        configured_account_id="account-configured",
+        currency="ZMW",
+        cutoff_utc=datetime.fromisoformat("2026-09-29T23:59:59+00:00"),
+    )
+    assert not collected.complete
+    assert evidence.pages[0].error is not None
