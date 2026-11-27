@@ -280,9 +280,10 @@
       "extras_cancelled": "Your request for {name} was cancelled."
     },
     "admin": {
-      "kyc_submitted": "New KYC submission waiting for review.",
+      "ask_answer_flagged": "Ask Vergeo gave a suspicious answer. Open it to investigate.",
       "dispute_opened": "New dispute opened on order {ref}.",
-      "extras_requested": "A seller requested an extra: {name}."
+      "extras_requested": "A seller requested an extra: {name}.",
+      "kyc_submitted": "New KYC submission waiting for review."
     }
   }
 }

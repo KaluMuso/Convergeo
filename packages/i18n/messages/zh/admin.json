@@ -52,7 +52,8 @@
     "coupons": "优惠券",
     "branches": "分店审核",
     "extras": "增值服务申请",
-    "trials": "免费试用"
+    "trials": "免费试用",
+    "askAudit": "Ask Vergeo 审计"
   },
   "boards": {
     "states": {
@@ -1920,5 +1921,55 @@
       "notLater": "新的结束时间必须晚于当前结束时间。",
       "alreadyEnded": "该试用已结束。"
     }
+  },
+  "askAudit": {
+    "title": "Ask Vergeo 审计",
+    "subtitle": "Ask Vergeo 向顾客展示的每条回答，均与实时价格、商品和商家核对。打开商品和商家页面即可调查并联系商家。",
+    "filters": {
+      "label": "筛选",
+      "flaggedOnly": "仅显示已标记",
+      "severity": "严重程度",
+      "severityAll": "全部严重程度"
+    },
+    "severity": {
+      "critical": "严重",
+      "warning": "警告",
+      "info": "提示"
+    },
+    "status": {
+      "pending": "等待审计",
+      "passed": "通过",
+      "flagged": "已标记",
+      "error": "审计失败"
+    },
+    "asker": {
+      "customer": "已登录顾客",
+      "guest": "访客"
+    },
+    "question": "问题",
+    "answer": "展示的回答",
+    "findings": "发现",
+    "citedItems": "引用的商品",
+    "viewItem": "查看商品",
+    "viewVendor": "查看商家 {vendor}",
+    "vendor": "商家",
+    "rules": {
+      "entity_missing": "引用的商品不存在",
+      "entity_inactive": "引用的商品未上架",
+      "vendor_inactive": "商家未启用",
+      "vendor_mismatch": "商家不符",
+      "price_mismatch": "价格与商品不一致",
+      "price_below_category_floor": "价格低于品类下限",
+      "price_far_below_median": "价格远低于品类中位数",
+      "price_far_above_median": "价格远高于品类中位数",
+      "text_price_unsupported": "回答中的价格与所引用商品不符"
+    },
+    "loading": "正在加载回答…",
+    "error": "无法加载回答日志。",
+    "permissionDenied": "只有管理员可以查看 Ask Vergeo 审计。",
+    "retry": "重试",
+    "empty": "暂无回答记录。",
+    "emptyFlagged": "没有已标记的回答。取消勾选“仅显示已标记”可查看全部。",
+    "loadMore": "加载更多"
   }
 }
