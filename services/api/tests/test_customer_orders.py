@@ -515,35 +515,106 @@ def test_pickup_only_on_ready_pickup_owner(
     app.dependency_overrides.clear()
 
 
-def test_pickup_with_credentials_not_stubbed(
-    monkeypatch: pytest.MonkeyPatch,
+def _seed_pickup_credentials(
     fake_client: FakeSupabaseClient,
-) -> None:
-    _mock_auth(monkeypatch, CUSTOMER_A_ID)
-    _seed_vendor(fake_client)
-    _seed_order(
-        fake_client,
-        order_id=ORDER_A_ID,
-        status="ready",
-        fulfilment="pickup",
-    )
+    *,
+    pin: str | None,
+    version: int = 1,
+    qr: str = "qr-token-abc",
+) -> str:
+    """Seed the columns services.pickup.issue writes; returns the PIN actually hashed."""
+    from app.services.pickup.tokens import derive_pin, hash_pin
+
+    used = pin if pin is not None else derive_pin(order_id=ORDER_A_ID, version=version)
     for row in fake_client.tables["orders"].rows:
         if row["id"] == ORDER_A_ID:
-            row["pickup_qr_token"] = "qr-token-abc"
-            row["pickup_pin"] = "123456"
-    _seed_items(fake_client, ORDER_A_ID)
+            row["pickup_qr_secret"] = qr
+            row["pickup_pin_hash"] = hash_pin(pin=used, order_id=ORDER_A_ID)
+            row["pickup_token_version"] = version
+    return used
+
+
+def _get_pickup(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_client: FakeSupabaseClient,
+) -> dict[str, object] | None:
+    _mock_auth(monkeypatch, CUSTOMER_A_ID)
     service_wrapper = _mock_supabase(monkeypatch, fake_client)
     app = create_app()
     _apply_supabase_overrides(app, service_wrapper)
-
     with TestClient(app, raise_server_exceptions=False) as client:
         response = client.get(f"/account/orders/{ORDER_A_ID}", headers=_auth_headers())
+        assert response.status_code == 200
         pickup = response.json()["pickup"]
-        assert pickup["qr_token"] == "qr-token-abc"
-        assert pickup["pin"] == "123456"
-        assert pickup["stub"] is False
-
     app.dependency_overrides.clear()
+    return pickup
+
+
+def test_pickup_with_issued_credentials_shows_qr_and_pin(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-signing-secret")
+    _seed_vendor(fake_client)
+    _seed_order(fake_client, order_id=ORDER_A_ID, status="ready", fulfilment="pickup")
+    _seed_items(fake_client, ORDER_A_ID)
+    expected = _seed_pickup_credentials(fake_client, pin=None)
+    pickup = _get_pickup(monkeypatch, fake_client)
+    assert pickup is not None
+    assert pickup["qr_token"] == "qr-token-abc"
+    assert pickup["pin"] == expected
+    assert pickup["stub"] is False
+
+
+def test_pickup_legacy_random_pin_is_not_revealed(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    """A PIN that is not the derived one (issued before this change) stays hidden."""
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-signing-secret")
+    _seed_vendor(fake_client)
+    _seed_order(fake_client, order_id=ORDER_A_ID, status="ready", fulfilment="pickup")
+    _seed_items(fake_client, ORDER_A_ID)
+    from app.services.pickup.tokens import derive_pin
+
+    derived = derive_pin(order_id=ORDER_A_ID, version=1)
+    other = "000000" if derived != "000000" else "111111"
+    _seed_pickup_credentials(fake_client, pin=other)
+    pickup = _get_pickup(monkeypatch, fake_client)
+    assert pickup is not None
+    assert pickup["pin"] is None
+    assert pickup["qr_token"] == "qr-token-abc"
+
+
+def test_pickup_credentials_hidden_for_gift_payer(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-signing-secret")
+    _seed_vendor(fake_client)
+    _seed_order(fake_client, order_id=ORDER_A_ID, status="ready", fulfilment="pickup")
+    _seed_items(fake_client, ORDER_A_ID)
+    _seed_pickup_credentials(fake_client, pin=None)
+    for row in fake_client.tables["orders"].rows:
+        if row["id"] == ORDER_A_ID:
+            row["is_gift"] = True
+    pickup = _get_pickup(monkeypatch, fake_client)
+    assert pickup is not None
+    assert pickup["sent_to_recipient"] is True
+    assert pickup["pin"] is None
+    assert pickup["qr_token"] is None
+
+
+def test_pickup_not_issued_yet_is_stub(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    _seed_vendor(fake_client)
+    _seed_order(fake_client, order_id=ORDER_A_ID, status="ready", fulfilment="pickup")
+    _seed_items(fake_client, ORDER_A_ID)
+    pickup = _get_pickup(monkeypatch, fake_client)
+    assert pickup is not None
+    assert pickup["stub"] is True
 
 
 def test_invoice_link_stub_when_invoice_exists(
