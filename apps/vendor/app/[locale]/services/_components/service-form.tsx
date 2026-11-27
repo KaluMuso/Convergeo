@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { EventImagePicker } from "../../events/_components/image-picker";
 import { ngweeToZmwInput } from "../../listings/[id]/edit/_lib/money";
 import { isValidZmwDecimal, zmwDecimalToNgwee } from "../../listings/new/_lib/money";
 import {
@@ -53,6 +54,9 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
   const [serviceArea, setServiceArea] = useState(initialService?.service_area ?? "");
   const [fromPrice, setFromPrice] = useState(
     initialService?.from_price_ngwee ? ngweeToZmwInput(initialService.from_price_ngwee) : "",
+  );
+  const [portfolioImages, setPortfolioImages] = useState<string[]>(
+    initialService?.portfolio_images ?? [],
   );
   const [bookable, setBookable] = useState(initialService?.bookable ?? false);
   const [isFree, setIsFree] = useState(initialService?.is_free ?? false);
@@ -114,7 +118,7 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
       bookable: isFree ? false : bookable,
       booking_price_ngwee: isFree ? null : bookingPriceNgwee,
       status: nextStatus ?? status,
-      portfolio_images: initialService?.portfolio_images ?? [],
+      portfolio_images: portfolioImages,
       includes: includes
         .split("\n")
         .map((line) => line.trim())
@@ -123,9 +127,12 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
 
     try {
       if (mode === "create") {
-        await servicesClient.createService(payload);
+        const created = await servicesClient.createService(payload);
         if (!isCurrentSave()) return;
-        router.push(`/${locale}/services`);
+        // Land on the edit page so the vendor can add packages straight away
+        // (the packages editor only exists once the service has an id).
+        const createdId = created?.service?.id;
+        router.push(createdId ? `/${locale}/services/${createdId}/edit` : `/${locale}/services`);
         router.refresh();
         return;
       }
@@ -235,46 +242,54 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
 
       {isFree ? null : (
         <>
-      <FormField id="from-price" label={ts("vendor.form.fromPriceLabel")}>
-        <Input
-          id="from-price"
-          inputMode="decimal"
-          value={fromPrice}
-          onChange={(event) => setFromPrice(event.target.value)}
-          placeholder="350"
-        />
-      </FormField>
-      <p className="-mt-2 text-xs text-text-3">{ts("vendor.form.fromPriceHint")}</p>
-
-      <label className="flex items-start gap-2 text-sm text-text">
-        <input
-          type="checkbox"
-          checked={bookable}
-          onChange={(event) => setBookable(event.target.checked)}
-          className="mt-0.5 h-4 w-4"
-        />
-        <span>
-          <span className="font-medium">{ts("vendor.form.bookableLabel")}</span>
-          <span className="block text-xs text-text-3">{ts("vendor.form.bookableHint")}</span>
-        </span>
-      </label>
-
-      {bookable ? (
-        <>
-          <FormField id="booking-price" label={ts("vendor.form.bookingPriceLabel")}>
+          <FormField id="from-price" label={ts("vendor.form.fromPriceLabel")}>
             <Input
-              id="booking-price"
+              id="from-price"
               inputMode="decimal"
-              value={bookingPrice}
-              onChange={(event) => setBookingPrice(event.target.value)}
-              placeholder="500"
+              value={fromPrice}
+              onChange={(event) => setFromPrice(event.target.value)}
+              placeholder="350"
             />
           </FormField>
-          <p className="-mt-2 text-xs text-text-3">{ts("vendor.form.bookingPriceHint")}</p>
-        </>
-      ) : null}
+          <p className="-mt-2 text-xs text-text-3">{ts("vendor.form.fromPriceHint")}</p>
+
+          <label className="flex items-start gap-2 text-sm text-text">
+            <input
+              type="checkbox"
+              checked={bookable}
+              onChange={(event) => setBookable(event.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              <span className="font-medium">{ts("vendor.form.bookableLabel")}</span>
+              <span className="block text-xs text-text-3">{ts("vendor.form.bookableHint")}</span>
+            </span>
+          </label>
+
+          {bookable ? (
+            <>
+              <FormField id="booking-price" label={ts("vendor.form.bookingPriceLabel")}>
+                <Input
+                  id="booking-price"
+                  inputMode="decimal"
+                  value={bookingPrice}
+                  onChange={(event) => setBookingPrice(event.target.value)}
+                  placeholder="500"
+                />
+              </FormField>
+              <p className="-mt-2 text-xs text-text-3">{ts("vendor.form.bookingPriceHint")}</p>
+            </>
+          ) : null}
         </>
       )}
+
+      <EventImagePicker
+        images={portfolioImages}
+        getToken={getToken}
+        onChange={setPortfolioImages}
+        disabled={saving}
+        getAlt={(position) => ts("vendor.form.photoAlt", { position })}
+      />
 
       <FormField id="status" label={ts("vendor.form.statusLabel")}>
         <Select

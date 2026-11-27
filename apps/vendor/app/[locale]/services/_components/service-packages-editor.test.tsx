@@ -172,4 +172,50 @@ describe("ServicePackagesEditor", () => {
     await waitFor(() => expect(archive).toHaveBeenCalledWith("s1", "basic"));
     expect(await screen.findByTestId("package-offer-basic")).toBeInTheDocument();
   });
+
+  it("lets a vendor add a second and third package, each saved to its own tier", async () => {
+    const user = userEvent.setup();
+    render(<ServicePackagesEditor serviceId="s1" />);
+    expect(await screen.findByTestId("packages-count")).toHaveTextContent("count");
+
+    await user.click(await screen.findByTestId("package-offer-standard"));
+    await user.type(screen.getByTestId("package-name-standard"), "Logo + cards");
+    await user.type(screen.getByTestId("package-price-standard"), "150");
+    await user.click(screen.getByTestId("package-save-standard"));
+    await waitFor(() => expect(upsert).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getByTestId("package-offer-premium"));
+    await user.type(screen.getByTestId("package-name-premium"), "Full brand");
+    await user.type(screen.getByTestId("package-price-premium"), "400");
+    await user.click(screen.getByTestId("package-save-premium"));
+    await waitFor(() => expect(upsert).toHaveBeenCalledTimes(2));
+
+    expect(upsert.mock.calls.map((call) => call[1])).toEqual(["standard", "premium"]);
+    // Editing the first package after adding others still works.
+    await user.clear(screen.getByTestId("package-name-basic"));
+    await user.type(screen.getByTestId("package-name-basic"), "Logo only v2");
+    await user.click(screen.getByTestId("package-save-basic"));
+    await waitFor(() => expect(upsert).toHaveBeenCalledTimes(3));
+    expect(upsert.mock.calls[2]?.[1]).toBe("basic");
+  });
+
+  it("explains the three-package limit once every tier is offered", async () => {
+    list.mockResolvedValue({
+      service_id: "s1",
+      items: (["basic", "standard", "premium"] as const).map((tier) => ({
+        ...BASIC,
+        id: `id-${tier}`,
+        tier,
+      })),
+    });
+    render(<ServicePackagesEditor serviceId="s1" />);
+    expect(await screen.findByTestId("packages-limit-reached")).toBeInTheDocument();
+    expect(screen.queryByTestId("package-offer-basic")).not.toBeInTheDocument();
+  });
+
+  it("does not show the limit message while a tier is still free", async () => {
+    render(<ServicePackagesEditor serviceId="s1" />);
+    await screen.findByTestId("packages-count");
+    expect(screen.queryByTestId("packages-limit-reached")).not.toBeInTheDocument();
+  });
 });
