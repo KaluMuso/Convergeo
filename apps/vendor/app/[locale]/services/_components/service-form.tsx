@@ -11,6 +11,15 @@ import { EventImagePicker } from "../../events/_components/image-picker";
 import { ngweeToZmwInput } from "../../listings/[id]/edit/_lib/money";
 import { isValidZmwDecimal, zmwDecimalToNgwee } from "../../listings/new/_lib/money";
 import {
+  ARCHETYPES,
+  attributesFromValues,
+  effectiveArchetype,
+  SERVICE_FIELDS,
+  valuesFromAttributes,
+  type AttributeErrors,
+  type FieldValues,
+} from "../_lib/archetypes";
+import {
   createServicesClient,
   SERVICE_VERTICALS,
   type ServiceStatus,
@@ -18,6 +27,15 @@ import {
   type ServiceVertical,
 } from "../_lib/services-client";
 import { Button, FormField, Input, Select, Spinner } from "../_lib/ui";
+
+import { AttributeFields } from "./attribute-fields";
+
+/** Every service field definition, so values saved under any archetype load once. */
+const ALL_SERVICE_DEFS = Array.from(
+  new Map(
+    ARCHETYPES.flatMap((archetype) => SERVICE_FIELDS[archetype]).map((def) => [def.key, def]),
+  ).values(),
+);
 
 type ServiceFormProps = {
   locale: string;
@@ -64,6 +82,14 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
     initialService?.booking_price_ngwee ? ngweeToZmwInput(initialService.booking_price_ngwee) : "",
   );
   const [status, setStatus] = useState<ServiceStatus>(initialService?.status ?? "draft");
+  const [archetypeOverride, setArchetypeOverride] = useState(
+    initialService?.archetype_override ?? "",
+  );
+  const [attrValues, setAttrValues] = useState<FieldValues>(() =>
+    valuesFromAttributes(ALL_SERVICE_DEFS, initialService?.attributes, ngweeToZmwInput),
+  );
+  const [attrErrors, setAttrErrors] = useState<AttributeErrors>({});
+  const archetype = effectiveArchetype(archetypeOverride, category);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const active = useRef(true);
@@ -96,6 +122,13 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
       setError(ts("vendor.errors.bookablePrice"));
       return;
     }
+    const attrs = attributesFromValues(SERVICE_FIELDS[archetype], attrValues);
+    if (!attrs.ok) {
+      setAttrErrors(attrs.errors);
+      setError(ts("vendor.attributes.errors.fix"));
+      return;
+    }
+    setAttrErrors({});
     const fromPriceNgwee = fromPrice.trim() ? zmwDecimalToNgwee(fromPrice) : null;
     const bookingPriceNgwee = isValidZmwDecimal(bookingPrice)
       ? zmwDecimalToNgwee(bookingPrice)
@@ -118,6 +151,9 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
       bookable: isFree ? false : bookable,
       booking_price_ngwee: isFree ? null : bookingPriceNgwee,
       status: nextStatus ?? status,
+      // null = derived from the vertical; sent explicitly so a PATCH can clear an override.
+      archetype: archetypeOverride || null,
+      attributes: attrs.attributes,
       portfolio_images: portfolioImages,
       includes: includes
         .split("\n")
@@ -197,6 +233,35 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
           ))}
         </Select>
       </FormField>
+
+      <div
+        className="flex flex-col gap-1 rounded-md bg-bg-2 p-3 text-sm"
+        data-testid="service-archetype-summary"
+      >
+        <p className="m-0 font-medium text-text">
+          {ts("vendor.archetypes.summary", { type: ts(`vendor.archetypes.${archetype}.name`) })}
+        </p>
+        <p className="m-0 text-xs text-text-3">{ts(`vendor.archetypes.${archetype}.help`)}</p>
+        <details>
+          <summary className="min-h-11 cursor-pointer py-2 text-xs font-medium text-primary">
+            {ts("vendor.archetypes.advanced")}
+          </summary>
+          <FormField id="archetype-override" label={ts("vendor.archetypes.overrideLabel")}>
+            <Select
+              id="archetype-override"
+              value={archetypeOverride}
+              onChange={(event) => setArchetypeOverride(event.target.value)}
+            >
+              <option value="">{ts("vendor.archetypes.derived")}</option>
+              {ARCHETYPES.map((key) => (
+                <option key={key} value={key}>
+                  {ts(`vendor.archetypes.${key}.name`)}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </details>
+      </div>
 
       <FormField id="description" label={ts("vendor.form.descriptionLabel")}>
         <textarea
@@ -283,6 +348,9 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
         </>
       )}
 
+      <p className="-mb-2 text-xs text-text-3" data-testid="service-photo-tip">
+        {ts(`vendor.archetypes.${archetype}.photoTip`)}
+      </p>
       <EventImagePicker
         images={portfolioImages}
         getToken={getToken}
@@ -290,6 +358,21 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
         disabled={saving}
         getAlt={(position) => ts("vendor.form.photoAlt", { position })}
       />
+
+      <section className="flex flex-col gap-3" aria-labelledby="service-details-heading">
+        <h2 id="service-details-heading" className="m-0 text-base font-semibold text-text">
+          {ts("vendor.attributes.serviceHeading")}
+        </h2>
+        <AttributeFields
+          scope="service"
+          idPrefix="service"
+          defs={SERVICE_FIELDS[archetype]}
+          values={attrValues}
+          errors={attrErrors}
+          disabled={saving}
+          onChange={setAttrValues}
+        />
+      </section>
 
       <FormField id="status" label={ts("vendor.form.statusLabel")}>
         <Select

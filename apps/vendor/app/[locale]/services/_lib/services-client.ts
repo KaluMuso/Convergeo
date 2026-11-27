@@ -10,7 +10,13 @@ export type ServiceVertical =
   | "home-services"
   | "tech-services"
   | "cleaning"
-  | "tailoring";
+  | "tailoring"
+  | "lodging"
+  | "property"
+  | "fitness"
+  | "rentals"
+  | "family-fun"
+  | "staffing";
 
 export type ServiceStatus = "draft" | "active" | "paused";
 
@@ -28,6 +34,10 @@ export type ServiceSummary = {
   status: ServiceStatus;
   portfolio_images: string[];
   includes: string[];
+  /** Stored override (null = derived from the vertical) and the effective archetype. */
+  archetype_override?: string | null;
+  archetype?: string;
+  attributes?: Record<string, unknown>;
 };
 
 export type ServiceCreatePayload = {
@@ -42,6 +52,9 @@ export type ServiceCreatePayload = {
   portfolio_images?: string[];
   includes?: string[];
   status?: ServiceStatus;
+  /** Override of the archetype derived from `category`; null = derived. */
+  archetype?: string | null;
+  attributes?: Record<string, unknown>;
 };
 
 export type ServiceUpdatePayload = Partial<ServiceCreatePayload>;
@@ -74,12 +87,18 @@ export function createServicesClient(getToken: () => string | null | Promise<str
 }
 
 export const SERVICE_VERTICALS: ServiceVertical[] = [
+  "lodging",
+  "property",
   "beauty",
-  "food-catering",
-  "auto",
-  "printing-creative",
-  "home-services",
-  "tech-services",
+  "fitness",
   "cleaning",
+  "home-services",
+  "rentals",
+  "family-fun",
+  "auto",
   "tailoring",
+  "food-catering",
+  "printing-creative",
+  "tech-services",
+  "staffing",
 ];

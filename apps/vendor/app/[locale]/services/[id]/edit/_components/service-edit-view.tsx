@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ServiceForm } from "../../../_components/service-form";
 import { ServicePackagesEditor } from "../../../_components/service-packages-editor";
+import { effectiveArchetype } from "../../../_lib/archetypes";
 import { createServicesClient, type ServiceSummary } from "../../../_lib/services-client";
 import { Spinner } from "../../../_lib/ui";
 
@@ -95,7 +96,11 @@ export function ServiceEditView({ locale, serviceId }: ServiceEditViewProps) {
         serviceId={serviceId}
         initialService={load.service}
       />
-      <ServicePackagesEditor serviceId={serviceId} />
+      <ServicePackagesEditor
+        serviceId={serviceId}
+        archetype={effectiveArchetype(load.service.archetype_override, load.service.category)}
+        portfolioImages={load.service.portfolio_images}
+      />
     </>
   );
 }

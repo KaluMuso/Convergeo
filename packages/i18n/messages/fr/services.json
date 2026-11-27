@@ -210,13 +210,369 @@
         "notFound": "Formule introuvable.",
         "limitReached": "Ce service a déjà {max} formules. Retirez-en une avant d'en ajouter une autre.",
         "orderMismatch": "Vos formules ont changé depuis le chargement de la page. Rechargez puis réessayez.",
-        "reorderFailed": "Impossible de modifier l'ordre."
+        "reorderFailed": "Impossible de modifier l'ordre.",
+        "attributes": "Vérifiez les détails signalés de l'option."
       },
       "addPackage": "Ajouter une formule",
       "packageHeading": "Formule {number}",
       "newPackage": "Nouvelle formule",
       "moveUp": "Monter {name}",
-      "moveDown": "Descendre {name}"
+      "moveDown": "Descendre {name}",
+      "priceUnit": {
+        "night": "Prix par nuit (ou par mois pour une location mensuelle).",
+        "session": "Prix d'une séance.",
+        "pass": "Prix du pass complet.",
+        "visit": "Prix par visite.",
+        "period": "Prix par période de location (heure, jour ou semaine).",
+        "ticket": "Prix par billet.",
+        "package": "Prix de la formule."
+      }
+    },
+    "archetypes": {
+      "accommodation": {
+        "name": "Séjours (chambres et logements)",
+        "help": "Le client choisit une chambre et des dates. Ajoutez une option par type de chambre.",
+        "photoTip": "Montrez le lit et la fenêtre de chaque chambre, puis le jardin et la salle à manger."
+      },
+      "appointment": {
+        "name": "Rendez-vous",
+        "help": "Le client choisit un soin et un jour. Ajoutez une option par soin.",
+        "photoTip": "Montrez des résultats finis (coupe, coiffure, retouche) et un poste propre."
+      },
+      "membership": {
+        "name": "Abonnements et pass",
+        "help": "Le client choisit un pass. Ajoutez vos pass journée, mensuel et annuel.",
+        "photoTip": "Montrez la salle, le matériel et un cours en action."
+      },
+      "on_site": {
+        "name": "Interventions sur place",
+        "help": "Le client vous fait venir chez lui. Ajoutez des options par taille de logement ou par heures.",
+        "photoTip": "Montrez l'avant et l'après, et votre équipe au travail."
+      },
+      "rental": {
+        "name": "Locations",
+        "help": "Le client loue un article pour une période. Ajoutez une option par article.",
+        "photoTip": "Photographiez chaque article sur fond neutre, en lumière du jour."
+      },
+      "ticketed": {
+        "name": "Billets et visites",
+        "help": "Le client achète l'entrée pour une visite. Ajoutez une option par type de billet.",
+        "photoTip": "Montrez les attractions et des familles qui en profitent (avec accord)."
+      },
+      "professional": {
+        "name": "Services professionnels",
+        "help": "Le client décrit un travail et vous faites un devis. Ajoutez des formules ou des tarifs.",
+        "photoTip": "Montrez des réalisations et votre espace de travail."
+      },
+      "summary": "Type de service : {type}",
+      "advanced": "Changer le type de service",
+      "overrideLabel": "Type de service",
+      "derived": "Automatique (selon la catégorie)"
+    },
+    "attributes": {
+      "offer": {
+        "room_type": {
+          "label": "Type de chambre",
+          "options": {
+            "standard": "Standard",
+            "premium": "Premium",
+            "presidential": "Présidentielle",
+            "family": "Familiale",
+            "dorm": "Dortoir",
+            "other": "Autre"
+          }
+        },
+        "stay_kind": {
+          "label": "Type de séjour",
+          "options": {
+            "nightly": "Par nuit",
+            "monthly": "Location mensuelle (visites)"
+          }
+        },
+        "sleeps": {
+          "label": "Couchages (personnes)"
+        },
+        "beds": {
+          "label": "Lits"
+        },
+        "bed_type": {
+          "label": "Type de lit",
+          "options": {
+            "single": "Simple",
+            "double": "Double",
+            "queen": "Queen",
+            "king": "King",
+            "bunk": "Superposé"
+          }
+        },
+        "size_sqm": {
+          "label": "Surface (m²)"
+        },
+        "amenities": {
+          "label": "Équipements de la chambre",
+          "hint": "Séparez par des virgules."
+        },
+        "breakfast_included": {
+          "label": "Petit-déjeuner inclus"
+        },
+        "min_nights": {
+          "label": "Nuits minimum"
+        },
+        "units_available": {
+          "label": "Chambres de ce type",
+          "hint": "Affiché « Plus que N » à partir de 5 ou moins."
+        },
+        "image": {
+          "label": "Photo"
+        },
+        "duration_min": {
+          "label": "Durée (minutes, multiples de 5)"
+        },
+        "group": {
+          "label": "Section du menu",
+          "hint": "Par exemple Coiffure, Ongles ou Barbe."
+        },
+        "staff": {
+          "label": "Qui peut le faire",
+          "hint": "Séparez par des virgules."
+        },
+        "home_visit": {
+          "label": "Possible à domicile"
+        },
+        "price_is_from": {
+          "label": "Prix de départ"
+        },
+        "pass_kind": {
+          "label": "Type de pass",
+          "options": {
+            "day": "Pass journée",
+            "week": "Hebdomadaire",
+            "month": "Mensuel",
+            "quarter": "Trimestriel",
+            "year": "Annuel",
+            "class_pack": "Carnet de cours"
+          }
+        },
+        "valid_days": {
+          "label": "Valable (jours)"
+        },
+        "visits_included": {
+          "label": "Visites incluses",
+          "hint": "Laissez vide pour illimité."
+        },
+        "classes_included": {
+          "label": "Cours inclus"
+        },
+        "guest_passes": {
+          "label": "Pass invités"
+        },
+        "peak_hours_only": {
+          "label": "Heures creuses uniquement"
+        },
+        "pricing_unit": {
+          "label": "Tarif par",
+          "options": {
+            "hour": "Heure",
+            "visit": "Visite",
+            "room": "Pièce"
+          }
+        },
+        "min_hours": {
+          "label": "Heures minimum"
+        },
+        "home_size": {
+          "label": "Taille du logement",
+          "options": {
+            "studio": "Studio",
+            "one_two_bed": "1 à 2 chambres",
+            "three_bed": "3 chambres",
+            "four_plus": "4 chambres ou plus"
+          }
+        },
+        "crew_size": {
+          "label": "Taille de l'équipe"
+        },
+        "supplies_included": {
+          "label": "Produits de nettoyage inclus"
+        },
+        "unit": {
+          "label": "Loué à l'unité de",
+          "options": {
+            "hour": "Heure",
+            "day": "Jour",
+            "week": "Semaine"
+          }
+        },
+        "deposit_ngwee": {
+          "label": "Caution (ZMW)",
+          "hint": "Vous la percevez directement. Vergeo5 ne la détient pas."
+        },
+        "quantity_available": {
+          "label": "Quantité disponible"
+        },
+        "specs": {
+          "label": "Caractéristiques",
+          "columns": {
+            "label": "Libellé",
+            "value": "Valeur"
+          }
+        },
+        "with_operator": {
+          "label": "Avec opérateur"
+        },
+        "delivery_available": {
+          "label": "Livraison possible"
+        },
+        "min_period": {
+          "label": "Durée minimale de location"
+        },
+        "ticket_kind": {
+          "label": "Billet pour",
+          "options": {
+            "adult": "Adulte",
+            "child": "Enfant",
+            "toddler": "Tout-petit",
+            "senior": "Senior",
+            "family": "Forfait famille",
+            "group": "Groupe"
+          }
+        },
+        "age_min": {
+          "label": "Âge minimum"
+        },
+        "age_max": {
+          "label": "Âge maximum"
+        },
+        "party_size": {
+          "label": "Personnes couvertes"
+        },
+        "entry": {
+          "label": "Entrée",
+          "options": {
+            "any_time": "À toute heure",
+            "timed": "Entrée horodatée"
+          }
+        },
+        "slot_capacity": {
+          "label": "Places par créneau"
+        },
+        "rate_unit": {
+          "label": "Tarif par",
+          "options": {
+            "hour": "Heure",
+            "day": "Jour",
+            "month": "Mois",
+            "project": "Projet"
+          }
+        },
+        "role": {
+          "label": "Rôle"
+        },
+        "experience_years": {
+          "label": "Années d'expérience"
+        },
+        "availability": {
+          "label": "Disponibilité",
+          "options": {
+            "now": "Disponible maintenant",
+            "week": "Sous une semaine",
+            "booked": "Complet"
+          }
+        },
+        "certifications": {
+          "label": "Certifications",
+          "hint": "Séparez par des virgules."
+        }
+      },
+      "service": {
+        "availability": {
+          "label": "Disponibilité",
+          "options": {
+            "available": "Accepte les demandes",
+            "limited": "Disponibilité limitée",
+            "unavailable": "Complet"
+          },
+          "hint": "Visible par les clients. C'est une indication, pas un calendrier en direct."
+        },
+        "amenities": {
+          "label": "Équipements et services",
+          "hint": "Séparez par des virgules."
+        },
+        "policy": {
+          "cancellation": {
+            "label": "Politique d'annulation",
+            "options": {
+              "flexible": "Flexible",
+              "moderate": "Modérée",
+              "strict": "Stricte"
+            }
+          },
+          "note": {
+            "label": "Note sur la politique"
+          }
+        },
+        "check_in": {
+          "label": "Heure d'arrivée (HH:MM)"
+        },
+        "check_out": {
+          "label": "Heure de départ (HH:MM)"
+        },
+        "walk_ins": {
+          "label": "Sans rendez-vous accepté"
+        },
+        "staff": {
+          "label": "Équipe",
+          "columns": {
+            "name": "Nom",
+            "role": "Rôle"
+          }
+        },
+        "class_schedule": {
+          "label": "Horaires hebdomadaires des cours",
+          "hint": "Jusqu'à 21 cours.",
+          "columns": {
+            "day": "Jour",
+            "dayOptions": {
+              "0": "Dimanche",
+              "1": "Lundi",
+              "2": "Mardi",
+              "3": "Mercredi",
+              "4": "Jeudi",
+              "5": "Vendredi",
+              "6": "Samedi"
+            },
+            "start": "Début (HH:MM)",
+            "title": "Cours",
+            "duration_min": "Minutes",
+            "capacity": "Places"
+          }
+        },
+        "pickup_note": {
+          "label": "Note de retrait"
+        },
+        "age_policy": {
+          "label": "Politique d'âge"
+        }
+      },
+      "choose": "Choisir",
+      "noPhoto": "Aucune photo",
+      "photoOption": "Photo {position}",
+      "tagsPlaceholder": "Wi-Fi, Parking",
+      "addRow": "Ajouter une ligne",
+      "removeRow": "Supprimer",
+      "serviceHeading": "Détails du service",
+      "errors": {
+        "int": "Saisissez un nombre entier dans la plage autorisée.",
+        "step": "Utilisez un multiple de 5.",
+        "time": "Utilisez l'heure sur 24 h, par exemple 14:00.",
+        "tooLong": "C'est trop long.",
+        "tags": "Trop d'éléments, ou un élément trop long.",
+        "money": "Saisissez un montant en ZMW supérieur à zéro.",
+        "rows": "Complétez chaque ligne, ou supprimez-la.",
+        "invalid": "Choisissez une des options.",
+        "ageOrder": "L'âge maximum doit être au moins égal à l'âge minimum.",
+        "fix": "Vérifiez les détails signalés."
+      }
     }
   },
   "postJob": {

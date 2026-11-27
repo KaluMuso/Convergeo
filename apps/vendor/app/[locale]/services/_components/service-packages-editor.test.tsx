@@ -22,7 +22,7 @@ vi.mock("@vergeo/auth/use-session", () => ({
   }),
 }));
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () => Object.assign((key: string) => key, { has: () => false }),
 }));
 vi.mock("../_lib/packages", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../_lib/packages")>();

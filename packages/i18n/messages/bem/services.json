@@ -215,13 +215,369 @@
         "notFound": "Package not found.",
         "limitReached": "You already have {max} packages on this service. Remove one before adding another.",
         "orderMismatch": "Your packages changed since this page loaded. Reload and try again.",
-        "reorderFailed": "Could not change the order."
+        "reorderFailed": "Could not change the order.",
+        "attributes": "Check the highlighted option details."
       },
       "addPackage": "Add a package",
       "packageHeading": "Package {number}",
       "newPackage": "New package",
       "moveUp": "Move {name} up",
-      "moveDown": "Move {name} down"
+      "moveDown": "Move {name} down",
+      "priceUnit": {
+        "night": "Price per night (or per month for a monthly let).",
+        "session": "Price for one session.",
+        "pass": "Price for the whole pass.",
+        "visit": "Price per visit.",
+        "period": "Price per rental period (hour, day or week).",
+        "ticket": "Price per ticket.",
+        "package": "Price for the package."
+      }
+    },
+    "archetypes": {
+      "accommodation": {
+        "name": "Stays (rooms and units)",
+        "help": "Customers pick a room and dates. Add one option per room type.",
+        "photoTip": "Show the bed and the window for each room, then the grounds and the dining area."
+      },
+      "appointment": {
+        "name": "Appointments",
+        "help": "Customers pick a treatment and a day. Add one option per treatment.",
+        "photoTip": "Show finished results (a cut, a set, a fitting) and a clean station."
+      },
+      "membership": {
+        "name": "Memberships and passes",
+        "help": "Customers pick a pass. Add your day, monthly and annual passes.",
+        "photoTip": "Show the gym floor, equipment and a class in action."
+      },
+      "on_site": {
+        "name": "On-site jobs",
+        "help": "Customers book you to come to them. Add options by home size or hours.",
+        "photoTip": "Show before and after, and your team at work."
+      },
+      "rental": {
+        "name": "Rentals",
+        "help": "Customers rent an item for a period. Add one option per item.",
+        "photoTip": "Photograph each item on a plain background, in daylight."
+      },
+      "ticketed": {
+        "name": "Tickets and visits",
+        "help": "Customers buy entry for a visit. Add one option per ticket type.",
+        "photoTip": "Show the attractions and families enjoying them (with permission)."
+      },
+      "professional": {
+        "name": "Professional services",
+        "help": "Customers describe a job and you quote. Add packages or rates.",
+        "photoTip": "Show finished work and your workspace."
+      },
+      "summary": "Service type: {type}",
+      "advanced": "Change service type",
+      "overrideLabel": "Service type",
+      "derived": "Automatic (from category)"
+    },
+    "attributes": {
+      "offer": {
+        "room_type": {
+          "label": "Room type",
+          "options": {
+            "standard": "Standard",
+            "premium": "Premium",
+            "presidential": "Presidential",
+            "family": "Family",
+            "dorm": "Dorm",
+            "other": "Other"
+          }
+        },
+        "stay_kind": {
+          "label": "Stay type",
+          "options": {
+            "nightly": "Per night",
+            "monthly": "Monthly let (viewings)"
+          }
+        },
+        "sleeps": {
+          "label": "Sleeps (guests)"
+        },
+        "beds": {
+          "label": "Beds"
+        },
+        "bed_type": {
+          "label": "Bed type",
+          "options": {
+            "single": "Single",
+            "double": "Double",
+            "queen": "Queen",
+            "king": "King",
+            "bunk": "Bunk"
+          }
+        },
+        "size_sqm": {
+          "label": "Size (m²)"
+        },
+        "amenities": {
+          "label": "Room amenities",
+          "hint": "Separate with commas."
+        },
+        "breakfast_included": {
+          "label": "Breakfast included"
+        },
+        "min_nights": {
+          "label": "Minimum nights"
+        },
+        "units_available": {
+          "label": "Rooms of this type",
+          "hint": "Shown as \"Only N left\" when 5 or fewer."
+        },
+        "image": {
+          "label": "Photo"
+        },
+        "duration_min": {
+          "label": "Duration (minutes, multiples of 5)"
+        },
+        "group": {
+          "label": "Menu section",
+          "hint": "For example Hair, Nails or Beard."
+        },
+        "staff": {
+          "label": "Who can do it",
+          "hint": "Separate with commas."
+        },
+        "home_visit": {
+          "label": "Available as a home visit"
+        },
+        "price_is_from": {
+          "label": "Price is a starting price"
+        },
+        "pass_kind": {
+          "label": "Pass type",
+          "options": {
+            "day": "Day pass",
+            "week": "Weekly",
+            "month": "Monthly",
+            "quarter": "Quarterly",
+            "year": "Annual",
+            "class_pack": "Class pack"
+          }
+        },
+        "valid_days": {
+          "label": "Valid for (days)"
+        },
+        "visits_included": {
+          "label": "Visits included",
+          "hint": "Leave empty for unlimited."
+        },
+        "classes_included": {
+          "label": "Classes included"
+        },
+        "guest_passes": {
+          "label": "Guest passes"
+        },
+        "peak_hours_only": {
+          "label": "Off-peak hours only"
+        },
+        "pricing_unit": {
+          "label": "Priced per",
+          "options": {
+            "hour": "Hour",
+            "visit": "Visit",
+            "room": "Room"
+          }
+        },
+        "min_hours": {
+          "label": "Minimum hours"
+        },
+        "home_size": {
+          "label": "Home size",
+          "options": {
+            "studio": "Studio",
+            "one_two_bed": "1 to 2 bedrooms",
+            "three_bed": "3 bedrooms",
+            "four_plus": "4 or more bedrooms"
+          }
+        },
+        "crew_size": {
+          "label": "Crew size"
+        },
+        "supplies_included": {
+          "label": "Cleaning supplies included"
+        },
+        "unit": {
+          "label": "Rented by the",
+          "options": {
+            "hour": "Hour",
+            "day": "Day",
+            "week": "Week"
+          }
+        },
+        "deposit_ngwee": {
+          "label": "Deposit (ZMW)",
+          "hint": "You collect it directly. Vergeo5 does not hold it."
+        },
+        "quantity_available": {
+          "label": "Quantity available"
+        },
+        "specs": {
+          "label": "Specs",
+          "columns": {
+            "label": "Label",
+            "value": "Value"
+          }
+        },
+        "with_operator": {
+          "label": "Comes with an operator"
+        },
+        "delivery_available": {
+          "label": "Delivery available"
+        },
+        "min_period": {
+          "label": "Minimum rental period"
+        },
+        "ticket_kind": {
+          "label": "Ticket for",
+          "options": {
+            "adult": "Adult",
+            "child": "Child",
+            "toddler": "Toddler",
+            "senior": "Senior",
+            "family": "Family bundle",
+            "group": "Group"
+          }
+        },
+        "age_min": {
+          "label": "Minimum age"
+        },
+        "age_max": {
+          "label": "Maximum age"
+        },
+        "party_size": {
+          "label": "People covered"
+        },
+        "entry": {
+          "label": "Entry",
+          "options": {
+            "any_time": "Any time on the day",
+            "timed": "Timed entry"
+          }
+        },
+        "slot_capacity": {
+          "label": "Places per time slot"
+        },
+        "rate_unit": {
+          "label": "Rate is per",
+          "options": {
+            "hour": "Hour",
+            "day": "Day",
+            "month": "Month",
+            "project": "Project"
+          }
+        },
+        "role": {
+          "label": "Role"
+        },
+        "experience_years": {
+          "label": "Years of experience"
+        },
+        "availability": {
+          "label": "Availability",
+          "options": {
+            "now": "Available now",
+            "week": "Within a week",
+            "booked": "Fully booked"
+          }
+        },
+        "certifications": {
+          "label": "Certifications",
+          "hint": "Separate with commas."
+        }
+      },
+      "service": {
+        "availability": {
+          "label": "Availability",
+          "options": {
+            "available": "Accepting requests",
+            "limited": "Limited availability",
+            "unavailable": "Fully booked"
+          },
+          "hint": "Shown to customers. It is a hint, not a live calendar."
+        },
+        "amenities": {
+          "label": "Amenities and facilities",
+          "hint": "Separate with commas."
+        },
+        "policy": {
+          "cancellation": {
+            "label": "Cancellation policy",
+            "options": {
+              "flexible": "Flexible",
+              "moderate": "Moderate",
+              "strict": "Strict"
+            }
+          },
+          "note": {
+            "label": "Policy note"
+          }
+        },
+        "check_in": {
+          "label": "Check-in time (HH:MM)"
+        },
+        "check_out": {
+          "label": "Check-out time (HH:MM)"
+        },
+        "walk_ins": {
+          "label": "Walk-ins welcome"
+        },
+        "staff": {
+          "label": "Team",
+          "columns": {
+            "name": "Name",
+            "role": "Role"
+          }
+        },
+        "class_schedule": {
+          "label": "Weekly class schedule",
+          "hint": "Up to 21 classes.",
+          "columns": {
+            "day": "Day",
+            "dayOptions": {
+              "0": "Sunday",
+              "1": "Monday",
+              "2": "Tuesday",
+              "3": "Wednesday",
+              "4": "Thursday",
+              "5": "Friday",
+              "6": "Saturday"
+            },
+            "start": "Start (HH:MM)",
+            "title": "Class",
+            "duration_min": "Minutes",
+            "capacity": "Places"
+          }
+        },
+        "pickup_note": {
+          "label": "Pickup note"
+        },
+        "age_policy": {
+          "label": "Age policy"
+        }
+      },
+      "choose": "Choose",
+      "noPhoto": "No photo",
+      "photoOption": "Photo {position}",
+      "tagsPlaceholder": "Wi-Fi, Parking",
+      "addRow": "Add row",
+      "removeRow": "Remove",
+      "serviceHeading": "Service details",
+      "errors": {
+        "int": "Enter a whole number in the allowed range.",
+        "step": "Use a multiple of 5.",
+        "time": "Use 24-hour time, for example 14:00.",
+        "tooLong": "This is too long.",
+        "tags": "Too many items, or an item is too long.",
+        "money": "Enter an amount in ZMW greater than zero.",
+        "rows": "Complete every row, or remove it.",
+        "invalid": "Choose one of the options.",
+        "ageOrder": "Maximum age must be at least the minimum age.",
+        "fix": "Check the highlighted details."
+      }
     }
   },
   "postJob": {
