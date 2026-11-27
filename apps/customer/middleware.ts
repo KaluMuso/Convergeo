@@ -12,6 +12,8 @@ import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
 import { type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
 
+import { isPublicCustomerRoute } from "./lib/public-routes";
+
 const intlMiddleware = createMiddleware({
   locales: [...LOCALES],
   defaultLocale: DEFAULT_LOCALE,
@@ -66,7 +68,11 @@ export default async function middleware(request: NextRequest) {
     return handleCspReportRequest(request);
   }
 
-  const session = await updateSession(request);
+  // Public pages verify the session JWT offline (no Supabase round trip, no cookie
+  // writes, cacheable). Everything else keeps the full server-side getUser() check.
+  const session = await updateSession(request, {
+    verify: isPublicCustomerRoute(request.nextUrl.pathname, request.method) ? "local" : "server",
+  });
   const localeResponse = intlMiddleware(request);
   const response = mergeSessionCookies(session.response, localeResponse);
   return applyReportOnlyCspNonce(
