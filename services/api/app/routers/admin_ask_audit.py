@@ -24,7 +24,9 @@ from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/ask-audit", tags=["admin-ask-audit"])
+# Not named `router`: app.main auto-mounts any module-level `router` at the app root,
+# which would expose this board at /ask-audit without the /admin role guard.
+ask_audit_router = APIRouter(prefix="/ask-audit", tags=["admin-ask-audit"])
 
 MAX_PAGE = 100
 _ANSWER_COLUMNS = (
@@ -133,7 +135,7 @@ def _cited_items(entries: Any, vendors: dict[str, dict[str, Any]]) -> list[Cited
     return out
 
 
-@router.get("", response_model=AskAnswerPageOut)
+@ask_audit_router.get("", response_model=AskAnswerPageOut)
 def list_ask_answers(
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     flagged_only: Annotated[bool, Query()] = False,
@@ -250,4 +252,4 @@ def list_ask_answers(
     )
 
 
-admin_router.include_router(router)
+admin_router.include_router(ask_audit_router)
