@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  ARCHETYPE_SECTIONS,
-  type DetailSection,
-  type EventArchetype,
-} from "@vergeo/ui/src/event-archetype";
+import { ARCHETYPE_SECTIONS, type EventArchetype } from "@vergeo/ui/src/event-archetype";
 import { useTranslations } from "next-intl";
 
 import {
