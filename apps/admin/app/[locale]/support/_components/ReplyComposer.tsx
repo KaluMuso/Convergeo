@@ -1,10 +1,11 @@
 "use client";
 
-import { getBrowserAccessToken } from "@vergeo/auth";
 import { ApiError } from "@vergeo/config";
 import { decodeJwt } from "jose";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
+
+import { getBrowserAccessToken } from "../../../../lib/access-token";
 
 import {
   CANNED_TEMPLATE_KEYS,

@@ -10,7 +10,7 @@ import type { Root } from "react-dom/client";
 let pathname = "/en";
 let holdPermissions: Promise<void> | null = null;
 
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: () => "local-only-token" }));
+vi.mock("../../../lib/access-token", () => ({ getBrowserAccessToken: () => "local-only-token" }));
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: async () => ({
     auth: {

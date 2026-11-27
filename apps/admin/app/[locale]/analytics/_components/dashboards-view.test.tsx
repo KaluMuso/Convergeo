@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import admin from "../../../../../../packages/i18n/messages/en/admin.json";
 
 vi.mock("../../_components/api", () => ({ dashboardApi: { request: vi.fn() } }));
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: async () => "t" }));
+vi.mock("../../../../lib/access-token", () => ({ getBrowserAccessToken: async () => "t" }));
 
 import { DashboardBody } from "./dashboards-view";
 
