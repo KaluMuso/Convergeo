@@ -143,6 +143,10 @@ NETWORK = "supabase_network_vergeo5-typegen"
 NETWORK_BIND_OPTION = "com.docker.network.bridge.host_binding_ipv4"
 NETWORK_OWNER_LABEL = "org.convergeo.typegen.disposable"
 IMAGE = "public.ecr.aws/supabase/postgres:17.6.1.143"
+# Supabase CLI v2.109.1 falls back to this official mirror when ECR is slow or
+# unreachable; same tag, same bytes, different registry name.
+IMAGE_MIRROR = "ghcr.io/supabase/postgres:17.6.1.143"
+ACCEPTED_IMAGES = (IMAGE, IMAGE_MIRROR)
 URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 LOCK = Path("/tmp/convergeo-typegen-explicit-window.lock")
 OWNERSHIP_MARKER = ".owned-typegen-stack"
@@ -542,8 +546,11 @@ def target_container() -> str:
         checked(["docker", "inspect", container, "--format", "{{json .}}"])
     )
     ports = details["NetworkSettings"]["Ports"].get("5432/tcp")
-    if details["Config"]["Image"] != IMAGE:
-        raise RehearsalError("typegen image changed", code="IMAGE_MISMATCH")
+    if details["Config"]["Image"] not in ACCEPTED_IMAGES:
+        raise RehearsalError(
+            f"typegen image changed: {details['Config']['Image']}",
+            code="IMAGE_MISMATCH",
+        )
     if (
         details["Name"] != f"/{CONTAINER}"
         or not details["State"]["Running"]
@@ -649,8 +656,11 @@ def started_container_on_network(network_id: str) -> str:
         checked(["docker", "inspect", matches[0], "--format", "{{json .}}"])
     )
     network = details.get("NetworkSettings", {}).get("Networks", {}).get(NETWORK, {})
-    if details.get("Config", {}).get("Image") != IMAGE:
-        raise RehearsalError("new disposable image changed", code="IMAGE_MISMATCH")
+    if details.get("Config", {}).get("Image") not in ACCEPTED_IMAGES:
+        raise RehearsalError(
+            f"new disposable image changed: {details.get('Config', {}).get('Image')}",
+            code="IMAGE_MISMATCH",
+        )
     if (
         not details.get("Id", "").startswith(matches[0])
         or details.get("Name") != f"/{CONTAINER}"
