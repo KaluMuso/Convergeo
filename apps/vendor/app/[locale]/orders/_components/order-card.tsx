@@ -734,16 +734,12 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
     }
     let cancelled = false;
     void manageClient
-      .listListings()
-      .then((rows) => {
+      .countInReview()
+      .then((count) => {
         if (cancelled) {
           return;
         }
-        setProductsInReviewCount(
-          rows.filter(
-            (row) => row.status === "active" && row.product_status === "pending_moderation",
-          ).length,
-        );
+        setProductsInReviewCount(count);
       })
       .catch(() => {
         if (!cancelled) {
