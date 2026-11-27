@@ -768,6 +768,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
             openNow: t("profile.branchOpenNow"),
             closedNow: t("profile.branchClosedNow"),
             hours: t("profile.branchHours"),
+            dayClosed: t("profile.branchDayClosed"),
             hoursLine: (day, hours) => t("profile.hoursLine", { day, hours }),
             phone: t("profile.branchPhone"),
             map: t("profile.branchMap"),

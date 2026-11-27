@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { dayLabel, formatDayHours, sortHoursEntries } from "../../../../../lib/pickup-hours";
+
 import { BranchDistance } from "./branch-distance";
 
 export type OtherBranch = {
@@ -9,7 +11,8 @@ export type OtherBranch = {
   address?: string | null;
   lat?: number | null;
   lng?: number | null;
-  hours?: Record<string, string>;
+  /** Raw per-day hours: a string span or `{ open, close, closed }` objects. */
+  hours?: Record<string, unknown>;
   open_now?: boolean | null;
   phone?: string | null;
   map_url?: string | null;
@@ -22,6 +25,8 @@ export type OtherBranchesLabels = {
   openNow: string;
   closedNow: string;
   hours: string;
+  /** Shown for a day flagged closed. */
+  dayClosed: string;
   hoursLine: (day: string, hours: string) => string;
   phone: string;
   map: string;
@@ -59,7 +64,12 @@ export function OtherBranches({
       </div>
       <ul className="m-0 grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
         {branches.map((branch) => {
-          const hours = Object.entries(branch.hours ?? {});
+          const hours = sortHoursEntries(Object.entries(branch.hours ?? {})).flatMap(
+            ([day, value]) => {
+              const text = formatDayHours(value, labels.dayClosed);
+              return text ? [[day, text] as const] : [];
+            },
+          );
           return (
             <li
               key={branch.slug}
@@ -67,9 +77,7 @@ export function OtherBranches({
               data-testid="branch-card"
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="m-0 text-base font-semibold text-text">
-                  {branch.display_name}
-                </h3>
+                <h3 className="m-0 text-base font-semibold text-text">{branch.display_name}</h3>
                 {branch.open_now === true ? (
                   <span className="rounded-pill bg-primary-tint px-2 py-0.5 text-xs font-semibold text-primary">
                     {labels.openNow}
@@ -82,13 +90,10 @@ export function OtherBranches({
               </div>
               {branch.landmark || branch.address ? (
                 <p className="m-0 text-sm text-text-2">
-                  {[branch.landmark, branch.address]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  {[branch.landmark, branch.address].filter(Boolean).join(" · ")}
                 </p>
               ) : null}
-              {typeof branch.lat === "number" &&
-              typeof branch.lng === "number" ? (
+              {typeof branch.lat === "number" && typeof branch.lng === "number" ? (
                 <BranchDistance
                   lat={branch.lat}
                   lng={branch.lng}
@@ -98,12 +103,10 @@ export function OtherBranches({
               ) : null}
               {hours.length > 0 ? (
                 <details className="text-sm text-text-2">
-                  <summary className="cursor-pointer text-text">
-                    {labels.hours}
-                  </summary>
+                  <summary className="cursor-pointer text-text">{labels.hours}</summary>
                   <ul className="m-0 mt-1 list-none space-y-0.5 p-0">
                     {hours.map(([day, span]) => (
-                      <li key={day}>{labels.hoursLine(day, span)}</li>
+                      <li key={day}>{labels.hoursLine(dayLabel(day, locale), span)}</li>
                     ))}
                   </ul>
                 </details>
