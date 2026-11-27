@@ -1,5 +1,6 @@
 "use client";
 
+import { glassClass } from "@vergeo/ui/src/glass";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import {
   useCallback,
@@ -10,7 +11,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 
 import { formatPdpGalleryIndicator } from "./gallery-labels";
@@ -19,6 +19,9 @@ export const MIN_ZOOM = 1;
 export const MAX_ZOOM = 4;
 /** Zoom applied by a click/tap or the + button. */
 export const STEP_ZOOM = 2;
+/** Two touch taps within this window (ms) and distance (px) count as a double-tap. */
+export const DOUBLE_TAP_MS = 300;
+export const DOUBLE_TAP_PX = 32;
 
 export type LightboxLabels = {
   /** Accessible name of the "view full screen" control on the gallery. */
@@ -113,6 +116,7 @@ export function Lightbox({
     startPan: { x: number; y: number };
     moved: boolean;
   } | null>(null);
+  const lastTap = useRef<{ time: number; x: number; y: number } | null>(null);
 
   const stageBox = useCallback(() => {
     const rect = stageRef.current?.getBoundingClientRect();
@@ -206,13 +210,24 @@ export function Lightbox({
     [applyZoom, close, go, zoom],
   );
 
-  const onWheel = useCallback(
-    (event: ReactWheelEvent<HTMLDivElement>) => {
+  // Wheel zoom needs preventDefault to stop the page scrolling, but React attaches
+  // wheel listeners as passive (preventDefault is ignored and logs a warning), so
+  // bind a native non-passive listener. zoomRef keeps the handler stable.
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const hasImage = Boolean(images[index]);
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+    const onWheel = (event: WheelEvent) => {
       event.preventDefault();
-      applyZoom(zoom * (event.deltaY < 0 ? 1.2 : 1 / 1.2));
-    },
-    [applyZoom, zoom],
-  );
+      applyZoom(zoomRef.current * (event.deltaY < 0 ? 1.2 : 1 / 1.2));
+    };
+    stage.addEventListener("wheel", onWheel, { passive: false });
+    return () => stage.removeEventListener("wheel", onWheel);
+  }, [applyZoom, hasImage]);
 
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -279,7 +294,24 @@ export function Lightbox({
       gesture.current = null;
       const dx = event.clientX - start.startX;
       if (!start.moved) {
-        // Tap / click toggles zoom.
+        if (event.pointerType === "touch" || event.pointerType === "pen") {
+          // Touch: a single tap does nothing (so it cannot fight swipe/pinch);
+          // a double-tap toggles zoom, like native photo viewers.
+          const now = event.timeStamp || Date.now();
+          const prev = lastTap.current;
+          if (
+            prev &&
+            now - prev.time <= DOUBLE_TAP_MS &&
+            Math.hypot(event.clientX - prev.x, event.clientY - prev.y) <= DOUBLE_TAP_PX
+          ) {
+            lastTap.current = null;
+            applyZoom(zoom > MIN_ZOOM ? MIN_ZOOM : STEP_ZOOM);
+          } else {
+            lastTap.current = { time: now, x: event.clientX, y: event.clientY };
+          }
+          return;
+        }
+        // Mouse click toggles zoom.
         applyZoom(zoom > MIN_ZOOM ? MIN_ZOOM : STEP_ZOOM);
         return;
       }
@@ -305,128 +337,147 @@ export function Lightbox({
       aria-label={labels.dialog}
       data-testid="pdp-lightbox"
       onKeyDown={onKeyDown}
-      className="fixed inset-0 z-50 flex flex-col bg-surface text-text"
+      className="v-glass-scrim fixed inset-0 z-50 text-text"
     >
-      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <p aria-live="polite" data-testid="pdp-lightbox-indicator" className="text-sm text-text-2">
-          {formatPdpGalleryIndicator(labels.indicator, index + 1, total)}
-        </p>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            aria-label={labels.zoomOut}
-            data-testid="pdp-lightbox-zoom-out"
-            onClick={() => applyZoom(zoom - 1)}
-            disabled={zoom <= MIN_ZOOM}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-xl disabled:opacity-40"
-          >
-            <span aria-hidden="true">−</span>
-          </button>
-          <button
-            type="button"
-            aria-label={labels.zoomIn}
-            data-testid="pdp-lightbox-zoom-in"
-            onClick={() => applyZoom(zoom + 1)}
-            disabled={zoom >= MAX_ZOOM}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-xl disabled:opacity-40"
-          >
-            <span aria-hidden="true">+</span>
-          </button>
-          <button
-            ref={closeRef}
-            type="button"
-            aria-label={labels.close}
-            data-testid="pdp-lightbox-close"
-            onClick={close}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-xl"
-          >
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-      </div>
-
       <div
-        className={
-          showSidePanel
-            ? "grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,22rem)]"
-            : "flex min-h-0 flex-1 flex-col"
-        }
+        data-testid="pdp-lightbox-panel"
+        className={`${glassClass("overlay")} absolute inset-2 flex flex-col overflow-hidden rounded-2xl sm:inset-4`}
       >
-        <div
-          ref={stageRef}
-          data-testid="pdp-lightbox-stage"
-          data-zoom={zoom.toFixed(2)}
-          className="relative flex min-h-0 items-center justify-center overflow-hidden bg-bg-2"
-          style={{
-            touchAction: "none",
-            cursor: zoom > MIN_ZOOM ? "zoom-out" : "zoom-in",
-          }}
-          onWheel={onWheel}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-        >
-          <MotionWrap reduced={reducedMotion} pan={pan} zoom={zoom}>
-            <CloudinaryImage
-              publicId={image.publicId}
-              alt={image.alt}
-              ratio="4/3"
-              cloudName={cloudName}
-              width={1600}
-              sizes="100vw"
-              priority
-            />
-          </MotionWrap>
-          {total > 1 ? (
-            <div className="absolute inset-y-0 flex w-full items-center justify-between px-1">
-              <button
-                type="button"
-                aria-label={labels.previous}
-                data-testid="pdp-lightbox-prev"
-                onClick={() => go(-1)}
-                disabled={index === 0}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-surface/90 text-2xl shadow disabled:opacity-40"
-              >
-                <span aria-hidden="true">‹</span>
-              </button>
-              <button
-                type="button"
-                aria-label={labels.next}
-                data-testid="pdp-lightbox-next"
-                onClick={() => go(1)}
-                disabled={index === total - 1}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-surface/90 text-2xl shadow disabled:opacity-40"
-              >
-                <span aria-hidden="true">›</span>
-              </button>
-            </div>
-          ) : null}
-        </div>
-
-        {showSidePanel ? (
-          <aside className="hidden min-h-0 flex-col gap-3 overflow-y-auto border-l border-border p-4 lg:flex">
+        <div className={`${glassClass("bar")} flex items-center justify-between gap-2 px-3 py-2`}>
+          <div className="flex min-w-0 flex-col">
             {productTitle ? (
-              <h2 className="m-0 text-base font-semibold text-text">{productTitle}</h2>
-            ) : null}
-            {variantSummary ? <p className="m-0 text-sm text-text-2">{variantSummary}</p> : null}
-            {labels.imagesTab ? (
-              <p className="m-0 text-xs font-medium uppercase tracking-wide text-text-3">
-                {labels.imagesTab}
+              <p
+                data-testid="pdp-lightbox-title"
+                className="m-0 truncate text-sm font-semibold text-text lg:hidden"
+              >
+                {productTitle}
               </p>
             ) : null}
-            <MotionGrid
-              images={images}
-              index={index}
-              cloudName={cloudName}
-              pick={setIndex}
-              resetZoom={() => {
-                setZoom(MIN_ZOOM);
-                setPan({ x: 0, y: 0 });
-              }}
-            />
-          </aside>
-        ) : null}
+            <p
+              aria-live="polite"
+              data-testid="pdp-lightbox-indicator"
+              className="m-0 text-xs text-text-2"
+            >
+              {formatPdpGalleryIndicator(labels.indicator, index + 1, total)}
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label={labels.zoomOut}
+              data-testid="pdp-lightbox-zoom-out"
+              onClick={() => applyZoom(zoom - 1)}
+              disabled={zoom <= MIN_ZOOM}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-xl disabled:opacity-40"
+            >
+              <span aria-hidden="true">−</span>
+            </button>
+            <button
+              type="button"
+              aria-label={labels.zoomIn}
+              data-testid="pdp-lightbox-zoom-in"
+              onClick={() => applyZoom(zoom + 1)}
+              disabled={zoom >= MAX_ZOOM}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-xl disabled:opacity-40"
+            >
+              <span aria-hidden="true">+</span>
+            </button>
+            <button
+              ref={closeRef}
+              type="button"
+              aria-label={labels.close}
+              data-testid="pdp-lightbox-close"
+              onClick={close}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-xl"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+        </div>
+
+        <div
+          className={
+            showSidePanel
+              ? "grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,22rem)]"
+              : "flex min-h-0 flex-1 flex-col"
+          }
+        >
+          <div
+            ref={stageRef}
+            data-testid="pdp-lightbox-stage"
+            data-zoom={zoom.toFixed(2)}
+            className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
+            style={{
+              touchAction: "none",
+              overscrollBehavior: "contain",
+              cursor: zoom > MIN_ZOOM ? "zoom-out" : "zoom-in",
+            }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          >
+            <MotionWrap reduced={reducedMotion} pan={pan} zoom={zoom}>
+              <CloudinaryImage
+                publicId={image.publicId}
+                alt={image.alt}
+                ratio="4/3"
+                cloudName={cloudName}
+                width={1600}
+                sizes="100vw"
+                priority
+              />
+            </MotionWrap>
+            {total > 1 ? (
+              <div className="absolute inset-y-0 flex w-full items-center justify-between px-1">
+                <button
+                  type="button"
+                  aria-label={labels.previous}
+                  data-testid="pdp-lightbox-prev"
+                  onClick={() => go(-1)}
+                  disabled={index === 0}
+                  className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-2xl disabled:opacity-40 ${glassClass("card")}`}
+                >
+                  <span aria-hidden="true">‹</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label={labels.next}
+                  data-testid="pdp-lightbox-next"
+                  onClick={() => go(1)}
+                  disabled={index === total - 1}
+                  className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-2xl disabled:opacity-40 ${glassClass("card")}`}
+                >
+                  <span aria-hidden="true">›</span>
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          {showSidePanel ? (
+            <aside className="hidden min-h-0 flex-col gap-3 overflow-y-auto border-l border-[var(--glass-border)] p-4 lg:flex">
+              {productTitle ? (
+                <h2 className="m-0 text-base font-semibold text-text">{productTitle}</h2>
+              ) : null}
+              {variantSummary ? <p className="m-0 text-sm text-text-2">{variantSummary}</p> : null}
+              {labels.imagesTab ? (
+                <p className="m-0 text-xs font-medium uppercase tracking-wide text-text-3">
+                  {labels.imagesTab}
+                </p>
+              ) : null}
+              <MotionGrid
+                images={images}
+                index={index}
+                cloudName={cloudName}
+                pick={setIndex}
+                resetZoom={() => {
+                  setZoom(MIN_ZOOM);
+                  setPan({ x: 0, y: 0 });
+                }}
+              />
+            </aside>
+          ) : null}
+        </div>
       </div>
     </div>
   );
