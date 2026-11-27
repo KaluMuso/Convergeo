@@ -92,7 +92,7 @@ describe("admin navigation from current API permissions", () => {
     ["support.manage", ["disputes", "support"]],
     ["services.manage", ["services"]],
     ["audit.read", ["auditLog"]],
-    ["logistics.manage", []],
+    ["logistics.manage", ["dispatch"]],
   ])("bounds %s to its current destinations", (permission, expected) => {
     expect(visible([permission as string])).toEqual(expected);
   });
@@ -123,7 +123,7 @@ describe("admin navigation from current API permissions", () => {
     expect(keys).toContain("config");
     expect(keys).toContain("disputes");
     expect(keys).toContain("coupons");
-    expect(keys).toHaveLength(25);
+    expect(keys).toHaveLength(26);
     expect(keys).not.toContain("roles");
     expect(visible([], true, true)).toContain("roles");
   });
@@ -736,5 +736,71 @@ describe("refocus rechecks grants quietly", () => {
     await act(async () => pending.reject(new Error("Local transport failure")));
     expect(typed()?.value).toBe("half-written reject reason");
     expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+});
+
+describe("logistics.manage reaches the dispatch board and order detail only", () => {
+  it("shows a Dispatch nav item and opens /orders/dispatch", async () => {
+    current = grants(["logistics.manage"]);
+    await renderRoute("/en/orders/dispatch");
+    expect(container.querySelector('[data-protected-route="/en/orders/dispatch"]')).not.toBeNull();
+    expect(navHrefs()).toEqual(["/en/orders/dispatch"]);
+  });
+
+  it("opens an order detail page, but not order search", async () => {
+    current = grants(["logistics.manage"]);
+    await renderRoute("/en/orders/some-order");
+    expect(
+      container.querySelector('[data-protected-route="/en/orders/some-order"]'),
+    ).not.toBeNull();
+    await renderRoute("/en/orders");
+    expect(container.querySelector("[data-protected-route]")).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
+  });
+
+  it("does not hand finance roles the dispatch board the API refuses them", async () => {
+    current = grants(["finance.read", "finance.operate"]);
+    await renderRoute("/en/orders/dispatch");
+    expect(container.querySelector("[data-protected-route]")).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
+    await renderRoute("/en/orders/some-order");
+    expect(
+      container.querySelector('[data-protected-route="/en/orders/some-order"]'),
+    ).not.toBeNull();
+  });
+
+  it("keeps every other destination closed to a logistics-only role", async () => {
+    current = grants(["logistics.manage"]);
+    for (const path of ["/en", "/en/config", "/en/kyc", "/en/disputes", "/en/analytics"]) {
+      await renderRoute(path);
+      expect(container.querySelector("[data-protected-route]")).toBeNull();
+    }
+  });
+});
+
+describe("explicit-grant destinations are denied by URL, not only hidden", () => {
+  it.each(["/en/roles", "/en/accounts", "/en/audit-log"])(
+    "denies %s to an unrestricted admin who lacks the explicit grant",
+    async (path) => {
+      current = grants([], true);
+      current.can_manage_roles = false;
+      await renderRoute(path);
+      expect(container.querySelector("[data-protected-route]")).toBeNull();
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
+    },
+  );
+
+  it("opens them for a superadmin holding every grant", async () => {
+    current = { permissions: ["audit.read"], unrestricted: true, can_manage_roles: true };
+    for (const path of ["/en/roles", "/en/accounts", "/en/audit-log"]) {
+      await renderRoute(path);
+      expect(container.querySelector(`[data-protected-route="${path}"]`)).not.toBeNull();
+    }
+  });
+
+  it("opens the audit log to a restricted role holding audit.read only", async () => {
+    current = grants(["audit.read"]);
+    await renderRoute("/en/audit-log");
+    expect(container.querySelector('[data-protected-route="/en/audit-log"]')).not.toBeNull();
   });
 });

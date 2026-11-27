@@ -30,6 +30,8 @@ export function resolveAdminNavCapabilities(
     support: has("support.manage"),
     intake: has("vendors.manage"),
     orders: any("finance.read", "finance.operate"),
+    // Courier dispatch board: the API gates it on logistics.manage alone (finance roles get 403).
+    dispatch: has("logistics.manage"),
     business: has("vendors.manage"),
     merch: has("ads.manage"),
     homeFeed: has("ads.manage"),

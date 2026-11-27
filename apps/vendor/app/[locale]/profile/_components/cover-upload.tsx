@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { cloudinaryPreviewUrl } from "../../../../lib/cloudinary-preview";
 import {
   downscaleImageFile,
   uploadToCloudinaryWithProgress,
@@ -89,7 +90,12 @@ export function CoverUpload({
     <div className="space-y-3">
       <div className="flex h-28 w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-bg-2 sm:h-36">
         {coverUrl ? (
-          <img src={coverUrl} alt={t("profile.cover.alt")} className="h-full w-full object-cover" />
+          <img
+            src={cloudinaryPreviewUrl(coverUrl, 800)}
+            alt={t("profile.cover.alt")}
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
         ) : (
           <span className="text-xs text-text-3">{t("profile.cover.empty")}</span>
         )}
