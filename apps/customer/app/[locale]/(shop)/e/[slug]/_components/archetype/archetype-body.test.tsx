@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { sanitiseDetails } from "@vergeo/ui/src/event-archetype";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { ArchetypeBody, ArchetypeLead, archetypeChips } from "./archetype-body";
+import { ArchetypeBody, archetypeChips } from "./archetype-body";
 
 import type { ShowcaseTicket, T } from "./archetype-blocks";
 import type { EventArchetype } from "@vergeo/ui/src/event-archetype";
@@ -167,54 +167,44 @@ describe("ArchetypeBody", () => {
     expect(menu).toHaveTextContent("Tables of 4");
   });
 
-  it("branded: lead band shows presented-by sponsor; body shows activations and no duplicate band", () => {
+  it("sponsor band shows approved sponsors only, on any archetype", () => {
     const raw = {
-      presented_by: { name: "Mosi", link_url: "https://example.com/mosi" },
-      sponsors: [{ name: "Mosi" }, { name: "Zamtel" }],
-      activations: [{ title: "Tasting" }],
+      sponsors: [
+        { name: "Zamtel", tagline: "Connect", status: "approved" },
+        { name: "Hidden", status: "pending" },
+        { name: "Nope", status: "rejected" },
+        { name: "NoStatus" },
+      ],
     };
     const { container } = render(
-      <>
-        <ArchetypeLead archetype="branded" rawDetails={raw} t={t} />
-        <ArchetypeBody
-          archetype="branded"
-          rawDetails={raw}
-          images={["a"]}
-          title="x"
-          tickets={[]}
-          t={t}
-        />
-      </>,
+      <ArchetypeBody
+        archetype="religious"
+        rawDetails={raw}
+        images={[]}
+        title="x"
+        tickets={[]}
+        t={t}
+      />,
     );
-    expect(screen.getAllByTestId("sponsor-band")).toHaveLength(1);
     const band = screen.getByTestId("sponsor-band");
-    expect(band).toHaveTextContent("archetype.presentedBy");
     expect(band).toHaveTextContent("Zamtel");
-    expect(within(band).getAllByText("Mosi")).toHaveLength(1);
-    expect(screen.getByTestId("block-activations")).toHaveTextContent("Tasting");
-    expect(container.querySelector('a[rel~="sponsored"]')).toHaveAttribute(
-      "href",
-      "https://example.com/mosi",
-    );
+    expect(container).not.toHaveTextContent("Hidden");
+    expect(container).not.toHaveTextContent("Nope");
+    expect(container).not.toHaveTextContent("NoStatus");
   });
 
-  it("non-branded archetypes show a plain sponsor band at the end and no lead", () => {
-    const raw = { sponsors: [{ name: "Zamtel", tagline: "Connect" }] };
-    const { container } = render(
-      <>
-        <ArchetypeLead archetype="concert" rawDetails={raw} t={t} />
-        <ArchetypeBody
-          archetype="concert"
-          rawDetails={raw}
-          images={[]}
-          title="x"
-          tickets={[]}
-          t={t}
-        />
-      </>,
+  it("no sponsor band when nothing is approved", () => {
+    render(
+      <ArchetypeBody
+        archetype="concert"
+        rawDetails={{ sponsors: [{ name: "Hidden", status: "pending" }] }}
+        images={[]}
+        title="x"
+        tickets={[]}
+        t={t}
+      />,
     );
-    expect(screen.getAllByTestId("sponsor-band")).toHaveLength(1);
-    expect(container).toHaveTextContent("archetype.sections.sponsors");
+    expect(screen.queryByTestId("sponsor-band")).toBeNull();
   });
 
   it("private gathering: host notes and agenda", () => {
@@ -242,6 +232,7 @@ describe("ArchetypeBody", () => {
       sponsors: [
         {
           name: "Evil",
+          status: "approved",
           link_url: "javascript:alert(1)",
           logo: "data:image/png;base64,AAAA",
         },

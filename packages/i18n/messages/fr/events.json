@@ -276,7 +276,6 @@
       "sports_family": "Fête sportive et familiale",
       "restaurant": "Événement gastronomique",
       "private_gathering": "Réunion privée",
-      "branded": "Expérience de marque",
       "generic": "Événement"
     },
     "sections": {
@@ -287,7 +286,6 @@
       "activities": "Activités",
       "ageGroups": "Tranches d'âge",
       "menu": "Menu",
-      "activations": "Au programme",
       "notes": "Bon à savoir",
       "sponsors": "Nos partenaires",
       "faqs": "Questions et conditions",
@@ -310,7 +308,6 @@
     "hostedBy": "Organisé par {name}",
     "seating": "Placement",
     "reservation": "Réservations",
-    "presentedBy": "Présenté par",
     "visitSponsor": "Visiter {name} (s'ouvre dans un nouvel onglet)",
     "galleryAlt": "{title}, photo {n}",
     "dietary": {
