@@ -35,7 +35,7 @@ ALLOWED_TRANSITIONS: Final[frozenset[tuple[str, str]]] = frozenset(
 #: Columns exposed to callers (never the raw row).
 PACKAGE_COLUMNS: Final = (
     "id, service_id, vendor_id, tier, name, description, price_ngwee, "
-    "delivery_days, revisions, includes, sort_order, status, created_at, updated_at"
+    "delivery_days, revisions, includes, attributes, sort_order, status, created_at, updated_at"
 )
 
 
@@ -85,6 +85,9 @@ def snapshot(package: dict[str, Any]) -> dict[str, Any]:
         "delivery_days": int_or_none(package.get("delivery_days")),
         "revisions": int_or_none(package.get("revisions")),
         "includes": [str(item) for item in includes] if isinstance(includes, list) else [],
+        "attributes": package.get("attributes")
+        if isinstance(package.get("attributes"), dict)
+        else {},
     }
 
 

@@ -11,6 +11,16 @@ from app.core.ratelimit_policies import enforce_registered_policy
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
+from app.schemas.service_archetypes import (
+    ARCHETYPES,
+    Archetype,
+    attribute_text,
+    derive_archetype,
+    effective_archetype,
+    tolerant_offer_attributes,
+    tolerant_service_attributes,
+    validate_service_attributes,
+)
 from app.schemas.service_packages import PublicPackageOut, to_public
 from app.services.branches.context import scope_owner_vendor_query
 from app.services.kyc.state_machine import ServiceRoleClient
@@ -33,6 +43,12 @@ SERVICE_VERTICALS = (
     "tech-services",
     "cleaning",
     "tailoring",
+    "lodging",
+    "property",
+    "fitness",
+    "rentals",
+    "family-fun",
+    "staffing",
 )
 
 ServiceVertical = Literal[
@@ -44,6 +60,12 @@ ServiceVertical = Literal[
     "tech-services",
     "cleaning",
     "tailoring",
+    "lodging",
+    "property",
+    "fitness",
+    "rentals",
+    "family-fun",
+    "staffing",
 ]
 
 ServiceStatus = Literal["draft", "active", "paused"]
@@ -60,6 +82,24 @@ def _clean_includes(items: list[str]) -> list[str]:
     """Trim, drop empties, cap item length, and cap the count of include bullets."""
     cleaned = [item.strip()[:MAX_INCLUDE_LEN] for item in items if item.strip()]
     return cleaned[:MAX_INCLUDES]
+
+
+def _screen_attributes(title: str, attributes: dict[str, Any], category: str | None) -> None:
+    text = attribute_text(attributes)
+    if not text.strip():
+        return
+    guard = screen_listing(title=title, description=text, category=category)
+    if not guard.allowed:
+        raise AppError(
+            code="prohibited_listing",
+            message="Service listing contains a prohibited category or keyword",
+            http_status=422,
+            details={
+                "message_key": "vendor.listings.errors.submitFailed",
+                "reason": guard.reason,
+                "matched": guard.matched,
+            },
+        )
 
 
 def _validated_title(value: str | None) -> str:
@@ -118,6 +158,10 @@ class ServiceBrowseItem(StrictModel):
     from_price_ngwee: int | None = None
     is_free: bool = False
     portfolio_images: list[str] = Field(default_factory=list)
+    archetype: Archetype = "professional"
+    availability: Literal["available", "limited", "unavailable"] = "available"
+    rating_avg: float | None = None
+    rating_count: int = 0
     provider: ProviderSummary
 
 
@@ -140,6 +184,10 @@ class ServiceDetailResponse(StrictModel):
     booking_price_ngwee: int | None = None
     portfolio_images: list[str] = Field(default_factory=list)
     includes: list[str] = Field(default_factory=list)
+    #: Effective archetype (stored override, else derived from the vertical).
+    archetype: Archetype = "professional"
+    #: Service-level attributes, tolerant-parsed for the archetype (``{}`` if invalid).
+    attributes: dict[str, Any] = Field(default_factory=dict)
     provider: ProviderSummary
     #: Active packages (open list, up to 10), vendor-ordered (docs/plan/service-packages.md).
     packages: list[PublicPackageOut] = Field(default_factory=list)
@@ -159,6 +207,10 @@ class ServiceSummary(StrictModel):
     status: ServiceStatus
     portfolio_images: list[str] = Field(default_factory=list)
     includes: list[str] = Field(default_factory=list)
+    #: Stored override (null = derived) and the effective archetype.
+    archetype_override: Archetype | None = None
+    archetype: Archetype = "professional"
+    attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class ServiceVendorListResponse(StrictModel):
@@ -177,6 +229,9 @@ class ServiceCreateRequest(StrictModel):
     portfolio_images: list[str] = Field(default_factory=list, max_length=MAX_PORTFOLIO_IMAGES)
     includes: list[str] = Field(default_factory=list, max_length=MAX_INCLUDES)
     status: ServiceStatus = "draft"
+    #: Override of the archetype derived from ``category`` (null = derived).
+    archetype: Archetype | None = None
+    attributes: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("from_price_ngwee", "booking_price_ngwee")
     @classmethod
@@ -227,6 +282,8 @@ class ServiceUpdateRequest(StrictModel):
     portfolio_images: list[str] | None = Field(default=None, max_length=MAX_PORTFOLIO_IMAGES)
     includes: list[str] | None = Field(default=None, max_length=MAX_INCLUDES)
     status: ServiceStatus | None = None
+    archetype: Archetype | None = None
+    attributes: dict[str, Any] | None = None
 
     @field_validator("from_price_ngwee", "booking_price_ngwee")
     @classmethod
@@ -486,10 +543,17 @@ def _parse_includes(value: Any) -> list[str]:
     return _clean_includes([str(item) for item in value if isinstance(item, str)])
 
 
+def _availability(row: dict[str, Any]) -> Literal["available", "limited", "unavailable"]:
+    attrs = tolerant_service_attributes(effective_archetype(row), row.get("attributes"))
+    value = attrs.get("availability")
+    return value if value in ("limited", "unavailable") else "available"
+
+
 def _to_browse_item(
     row: dict[str, Any],
     *,
     response_time_tier_value: ResponseTimeTier | None,
+    rating: tuple[float, int] | None = None,
 ) -> ServiceBrowseItem:
     service_id = str(row["id"])
     vendor_row = _parse_vendor_embed(row.get("vendors"))
@@ -503,6 +567,10 @@ def _to_browse_item(
         from_price_ngwee=row.get("from_price_ngwee"),
         is_free=bool(row.get("is_free")),
         portfolio_images=_parse_images(row.get("portfolio_images")),
+        archetype=effective_archetype(row),  # type: ignore[arg-type]
+        availability=_availability(row),
+        rating_avg=rating[0] if rating else None,
+        rating_count=rating[1] if rating else 0,
         provider=_provider_from_vendor(
             vendor_row,
             response_time_tier_value=response_time_tier_value,
@@ -530,6 +598,8 @@ def _to_detail(
         booking_price_ngwee=row.get("booking_price_ngwee"),
         portfolio_images=_parse_images(row.get("portfolio_images")),
         includes=_parse_includes(row.get("includes")),
+        archetype=effective_archetype(row),  # type: ignore[arg-type]
+        attributes=tolerant_service_attributes(effective_archetype(row), row.get("attributes")),
         provider=_provider_from_vendor(
             vendor_row,
             response_time_tier_value=response_time_tier_value,
@@ -553,6 +623,9 @@ def _to_summary(row: dict[str, Any]) -> ServiceSummary:
         status=row["status"],
         portfolio_images=_parse_images(row.get("portfolio_images")),
         includes=_parse_includes(row.get("includes")),
+        archetype_override=(row["archetype"] if row.get("archetype") in ARCHETYPES else None),
+        archetype=effective_archetype(row),  # type: ignore[arg-type]
+        attributes=tolerant_service_attributes(effective_archetype(row), row.get("attributes")),
     )
 
 
@@ -563,17 +636,46 @@ def _sanitize_area(value: str | None) -> str | None:
     return cleaned or None
 
 
+def _fetch_vendor_ratings(client: Any, vendor_ids: list[str]) -> dict[str, tuple[float, int]]:
+    """Published-review average per vendor (reviews attribute to the provider vendor).
+
+    A read failure degrades to "no ratings": browse must not break on this extra.
+    """
+    if not vendor_ids:
+        return {}
+    try:
+        found = _rows(
+            client.table("service_reviews")
+            .select("provider_vendor_id, rating")
+            .in_("provider_vendor_id", vendor_ids)
+            .eq("status", "published")
+            .execute()
+        )
+    except Exception:
+        return {}
+    sums: dict[str, list[int]] = {}
+    for row in found:
+        rating = row.get("rating")
+        if isinstance(rating, int) and not isinstance(rating, bool):
+            sums.setdefault(str(row.get("provider_vendor_id")), []).append(rating)
+    return {vid: (round(sum(v) / len(v), 2), len(v)) for vid, v in sums.items() if v}
+
+
 def build_browse_response(
     client: Any,
     *,
     category: ServiceVertical | None = None,
     area: str | None = None,
+    price_min: int | None = None,
+    price_max: int | None = None,
+    min_rating: float | None = None,
+    available_only: bool = False,
 ) -> ServiceBrowseResponse:
     query = (
         client.table("services")
         .select(
             "id, vendor_id, category, title, description, service_area, "
-            "from_price_ngwee, is_free, portfolio_images, status, "
+            "from_price_ngwee, is_free, portfolio_images, status, archetype, attributes, "
             "vendors!inner(id, slug, display_name, preferred_badge, status)"
         )
         .eq("status", "active")
@@ -584,6 +686,11 @@ def build_browse_response(
     area_filter = _sanitize_area(area)
     if area_filter is not None:
         query = query.ilike("service_area", f"%{area_filter}%")
+    # Price band (integer ngwee). A band excludes quote-only and free services.
+    if price_min is not None:
+        query = query.gte("from_price_ngwee", price_min)
+    if price_max is not None:
+        query = query.lte("from_price_ngwee", price_max)
 
     response = query.order("updated_at", desc=True).execute()
     rows = _rows(response)
@@ -592,14 +699,20 @@ def build_browse_response(
     public_rows = [row for row in rows if str(row.get("id") or "") not in demo_service_ids]
     vendor_ids = list({str(row.get("vendor_id")) for row in public_rows if row.get("vendor_id")})
     tiers = _fetch_response_tiers(client, vendor_ids)
+    ratings = _fetch_vendor_ratings(client, vendor_ids)
 
     items = [
         _to_browse_item(
             row,
             response_time_tier_value=tiers.get(str(row.get("vendor_id") or "")),
+            rating=ratings.get(str(row.get("vendor_id") or "")),
         )
         for row in public_rows
     ]
+    if min_rating is not None:
+        items = [i for i in items if i.rating_avg is not None and i.rating_avg >= min_rating]
+    if available_only:
+        items = [i for i in items if i.availability != "unavailable"]
     return ServiceBrowseResponse(items=items, total=len(items))
 
 
@@ -620,8 +733,20 @@ def browse_services(
     category: Annotated[ServiceVertical | None, Query()] = None,
     area: Annotated[str | None, Query(max_length=120)] = None,
     sort: Annotated[ServiceSort, Query()] = "newest",
+    price_min: Annotated[int | None, Query(ge=0, le=10**12)] = None,
+    price_max: Annotated[int | None, Query(ge=0, le=10**12)] = None,
+    min_rating: Annotated[float | None, Query(ge=0, le=5)] = None,
+    available: Annotated[bool, Query()] = False,
 ) -> ServiceBrowseResponse:
-    response = build_browse_response(service_client.client, category=category, area=area)
+    response = build_browse_response(
+        service_client.client,
+        category=category,
+        area=area,
+        price_min=price_min,
+        price_max=price_max,
+        min_rating=min_rating,
+        available_only=available,
+    )
     return response.model_copy(update={"items": sort_services(response.items, sort)})
 
 
@@ -636,7 +761,7 @@ def get_service_detail(
         .select(
             "id, vendor_id, category, title, description, service_area, "
             "from_price_ngwee, is_free, bookable, booking_price_ngwee, portfolio_images, includes, "
-            "status, "
+            "status, archetype, attributes, "
             "vendors!inner(id, slug, display_name, preferred_badge, status)"
         )
         .eq("id", service_id)
@@ -658,9 +783,17 @@ def get_service_detail(
     tiers = _fetch_response_tiers(service_client.client, [vendor_id])
     detail = _to_detail(row, response_time_tier_value=tiers.get(vendor_id))
     packages = package_state.list_active_for_services_safe(service_client, [service_id])
-    return detail.model_copy(
-        update={"packages": [to_public(p) for p in packages.get(service_id, [])]}
-    )
+    archetype = detail.archetype
+    public: list[PublicPackageOut] = []
+    for pkg in packages.get(service_id, []):
+        item = to_public(pkg)
+        # Tolerant read: attributes that no longer validate degrade to {} (ST-7).
+        public.append(
+            item.model_copy(
+                update={"attributes": tolerant_offer_attributes(archetype, item.attributes)}
+            )
+        )
+    return detail.model_copy(update={"packages": public})
 
 
 @router.get("/vendor/services", response_model=ServiceVendorListResponse)
@@ -673,7 +806,8 @@ def list_vendor_services(
         service_client.client.table("services")
         .select(
             "id, category, title, description, service_area, from_price_ngwee, "
-            "is_free, bookable, booking_price_ngwee, portfolio_images, includes, status"
+            "is_free, bookable, booking_price_ngwee, portfolio_images, includes, status, "
+            "archetype, attributes"
         )
         .eq("vendor_id", vendor["id"])
         .order("updated_at", desc=True)
@@ -703,7 +837,12 @@ def create_vendor_service(
                 "matched": guard.matched,
             },
         )
+    archetype_value = payload.archetype or derive_archetype(payload.category)
+    attributes = validate_service_attributes(archetype_value, payload.attributes)
+    _screen_attributes(title, attributes, payload.category)
     insert_row = {
+        "archetype": payload.archetype,
+        "attributes": attributes,
         "id": str(uuid.uuid4()),
         "vendor_id": vendor["id"],
         "category": payload.category,
@@ -776,6 +915,28 @@ def update_vendor_service(
             http_status=422,
             details={"message_key": "vendor.services.errors.bookablePrice"},
         )
+
+    # Archetype + attributes: validated against the EFFECTIVE archetype after the change.
+    if "archetype" in updates or "attributes" in updates or "category" in updates:
+        merged = {
+            **existing,
+            **{k: v for k, v in updates.items() if k in ("archetype", "category")},
+        }
+        archetype_value = effective_archetype(merged)
+        if updates.get("attributes") is None:
+            updates.pop("attributes", None)
+        if "attributes" in updates:
+            updates["attributes"] = validate_service_attributes(
+                archetype_value, updates["attributes"]
+            )
+            _screen_attributes(
+                str(updates.get("title", existing.get("title") or "")),
+                updates["attributes"],
+                merged.get("category"),
+            )
+        # archetype=None in a PATCH means "unset the override" only when explicitly sent.
+        if "archetype" in updates and updates["archetype"] is None:
+            updates["archetype"] = None
 
     if not updates:
         return ServiceMutationResponse(service=_to_summary(existing))
