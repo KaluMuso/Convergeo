@@ -59,11 +59,17 @@ def _link(item_id: str, override: str | None, product: str | None) -> dict[str, 
 
 
 ITEMS = [
-    {"id": "a", "qty": 1, "unit_price_ngwee": 100, "title_snapshot": None},
-    {"id": "b", "qty": 2, "unit_price_ngwee": 100, "title_snapshot": "  "},
-    {"id": "c", "qty": 1, "unit_price_ngwee": 100, "title_snapshot": "Snapshot wins"},
-    {"id": "d", "qty": 1, "unit_price_ngwee": 100, "title_snapshot": None},
-    {"id": "e", "qty": 1, "unit_price_ngwee": 100, "title_snapshot": None},
+    {"id": "a", "order_id": "order-1", "qty": 1, "unit_price_ngwee": 100, "title_snapshot": None},
+    {"id": "b", "order_id": "order-1", "qty": 2, "unit_price_ngwee": 100, "title_snapshot": "  "},
+    {
+        "id": "c",
+        "order_id": "order-1",
+        "qty": 1,
+        "unit_price_ngwee": 100,
+        "title_snapshot": "Snapshot wins",
+    },
+    {"id": "d", "order_id": "order-1", "qty": 1, "unit_price_ngwee": 100, "title_snapshot": None},
+    {"id": "e", "order_id": "order-1", "qty": 1, "unit_price_ngwee": 100, "title_snapshot": None},
 ]
 LINKS = [
     _link("a", None, "Solar lamp"),
@@ -112,3 +118,24 @@ def test_vendor_queue_preview_resolves_titles_in_one_query() -> None:
     assert grouped["o1"][0]["title_snapshot"] == "Solar lamp"
     assert grouped["o2"][0]["title_snapshot"] == "Override title"
     assert client.calls.count("order_item_products") == 1
+
+
+def test_customer_list_loader_resolves_titles_once_for_many_orders() -> None:
+    from app.routers.customer_orders import _load_order_items_many
+
+    order_ids = [f"o{i}" for i in range(20)]
+    rows = [
+        {
+            "id": f"i{i}",
+            "order_id": f"o{i}",
+            "qty": 1,
+            "unit_price_ngwee": 100,
+            "title_snapshot": None,
+        }
+        for i in range(20)
+    ]
+    links = [_link(f"i{i}", None, f"Product {i}") for i in range(20)]
+    client = _Client({"order_items": rows, "order_item_products": links})
+    grouped = _load_order_items_many(client, order_ids)  # type: ignore[arg-type]
+    assert [grouped[o][0].title for o in order_ids] == [f"Product {i}" for i in range(20)]
+    assert client.calls == ["order_items", "order_item_products"]
