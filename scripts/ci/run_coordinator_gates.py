@@ -34,8 +34,8 @@ def inputs() -> dict[str, Any]:
             raise RuntimeError("Retained identity inventory changed: " + key)
     actual = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
               for p in sorted((ROOT / "supabase/migrations").glob("*.sql"))}
-    if len(actual) != 200 or actual != data["migrations"]:
-        raise RuntimeError("Qualified 200-input source inventory differs")
+    if len(actual) != 201 or actual != data["migrations"]:
+        raise RuntimeError("Qualified 201-input source inventory differs")
     if any(hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != digest
            for path, digest in data["source_sha256"].items()):
         raise RuntimeError("Retained test/runner source binding differs")
@@ -202,7 +202,7 @@ class Runner(financial.Runner):
                 response = connection.getresponse()
                 body = response.read(65537)
                 if role == "service_role":
-                    if response.status != 200 or len(body) > 65536 or json.loads(body) != [
+                    if response.status != 201 or len(body) > 65536 or json.loads(body) != [
                         {"group_name": database, "database_name": database}
                     ]:
                         raise RuntimeError("REST database row binding differs")
