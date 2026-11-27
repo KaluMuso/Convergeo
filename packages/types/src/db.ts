@@ -7917,8 +7917,9 @@ export type Database = {
           price_ngwee: number | null
           revisions: number | null
           service_id: string
+          sort_order: number
           status: string
-          tier: string
+          tier: string | null
           updated_at: string
           vendor_id: string
         }
@@ -7932,8 +7933,9 @@ export type Database = {
           price_ngwee?: number | null
           revisions?: number | null
           service_id: string
+          sort_order?: number
           status?: string
-          tier: string
+          tier?: string | null
           updated_at?: string
           vendor_id: string
         }
@@ -7947,8 +7949,9 @@ export type Database = {
           price_ngwee?: number | null
           revisions?: number | null
           service_id?: string
+          sort_order?: number
           status?: string
-          tier?: string
+          tier?: string | null
           updated_at?: string
           vendor_id?: string
         }

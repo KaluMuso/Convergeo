@@ -5,8 +5,8 @@ import { zmwDecimalToNgwee } from "../../listings/new/_lib/money";
 
 /** Service packages — vendor client + pure validation (docs/plan/service-packages.md). */
 
-export type PackageTier = "basic" | "standard" | "premium";
-export const PACKAGE_TIERS: PackageTier[] = ["basic", "standard", "premium"];
+/** A service may carry at most this many ACTIVE packages (API: `package_limit_reached`). */
+export const MAX_PACKAGES = 10;
 
 export const PACKAGE_LIMITS = {
   nameMin: 2,
@@ -21,7 +21,9 @@ export const PACKAGE_LIMITS = {
 
 export type ServicePackage = {
   id: string;
-  tier: PackageTier;
+  /** Legacy Basic/Standard/Premium label on rows that predate the open list. */
+  tier?: "basic" | "standard" | "premium" | null;
+  sort_order?: number;
   name: string;
   description: string | null;
   /** Integer ngwee; null = request a quote. */
@@ -152,42 +154,40 @@ export function validateDraft(
   };
 }
 
-/**
- * Guidance (SP-4), not a rule: flag a higher tier priced below a lower one.
- * Only active, fixed-price packages are compared.
- */
-export function priceOrderWarnings(
-  packages: Pick<ServicePackage, "tier" | "price_ngwee" | "status">[],
-): { higher: PackageTier; lower: PackageTier }[] {
-  const priced = PACKAGE_TIERS.map((tier) =>
-    packages.find((p) => p.tier === tier && p.status === "active" && p.price_ngwee !== null),
-  ).filter((p): p is Pick<ServicePackage, "tier" | "price_ngwee" | "status"> => Boolean(p));
-  const warnings: { higher: PackageTier; lower: PackageTier }[] = [];
-  for (let i = 1; i < priced.length; i += 1) {
-    const lower = priced[i - 1];
-    const higher = priced[i];
-    if (lower && higher && (higher.price_ngwee ?? 0) < (lower.price_ngwee ?? 0)) {
-      warnings.push({ higher: higher.tier, lower: lower.tier });
-    }
-  }
-  return warnings;
-}
-
 export function createPackagesClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
   const base = (serviceId: string) => `/vendor/services/${encodeURIComponent(serviceId)}/packages`;
+  const one = (serviceId: string, packageId: string) =>
+    `${base(serviceId)}/${encodeURIComponent(packageId)}`;
   return {
-    list(serviceId: string): Promise<{ service_id: string; items: ServicePackage[] }> {
+    list(serviceId: string): Promise<{
+      service_id: string;
+      max_packages?: number;
+      items: ServicePackage[];
+    }> {
       return client.request(base(serviceId));
     },
-    upsert(serviceId: string, tier: PackageTier, payload: PackagePayload): Promise<ServicePackage> {
-      return client.request(`${base(serviceId)}/${tier}`, {
+    create(serviceId: string, payload: PackagePayload): Promise<ServicePackage> {
+      return client.request(base(serviceId), {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    update(serviceId: string, packageId: string, payload: PackagePayload): Promise<ServicePackage> {
+      return client.request(one(serviceId, packageId), {
         method: "PUT",
         body: JSON.stringify(payload),
       });
     },
-    archive(serviceId: string, tier: PackageTier): Promise<ServicePackage> {
-      return client.request(`${base(serviceId)}/${tier}/archive`, { method: "POST" });
+    remove(serviceId: string, packageId: string): Promise<void> {
+      return client.request(one(serviceId, packageId), { method: "DELETE" });
+    },
+    /** `ids` = every ACTIVE package of the service, in the desired order. */
+    reorder(serviceId: string, ids: string[]): Promise<{ items: ServicePackage[] }> {
+      return client.request(`${base(serviceId)}/reorder`, {
+        method: "POST",
+        body: JSON.stringify({ ids }),
+      });
     },
   };
 }

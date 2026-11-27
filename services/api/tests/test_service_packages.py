@@ -5,7 +5,9 @@ Design: docs/plan/service-packages.md. The claims defended here:
 * money is an integer number of ngwee end to end (floats, strings and bools refused);
 * only the owning vendor can create/update/archive, and a non-owner sees a 404;
 * status moves only through the guarded transition, which writes an audit row;
-* the public detail shows active packages only, tier-ordered;
+* the public detail shows active packages only, in the vendor's order;
+* a service holds an open list of at most 10 active packages (`package_limit_reached`);
+* rows from the old fixed-tier era (tier label, no sort_order) still read and sort;
 * a package-carrying RFQ stores an immutable snapshot, and refuses a foreign,
   archived, or service-less package;
 * nothing here touches orders, payments or the booking spine (SP-1).
@@ -91,6 +93,10 @@ class FakeQuery:
         self._op, self._payload = "update", payload
         return self
 
+    def delete(self) -> FakeQuery:
+        self._op = "delete"
+        return self
+
     def _match(self, row: dict[str, Any]) -> bool:
         if not all(row.get(c) == v for c, v in self._eq):
             return False
@@ -104,17 +110,13 @@ class FakeQuery:
             assert self._payload is not None
             row = dict(self._payload)
             if table.name == "service_packages":
-                # Mirror the UNIQUE (service_id, tier) constraint.
-                for existing in table.rows:
-                    if (existing["service_id"], existing["tier"]) == (
-                        row["service_id"],
-                        row["tier"],
-                    ):
-                        raise RuntimeError("duplicate key value violates unique constraint")
                 row.setdefault("id", str(uuid.uuid4()))
             table.rows.append(row)
             return MagicMock(data=[dict(row)])
         matched = [r for r in table.rows if self._match(r)]
+        if self._op == "delete":
+            table.rows[:] = [r for r in table.rows if not self._match(r)]
+            return MagicMock(data=[dict(r) for r in matched])
         if self._op == "update":
             assert self._payload is not None
             for row in matched:
@@ -143,6 +145,9 @@ class FakeTable:
 
     def update(self, payload: dict[str, Any]) -> FakeQuery:
         return FakeQuery(self).update(payload)
+
+    def delete(self) -> FakeQuery:
+        return FakeQuery(self).delete()
 
 
 class FakeClient:
@@ -253,37 +258,193 @@ def _pkg(**over: Any) -> dict[str, Any]:
     return body
 
 
-def _put(client: TestClient, tier: str, service_id: str = SERVICE_ID, **over: Any) -> Any:
-    return client.put(f"/vendor/services/{service_id}/packages/{tier}", json=_pkg(**over))
+def _put(client: TestClient, _label: str, service_id: str = SERVICE_ID, **over: Any) -> Any:
+    """Create one package (the label only documents the intent at the call site)."""
+    return client.post(f"/vendor/services/{service_id}/packages", json=_pkg(**over))
+
+
+def _update(client: TestClient, package_id: str, service_id: str = SERVICE_ID, **over: Any) -> Any:
+    return client.put(f"/vendor/services/{service_id}/packages/{package_id}", json=_pkg(**over))
+
+
+def _archive(client: TestClient, package_id: str, service_id: str = SERVICE_ID) -> Any:
+    return client.post(f"/vendor/services/{service_id}/packages/{package_id}/archive")
+
+
+def _ids(client: TestClient, service_id: str = SERVICE_ID) -> list[str]:
+    items = client.get(f"/vendor/services/{service_id}/packages").json()["items"]
+    return [item["id"] for item in items]
 
 
 # --- Vendor CRUD + validation ------------------------------------------------
-def test_vendor_creates_and_lists_packages_in_tier_order(vendor: TestClient) -> None:
-    assert _put(vendor, "premium", name="Full brand", price_ngwee=None).status_code == 200
-    created = _put(vendor, "basic")
+def test_vendor_creates_and_lists_packages_in_the_order_added(vendor: TestClient) -> None:
+    first = _put(vendor, "a", name="Full brand", price_ngwee=None)
+    assert first.status_code == 200, first.text
+    created = _put(vendor, "b")
     assert created.status_code == 200, created.text
     body = created.json()
-    assert body["tier"] == "basic" and body["status"] == "active"
+    assert body["tier"] is None and body["status"] == "active" and body["sort_order"] == 1
     assert body["price_ngwee"] == 75_000 and isinstance(body["price_ngwee"], int)
 
     listed = vendor.get(f"/vendor/services/{SERVICE_ID}/packages").json()
-    assert [p["tier"] for p in listed["items"]] == ["basic", "premium"]
-    assert listed["items"][1]["price_ngwee"] is None  # request-a-quote package
+    assert [p["name"] for p in listed["items"]] == ["Full brand", "Starter logo"]
+    assert listed["max_packages"] == 10
+    assert listed["items"][0]["price_ngwee"] is None  # request-a-quote package
 
 
-def test_saving_a_tier_twice_updates_it_and_never_creates_a_fourth(
+def test_packages_are_not_limited_to_three_and_names_may_repeat(
     vendor: TestClient, db: FakeClient
 ) -> None:
-    for tier in ("basic", "standard", "premium"):
-        assert _put(vendor, tier).status_code == 200
-    assert _put(vendor, "standard", name="Standard logo", price_ngwee=120_000).status_code == 200
+    for index in range(6):
+        assert _put(vendor, "x", name=f"Option {index}").status_code == 200
+    assert _put(vendor, "x", name="Option 0").status_code == 200  # same name is fine
+    assert len(db.rows("service_packages")) == 7
+
+
+def test_the_eleventh_active_package_is_refused_with_a_stable_code(
+    vendor: TestClient, db: FakeClient
+) -> None:
+    for index in range(10):
+        assert _put(vendor, "x", name=f"Option {index}").status_code == 200
+    over = _put(vendor, "x", name="One too many")
+    assert over.status_code == 409
+    error = over.json()["error"]
+    assert error["code"] == "package_limit_reached"
+    assert error["details"]["max"] == 10
+    assert error["details"]["message_key"] == "services.vendor.packages.errors.limitReached"
+    assert len(db.rows("service_packages")) == 10
+
+
+def test_the_cap_is_per_service_and_archived_packages_do_not_count(
+    vendor: TestClient, db: FakeClient
+) -> None:
+    for index in range(10):
+        _put(vendor, "x", name=f"Option {index}")
+    assert _put(vendor, "x", service_id=PRICED_SERVICE).status_code == 200  # other service
+    first_id = _ids(vendor)[0]
+    assert _archive(vendor, first_id).status_code == 200
+    assert _put(vendor, "x", name="Replacement").status_code == 200  # slot freed
+    # ...and bringing the archived one back now would be the 11th.
+    revive = _update(vendor, first_id, name="Back again")
+    assert revive.status_code == 409 and revive.json()["error"]["code"] == "package_limit_reached"
+    assert next(r for r in db.rows("service_packages") if r["id"] == first_id)["status"] == (
+        "archived"
+    )
+
+
+def test_updating_a_package_changes_it_in_place(vendor: TestClient, db: FakeClient) -> None:
+    for name in ("One", "Two", "Three"):
+        _put(vendor, "x", name=name)
+    target = _ids(vendor)[1]
+    assert _update(vendor, target, name="Two plus", price_ngwee=120_000).status_code == 200
     rows = db.rows("service_packages")
     assert len(rows) == 3
-    assert next(r for r in rows if r["tier"] == "standard")["price_ngwee"] == 120_000
+    assert next(r for r in rows if r["id"] == target)["price_ngwee"] == 120_000
+    assert next(r for r in rows if r["id"] == target)["name"] == "Two plus"
 
 
-def test_an_unknown_tier_is_refused(vendor: TestClient) -> None:
-    assert _put(vendor, "deluxe").status_code == 422
+def test_updating_a_missing_or_malformed_package_is_404(vendor: TestClient) -> None:
+    assert _update(vendor, str(uuid.uuid4())).status_code == 404
+    assert _update(vendor, "not-a-uuid").status_code == 404
+
+
+def test_reordering_sets_the_order_the_customer_sees(
+    vendor: TestClient, customer: TestClient
+) -> None:
+    for name in ("One", "Two", "Three"):
+        _put(vendor, "x", name=name)
+    one, two, three = _ids(vendor)
+    response = vendor.post(
+        f"/vendor/services/{SERVICE_ID}/packages/reorder", json={"ids": [three, one, two]}
+    )
+    assert response.status_code == 200, response.text
+    assert [p["name"] for p in response.json()["items"]] == ["Three", "One", "Two"]
+    public = customer.get(f"/services/{SERVICE_ID}").json()["packages"]
+    assert [p["name"] for p in public] == ["Three", "One", "Two"]
+
+
+@pytest.mark.parametrize("case", ["missing", "extra", "duplicate", "empty"])
+def test_a_bad_reorder_is_refused_and_changes_nothing(
+    vendor: TestClient, db: FakeClient, case: str
+) -> None:
+    for name in ("One", "Two"):
+        _put(vendor, "x", name=name)
+    one, two = _ids(vendor)
+    ids = {
+        "missing": [one],
+        "extra": [one, two, str(uuid.uuid4())],
+        "duplicate": [one, one],
+        "empty": [],
+    }[case]
+    response = vendor.post(f"/vendor/services/{SERVICE_ID}/packages/reorder", json={"ids": ids})
+    assert response.status_code in (409, 422), response.text
+    assert _ids(vendor) == [one, two]
+
+
+def test_deleting_a_package_removes_it_and_writes_an_audit_row(
+    vendor: TestClient, db: FakeClient
+) -> None:
+    _put(vendor, "x", name="Keep")
+    _put(vendor, "x", name="Drop")
+    keep, drop = _ids(vendor)
+    response = vendor.delete(f"/vendor/services/{SERVICE_ID}/packages/{drop}")
+    assert response.status_code == 204
+    assert _ids(vendor) == [keep]
+    audit = [r for r in db.rows("audit_log") if r["action"] == "service_package.deleted"]
+    assert len(audit) == 1 and audit[0]["entity_id"] == drop and audit[0]["actor"] == VENDOR_OWNER
+    assert vendor.delete(f"/vendor/services/{SERVICE_ID}/packages/{drop}").status_code == 404
+
+
+def test_a_package_from_the_old_tier_era_still_works_end_to_end(
+    vendor: TestClient, customer: TestClient, db: FakeClient
+) -> None:
+    """Pre-migration rows: tier label set, backfilled sort_order 0/1/2, vendor-chosen name."""
+    legacy = [
+        ("premium", 2, "Full brand", None),
+        ("basic", 0, "Starter logo", 75_000),
+        ("standard", 1, "Logo + card", 150_000),
+    ]
+    ids: dict[str, str] = {}
+    for tier, order, name, price in legacy:
+        row = {
+            "id": str(uuid.uuid4()),
+            "service_id": SERVICE_ID,
+            "vendor_id": VENDOR_ID,
+            "tier": tier,
+            "sort_order": order,
+            "name": name,
+            "description": None,
+            "price_ngwee": price,
+            "delivery_days": 3,
+            "revisions": None,
+            "includes": [],
+            "status": "active",
+        }
+        db.rows("service_packages").append(row)
+        ids[tier] = row["id"]
+
+    listed = vendor.get(f"/vendor/services/{SERVICE_ID}/packages").json()["items"]
+    assert [p["tier"] for p in listed] == ["basic", "standard", "premium"]
+    public = customer.get(f"/services/{SERVICE_ID}").json()["packages"]
+    assert [p["name"] for p in public] == ["Starter logo", "Logo + card", "Full brand"]
+
+    # The vendor can edit a legacy row (its tier label is preserved) and append a new one.
+    assert (
+        _update(vendor, ids["standard"], name="Logo + card", price_ngwee=160_000).status_code == 200
+    )
+    assert next(r for r in db.rows("service_packages") if r["id"] == ids["standard"])["tier"] == (
+        "standard"
+    )
+    assert _put(vendor, "x", name="Brand audit").json()["sort_order"] == 3
+
+    # A legacy package still carries its price into an RFQ snapshot.
+    response = customer.post(
+        "/rfq",
+        json={"service_id": SERVICE_ID, "package_id": ids["basic"], "requested_details": "hi"},
+    )
+    assert response.status_code == 200, response.text
+    snap = response.json()["thread"]["package_snapshot"]
+    assert snap["tier"] == "basic" and snap["price_ngwee"] == 75_000
 
 
 @pytest.mark.parametrize(
@@ -313,6 +474,11 @@ def test_invalid_packages_are_refused(vendor: TestClient, db: FakeClient, overri
     assert db.rows("service_packages") == []
 
 
+def test_a_tier_field_is_not_accepted_from_clients(vendor: TestClient, db: FakeClient) -> None:
+    assert _put(vendor, "basic", tier="basic").status_code == 422
+    assert db.rows("service_packages") == []
+
+
 def test_a_prohibited_package_is_refused(
     vendor: TestClient, db: FakeClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -333,7 +499,12 @@ def test_a_non_owner_gets_404_and_writes_nothing(
     other = _app(db, OTHER_OWNER, "vendor", monkeypatch)
     assert _put(other, "basic").status_code == 404
     assert other.get(f"/vendor/services/{SERVICE_ID}/packages").status_code == 404
-    assert other.post(f"/vendor/services/{SERVICE_ID}/packages/basic/archive").status_code == 404
+    assert (
+        other.post(
+            f"/vendor/services/{SERVICE_ID}/packages/reorder", json={"ids": [str(uuid.uuid4())]}
+        ).status_code
+        == 404
+    )
     assert db.rows("service_packages") == []
 
 
@@ -345,11 +516,25 @@ def test_a_customer_cannot_manage_packages(customer: TestClient) -> None:
     assert _put(customer, "basic").status_code == 403
 
 
+def test_a_vendor_cannot_touch_another_vendors_package(
+    vendor: TestClient, db: FakeClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    other = _app(db, OTHER_OWNER, "vendor", monkeypatch)
+    theirs = _put(other, "x", service_id=OTHER_SERVICE).json()["id"]
+    # Own service id + their package id: not found (the package is scoped to the service).
+    assert _update(vendor, theirs).status_code == 404
+    assert vendor.delete(f"/vendor/services/{SERVICE_ID}/packages/{theirs}").status_code == 404
+    assert _archive(vendor, theirs).status_code == 404
+    # Their service id: not found (ownership).
+    assert _update(vendor, theirs, service_id=OTHER_SERVICE).status_code == 404
+    assert len(db.rows("service_packages")) == 1
+
+
 # --- Guarded transitions -----------------------------------------------------
 def test_archive_is_guarded_audited_and_idempotent(vendor: TestClient, db: FakeClient) -> None:
-    _put(vendor, "basic")
-    first = vendor.post(f"/vendor/services/{SERVICE_ID}/packages/basic/archive")
-    second = vendor.post(f"/vendor/services/{SERVICE_ID}/packages/basic/archive")
+    pid = _put(vendor, "basic").json()["id"]
+    first = _archive(vendor, pid)
+    second = _archive(vendor, pid)
     assert first.status_code == 200 and first.json()["status"] == "archived"
     assert second.status_code == 200
     audit = [r for r in db.rows("audit_log") if r["action"] == "service_package.transition"]
@@ -359,19 +544,19 @@ def test_archive_is_guarded_audited_and_idempotent(vendor: TestClient, db: FakeC
     assert audit[0]["actor"] == VENDOR_OWNER
 
 
-def test_saving_an_archived_tier_reactivates_it_through_the_guard(
+def test_saving_an_archived_package_reactivates_it_through_the_guard(
     vendor: TestClient, db: FakeClient
 ) -> None:
-    _put(vendor, "basic")
-    vendor.post(f"/vendor/services/{SERVICE_ID}/packages/basic/archive")
-    revived = _put(vendor, "basic", name="Starter logo v2")
+    pid = _put(vendor, "basic").json()["id"]
+    _archive(vendor, pid)
+    revived = _update(vendor, pid, name="Starter logo v2")
     assert revived.json()["status"] == "active"
     actions = [r["after"]["status"] for r in db.rows("audit_log")]
     assert actions == ["archived", "active"]
 
 
-def test_archiving_a_missing_tier_is_404(vendor: TestClient) -> None:
-    assert vendor.post(f"/vendor/services/{SERVICE_ID}/packages/premium/archive").status_code == 404
+def test_archiving_a_missing_package_is_404(vendor: TestClient) -> None:
+    assert _archive(vendor, str(uuid.uuid4())).status_code == 404
 
 
 def test_the_transition_table_is_closed() -> None:
@@ -391,21 +576,22 @@ def test_the_router_never_writes_status_directly() -> None:
     source = (REPO_ROOT / "services/api/app/routers/service_packages.py").read_text()
     assert '"status": state.ARCHIVED' not in source
     assert '.update({"status"' not in source
+    assert "sort_by_tier" not in source
 
 
 # --- Public detail -----------------------------------------------------------
 def test_public_detail_lists_active_packages_only(vendor: TestClient, customer: TestClient) -> None:
     _put(vendor, "premium", name="Full brand", price_ngwee=None)
     _put(vendor, "basic")
-    _put(vendor, "standard", name="Logo + card")
-    vendor.post(f"/vendor/services/{SERVICE_ID}/packages/standard/archive")
+    hidden = _put(vendor, "standard", name="Logo + card").json()["id"]
+    _archive(vendor, hidden)
 
     detail = customer.get(f"/services/{SERVICE_ID}")
     assert detail.status_code == 200, detail.text
     packages = detail.json()["packages"]
-    assert [p["tier"] for p in packages] == ["basic", "premium"]
+    assert [p["name"] for p in packages] == ["Full brand", "Starter logo"]
     assert "status" not in packages[0]  # public shape carries no lifecycle state
-    assert packages[0]["price_ngwee"] == 75_000
+    assert packages[1]["price_ngwee"] == 75_000
 
 
 def test_a_service_without_packages_is_unchanged(customer: TestClient) -> None:
@@ -429,12 +615,13 @@ def test_requesting_a_package_stores_an_immutable_snapshot(
     thread = response.json()["thread"]
     assert thread["package_id"] == pkg["id"]
     snap = thread["package_snapshot"]
-    assert snap["tier"] == "standard" and snap["price_ngwee"] == 150_000
+    assert snap["tier"] is None and snap["name"] == "Logo + card"
+    assert snap["price_ngwee"] == 150_000
     assert isinstance(snap["price_ngwee"], int)
     assert snap["delivery_days"] == 3 and snap["includes"] == ["1 concept", "PNG + PDF files"]
 
     # The vendor later changes the price; the thread keeps what the customer saw.
-    _put(vendor, "standard", name="Logo + card", price_ngwee=999_000)
+    _update(vendor, pkg["id"], name="Logo + card", price_ngwee=999_000)
     stored = db.rows("rfq_threads")[0]["package_snapshot"]
     assert stored["price_ngwee"] == 150_000
     # No order, payment or job was created (SP-1).
@@ -485,7 +672,7 @@ def test_an_unavailable_package_is_refused(
     pkg = _put(vendor, "basic").json()
     payload: dict[str, Any] = {"service_id": SERVICE_ID, "requested_details": "hi"}
     if case == "archived":
-        vendor.post(f"/vendor/services/{SERVICE_ID}/packages/basic/archive")
+        _archive(vendor, pkg["id"])
         payload["package_id"] = pkg["id"]
     elif case == "foreign":
         other = _app(db, OTHER_OWNER, "vendor", monkeypatch)
@@ -522,8 +709,8 @@ def test_admin_services_list_shows_packages(
     admin = _app(db, ADMIN, "admin", monkeypatch)
     items = admin.get("/admin/services").json()["items"]
     mine = next(item for item in items if item["id"] == SERVICE_ID)
-    assert [p["tier"] for p in mine["packages"]] == ["basic", "premium"]
-    assert mine["packages"][0]["price_ngwee"] == 75_000
+    assert [p["name"] for p in mine["packages"]] == ["Full brand", "Starter logo"]
+    assert mine["packages"][1]["price_ngwee"] == 75_000
     other = next(item for item in items if item["id"] == OTHER_SERVICE)
     assert other["packages"] == []
 
@@ -531,8 +718,14 @@ def test_admin_services_list_shows_packages(
 def test_package_write_routes_have_rate_limit_policies() -> None:
     from app.core import ratelimit_policies as rp
 
-    assert "PUT /vendor/services/{service_id}/packages/{tier}" in rp.POLICIES
-    assert "POST /vendor/services/{service_id}/packages/{tier}/archive" in rp.POLICIES
+    for route in (
+        "POST /vendor/services/{service_id}/packages",
+        "PUT /vendor/services/{service_id}/packages/{package_id}",
+        "DELETE /vendor/services/{service_id}/packages/{package_id}",
+        "POST /vendor/services/{service_id}/packages/reorder",
+        "POST /vendor/services/{service_id}/packages/{package_id}/archive",
+    ):
+        assert route in rp.POLICIES, route
 
 
 # --- Migration pins -----------------------------------------------------------
@@ -547,3 +740,19 @@ def test_the_migration_is_additive_with_rls_and_no_client_writes() -> None:
         assert f"grant {verb}" not in lowered.replace("service_role", "")
     assert "drop table public.services" not in lowered
     assert "down (reversible)" in lowered
+
+
+def test_the_open_list_migration_is_additive_reversible_and_capped() -> None:
+    sql = (
+        REPO_ROOT / "supabase/migrations/20261127120000_service_packages_open_list.sql"
+    ).read_text()
+    lowered = sql.lower()
+    assert "drop constraint if exists service_packages_one_per_tier" in lowered
+    assert "alter column tier drop not null" in lowered
+    assert "add column if not exists sort_order integer not null default 0" in lowered
+    assert "when 'basic' then 0" in lowered  # existing rows keep their tier order
+    assert "if active_count >= 10" in lowered  # database-level cap mirrors the API
+    assert "down (reversible" in lowered
+    assert "drop table" not in lowered.split("down (reversible")[0]
+    assert "drop column" not in lowered.split("down (reversible")[0]
+    assert "grant insert" not in lowered and "grant update" not in lowered
