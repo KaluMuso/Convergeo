@@ -40,7 +40,15 @@ const auditCommands = new Map([
 function assertStrictAudit(source) {
   const audit = job(source, "deps-audit");
   assert.match(audit, /^ {4}name: Dependency audit$/m);
-  assert.doesNotMatch(audit, /^\s+(?:if|continue-on-error):/m);
+  // The only permitted condition is the job-level docs-only path-tier skip (#903):
+  // every code change still runs the audit, and no step may be conditional.
+  const docsOnlyGuard =
+    "    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}\n";
+  const jobIfs = audit.match(/^ {4}if:.*$/gm) ?? [];
+  assert.ok(jobIfs.length <= 1, "deps-audit may carry at most the docs-only job guard");
+  if (jobIfs.length === 1) assert.equal(`${jobIfs[0]}\n`, docsOnlyGuard);
+  assert.doesNotMatch(audit, /^ {5,}if:/m);
+  assert.doesNotMatch(audit, /^\s+continue-on-error:/m);
   assert.doesNotMatch(audit, /ALLOWLIST|github_advisory_id|--ignore|\|\|\s*true/);
   assert.equal((audit.match(/run: pnpm audit /g) ?? []).length, 2);
   for (const [name, command] of auditCommands) {
