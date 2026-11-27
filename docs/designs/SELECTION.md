@@ -215,11 +215,11 @@ Reconciles the flagship's cream/serif system, the dark prototype's panels, the p
 
 Translucent tint of `--surface` + `backdrop-filter: blur` + soft 1px light border + subtle shadow. Defined in `packages/ui/src/styles/base.css` (`.v-glass*`), helper `glassClass(variant)` from `@vergeo/ui/src/glass`.
 
-| Variant | Class | Use |
-|---|---|---|
-| bar | `v-glass v-glass--bar` | sticky top bar (border-bottom only); `bar-bottom` flips the border for bottom nav |
-| overlay | `v-glass v-glass--overlay` | modals, bottom sheets, drawers, image viewer chrome |
-| card | `v-glass v-glass--card` | floating chips/cards over media |
+| Variant | Class                      | Use                                                                               |
+| ------- | -------------------------- | --------------------------------------------------------------------------------- |
+| bar     | `v-glass v-glass--bar`     | sticky top bar (border-bottom only); `bar-bottom` flips the border for bottom nav |
+| overlay | `v-glass v-glass--overlay` | modals, bottom sheets, drawers, image viewer chrome                               |
+| card    | `v-glass v-glass--card`    | floating chips/cards over media                                                   |
 
 Tokens: `--glass-blur`, `--glass-saturate`, `--glass-border`, `--glass-highlight`, `--glass-shadow`, `--glass-bg-{bar,overlay,card,fallback}`; dark overrides under `[data-theme="dark"]`. Backgrounds derive from `--surface`, so accent/dark presets follow automatically.
 Fallbacks: blur and translucent backgrounds apply only inside `@supports (backdrop-filter)`, otherwise a 96% opaque surface; `prefers-reduced-transparency: reduce` and `prefers-contrast: more` force opaque `--surface-elevated`. Keep text on glass at token text colors (contrast is checked against the opaque fallback). Do not stack more than two blurred layers on one screen (GPU cost on low-end Android).

@@ -19,40 +19,48 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
     <div
       class="flex items-center justify-between gap-2"
     >
-      <a
-        aria-label="Convergeo"
-        class="inline-flex shrink-0 items-center rounded-sm transition-opacity duration-fast ease-std hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing"
-        href="/en"
+      <div
+        class="flex min-w-0 items-center gap-1"
       >
-        <span
-          class="inline-flex items-center"
-          data-testid="brand-logo"
+        <button
+          aria-label="Menu"
+          type="button"
+        />
+        <a
+          aria-label="Convergeo"
+          class="inline-flex shrink-0 items-center rounded-sm transition-opacity duration-fast ease-std hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing"
+          href="/en"
         >
-          <img
-            alt="Convergeo"
-            class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] mix-blend-multiply dark:hidden"
-            data-nimg="1"
-            decoding="async"
-            height="26"
-            src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75"
-            srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75 2x"
-            style="color: transparent; height: 26px;"
-            width="152"
-          />
-          <img
-            alt="Convergeo"
-            class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] hidden mix-blend-screen dark:block"
-            data-nimg="1"
-            decoding="async"
-            height="26"
-            loading="lazy"
-            src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75"
-            srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75 2x"
-            style="color: transparent; height: 26px;"
-            width="152"
-          />
-        </span>
-      </a>
+          <span
+            class="inline-flex items-center"
+            data-testid="brand-logo"
+          >
+            <img
+              alt="Convergeo"
+              class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] mix-blend-multiply dark:hidden"
+              data-nimg="1"
+              decoding="async"
+              height="26"
+              src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75"
+              srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75 2x"
+              style="color: transparent; height: 26px;"
+              width="152"
+            />
+            <img
+              alt="Convergeo"
+              class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] hidden mix-blend-screen dark:block"
+              data-nimg="1"
+              decoding="async"
+              height="26"
+              loading="lazy"
+              src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75"
+              srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75 2x"
+              style="color: transparent; height: 26px;"
+              width="152"
+            />
+          </span>
+        </a>
+      </div>
       <div
         class="flex items-center gap-0.5"
       >
@@ -124,8 +132,16 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
     class="hidden flex-wrap items-center gap-x-2 px-4 md:flex lg:h-14 lg:flex-nowrap lg:gap-x-3 lg:px-6 xl:px-8"
   >
     <div
-      class="order-1 flex h-14 items-center"
+      class="order-1 flex h-14 items-center gap-1"
     >
+      <span
+        class="lg:hidden"
+      >
+        <button
+          aria-label="Menu"
+          type="button"
+        />
+      </span>
       <a
         aria-label="Convergeo"
         class="inline-flex shrink-0 items-center rounded-sm transition-opacity duration-fast ease-std hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing"
@@ -243,7 +259,7 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
       class="order-4 flex basis-full items-center gap-1 overflow-x-auto pb-2 [scrollbar-width:none] lg:contents"
     >
       <div
-        class="shrink-0 lg:order-2"
+        class="hidden shrink-0 lg:order-2 lg:block"
       >
         <button
           type="button"

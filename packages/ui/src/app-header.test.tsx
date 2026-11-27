@@ -121,6 +121,7 @@ describe("AppHeader", () => {
 
     const header = container.querySelector("header");
     expect(header).toHaveAttribute("data-compact", "false");
+    expect(header).not.toHaveClass("v-glass");
 
     act(() => {
       Object.defineProperty(window, "scrollY", { value: 80, writable: true, configurable: true });
@@ -128,6 +129,7 @@ describe("AppHeader", () => {
     });
 
     expect(header).toHaveAttribute("data-compact", "true");
+    expect(header).toHaveClass("v-glass", "v-glass--bar");
     expect(header).toHaveStyle({ boxShadow: "var(--shadow-1)" });
   });
 });

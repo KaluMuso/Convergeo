@@ -50,9 +50,14 @@ def test_python_api_context_aggregates_every_shard() -> None:
     python = job_block("python")
     shard = job_block("python-shard")
 
-    assert "needs: python-shard" in python
+    assert "needs: [changes, python-shard]" in python
     assert "if: ${{ always() }}" in python
-    assert 'test "${{ needs.python-shard.result }}" = "success"' in python
+    # Success requires the shards to pass; a skip is only accepted when `changes`
+    # succeeded and reported no Python-affecting change (docs-only PRs).
+    assert '[ "${{ needs.python-shard.result }}" = "success" ]' in python
+    assert '[ "${{ needs.python-shard.result }}" = "skipped" ]' in python
+    assert '[ "${{ needs.changes.result }}" = "success" ]' in python
+    assert '[ "${{ needs.changes.outputs.run_python }}" != "true" ]' in python
     # The shard matrix covers the whole suite: partition proof + every ignore kept.
     assert "shard_pytest_files.py --total 3 --check" in shard
     assert "shard: [1, 2, 3]" in shard

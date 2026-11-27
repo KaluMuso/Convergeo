@@ -2,6 +2,8 @@
 
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 
+import { glassClass } from "./glass";
+
 export type BottomNavItem = {
   key: string;
   icon: ReactNode;
@@ -47,7 +49,7 @@ export function BottomNav({
     <nav
       aria-label={ariaLabel}
       className={mergeClasses(
-        "v-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface",
+        `v-bottom-nav fixed inset-x-0 bottom-0 z-50 ${glassClass("bar-bottom")}`,
         desktopHiddenClassName,
         className,
       )}
