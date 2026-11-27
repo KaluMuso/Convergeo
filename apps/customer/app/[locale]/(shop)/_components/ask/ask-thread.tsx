@@ -13,6 +13,7 @@ import { CitationCard } from "./citation-card";
 import { FaqList } from "./faq-list";
 import { QuotaBanner } from "./quota-banner";
 import { QuotaMeter } from "./quota-meter";
+import { AskSpeakButton } from "./speak-button";
 import {
   extractErrorState,
   parseQuota,
@@ -221,6 +222,7 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
               stop: t("ask.voiceStop"),
               listening: t("ask.voiceListening"),
               error: t("ask.voiceError"),
+              denied: t("ask.voiceDenied"),
             }}
           />
         </div>
@@ -288,7 +290,16 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
                 />
               ) : null}
 
-              {text ? <p className="whitespace-pre-wrap text-sm text-text">{text}</p> : null}
+              {text ? (
+                <div className="flex items-start gap-2">
+                  <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm text-text">{text}</p>
+                  <AskSpeakButton
+                    text={text}
+                    locale={locale}
+                    labels={{ speak: t("ask.speak"), stop: t("ask.speakStop") }}
+                  />
+                </div>
+              ) : null}
 
               {answer.sign_in_required ? (
                 <Link

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ApiError } from "@vergeo/config";
 import { NextIntlClientProvider } from "next-intl";
@@ -30,6 +30,8 @@ import { AskThread } from "./ask-thread";
 import { CitationCard } from "./citation-card";
 import { QuotaBanner } from "./quota-banner";
 import { QuotaMeter } from "./quota-meter";
+import { AskSpeakButton } from "./speak-button";
+import { pickVoice } from "./speech-synthesis";
 import { extractErrorState, parseQuota } from "./types";
 import { AskVoiceButton } from "./voice-button";
 
@@ -38,6 +40,7 @@ const voiceLabels = {
   stop: "Stop listening",
   listening: "Listening",
   error: "Couldn't hear that",
+  denied: "Microphone is blocked",
 };
 
 type FakeRecognition = {
@@ -520,6 +523,32 @@ describe("AskVoiceButton", () => {
     expect(onTranscript).toHaveBeenCalledWith("cheapest phone", true);
   });
 
+  it("tells the user when the microphone is blocked instead of doing nothing", async () => {
+    const { instances } = installSpeechRecognition();
+    const user = userEvent.setup();
+    render(<AskVoiceButton labels={voiceLabels} onTranscript={() => {}} />);
+    await user.click(await screen.findByTestId("ask-voice-button"));
+    await waitFor(() => expect(instances).toHaveLength(1));
+    act(() => {
+      (instances[0] as unknown as { onerror: (e: unknown) => void }).onerror({
+        error: "not-allowed",
+      });
+    });
+    expect(screen.getByTestId("ask-voice-status")).toHaveTextContent("Microphone is blocked");
+  });
+
+  it("shows the generic message for other errors", async () => {
+    const { instances } = installSpeechRecognition();
+    const user = userEvent.setup();
+    render(<AskVoiceButton labels={voiceLabels} onTranscript={() => {}} />);
+    await user.click(await screen.findByTestId("ask-voice-button"));
+    await waitFor(() => expect(instances).toHaveLength(1));
+    act(() => {
+      (instances[0] as unknown as { onerror: (e: unknown) => void }).onerror({ error: "network" });
+    });
+    expect(screen.getByTestId("ask-voice-status")).toHaveTextContent("Couldn't hear that");
+  });
+
   it("is mounted beside the Ask input only when supported", async () => {
     renderThread();
     expect(screen.queryByTestId("ask-voice-button")).not.toBeInTheDocument();
@@ -742,5 +771,132 @@ describe("Workflow + fallback rendering", () => {
         }),
       }),
     );
+  });
+});
+
+type FakeVoice = { lang: string; name: string };
+
+function installSpeechSynthesis(voices: FakeVoice[] = []) {
+  const utterances: Array<{
+    text: string;
+    lang: string;
+    voice: FakeVoice | null;
+    onend: (() => void) | null;
+    onerror: (() => void) | null;
+  }> = [];
+  class FakeUtterance {
+    lang = "";
+    voice: FakeVoice | null = null;
+    onend: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor(public text: string) {
+      utterances.push(this);
+    }
+  }
+  const synth = {
+    speak: vi.fn(),
+    cancel: vi.fn(),
+    getVoices: vi.fn(() => voices),
+  };
+  Object.assign(window, { speechSynthesis: synth, SpeechSynthesisUtterance: FakeUtterance });
+  return { synth, utterances };
+}
+
+function removeSpeechSynthesis() {
+  const w = window as unknown as Record<string, unknown>;
+  delete w.speechSynthesis;
+  delete w.SpeechSynthesisUtterance;
+}
+
+const speakLabels = { speak: "Read the answer aloud", stop: "Stop reading" };
+
+describe("AskSpeakButton", () => {
+  afterEach(() => removeSpeechSynthesis());
+
+  it("renders nothing when speechSynthesis is unsupported", () => {
+    removeSpeechSynthesis();
+    const { container } = render(<AskSpeakButton text="Hello" locale="en" labels={speakLabels} />);
+    expect(screen.queryByTestId("ask-speak-button")).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("speaks the answer with a voice for the page locale and toggles to stop", async () => {
+    const { synth, utterances } = installSpeechSynthesis([
+      { lang: "en-GB", name: "English" },
+      { lang: "fr-FR", name: "Francais" },
+    ]);
+    const user = userEvent.setup();
+    render(<AskSpeakButton text="Bonjour" locale="fr" labels={speakLabels} />);
+
+    const button = await screen.findByTestId("ask-speak-button");
+    expect(button).toHaveAccessibleName("Read the answer aloud");
+    await user.click(button);
+
+    expect(synth.speak).toHaveBeenCalledTimes(1);
+    expect(utterances[0]).toMatchObject({ text: "Bonjour", lang: "fr-FR" });
+    expect(utterances[0]?.voice?.name).toBe("Francais");
+    expect(screen.getByTestId("ask-speak-button")).toHaveAccessibleName("Stop reading");
+
+    synth.cancel.mockClear();
+    await user.click(screen.getByTestId("ask-speak-button"));
+    expect(synth.cancel).toHaveBeenCalled();
+    expect(screen.getByTestId("ask-speak-button")).toHaveAccessibleName("Read the answer aloud");
+  });
+
+  it("falls back to English for bem/nya and when no voice matches", async () => {
+    const { utterances } = installSpeechSynthesis([{ lang: "en-US", name: "US" }]);
+    const user = userEvent.setup();
+    render(<AskSpeakButton text="Mwapoleni" locale="bem" labels={speakLabels} />);
+    await user.click(await screen.findByTestId("ask-speak-button"));
+    expect(utterances[0]?.voice?.name).toBe("US");
+    expect(utterances[0]?.lang).toBe("en-US");
+    expect(pickVoice([{ lang: "de-DE", name: "De" } as SpeechSynthesisVoice], "fr")).toBeNull();
+  });
+
+  it("resets when the utterance ends", async () => {
+    const { utterances } = installSpeechSynthesis();
+    const user = userEvent.setup();
+    render(<AskSpeakButton text="Hi" locale="en" labels={speakLabels} />);
+    await user.click(await screen.findByTestId("ask-speak-button"));
+    act(() => utterances[0]?.onend?.());
+    expect(screen.getByTestId("ask-speak-button")).toHaveAttribute("data-state", "idle");
+  });
+
+  it("cancels speech on unmount and when the answer changes", async () => {
+    const { synth } = installSpeechSynthesis();
+    const user = userEvent.setup();
+    const view = render(<AskSpeakButton text="One" locale="en" labels={speakLabels} />);
+    await user.click(await screen.findByTestId("ask-speak-button"));
+    synth.cancel.mockClear();
+
+    view.rerender(<AskSpeakButton text="Two" locale="en" labels={speakLabels} />);
+    expect(synth.cancel).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("ask-speak-button")).toHaveAttribute("data-state", "idle");
+
+    await user.click(screen.getByTestId("ask-speak-button"));
+    synth.cancel.mockClear();
+    view.unmount();
+    expect(synth.cancel).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AskThread read-aloud", () => {
+  afterEach(() => removeSpeechSynthesis());
+
+  it("shows a speaker button on a text answer when supported", async () => {
+    installSpeechSynthesis();
+    request.mockResolvedValueOnce({
+      query: "fridge",
+      answer: "A fridge answer",
+      citations: [],
+      cached: false,
+      refused: false,
+      message_key: null,
+    });
+    const user = userEvent.setup();
+    renderThread();
+    await user.type(screen.getByLabelText("Your question"), "fridge");
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    expect(await screen.findByTestId("ask-speak-button")).toBeInTheDocument();
   });
 });
