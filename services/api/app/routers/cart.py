@@ -25,6 +25,7 @@ from app.services.cart.grouping import (
     group_by_vendor,
     line_variant_id,
     line_variant_options,
+    listing_display_title,
 )
 from app.services.cart.merge import (
     MergeConflict,
@@ -516,9 +517,7 @@ def _build_cart_response(
                 unit_price_ngwee=unit_price,
                 wholesale=bool(item.get("wholesale", False)),
                 line_total_ngwee=line_total_ngwee(qty, unit_price),
-                title_override=listing.get("title_override")
-                if isinstance(listing.get("title_override"), str)
-                else None,
+                title_override=listing_display_title(listing),
                 product_class=str(listing.get("product_class") or "A"),
                 condition=str(listing.get("condition") or "new"),
                 sale_unit=str(listing.get("sale_unit") or "each"),

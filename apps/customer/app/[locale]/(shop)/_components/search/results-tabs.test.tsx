@@ -1,15 +1,11 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetLocalWishlistStoreForTests } from "../plp/use-local-wishlist";
 
-import {
-  SearchProductCard,
-  type ResultsTabsLabels,
-  type SearchHit,
-} from "./results-tabs";
+import { SearchProductCard, type ResultsTabsLabels, type SearchHit } from "./results-tabs";
 
 const LABELS: ResultsTabsLabels = {
   loadMore: "Load more",
@@ -75,6 +71,7 @@ describe("SearchProductCard price mapping", () => {
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
     resetLocalWishlistStoreForTests();
   });
 
@@ -82,9 +79,22 @@ describe("SearchProductCard price mapping", () => {
     render(<SearchProductCard hit={baseHit} locale="en" labels={LABELS} />);
     expect(screen.queryByTestId("price-block")).not.toBeInTheDocument();
     expect(screen.queryByText(/K0\.00/)).not.toBeInTheDocument();
-    expect(
-      screen.getByText("Synthetic multiseller product A"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Synthetic multiseller product A")).toBeInTheDocument();
+  });
+
+  it("renders the listing image from the API's image_public_id (no placeholder)", () => {
+    vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "demo");
+    const { container } = render(
+      <SearchProductCard
+        hit={{ ...baseHit, image_public_id: "vergeo5/listings/abc123" }}
+        locale="en"
+        labels={LABELS}
+      />,
+    );
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute("src") ?? "").toContain("abc123");
+    expect(screen.queryByText(LABELS.mediaEmpty)).not.toBeInTheDocument();
   });
 
   it("renders the real price when price_min_ngwee is populated (the confirmed defect case)", () => {

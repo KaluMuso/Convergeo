@@ -17,7 +17,11 @@ import { VariantLineLabel } from "./variant-line-label";
 
 import type { CartLine, ChangeNotice } from "./mini-cart-drawer";
 
+import { cartLineTitle } from "@/lib/cart-line-title";
+
 export type CartLineItemLabels = QtyStepperLabels & {
+  /** Translated fallback when a line has no resolvable title (never the listing id). */
+  untitledItem?: string;
   unitPrice: string;
   unitPriceMeasured: string;
   saleUnits: SaleUnitLabels;
@@ -60,24 +64,17 @@ export function CartLineItem({
   onRemove,
   onSaveForLater,
 }: CartLineItemProps) {
-  const title = item.title_override ?? item.listing_id;
+  const title = cartLineTitle(item, labels.untitledItem);
   const outOfStock = isOutOfStock(notice);
   const offerDiscount =
     typeof item.list_line_total_ngwee === "number"
       ? Math.max(0, item.list_line_total_ngwee - item.line_total_ngwee)
       : 0;
-  const maxQty =
-    notice?.kind === "qty_reduced" ? (notice.available_qty ?? item.qty) : 99;
+  const maxQty = notice?.kind === "qty_reduced" ? (notice.available_qty ?? item.qty) : 99;
   const saleUnit = resolveSaleUnit(item.sale_unit);
   const minimum = resolveMinimumSteps(item.min_steps);
   const formatQuantity = (qty: number) =>
-    formatListingQuantity(
-      qty,
-      saleUnit,
-      item.unit_step_milli,
-      locale,
-      labels.saleUnits,
-    );
+    formatListingQuantity(qty, saleUnit, item.unit_step_milli, locale, labels.saleUnits);
   const unitPriceLabel =
     saleUnit === "each"
       ? labels.unitPrice.replace("{amount}", formatK(item.unit_price_ngwee))
@@ -85,12 +82,7 @@ export function CartLineItem({
           .replace("{amount}", formatK(item.unit_price_ngwee))
           .replace(
             "{quantity}",
-            formatSaleIncrement(
-              saleUnit,
-              item.unit_step_milli,
-              locale,
-              labels.saleUnits,
-            ),
+            formatSaleIncrement(saleUnit, item.unit_step_milli, locale, labels.saleUnits),
           );
   const leadTimeLabel = formatMadeToOrderLeadTime(
     item.fulfilment_mode,
@@ -123,18 +115,12 @@ export function CartLineItem({
             </p>
           ) : null}
           {item.is_rfq_quote ? (
-            <p
-              className="text-xs font-medium text-primary"
-              data-testid="cart-line-rfq-badge"
-            >
+            <p className="text-xs font-medium text-primary" data-testid="cart-line-rfq-badge">
               {labels.quotedPriceBadge}
             </p>
           ) : null}
           {outOfStock ? (
-            <p
-              className="text-sm font-medium text-danger"
-              data-testid="cart-line-oos"
-            >
+            <p className="text-sm font-medium text-danger" data-testid="cart-line-oos">
               {labels.outOfStockLine}
             </p>
           ) : null}
@@ -149,10 +135,7 @@ export function CartLineItem({
             </s>
           ) : null}
           <p className="m-0 font-mono text-sm font-semibold text-text">
-            {labels.lineTotal.replace(
-              "{amount}",
-              formatK(item.line_total_ngwee),
-            )}
+            {labels.lineTotal.replace("{amount}", formatK(item.line_total_ngwee))}
           </p>
           {offerDiscount > 0 && labels.offerSaving ? (
             <p
