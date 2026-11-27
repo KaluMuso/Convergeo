@@ -1,5 +1,6 @@
 "use client";
 
+import { glassClass } from "@vergeo/ui/src/glass";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -33,7 +34,7 @@ export function ConfirmDiffDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-[2px] sm:items-center"
       role="presentation"
       onClick={onCancel}
     >
@@ -41,7 +42,7 @@ export function ConfirmDiffDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-diff-title"
-        className="w-full max-w-md rounded-lg border border-border bg-surface p-4 shadow-lg"
+        className={`${glassClass("overlay")} w-full max-w-md rounded-lg p-4`}
         onClick={(event) => event.stopPropagation()}
       >
         <h3 id="confirm-diff-title" className="font-serif text-lg text-text">
