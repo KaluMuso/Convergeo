@@ -3,6 +3,7 @@
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
+import { glassClass } from "@vergeo/ui/src/glass";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
@@ -189,7 +190,7 @@ export function OrderCard({ locale, order, onUpdated, onError }: OrderCardProps)
           }}
         >
           <div
-            className="w-full max-w-[360px] rounded-t-2xl bg-surface p-4 shadow-xl"
+            className={`w-full max-w-[360px] rounded-t-2xl p-4 ${glassClass("overlay")}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby={`order-sheet-${order.id}`}
