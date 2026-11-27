@@ -552,6 +552,117 @@ export type Database = {
           },
         ]
       }
+      ask_answer_findings: {
+        Row: {
+          answer_id: string
+          created_at: string
+          details: Json
+          entity_id: string | null
+          entity_kind: string | null
+          id: string
+          reason: string
+          rule: string
+          severity: string
+          vendor_id: string | null
+        }
+        Insert: {
+          answer_id: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_kind?: string | null
+          id?: string
+          reason: string
+          rule: string
+          severity: string
+          vendor_id?: string | null
+        }
+        Update: {
+          answer_id?: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_kind?: string | null
+          id?: string
+          reason?: string
+          rule?: string
+          severity?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ask_answer_findings_answer_id_fkey"
+            columns: ["answer_id"]
+            isOneToOne: false
+            referencedRelation: "ask_answers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ask_answer_findings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ask_answers: {
+        Row: {
+          answer_text: string
+          audit_severity: string | null
+          audit_status: string
+          audited_at: string | null
+          cached: boolean
+          citations: Json
+          created_at: string
+          guest_key: string | null
+          id: string
+          intent: string | null
+          locale: string | null
+          model: string | null
+          query: string
+          refused: boolean
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          answer_text: string
+          audit_severity?: string | null
+          audit_status?: string
+          audited_at?: string | null
+          cached?: boolean
+          citations?: Json
+          created_at?: string
+          guest_key?: string | null
+          id?: string
+          intent?: string | null
+          locale?: string | null
+          model?: string | null
+          query: string
+          refused?: boolean
+          source: string
+          user_id?: string | null
+        }
+        Update: {
+          answer_text?: string
+          audit_severity?: string | null
+          audit_status?: string
+          audited_at?: string | null
+          cached?: boolean
+          citations?: Json
+          created_at?: string
+          guest_key?: string | null
+          id?: string
+          intent?: string | null
+          locale?: string | null
+          model?: string | null
+          query?: string
+          refused?: boolean
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ask_cache: {
         Row: {
           answer: Json
