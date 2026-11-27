@@ -77,6 +77,11 @@ export type AdCreative = {
   cta_href: string;
   external: boolean;
   sponsored: boolean;
+  /** Customer route of the promoted item (product/service/event/listing); null for house/external ads. */
+  target_href?: string | null;
+  /** Customer route of the advertising vendor's storefront (`/v/{slug}`). */
+  vendor_href?: string | null;
+  vendor_name?: string | null;
 };
 
 export type FeedSectionType =

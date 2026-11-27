@@ -7,8 +7,9 @@ import {
   mergeSessionCookies,
   updateSession,
 } from "@vergeo/auth/middleware";
-import { buildConnectSrc, CSP_ORIGINS } from "@vergeo/config/security-headers";
+import { buildConnectSrc, CSP_ORIGINS, cspSha256Source } from "@vergeo/config/security-headers";
 import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
+import { THEME_SCRIPT } from "@vergeo/ui/src/theme-script";
 import { type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
 
@@ -22,7 +23,17 @@ const intlMiddleware = createMiddleware({
 
 const NONCE = `'nonce-${CSP_NONCE_PLACEHOLDER}'`;
 
-function buildReportOnlyCsp(lenco: boolean): string {
+// The pre-paint theme bootstrap is a static inline script (identical bytes on every
+// request), so it is allowed by hash rather than nonce: no policy weakening, and ISR
+// pages stay static. Computed once per isolate.
+let themeScriptHash: Promise<string> | undefined;
+function getThemeScriptHash(): Promise<string> {
+  themeScriptHash ??= cspSha256Source(THEME_SCRIPT);
+  return themeScriptHash;
+}
+
+export function buildReportOnlyCsp(lenco: boolean, inlineScriptHashes: string[] = []): string {
+  const hashes = inlineScriptHashes.length > 0 ? ` ${inlineScriptHashes.join(" ")}` : "";
   const scriptExtra = lenco ? ` ${CSP_ORIGINS.lencoWidget}` : "";
   const frameExtra = lenco ? ` ${CSP_ORIGINS.lencoWidget}` : "";
   const connectExtra = lenco ? ` ${CSP_ORIGINS.lencoWidget} ${CSP_ORIGINS.lencoApi}` : "";
@@ -34,7 +45,7 @@ function buildReportOnlyCsp(lenco: boolean): string {
   // log a console warning. Enforced CSP (next.config) still upgrades in production.
   const base = [
     "default-src 'self'",
-    `script-src 'self' 'strict-dynamic' ${NONCE} https: ${CSP_ORIGINS.ga4Script}${scriptExtra}`,
+    `script-src 'self' 'strict-dynamic' ${NONCE}${hashes} https: ${CSP_ORIGINS.ga4Script}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: ${CSP_ORIGINS.cloudinary} ${CSP_ORIGINS.ga4Img}`,
     "font-src 'self' data:",
@@ -78,7 +89,7 @@ export default async function middleware(request: NextRequest) {
   return applyReportOnlyCspNonce(
     request,
     response,
-    buildReportOnlyCsp(isCheckoutCardRoute(request.nextUrl.pathname)),
+    buildReportOnlyCsp(isCheckoutCardRoute(request.nextUrl.pathname), [await getThemeScriptHash()]),
   );
 }
 

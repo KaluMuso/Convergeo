@@ -6,7 +6,7 @@ vi.mock("next-intl/middleware", () => ({
   default: vi.fn(() => vi.fn(() => NextResponse.next())),
 }));
 
-import { config, isCheckoutCardRoute } from "./middleware";
+import { buildReportOnlyCsp, config, isCheckoutCardRoute } from "./middleware";
 
 describe("customer middleware matcher", () => {
   it("keeps the CSP report path and the broadened locale-redirect matcher", () => {
@@ -50,5 +50,25 @@ describe("customer CSP route gates", () => {
     expect(isCheckoutCardRoute("/en/checkout")).toBe(false);
     expect(isCheckoutCardRoute("/en/checkout/card/pay_123/extra")).toBe(false);
     expect(isCheckoutCardRoute("/zz/checkout/card/pay_123")).toBe(false);
+  });
+});
+
+describe("customer report-only CSP inline script allowance", () => {
+  it("adds the theme-script hash next to the nonce without weakening script-src", () => {
+    const csp = buildReportOnlyCsp(false, ["'sha256-abc='"]);
+    const scriptSrc = csp.split("; ").find((d) => d.startsWith("script-src")) ?? "";
+    expect(scriptSrc).toContain("'strict-dynamic'");
+    expect(scriptSrc).toContain("'nonce-{{CSP_NONCE}}'");
+    expect(scriptSrc).toContain("'sha256-abc='");
+    expect(scriptSrc).not.toContain("unsafe-inline");
+    expect(scriptSrc).not.toContain("unsafe-eval");
+  });
+
+  it("matches the sha256 of THEME_SCRIPT", async () => {
+    const { cspSha256Source } = await import("@vergeo/config/security-headers");
+    const { THEME_SCRIPT } = await import("@vergeo/ui/src/theme-script");
+    const { createHash } = await import("node:crypto");
+    const expected = `'sha256-${createHash("sha256").update(THEME_SCRIPT).digest("base64")}'`;
+    expect(await cspSha256Source(THEME_SCRIPT)).toBe(expected);
   });
 });
