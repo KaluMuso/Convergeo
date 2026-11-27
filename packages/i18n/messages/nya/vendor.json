@@ -1875,7 +1875,8 @@
       "not_editable": "This event can no longer be edited.",
       "invalid_transition": "That action is not available for this event.",
       "recurrenceRuleRequired": "⚠ Recurring events need a repeat rule and a timezone.",
-      "recurrenceSeedRequired": "⚠ A recurring series needs one starting date. Future dates are created for you."
+      "recurrenceSeedRequired": "⚠ A recurring series needs one starting date. Future dates are created for you.",
+      "invalidArchetypeDetails": "Some details are not valid. Check the page style section."
     },
     "gate": {
       "title": "⚠ Events are for verified organisers",
@@ -2070,6 +2071,136 @@
         "highValue": "⚠ This event needs a verification call before it can be published. Contact Convergeo support.",
         "generic": "⚠ Something went wrong. Try again.",
         "pickOrganiser": "⚠ Choose an organiser first."
+      }
+    },
+    "archetype": {
+      "heading": "Page style details",
+      "help": "Extra details shown on your event page. Everything here is optional; tickets and payments are not affected.",
+      "styleLabel": "Page style",
+      "styleHelp": "Controls the layout of your public event page.",
+      "auto": "Automatic ({name})",
+      "none": "Not set",
+      "remove": "Remove",
+      "onePerLine": "One per line",
+      "add": {
+        "sponsors": "Add sponsor",
+        "faqs": "Add question",
+        "lineup": "Add act",
+        "agenda": "Add item",
+        "speakers": "Add speaker",
+        "activities": "Add activity",
+        "age_groups": "Add age group",
+        "menu_sections": "Add menu section",
+        "menu_item": "Add dish"
+      },
+      "sections": {
+        "sponsors": "Sponsors",
+        "faqs": "Questions and policies",
+        "lineup": "Line-up",
+        "agenda": "Programme",
+        "speakers": "Speakers and hosts",
+        "activities": "Activities",
+        "age_groups": "Age groups",
+        "menu_sections": "Menu",
+        "stages": "Stages",
+        "languages": "Languages",
+        "bring_list": "What to bring"
+      },
+      "fields": {
+        "dress_code": "Dress code",
+        "age_policy": "Age policy",
+        "doors_open": "Doors open",
+        "merch_note": "Merchandise note",
+        "denomination": "Denomination",
+        "donation_note": "Donation note",
+        "livestream_url": "Livestream link (https)",
+        "family_bundle_note": "Family ticket note",
+        "seating_note": "Seating note",
+        "reservation_note": "Reservation note",
+        "host_name": "Host or chef",
+        "host_names": "Hosts",
+        "occasion": "Occasion",
+        "rsvp_note": "RSVP note",
+        "gift_note": "Gift note",
+        "sponsors": {
+          "name": "Name",
+          "logo": "Logo (Cloudinary id or https image)",
+          "link_url": "Link (https)",
+          "tagline": "Tagline"
+        },
+        "faqs": {
+          "question": "Question",
+          "answer": "Answer"
+        },
+        "lineup": {
+          "name": "Name",
+          "role": "Role",
+          "stage": "Stage",
+          "slot": "Slot time",
+          "image": "Photo (Cloudinary id or https)",
+          "bio": "Short bio"
+        },
+        "agenda": {
+          "time": "Time",
+          "title": "Title",
+          "speaker": "Speaker",
+          "notes": "Notes"
+        },
+        "speakers": {
+          "name": "Name",
+          "role": "Role",
+          "image": "Photo (Cloudinary id or https)",
+          "bio": "Short bio"
+        },
+        "activities": {
+          "name": "Name",
+          "age_group": "Age group",
+          "time": "Time",
+          "area": "Area"
+        },
+        "age_groups": {
+          "label": "Label",
+          "min_age": "Minimum age",
+          "max_age": "Maximum age (optional)"
+        },
+        "menu_sections": {
+          "title": "Section title",
+          "name": "Dish name",
+          "description": "Description",
+          "price": "Price (K)",
+          "priceHelp": "Display only. Tickets carry the real price.",
+          "dietary": "Dietary tags (vegetarian, vegan, halal, gluten_free, spicy)"
+        }
+      },
+      "options": {
+        "age_policy": {
+          "all_ages": "All ages welcome",
+          "guardian_under_12": "Under 12s with a guardian",
+          "16_plus": "16 and over",
+          "18_plus": "18 and over"
+        },
+        "role": {
+          "headliner": "Headliner",
+          "support": "Support act",
+          "dj": "DJ",
+          "mc": "MC",
+          "guest": "Special guest"
+        }
+      },
+      "errors": {
+        "requiredField": "Fill in the required fields.",
+        "invalidTime": "Use the 24-hour format, for example 18:30.",
+        "invalidUrl": "Links must start with https://.",
+        "invalidPrice": "Enter a price like 120 or 120.50.",
+        "invalidNumber": "Ages must be whole numbers.",
+        "tooMany": "You have added too many items in one section."
+      },
+      "restaurantTables": "Tables: create one ticket type per table size (for example Table for 2, Table for 4) with its own ticket cap. There is no seat map.",
+      "sponsorReviewNote": "Sponsors show publicly only after Vergeo5 approves them. Editing a sponsor sends it back for review.",
+      "sponsorStatus": {
+        "pending": "Awaiting approval",
+        "approved": "Approved",
+        "rejected": "Not approved"
       }
     }
   },
