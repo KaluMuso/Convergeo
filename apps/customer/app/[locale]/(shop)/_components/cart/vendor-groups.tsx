@@ -31,6 +31,8 @@ import {
   type MiniCartLabels,
 } from "./mini-cart-drawer";
 
+import { cartLineTitle } from "@/lib/cart-line-title";
+
 export type VendorGroupLabels = {
   vendorGroup: string;
   vendorSubtotal: string;
@@ -514,7 +516,7 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
   const itemCount = getCartItemCount(cart);
   const titleByListingId =
     cart?.items.reduce<Record<string, string>>((acc, item) => {
-      acc[item.listing_id] = item.title_override ?? item.listing_id;
+      acc[item.listing_id] = cartLineTitle(item, tCheckout("cart.untitledItem"));
       return acc;
     }, {}) ?? {};
 

@@ -36,6 +36,8 @@ import {
 } from "./cart-store";
 import { VariantLineLabel } from "./variant-line-label";
 
+import { cartLineTitle } from "@/lib/cart-line-title";
+
 export {
   CartNavTrigger,
   closeMiniCart,
@@ -1090,7 +1092,7 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
                   <li key={item.id} className="flex items-start justify-between gap-3 text-sm">
                     <span className="min-w-0 text-text">
                       <span className="block truncate">
-                        {item.title_override ?? item.listing_id}
+                        {cartLineTitle(item, tCheckout("cart.untitledItem"))}
                       </span>
                       <VariantLineLabel
                         options={item.variant_options}
