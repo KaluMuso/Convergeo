@@ -24,11 +24,17 @@ afterEach(() => {
   search = "q=phone";
 });
 
+async function mount(ui: React.ReactElement) {
+  const result = render(ui);
+  await screen.findByTestId("filter-boxes");
+  return result;
+}
+
 const categories = [{ path: "electronics", label: "Electronics" }];
 
 describe("SearchFilterPanel (filter boxes)", () => {
-  it("renders titled boxes, with counts beside category chips", () => {
-    render(
+  it("renders titled boxes, with counts beside category chips", async () => {
+    await mount(
       <SearchFilterPanel
         labels={testFilterLabels}
         categories={categories}
@@ -47,7 +53,7 @@ describe("SearchFilterPanel (filter boxes)", () => {
   it("toggles URL params instantly and resets pagination", async () => {
     search = "q=phone&page=3";
     const user = userEvent.setup();
-    render(<SearchFilterPanel labels={testFilterLabels} categories={categories} />);
+    await mount(<SearchFilterPanel labels={testFilterLabels} categories={categories} />);
     await user.click(screen.getByText("Verified sellers"));
     expect(push).toHaveBeenCalledWith("/en/search?q=phone&verified=1", { scroll: false });
     await user.click(screen.getByText("In stock"));
@@ -58,7 +64,7 @@ describe("SearchFilterPanel (filter boxes)", () => {
 
   it("applies a price band and category chip", async () => {
     const user = userEvent.setup();
-    render(<SearchFilterPanel labels={testFilterLabels} categories={categories} />);
+    await mount(<SearchFilterPanel labels={testFilterLabels} categories={categories} />);
     await user.click(screen.getByText("K500–K2,000"));
     expect(push).toHaveBeenCalledWith("/en/search?q=phone&min_price=500&max_price=2000", {
       scroll: false,
@@ -72,7 +78,7 @@ describe("SearchFilterPanel (filter boxes)", () => {
   it("marks selected chips from the URL and clears filters but keeps the query", async () => {
     search = "q=phone&verified=1&deals=1&min_price=500&max_price=2000";
     const user = userEvent.setup();
-    render(<SearchFilterPanel labels={testFilterLabels} categories={categories} />);
+    await mount(<SearchFilterPanel labels={testFilterLabels} categories={categories} />);
     const verified = screen.getByText("Verified sellers").closest("a")!;
     expect(verified).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("K500–K2,000").closest("a")).toHaveAttribute("aria-pressed", "true");
@@ -82,14 +88,14 @@ describe("SearchFilterPanel (filter boxes)", () => {
 
   it("submits custom min/max price", async () => {
     const user = userEvent.setup();
-    render(<SearchFilterPanel labels={testFilterLabels} categories={[]} />);
+    await mount(<SearchFilterPanel labels={testFilterLabels} categories={[]} />);
     await user.type(screen.getByLabelText("Min"), "100");
     await user.click(screen.getByText("Set price"));
     expect(push).toHaveBeenCalledWith("/en/search?q=phone&min_price=100", { scroll: false });
   });
 
-  it("hides price boxes for non-commerce tabs", () => {
-    render(
+  it("hides price boxes for non-commerce tabs", async () => {
+    await mount(
       <SearchFilterPanel labels={testFilterLabels} categories={[]} showPriceFilters={false} />,
     );
     expect(screen.queryByText("K500–K2,000")).toBeNull();

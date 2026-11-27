@@ -1,8 +1,12 @@
 "use client";
 
-import { FilterBoxes, type FilterBoxesLabels } from "../filters/filter-boxes";
+import dynamic from "next/dynamic";
 
 import type { SearchFilterState } from "./search-filters";
+import type { FilterBoxesLabels } from "../filters/filter-boxes";
+
+/** Kept off the route's first-load JS (150 kB budget); server-rendered, hydrated on demand. */
+const FilterBoxes = dynamic(() => import("../filters/filter-boxes").then((mod) => mod.FilterBoxes));
 
 export type SearchCategoryOption = {
   path: string;

@@ -1,9 +1,13 @@
 "use client";
 
-import { FilterBoxes, type FilterBoxesLabels, type FilterCounts } from "../filters/filter-boxes";
+import dynamic from "next/dynamic";
 
 import type { PlpFilterState } from "./plp-filters";
+import type { FilterBoxesLabels, FilterCounts } from "../filters/filter-boxes";
 import type { PriceBandId } from "../filters/filter-hrefs";
+
+/** Kept off the route's first-load JS (150 kB budget); server-rendered, hydrated on demand. */
+const FilterBoxes = dynamic(() => import("../filters/filter-boxes").then((mod) => mod.FilterBoxes));
 
 export type { PlpFilterState } from "./plp-filters";
 export { decodePlpFilters, encodePlpFilters } from "./plp-filters";

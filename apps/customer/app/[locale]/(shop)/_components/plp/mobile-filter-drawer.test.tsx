@@ -40,7 +40,7 @@ describe("MobileFilterDrawer", () => {
     await user.click(screen.getByTestId("plp-open-filters"));
     expect(screen.getByTestId("plp-filter-drawer")).toBeInTheDocument();
     expect(screen.getByTestId("plp-facet-panel")).toBeInTheDocument();
-    expect(screen.getAllByTestId("filter-box").length).toBeGreaterThan(3);
+    expect((await screen.findAllByTestId("filter-box")).length).toBeGreaterThan(3);
     expect(screen.getByText("Used")).toBeInTheDocument();
   });
 
