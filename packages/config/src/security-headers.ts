@@ -29,6 +29,15 @@ export const CSP_ORIGINS = {
 export const PERMISSIONS_POLICY_DEFAULT =
   "camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=()";
 
+/**
+ * Customer storefront: the Ask Vergeo mic (Web Speech API) needs the `microphone`
+ * feature for the page's own origin. `microphone=()` blocks it outright and Chrome
+ * reports `not-allowed` even though `webkitSpeechRecognition` exists. Granted to `self`
+ * only (never to embedded third parties); every other powerful feature stays denied.
+ */
+export const PERMISSIONS_POLICY_CUSTOMER =
+  "camera=(), microphone=(self), geolocation=(), browsing-topics=(), payment=(), usb=()";
+
 export const PERMISSIONS_POLICY_ADMIN =
   "camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=(), " +
   "accelerometer=(), gyroscope=(), magnetometer=(), fullscreen=(self)";
