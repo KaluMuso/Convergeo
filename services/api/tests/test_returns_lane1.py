@@ -611,3 +611,37 @@ def test_concurrent_contest_exactly_one_wins_no_duplicate_dispute() -> None:
     successes = [result for result in results if result is not None]
     assert len(successes) == 1
     assert len(fake.tables["disputes"].rows) == 1
+
+
+class _RefundRowsClient:
+    """Minimal chain stub: .client.table().select().eq().execute().data."""
+
+    def __init__(self, rows: list[dict[str, object]]) -> None:
+        self._rows = rows
+        self.client = self
+
+    def table(self, _name: str) -> _RefundRowsClient:
+        return self
+
+    def select(self, *_a: object) -> _RefundRowsClient:
+        return self
+
+    def eq(self, *_a: object) -> _RefundRowsClient:
+        return self
+
+    def execute(self) -> object:
+        return type("R", (), {"data": self._rows})()
+
+
+def test_delivery_already_refunded_only_for_other_active_refunds() -> None:
+    from app.services.returns.lane1 import _delivery_already_refunded
+
+    own = "return-b-refund"
+    none = _RefundRowsClient([])
+    assert not _delivery_already_refunded(none, order_id="o1", own_source_key=own)  # type: ignore[arg-type]
+    first = _RefundRowsClient([{"source_key": "return-a-refund", "status": "completed"}])
+    assert _delivery_already_refunded(first, order_id="o1", own_source_key=own)  # type: ignore[arg-type]
+    failed = _RefundRowsClient([{"source_key": "return-a-refund", "status": "failed"}])
+    assert not _delivery_already_refunded(failed, order_id="o1", own_source_key=own)  # type: ignore[arg-type]
+    replay = _RefundRowsClient([{"source_key": own, "status": "completed"}])
+    assert not _delivery_already_refunded(replay, order_id="o1", own_source_key=own)  # type: ignore[arg-type]

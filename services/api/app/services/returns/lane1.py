@@ -12,6 +12,7 @@ from app.services.branches.context import scope_owner_vendor_query
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.notifications.dedupe import enqueue_outbox_row
+from app.services.refunds.constants import ACTIVE_REFUND_STATUSES
 from app.services.refunds.execute import ensure_refund_allowed, execute_refund
 from app.services.refunds.math import compute_lane1_refund
 
@@ -95,6 +96,26 @@ def _load_order_item_context(
     if row is None:
         raise AppError(code="not_found", message="Order item not found", http_status=404)
     return row
+
+
+def _delivery_already_refunded(
+    service_client: ServiceRoleClient, *, order_id: str, own_source_key: str
+) -> bool:
+    """True when another active refund on this order already carries the delivery fee.
+
+    Lane 1 refunds the full delivery fee with the first returned item; later item
+    returns must not refund it again (the cumulative refund cap would reject them).
+    """
+    rows = (
+        service_client.client.table("refunds")
+        .select("source_key, status")
+        .eq("order_id", order_id)
+        .execute()
+    ).data or []
+    return any(
+        str(r.get("status")) in ACTIVE_REFUND_STATUSES and r.get("source_key") != own_source_key
+        for r in rows
+    )
 
 
 def _load_order_row(service_client: ServiceRoleClient, order_id: str) -> dict[str, Any]:
@@ -358,8 +379,9 @@ def _load_vendor_for_owner(service_client: ServiceRoleClient, owner_user_id: str
     response = (
         scope_owner_vendor_query(
             service_client.client.table("vendors")
-        .select("id, owner_user_id")
-        .eq("owner_user_id", owner_user_id))
+            .select("id, owner_user_id")
+            .eq("owner_user_id", owner_user_id)
+        )
         .maybe_single()
         .execute()
     )
@@ -475,6 +497,14 @@ def vendor_accept_lane1_return(
         # preview) rather than the whole order, so a single-item return on a
         # multi-item order no longer refunds the items the customer keeps.
         item_ngwee_override=_item_ngwee(item),
+        # Delivery is refunded once per order: zero it when an earlier refund took it.
+        delivery_fee_ngwee_override=(
+            0
+            if _delivery_already_refunded(
+                service_client, order_id=order_id, own_source_key=f"return-{return_id}-refund"
+            )
+            else None
+        ),
     )
 
     return_shipping_ngwee = _load_return_shipping_ngwee(service_client, order=order)
