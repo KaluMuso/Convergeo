@@ -28,6 +28,13 @@ SERVICE_CATEGORIES = frozenset(
         "tech_services",
         "cleaning",
         "tailoring",
+        # Six service verticals from service archetypes (#984 / VERTICAL_ARCHETYPE).
+        "lodging",
+        "property",
+        "fitness",
+        "rentals",
+        "family-fun",
+        "staffing",
     }
 )
 CANCELABLE_STATUSES = frozenset({"open", "quoted"})
