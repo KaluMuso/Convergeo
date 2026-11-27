@@ -1,5 +1,6 @@
 "use client";
 
+import { glassClass } from "@vergeo/ui/src/glass";
 import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,7 +39,9 @@ export function VendorShell({ locale, capabilities, children }: VendorShellProps
   if (isOnboarding) {
     return (
       <div className="flex min-h-dvh flex-col">
-        <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-2">
+        <header
+          className={`sticky top-0 z-40 flex items-center justify-between px-4 py-2 ${glassClass("bar")}`}
+        >
           <Link
             href={`/${locale}`}
             className="font-display text-base font-semibold text-display-ink"
@@ -59,7 +62,9 @@ export function VendorShell({ locale, capabilities, children }: VendorShellProps
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-2">
+      <header
+        className={`sticky top-0 z-40 flex items-center justify-between px-4 py-2 ${glassClass("bar")}`}
+      >
         <Link href={`/${locale}`} className="font-display text-base font-semibold text-display-ink">
           {tCommon("app.name")}
         </Link>

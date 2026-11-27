@@ -241,7 +241,14 @@ class TestConcurrentSubmit:
             "SELECT status FROM public.checkout_groups "
             f"WHERE id IN ('{session_ids[0]}', '{session_ids[1]}') ORDER BY status;"
         )
-        assert statuses.ok and statuses.rows == ["completed", "pending"]
+        # Prepaid (momo) groups stay pending until payment succeeds (#940);
+        # exactly one of the two sessions holds the placed orders.
+        assert statuses.ok and statuses.rows == ["pending", "pending"]
+        ordered = db.run(
+            "SELECT count(DISTINCT checkout_group_id)::text FROM public.orders "
+            f"WHERE checkout_group_id IN ('{session_ids[0]}', '{session_ids[1]}');"
+        )
+        assert ordered.ok and ordered.rows == ["1"]
 
     def test_legacy_made_to_order_does_not_require_stock_hold_or_capacity(
         self, db: PgConn, db_url_env: None, pg_service: SupabaseServiceClient
