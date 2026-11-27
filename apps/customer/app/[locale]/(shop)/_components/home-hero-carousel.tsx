@@ -38,6 +38,65 @@ function HeroIllustration({ priority }: { priority: boolean }) {
   );
 }
 
+/**
+ * Sponsored slide CTAs: the promoted item AND the advertising vendor's storefront.
+ * Placements without resolved links (house/external ads) keep the admin-set `cta_href`.
+ */
+function SponsoredCtas({
+  ad,
+  locale,
+  sponsoredLabel,
+}: {
+  ad: AdCreative;
+  locale: string;
+  sponsoredLabel: string;
+}) {
+  const t = useTranslations("catalog");
+  const itemHref = ad.target_href ?? null;
+  const vendorHref = ad.vendor_href ?? null;
+  const primaryHref = itemHref ?? vendorHref;
+  const label = ad.cta_label ?? t("home.feed.adCta");
+
+  if (!primaryHref) {
+    return (
+      <LinkButton
+        href={localizeHref(ad.cta_href, locale)}
+        variant="primary"
+        LinkComponent={ad.external ? undefined : Link}
+        aria-label={`${sponsoredLabel}: ${ad.cta_label ?? ad.headline}`}
+        {...(ad.external ? { target: "_blank", rel: "sponsored noopener noreferrer" } : {})}
+      >
+        {label}
+      </LinkButton>
+    );
+  }
+
+  return (
+    <>
+      <LinkButton
+        href={localizeHref(primaryHref, locale)}
+        variant="primary"
+        LinkComponent={Link}
+        data-testid="hero-sponsored-item-cta"
+        aria-label={`${sponsoredLabel}: ${ad.cta_label ?? ad.headline}`}
+      >
+        {label}
+      </LinkButton>
+      {itemHref && vendorHref ? (
+        <Link
+          href={localizeHref(vendorHref, locale)}
+          data-testid="hero-sponsored-vendor-cta"
+          className={HERO_SECONDARY_CTA}
+        >
+          {t("home.feed.visitVendor", {
+            vendor: ad.vendor_name ?? ad.advertiser_name,
+          })}
+        </Link>
+      ) : null}
+    </>
+  );
+}
+
 type HomeHeroCarouselProps = {
   locale: string;
   brandName: string;
@@ -122,15 +181,7 @@ export function HomeHeroCarousel({
       ),
       cta: (
         <AdTracker placementId={ad.placement_id}>
-          <LinkButton
-            href={localizeHref(ad.cta_href, locale)}
-            variant="primary"
-            LinkComponent={ad.external ? undefined : Link}
-            aria-label={`${sponsoredLabel}: ${ad.cta_label ?? ad.headline}`}
-            {...(ad.external ? { target: "_blank", rel: "sponsored noopener noreferrer" } : {})}
-          >
-            {ad.cta_label ?? t("home.feed.adCta")}
-          </LinkButton>
+          <SponsoredCtas ad={ad} locale={locale} sponsoredLabel={sponsoredLabel} />
         </AdTracker>
       ),
     }));
@@ -153,7 +204,7 @@ export function HomeHeroCarousel({
       slides={slides}
       labels={labels}
       headingId="home-hero-heading"
-      className="motion-rise relative -mx-4 overflow-hidden bg-panel sm:mx-0 sm:rounded-xl"
+      className="motion-rise relative bg-panel"
     />
   );
 }

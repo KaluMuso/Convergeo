@@ -438,6 +438,12 @@ class AdCreativeOut(BaseModel):
     cta_href: str
     external: bool
     sponsored: bool = True
+    # Customer routes (``/p/{slug}``, ``/s/{id}``, ``/e/{slug}``, ``/l/{id}``, ``/v/{slug}``)
+    # for the promoted item and the advertising vendor's storefront. Null for house/external
+    # ads (and whenever the lookup fails) so clients fall back to ``cta_href``.
+    target_href: str | None = None
+    vendor_href: str | None = None
+    vendor_name: str | None = None
 
 
 class AdEvent(BaseModel):
