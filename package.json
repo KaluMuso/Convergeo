@@ -40,7 +40,7 @@
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.73.0",
     "yauzl": "3.4.0",
-    "puppeteer": "25.18.1",
+    "puppeteer": "25.17.0",
     "lint-staged": "^17.6.2"
   },
   "pnpm": {
