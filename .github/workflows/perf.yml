@@ -349,6 +349,23 @@ jobs:
               fi
             done
           done
+          # Checkout is the only measured route that waits on a live cart API call
+          # (guest cart -> /api/ci-perf/cart -> Python API). Curl on the HTML above never
+          # touches it, so the first measured checkout load paid the cold cart path inside
+          # Lighthouse's page-load window. Exercise the same seed + read path first.
+          jar="$(mktemp)"
+          seed=$(curl -s -o /dev/null -w '%{http_code}' -c "$jar" -b "$jar" \
+            -X POST http://localhost:3000/api/ci-perf/cart/items \
+            -H 'Content-Type: application/json' \
+            -H "Idempotency-Key: ci-perf-warm-$(date +%s%N)" \
+            -H 'Origin: http://localhost:3000' \
+            --data '{"listing_id":"b1000000-0000-0000-0000-000000000001","qty":1}')
+          echo "cart warmup seed -> ${seed}"
+          for round in 1 2; do
+            code=$(curl -s -o /dev/null -w '%{http_code} %{time_total}s' -b "$jar" http://localhost:3000/api/ci-perf/cart)
+            echo "cart warmup read ${round} -> ${code}"
+          done
+          rm -f "$jar"
 
       - name: Lighthouse performance assertions (blocking — see lighthouserc.json)
         # Same five URL policies, three runs, median perf/LCP and checkout SEO warning.
