@@ -27,7 +27,7 @@ JS download, hydrate, permissions round trip, data round trip in sequence.
 | Middleware                                                                       | 203 kB                                                                                                                                     |
 | HTML per page                                                                    | ~159 kB raw / ~47 kB gzip, of which ~36 kB gzip is the full `admin` (128 kB raw) + `services` message namespaces inlined on every document |
 | Layout chunk contents                                                            | Supabase client (`7348` 54 kB + `cfd9c9bb` 14 kB gz) is the largest single item after React/Next (46 + 53 kB)                              |
-| Routes with `generateMetadata`                                                   | 51 of 62 server pages before; all but login/reset/permission-denied/notifications after                                                    |
+| Routes with `generateMetadata`                                                   | 51 of 63 pages before; all but login, reset-password (x2), permission-denied and notifications (client page) after                         |
 | `loading.tsx` / `useOptimistic` / `next/dynamic` / `useSearchParams` in app code | 0 / 0 / 0 / 1 (login only)                                                                                                                 |
 
 Customer routes are held to 150 kB gz CI budget; admin has none. At ~190 kB it would fail the
