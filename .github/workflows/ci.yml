@@ -10,11 +10,14 @@ on:
     # every scheduled trigger; other jobs are unchanged and simply re-run green.
     - cron: "17 2 * * *"
 
-# Supersede a pull request's older run when it is pushed again. Pushes (master,
-# release), the nightly schedule and manual runs get a run-unique group, so they
-# are never cancelled and never replaced while queued.
+# Supersede a pull request's older run when it is pushed again. Master pushes
+# share one group without cancel-in-progress: the running master run always
+# finishes, and only the newest pushed SHA waits behind it (older waiting master
+# runs are superseded). Without this, a day of merges queued a full CI run per
+# commit and starved pull-request checks of runners for hours. The nightly
+# schedule and manual runs keep a run-unique group and are never replaced.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.ref) || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
