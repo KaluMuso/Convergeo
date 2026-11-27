@@ -13,6 +13,12 @@ from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.schemas.service_packages import PublicPackageOut, to_public
 from app.services.branches.context import scope_owner_vendor_query
+from app.services.categories.taxonomy import (
+    FALLBACK_SERVICE_SLUGS,
+    allowed_slugs,
+    expand_service_category,
+    public_service_verticals,
+)
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.listings.demo import fetch_demo_service_ids, has_non_genuine_media
 from app.services.moderation.prohibited import screen_listing
@@ -35,15 +41,11 @@ SERVICE_VERTICALS = (
     "tailoring",
 )
 
-ServiceVertical = Literal[
-    "beauty",
-    "food-catering",
-    "auto",
-    "printing-creative",
-    "home-services",
-    "tech-services",
-    "cleaning",
-    "tailoring",
+# Slug of a published, vendor-visible ``service_categories`` node. The eight original verticals
+# are seeded rows (20261127130000) so existing slugs are unchanged; validity is checked against
+# the DB at write time (see ``_assert_service_category``), not by a closed Literal.
+ServiceVertical = Annotated[
+    str, Field(min_length=2, max_length=80, pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")
 ]
 
 ServiceStatus = Literal["draft", "active", "paused"]
@@ -125,6 +127,9 @@ class ServiceBrowseResponse(StrictModel):
     items: list[ServiceBrowseItem]
     total: int
     verticals: list[str] = Field(default_factory=lambda: list(SERVICE_VERTICALS))
+    # Display names for admin-managed verticals (slug -> name); the customer app prefers its
+    # translated label for the original eight and falls back to this for new ones.
+    vertical_names: dict[str, str] = Field(default_factory=dict)
 
 
 class ServiceDetailResponse(StrictModel):
@@ -580,7 +585,10 @@ def build_browse_response(
         .eq("vendors.status", "active")
     )
     if category is not None:
-        query = query.eq("category", category)
+        family = expand_service_category(client, category)
+        query = (
+            query.eq("category", category) if len(family) == 1 else query.in_("category", family)
+        )
     area_filter = _sanitize_area(area)
     if area_filter is not None:
         query = query.ilike("service_area", f"%{area_filter}%")
@@ -600,7 +608,13 @@ def build_browse_response(
         )
         for row in public_rows
     ]
-    return ServiceBrowseResponse(items=items, total=len(items))
+    verticals, names = public_service_verticals(client)
+    return ServiceBrowseResponse(
+        items=items,
+        total=len(items),
+        verticals=verticals or list(SERVICE_VERTICALS),
+        vertical_names=names,
+    )
 
 
 def resolve_service_id(slug_or_id: str) -> str:
@@ -683,6 +697,23 @@ def list_vendor_services(
     return ServiceVendorListResponse(items=items)
 
 
+def _assert_service_category(
+    service_client: ServiceRoleClient, slug: str, *, current: str | None = None
+) -> None:
+    """Published, vendor-visible service category (existing category stays editable)."""
+    if current is not None and slug == current:
+        return
+    if slug not in allowed_slugs(
+        service_client.client, "service", "vendor", FALLBACK_SERVICE_SLUGS
+    ):
+        raise AppError(
+            code="invalid_category",
+            message="Unknown or unavailable service category",
+            http_status=422,
+            details={"field": "category", "message_key": "vendor.services.errors.invalidCategory"},
+        )
+
+
 @router.post("/vendor/services", response_model=ServiceMutationResponse)
 def create_vendor_service(
     payload: ServiceCreateRequest,
@@ -690,6 +721,7 @@ def create_vendor_service(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ServiceMutationResponse:
     vendor = _load_vendor_for_owner(service_client, user.id)
+    _assert_service_category(service_client, payload.category)
     title = _validated_title(payload.title)
     guard = screen_listing(title=title, description=payload.description, category=payload.category)
     if not guard.allowed:
@@ -738,6 +770,10 @@ def update_vendor_service(
 ) -> ServiceMutationResponse:
     _vendor, existing = _assert_vendor_owns_service(service_client, user.id, service_id)
     updates = payload.model_dump(exclude_unset=True)
+    if updates.get("category") is not None:
+        _assert_service_category(
+            service_client, str(updates["category"]), current=existing.get("category")
+        )
 
     # "This is free" toggle: switching on clears every price; a free service may
     # not be given a price (mirrors services_free_price_check).

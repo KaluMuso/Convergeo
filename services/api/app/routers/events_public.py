@@ -380,7 +380,7 @@ def _load_category_taxonomy(client: Any) -> tuple[dict[str, set[str]], list[str]
     try:
         response = (
             client.table("event_categories")
-            .select("slug, parent_slug, sort")
+            .select("slug, parent_slug, sort, status, show_in_customer")
             .order("sort")
             .execute()
         )
@@ -390,6 +390,10 @@ def _load_category_taxonomy(client: Any) -> tuple[dict[str, set[str]], list[str]
     for row in rows:
         slug = str(row.get("slug") or "")
         if not slug:
+            continue
+        # Admin-controlled taxonomy: blocked/draft or vendor-only categories are not offered
+        # as customer browse filters (their events stay listed under "all").
+        if row.get("status", "published") != "published" or row.get("show_in_customer") is False:
             continue
         family.setdefault(slug, set()).add(slug)
         parent = row.get("parent_slug")

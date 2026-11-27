@@ -245,6 +245,16 @@ _ADMIN_ROUTE_PERMISSION_SPEC: dict[tuple[str, str], str | tuple[str, ...]] = {
     # Admin catalog control (admin_catalog_control.py). Services mutations have no
     # rbac grant on purpose: the permission set only has ``services.read`` and a
     # new ``services.manage`` is left to the RBAC audit — admin/superadmin only.
+    # Admin category manager (admin_taxonomy.py). Event/service umbrellas are further
+    # gated in-handler (events.manage / unrestricted admin).
+    ("GET", "/admin/catalog/taxonomy"): "products.manage",
+    ("POST", "/admin/catalog/taxonomy"): "products.manage",
+    ("POST", "/admin/catalog/taxonomy/image/sign"): "products.manage",
+    ("POST", "/admin/catalog/taxonomy/{umbrella}/reorder"): "products.manage",
+    ("PATCH", "/admin/catalog/taxonomy/{umbrella}/{node_id}"): "products.manage",
+    ("POST", "/admin/catalog/taxonomy/{umbrella}/{node_id}/status"): "products.manage",
+    ("POST", "/admin/catalog/taxonomy/{umbrella}/{node_id}/move"): "products.manage",
+    ("DELETE", "/admin/catalog/taxonomy/{umbrella}/{node_id}"): "products.manage",
     ("GET", "/admin/catalog/listings"): "products.manage",
     ("POST", "/admin/catalog/listings/{entity_id}/moderate"): "products.manage",
     ("POST", "/admin/catalog/listings/{entity_id}/restore"): "products.manage",

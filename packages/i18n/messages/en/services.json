@@ -165,7 +165,8 @@
       "titleInvalid": "Enter a title with at least two characters.",
       "bookablePrice": "Set a fixed booking price greater than zero to allow direct booking.",
       "authRequired": "Sign in to manage your services.",
-      "freeHasPrice": "A free service cannot have a price."
+      "freeHasPrice": "A free service cannot have a price.",
+      "invalidCategory": "That category is not available. Pick another one."
     },
     "packages": {
       "title": "Packages",

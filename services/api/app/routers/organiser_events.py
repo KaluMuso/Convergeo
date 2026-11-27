@@ -13,6 +13,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.branches.context import scope_owner_vendor_query
+from app.services.categories.taxonomy import allowed_slugs
 from app.services.events.access import hash_access_code
 from app.services.events.cancellation import process_event_cancellation
 from app.services.events.recurrence import RecurrenceError, materialize_recurrence_instances
@@ -310,8 +311,18 @@ def _unique_event_slug(service_client: ServiceRoleClient, base_title: str) -> st
     return f"{base}-{uuid.uuid4().hex[:8]}"
 
 
-def _assert_known_category(slug: str) -> None:
-    if slug not in EVENT_CATEGORIES:
+def _assert_known_category(
+    service_client: ServiceRoleClient, slug: str, *, current: str | None = None
+) -> None:
+    """Accept published, vendor-visible taxonomy slugs (constants only if the DB is empty).
+
+    ``current`` is the event's existing category: re-saving an event whose category was
+    blocked afterwards must keep working (blocking never strands existing listings).
+    """
+    if current is not None and slug == current:
+        return
+    allowed = allowed_slugs(service_client.client, "event", "vendor", EVENT_CATEGORIES)
+    if slug not in allowed:
         raise AppError(
             code="invalid_category",
             message="Unknown event category",
@@ -952,7 +963,7 @@ async def create_organiser_event(
 ) -> EventMutationResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     _require_active_kyc_vendor(service_client, vendor)
-    _assert_known_category(body.category)
+    _assert_known_category(service_client, body.category)
     _validate_instance_time_order(body.instances)
     _validate_recurrence_payload(
         event_type=body.event_type,
@@ -1168,7 +1179,7 @@ async def update_organiser_event(
     if body.description is not None:
         updates["description"] = body.description.strip() or None
     if body.category is not None:
-        _assert_known_category(body.category)
+        _assert_known_category(service_client, body.category, current=_category_from_row(event_row))
         updates["category_slug"] = body.category
     if body.landmark is not None:
         updates["landmark"] = body.landmark.strip() or None
