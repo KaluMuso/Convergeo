@@ -52,12 +52,12 @@ WITH scored AS (
 )
 SELECT
   vl.id::text,
-  coalesce(sd.title, vl.title, 'Listing') AS title,
+  coalesce(sd.title, vl.title_override, p.name, 'Listing') AS title,
   p.slug AS product_slug,
   v.display_name AS vendor_name,
   coalesce(vl.price_ngwee, 0)::text AS price_ngwee,
   (
-    SELECT li.public_id
+    SELECT li.cloudinary_public_id
     FROM public.listing_images li
     WHERE li.listing_id = vl.id
     ORDER BY li.position ASC
