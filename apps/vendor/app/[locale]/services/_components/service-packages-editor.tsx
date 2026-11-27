@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ngweeToZmwInput } from "../../listings/[id]/edit/_lib/money";
+import { OFFER_FIELDS, OFFER_META, type Archetype, type AttributeErrors } from "../_lib/archetypes";
 import {
   MAX_PACKAGES,
   PACKAGE_LIMITS,
@@ -19,7 +20,15 @@ import {
 } from "../_lib/packages";
 import { Button, FormField, Input } from "../_lib/ui";
 
-type Props = { serviceId: string };
+import { AttributeFields } from "./attribute-fields";
+
+type Props = {
+  serviceId: string;
+  /** Effective archetype of the service; decides the offer fields. */
+  archetype?: Archetype;
+  /** Service photos an offer can use as its own picture. */
+  portfolioImages?: readonly string[];
+};
 
 /** One row of the editor: a saved package, an archived one, or a new unsaved draft. */
 type Item = {
@@ -27,6 +36,7 @@ type Item = {
   pkg: ServicePackage | null;
   draft: PackageDraft | null;
   errors: Partial<Record<PackageField, string>>;
+  attributeErrors: AttributeErrors;
   busy: boolean;
   message: string | null;
 };
@@ -47,7 +57,12 @@ function apiErrorKey(error: unknown, fallback: string): string {
  * reorder. Validation mirrors the API so the vendor sees which field is wrong;
  * the API is still the gate (cap, ownership, content screen).
  */
-export function ServicePackagesEditor({ serviceId }: Props) {
+export function ServicePackagesEditor({
+  serviceId,
+  archetype = "professional",
+  portfolioImages = [],
+}: Props) {
+  const meta = OFFER_META[archetype];
   const t = useTranslations("services.vendor.packages");
   const { session } = useSession();
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
@@ -74,8 +89,10 @@ export function ServicePackagesEditor({ serviceId }: Props) {
           response.items.map((pkg) => ({
             key: pkg.id,
             pkg,
-            draft: pkg.status === "active" ? draftFromPackage(pkg, ngweeToZmwInput) : null,
+            draft:
+              pkg.status === "active" ? draftFromPackage(pkg, ngweeToZmwInput, archetype) : null,
             errors: {},
+            attributeErrors: {},
             busy: false,
             message: null,
           })),
@@ -88,7 +105,7 @@ export function ServicePackagesEditor({ serviceId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [client, serviceId, hasSession]);
+  }, [client, serviceId, hasSession, archetype]);
 
   // Counts what would be active: saved active packages plus any draft being edited.
   const activeCount = items.filter((item) => item.draft !== null).length;
@@ -102,23 +119,28 @@ export function ServicePackagesEditor({ serviceId }: Props) {
       {
         key: `new-${newKey.current}`,
         pkg: null,
-        draft: emptyDraft(),
+        draft: emptyDraft(archetype),
         errors: {},
+        attributeErrors: {},
         busy: false,
         message: null,
       },
     ]);
-  }, []);
+  }, [archetype]);
 
   const save = useCallback(
     async (item: Item) => {
       if (!item.draft) return;
-      const verdict = validateDraft(item.draft);
+      const verdict = validateDraft(item.draft, archetype);
       if (!verdict.ok) {
-        patch(item.key, { errors: verdict.errors, message: null });
+        patch(item.key, {
+          errors: verdict.errors,
+          attributeErrors: verdict.attributeErrors ?? {},
+          message: null,
+        });
         return;
       }
-      patch(item.key, { busy: true, errors: {}, message: null });
+      patch(item.key, { busy: true, errors: {}, attributeErrors: {}, message: null });
       try {
         const pkg = item.pkg
           ? await client.update(serviceId, item.pkg.id, verdict.payload)
@@ -133,7 +155,7 @@ export function ServicePackagesEditor({ serviceId }: Props) {
         });
       }
     },
-    [client, patch, serviceId, t],
+    [archetype, client, patch, serviceId, t],
   );
 
   const remove = useCallback(
@@ -223,7 +245,7 @@ export function ServicePackagesEditor({ serviceId }: Props) {
         const fieldError = (field: PackageField) =>
           item.errors[field] ? t(item.errors[field] as string) : undefined;
         const setDraft = (next: Partial<PackageDraft>) =>
-          patch(item.key, { draft: { ...(draft ?? emptyDraft()), ...next } });
+          patch(item.key, { draft: { ...(draft ?? emptyDraft(archetype)), ...next } });
         const label = draft?.name.trim() || item.pkg?.name || t("newPackage");
         const position = movable.findIndex((other) => other.key === item.key);
         const id = item.key;
@@ -278,7 +300,9 @@ export function ServicePackagesEditor({ serviceId }: Props) {
                   data-testid={`package-offer-${id}`}
                   onClick={() =>
                     patch(item.key, {
-                      draft: item.pkg ? draftFromPackage(item.pkg, ngweeToZmwInput) : emptyDraft(),
+                      draft: item.pkg
+                        ? draftFromPackage(item.pkg, ngweeToZmwInput, archetype)
+                        : emptyDraft(archetype),
                       message: null,
                     })
                   }
@@ -324,6 +348,17 @@ export function ServicePackagesEditor({ serviceId }: Props) {
                   />
                 </FormField>
 
+                <AttributeFields
+                  scope="offer"
+                  idPrefix={`offer-${id}`}
+                  defs={OFFER_FIELDS[archetype]}
+                  values={draft.attributes}
+                  errors={item.attributeErrors}
+                  portfolioImages={portfolioImages}
+                  disabled={item.busy}
+                  onChange={(attributes) => setDraft({ attributes })}
+                />
+
                 <fieldset className="flex flex-col gap-2">
                   <legend className="text-sm font-medium text-text">{t("priceModeLabel")}</legend>
                   <div className="flex flex-wrap gap-4 text-sm text-text">
@@ -342,7 +377,11 @@ export function ServicePackagesEditor({ serviceId }: Props) {
                   </div>
                 </fieldset>
                 {draft.priceMode === "fixed" ? (
-                  <FormField label={t("priceLabel")} errorMessage={fieldError("price")}>
+                  <FormField
+                    label={t("priceLabel")}
+                    helpText={t(`priceUnit.${meta.priceUnit}`)}
+                    errorMessage={fieldError("price")}
+                  >
                     <Input
                       value={draft.price}
                       inputMode="decimal"
@@ -352,31 +391,37 @@ export function ServicePackagesEditor({ serviceId }: Props) {
                   </FormField>
                 ) : null}
 
-                <FormField label={t("deliveryLabel")} errorMessage={fieldError("delivery")}>
-                  <Input
-                    value={draft.deliveryDays}
-                    inputMode="numeric"
-                    data-testid={`package-delivery-${id}`}
-                    onChange={(event) => setDraft({ deliveryDays: event.target.value })}
-                  />
-                </FormField>
+                {meta.showDelivery ? (
+                  <>
+                    <FormField label={t("deliveryLabel")} errorMessage={fieldError("delivery")}>
+                      <Input
+                        value={draft.deliveryDays}
+                        inputMode="numeric"
+                        data-testid={`package-delivery-${id}`}
+                        onChange={(event) => setDraft({ deliveryDays: event.target.value })}
+                      />
+                    </FormField>
 
-                <label className="flex min-h-11 items-center gap-2 text-sm text-text">
-                  <input
-                    type="checkbox"
-                    checked={!draft.revisionsApplicable}
-                    onChange={(event) => setDraft({ revisionsApplicable: !event.target.checked })}
-                  />
-                  {t("revisionsNA")}
-                </label>
-                {draft.revisionsApplicable ? (
-                  <FormField label={t("revisionsLabel")} errorMessage={fieldError("revisions")}>
-                    <Input
-                      value={draft.revisions}
-                      inputMode="numeric"
-                      onChange={(event) => setDraft({ revisions: event.target.value })}
-                    />
-                  </FormField>
+                    <label className="flex min-h-11 items-center gap-2 text-sm text-text">
+                      <input
+                        type="checkbox"
+                        checked={!draft.revisionsApplicable}
+                        onChange={(event) =>
+                          setDraft({ revisionsApplicable: !event.target.checked })
+                        }
+                      />
+                      {t("revisionsNA")}
+                    </label>
+                    {draft.revisionsApplicable ? (
+                      <FormField label={t("revisionsLabel")} errorMessage={fieldError("revisions")}>
+                        <Input
+                          value={draft.revisions}
+                          inputMode="numeric"
+                          onChange={(event) => setDraft({ revisions: event.target.value })}
+                        />
+                      </FormField>
+                    ) : null}
+                  </>
                 ) : null}
 
                 <FormField
@@ -391,6 +436,12 @@ export function ServicePackagesEditor({ serviceId }: Props) {
                     onChange={(event) => setDraft({ includes: event.target.value })}
                   />
                 </FormField>
+
+                {fieldError("attributes") ? (
+                  <p role="alert" className="text-sm text-danger">
+                    {fieldError("attributes")}
+                  </p>
+                ) : null}
 
                 {item.message ? (
                   <p

@@ -3,6 +3,17 @@ import { createApiClient } from "@vergeo/config";
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { zmwDecimalToNgwee } from "../../listings/new/_lib/money";
 
+import {
+  attributesFromValues,
+  emptyValues,
+  valuesFromAttributes,
+  OFFER_FIELDS,
+  OFFER_META,
+  type Archetype,
+  type AttributeErrors,
+  type FieldValues,
+} from "./archetypes";
+
 /** Service packages — vendor client + pure validation (docs/plan/service-packages.md). */
 
 /** A service may carry at most this many ACTIVE packages (API: `package_limit_reached`). */
@@ -31,6 +42,8 @@ export type ServicePackage = {
   delivery_days: number;
   revisions: number | null;
   includes: string[];
+  /** Archetype-specific offer attributes (docs/plan/service-type-templates.md). */
+  attributes?: Record<string, unknown>;
   status: "active" | "archived";
   updated_at: string | null;
 };
@@ -42,6 +55,7 @@ export type PackagePayload = {
   delivery_days: number;
   revisions: number | null;
   includes: string[];
+  attributes: Record<string, unknown>;
 };
 
 /** What the form edits — strings, as typed. */
@@ -54,12 +68,16 @@ export type PackageDraft = {
   revisionsApplicable: boolean;
   revisions: string;
   includes: string;
+  /** Archetype attribute fields, as typed. */
+  attributes: FieldValues;
 };
 
-export type PackageField = "name" | "description" | "price" | "delivery" | "revisions" | "includes";
+export type PackageField =
+  "name" | "description" | "price" | "delivery" | "revisions" | "includes" | "attributes";
 
-export function emptyDraft(): PackageDraft {
+export function emptyDraft(archetype: Archetype = "professional"): PackageDraft {
   return {
+    attributes: emptyValues(OFFER_FIELDS[archetype]),
     name: "",
     description: "",
     priceMode: "fixed",
@@ -74,8 +92,10 @@ export function emptyDraft(): PackageDraft {
 export function draftFromPackage(
   pkg: ServicePackage,
   toZmw: (ngwee: number) => string,
+  archetype: Archetype = "professional",
 ): PackageDraft {
   return {
+    attributes: valuesFromAttributes(OFFER_FIELDS[archetype], pkg.attributes, toZmw),
     name: pkg.name,
     description: pkg.description ?? "",
     priceMode: pkg.price_ngwee === null ? "quote" : "fixed",
@@ -95,10 +115,16 @@ const WHOLE = /^\d+$/;
  */
 export function validateDraft(
   draft: PackageDraft,
+  archetype: Archetype = "professional",
 ):
   | { ok: true; payload: PackagePayload }
-  | { ok: false; errors: Partial<Record<PackageField, string>> } {
+  | {
+      ok: false;
+      errors: Partial<Record<PackageField, string>>;
+      attributeErrors?: AttributeErrors;
+    } {
   const errors: Partial<Record<PackageField, string>> = {};
+  const meta = OFFER_META[archetype];
   const L = PACKAGE_LIMITS;
 
   const name = draft.name.trim();
@@ -117,14 +143,18 @@ export function validateDraft(
     }
   }
 
-  const deliveryRaw = draft.deliveryDays.trim();
+  // Non-professional archetypes have no delivery time: the API still needs 1-90 days.
+  const deliveryRaw = meta.showDelivery ? draft.deliveryDays.trim() : "1";
   const delivery = WHOLE.test(deliveryRaw) ? Number(deliveryRaw) : NaN;
   if (!Number.isInteger(delivery) || delivery < L.deliveryMin || delivery > L.deliveryMax) {
     errors.delivery = "errors.delivery";
   }
 
+  const converted = attributesFromValues(OFFER_FIELDS[archetype], draft.attributes);
+  if (!converted.ok) errors.attributes = "errors.attributes";
+
   let revisions: number | null = null;
-  if (draft.revisionsApplicable) {
+  if (meta.showRevisions && draft.revisionsApplicable) {
     const raw = draft.revisions.trim();
     revisions = WHOLE.test(raw) ? Number(raw) : NaN;
     if (!Number.isInteger(revisions) || revisions < 0 || revisions > L.revisionsMax) {
@@ -140,10 +170,17 @@ export function validateDraft(
     errors.includes = "errors.includes";
   }
 
-  if (Object.keys(errors).length > 0) return { ok: false, errors };
+  if (Object.keys(errors).length > 0) {
+    return {
+      ok: false,
+      errors,
+      attributeErrors: converted.ok ? undefined : converted.errors,
+    };
+  }
   return {
     ok: true,
     payload: {
+      attributes: converted.ok ? converted.attributes : {},
       name,
       description: description || null,
       price_ngwee: price,

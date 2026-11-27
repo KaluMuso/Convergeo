@@ -210,13 +210,369 @@
         "notFound": "未找到套餐。",
         "limitReached": "此服务已有 {max} 个套餐。请先移除一个再添加。",
         "orderMismatch": "页面加载后您的套餐已发生变化。请重新加载后再试。",
-        "reorderFailed": "无法更改顺序。"
+        "reorderFailed": "无法更改顺序。",
+        "attributes": "请检查标出的选项详情。"
       },
       "addPackage": "添加套餐",
       "packageHeading": "套餐 {number}",
       "newPackage": "新套餐",
       "moveUp": "上移 {name}",
-      "moveDown": "下移 {name}"
+      "moveDown": "下移 {name}",
+      "priceUnit": {
+        "night": "每晚价格（月租则为每月）。",
+        "session": "单次服务价格。",
+        "pass": "整张通行证的价格。",
+        "visit": "每次价格。",
+        "period": "每个租期价格（小时、天或周）。",
+        "ticket": "每张票价格。",
+        "package": "套餐价格。"
+      }
+    },
+    "archetypes": {
+      "accommodation": {
+        "name": "住宿（客房与单元）",
+        "help": "顾客选择房间和日期。每种房型添加一个选项。",
+        "photoTip": "展示每间房的床和窗景，再展示庭院和餐区。"
+      },
+      "appointment": {
+        "name": "预约",
+        "help": "顾客选择项目和日期。每个项目添加一个选项。",
+        "photoTip": "展示成品效果（发型、造型、改衣）和整洁的工位。"
+      },
+      "membership": {
+        "name": "会员与通行证",
+        "help": "顾客选择通行证。添加您的单日、月度和年度通行证。",
+        "photoTip": "展示健身区、器械和上课场景。"
+      },
+      "on_site": {
+        "name": "上门工作",
+        "help": "顾客预约您上门。按住宅大小或小时数添加选项。",
+        "photoTip": "展示前后对比和团队工作照。"
+      },
+      "rental": {
+        "name": "租赁",
+        "help": "顾客按期租用物品。每件物品添加一个选项。",
+        "photoTip": "在素色背景和日光下拍摄每件物品。"
+      },
+      "ticketed": {
+        "name": "门票与游玩",
+        "help": "顾客购买入场票。每种票添加一个选项。",
+        "photoTip": "展示游乐项目和玩耍的家庭（需征得同意）。"
+      },
+      "professional": {
+        "name": "专业服务",
+        "help": "顾客描述工作，您来报价。添加套餐或费率。",
+        "photoTip": "展示完成的作品和工作环境。"
+      },
+      "summary": "服务类型：{type}",
+      "advanced": "更改服务类型",
+      "overrideLabel": "服务类型",
+      "derived": "自动（按类别）"
+    },
+    "attributes": {
+      "offer": {
+        "room_type": {
+          "label": "房型",
+          "options": {
+            "standard": "标准",
+            "premium": "高级",
+            "presidential": "总统套房",
+            "family": "家庭房",
+            "dorm": "宿舍",
+            "other": "其他"
+          }
+        },
+        "stay_kind": {
+          "label": "住宿类型",
+          "options": {
+            "nightly": "按晚",
+            "monthly": "月租（看房）"
+          }
+        },
+        "sleeps": {
+          "label": "可住人数"
+        },
+        "beds": {
+          "label": "床数"
+        },
+        "bed_type": {
+          "label": "床型",
+          "options": {
+            "single": "单人",
+            "double": "双人",
+            "queen": "大床",
+            "king": "特大床",
+            "bunk": "上下铺"
+          }
+        },
+        "size_sqm": {
+          "label": "面积（平方米）"
+        },
+        "amenities": {
+          "label": "客房设施",
+          "hint": "用逗号分隔。"
+        },
+        "breakfast_included": {
+          "label": "含早餐"
+        },
+        "min_nights": {
+          "label": "最少晚数"
+        },
+        "units_available": {
+          "label": "此房型数量",
+          "hint": "5 间及以下时显示“仅剩 N”。"
+        },
+        "image": {
+          "label": "照片"
+        },
+        "duration_min": {
+          "label": "时长（分钟，5 的倍数）"
+        },
+        "group": {
+          "label": "菜单分类",
+          "hint": "例如 美发、美甲或胡须。"
+        },
+        "staff": {
+          "label": "可提供服务的人员",
+          "hint": "用逗号分隔。"
+        },
+        "home_visit": {
+          "label": "可上门服务"
+        },
+        "price_is_from": {
+          "label": "起步价"
+        },
+        "pass_kind": {
+          "label": "通行证类型",
+          "options": {
+            "day": "单日票",
+            "week": "周卡",
+            "month": "月卡",
+            "quarter": "季卡",
+            "year": "年卡",
+            "class_pack": "课程包"
+          }
+        },
+        "valid_days": {
+          "label": "有效天数"
+        },
+        "visits_included": {
+          "label": "含入场次数",
+          "hint": "留空表示不限次数。"
+        },
+        "classes_included": {
+          "label": "含课程"
+        },
+        "guest_passes": {
+          "label": "访客票数"
+        },
+        "peak_hours_only": {
+          "label": "仅限非高峰时段"
+        },
+        "pricing_unit": {
+          "label": "计价单位",
+          "options": {
+            "hour": "小时",
+            "visit": "次",
+            "room": "房间"
+          }
+        },
+        "min_hours": {
+          "label": "最少小时数"
+        },
+        "home_size": {
+          "label": "住宅大小",
+          "options": {
+            "studio": "单间",
+            "one_two_bed": "1 至 2 间卧室",
+            "three_bed": "3 间卧室",
+            "four_plus": "4 间及以上卧室"
+          }
+        },
+        "crew_size": {
+          "label": "人数"
+        },
+        "supplies_included": {
+          "label": "含清洁用品"
+        },
+        "unit": {
+          "label": "按以下计租",
+          "options": {
+            "hour": "小时",
+            "day": "天",
+            "week": "周"
+          }
+        },
+        "deposit_ngwee": {
+          "label": "押金（ZMW）",
+          "hint": "由您直接收取，Vergeo5 不代管。"
+        },
+        "quantity_available": {
+          "label": "可租数量"
+        },
+        "specs": {
+          "label": "规格",
+          "columns": {
+            "label": "名称",
+            "value": "数值"
+          }
+        },
+        "with_operator": {
+          "label": "配操作员"
+        },
+        "delivery_available": {
+          "label": "可送货"
+        },
+        "min_period": {
+          "label": "最短租期"
+        },
+        "ticket_kind": {
+          "label": "票种",
+          "options": {
+            "adult": "成人",
+            "child": "儿童",
+            "toddler": "幼儿",
+            "senior": "老年人",
+            "family": "家庭套票",
+            "group": "团体"
+          }
+        },
+        "age_min": {
+          "label": "最小年龄"
+        },
+        "age_max": {
+          "label": "最大年龄"
+        },
+        "party_size": {
+          "label": "适用人数"
+        },
+        "entry": {
+          "label": "入场方式",
+          "options": {
+            "any_time": "当天任意时间",
+            "timed": "定时入场"
+          }
+        },
+        "slot_capacity": {
+          "label": "每时段名额"
+        },
+        "rate_unit": {
+          "label": "费率单位",
+          "options": {
+            "hour": "小时",
+            "day": "天",
+            "month": "月",
+            "project": "项目"
+          }
+        },
+        "role": {
+          "label": "职位"
+        },
+        "experience_years": {
+          "label": "从业年限"
+        },
+        "availability": {
+          "label": "可用性",
+          "options": {
+            "now": "现在可用",
+            "week": "一周内",
+            "booked": "已订满"
+          }
+        },
+        "certifications": {
+          "label": "资质证书",
+          "hint": "用逗号分隔。"
+        }
+      },
+      "service": {
+        "availability": {
+          "label": "可用性",
+          "options": {
+            "available": "接受请求",
+            "limited": "名额有限",
+            "unavailable": "已订满"
+          },
+          "hint": "向顾客显示。仅为提示，不是实时日历。"
+        },
+        "amenities": {
+          "label": "设施与服务",
+          "hint": "用逗号分隔。"
+        },
+        "policy": {
+          "cancellation": {
+            "label": "取消政策",
+            "options": {
+              "flexible": "灵活",
+              "moderate": "适中",
+              "strict": "严格"
+            }
+          },
+          "note": {
+            "label": "政策说明"
+          }
+        },
+        "check_in": {
+          "label": "入住时间（HH:MM）"
+        },
+        "check_out": {
+          "label": "退房时间（HH:MM）"
+        },
+        "walk_ins": {
+          "label": "欢迎无预约到店"
+        },
+        "staff": {
+          "label": "团队",
+          "columns": {
+            "name": "姓名",
+            "role": "职位"
+          }
+        },
+        "class_schedule": {
+          "label": "每周课程表",
+          "hint": "最多 21 节课。",
+          "columns": {
+            "day": "星期",
+            "dayOptions": {
+              "0": "星期日",
+              "1": "星期一",
+              "2": "星期二",
+              "3": "星期三",
+              "4": "星期四",
+              "5": "星期五",
+              "6": "星期六"
+            },
+            "start": "开始（HH:MM）",
+            "title": "课程",
+            "duration_min": "分钟",
+            "capacity": "名额"
+          }
+        },
+        "pickup_note": {
+          "label": "取货说明"
+        },
+        "age_policy": {
+          "label": "年龄政策"
+        }
+      },
+      "choose": "请选择",
+      "noPhoto": "无照片",
+      "photoOption": "照片 {position}",
+      "tagsPlaceholder": "Wi-Fi, 停车位",
+      "addRow": "添加一行",
+      "removeRow": "删除",
+      "serviceHeading": "服务详情",
+      "errors": {
+        "int": "请输入允许范围内的整数。",
+        "step": "请使用 5 的倍数。",
+        "time": "请使用 24 小时制，例如 14:00。",
+        "tooLong": "内容过长。",
+        "tags": "项目过多或某项过长。",
+        "money": "请输入大于零的 ZMW 金额。",
+        "rows": "请填写完整每一行，或删除它。",
+        "invalid": "请选择其中一个选项。",
+        "ageOrder": "最大年龄不能小于最小年龄。",
+        "fix": "请检查标出的内容。"
+      }
     }
   },
   "postJob": {

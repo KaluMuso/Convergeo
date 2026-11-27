@@ -15,7 +15,7 @@ const { auth, listServices, translate } = vi.hoisted(() => ({
     loading: false,
   },
   listServices: vi.fn(),
-  translate: (key: string) => key,
+  translate: Object.assign((key: string) => key, { has: () => false }),
 }));
 
 vi.mock("@vergeo/auth/use-session", () => ({ useSession: () => auth }));
