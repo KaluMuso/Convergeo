@@ -393,7 +393,18 @@ export function HeroCarousel({
             }}
           >
             <span aria-hidden className="v-hero__zone-chevron">
-              ‹
+              <svg
+                viewBox="0 0 24 24"
+                width="32"
+                height="32"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.25"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M15 5l-7 7 7 7" />
+              </svg>
             </span>
           </button>
           <button
@@ -408,7 +419,18 @@ export function HeroCarousel({
             }}
           >
             <span aria-hidden className="v-hero__zone-chevron">
-              ›
+              <svg
+                viewBox="0 0 24 24"
+                width="32"
+                height="32"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.25"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 5l7 7-7 7" />
+              </svg>
             </span>
           </button>
 
