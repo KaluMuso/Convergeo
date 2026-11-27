@@ -28,6 +28,7 @@
       "sqm": "平方米"
     },
     "remove": "移除",
+    "untitledItem": "商品",
     "removeLabel": "从购物车中移除 {title}",
     "saveForLater": "稍后再买",
     "saveForLaterLabel": "将 {title} 保存到稍后再买",
@@ -169,6 +170,7 @@
       "zoneLabel": "区域：{zone}",
       "pickupAt": "取货地点：{landmark}",
       "pickupHours": "营业时间：{hours}",
+      "pickupClosed": "休息",
       "outsideZone": "这里暂不送货。您可以到卖家处自取。",
       "mixedHint": "可以一个卖家送货，另一个卖家自取。",
       "continue": "继续",
