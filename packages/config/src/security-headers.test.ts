@@ -48,8 +48,10 @@ describe("security-headers", () => {
     expect(dev).not.toContain("https://*.vercel.app");
   });
 
-  it("lets only the customer storefront use its own microphone (Ask Vergeo voice)", () => {
+  it("lets only the customer storefront use its own microphone and location (Ask Vergeo)", () => {
     expect(PERMISSIONS_POLICY_CUSTOMER).toContain("microphone=(self)");
+    expect(PERMISSIONS_POLICY_CUSTOMER).toContain("geolocation=(self)");
+    expect(PERMISSIONS_POLICY_CUSTOMER).not.toContain("geolocation=*");
     expect(PERMISSIONS_POLICY_CUSTOMER).toContain("camera=()");
     expect(PERMISSIONS_POLICY_CUSTOMER).not.toContain("microphone=*");
     expect(PERMISSIONS_POLICY_DEFAULT).toContain("microphone=()");

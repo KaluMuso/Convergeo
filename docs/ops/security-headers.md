@@ -107,9 +107,10 @@ Common to all three apps: `Strict-Transport-Security: max-age=63072000; includeS
 ### Customer (`apps/customer`)
 
 - `X-Frame-Options: SAMEORIGIN`, CSP `frame-ancestors 'self'`.
-- `Permissions-Policy: camera=(), microphone=(self), geolocation=(), browsing-topics=(), payment=(), usb=()`
+- `Permissions-Policy: camera=(), microphone=(self), geolocation=(self), browsing-topics=(), payment=(), usb=()`
   (`microphone=(self)` is required for the Ask Vergeo mic; `microphone=()` makes Chrome fail
-  every recognition with `not-allowed`).
+  every recognition with `not-allowed`. `geolocation=(self)` is required for "near me" and
+  "use my location"; a denied prompt is handled in the UI.)
 - CSP allowlist: `self`, Cloudinary (`res.cloudinary.com`, images), Supabase
   (`*.supabase.co` + `wss://*.supabase.co`, connect), GA4
   (`*.googletagmanager.com` / `*.google-analytics.com` — allowed now; **M16-P05** wires
