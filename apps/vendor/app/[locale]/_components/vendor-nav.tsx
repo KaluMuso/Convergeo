@@ -1,6 +1,7 @@
 "use client";
 
 import { BottomNav, type BottomNavItem } from "@vergeo/ui/src/bottom-nav";
+import { glassClass } from "@vergeo/ui/src/glass";
 import { LcMenu } from "@vergeo/ui/src/lucide-icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -156,6 +157,7 @@ export function VendorNav({ locale, capabilities }: VendorNavProps) {
               );
             }}
             desktopHiddenClassName="lg:hidden"
+            className={glassClass("bar-bottom")}
           />
         </div>
       ) : null}
@@ -171,7 +173,7 @@ export function VendorNav({ locale, capabilities }: VendorNavProps) {
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${menuId}-title`}
-            className="max-h-[80dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 shadow-xl"
+            className={`max-h-[80dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl p-4 ${glassClass("overlay")}`}
             onClick={(event) => event.stopPropagation()}
           >
             <header className="mb-4 flex items-center justify-between gap-2">
