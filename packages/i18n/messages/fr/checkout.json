@@ -28,6 +28,7 @@
       "sqm": "m²"
     },
     "remove": "Retirer",
+    "untitledItem": "Article",
     "removeLabel": "Retirer {title} du panier",
     "saveForLater": "Enregistrer pour plus tard",
     "saveForLaterLabel": "Enregistrer {title} pour plus tard",
@@ -169,6 +170,7 @@
       "zoneLabel": "Zone : {zone}",
       "pickupAt": "Retrait à {landmark}",
       "pickupHours": "Ouvert : {hours}",
+      "pickupClosed": "Fermé",
       "outsideZone": "Nous ne livrons pas encore ici. Vous pouvez récupérer chez le vendeur.",
       "mixedHint": "Vous pouvez vous faire livrer par un vendeur et récupérer chez un autre.",
       "continue": "Continuer",

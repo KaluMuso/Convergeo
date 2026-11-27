@@ -81,6 +81,41 @@ function looksLikeError(value: unknown): value is Error {
   );
 }
 
+/**
+ * `AbortSignal.any` where available; otherwise a manual composition.
+ *
+ * `AbortSignal.any` is missing on Chrome/WebView < 116 and Safari < 17.4 — still
+ * common on low-end Android in Zambia. Calling it unguarded threw a TypeError
+ * BEFORE the request was made, so every client-side fetch that passed a signal
+ * (e.g. the home "Popular now" infinite scroll) failed with a generic error.
+ */
+export function composeSignals(signals: AbortSignal[]): {
+  signal: AbortSignal;
+  dispose: () => void;
+} {
+  if (typeof AbortSignal.any === "function") {
+    return { signal: AbortSignal.any(signals), dispose: () => {} };
+  }
+  const controller = new AbortController();
+  const listeners: Array<[AbortSignal, () => void]> = [];
+  const dispose = () => {
+    for (const [source, listener] of listeners) {
+      source.removeEventListener("abort", listener);
+    }
+    listeners.length = 0;
+  };
+  for (const source of signals) {
+    if (source.aborted) {
+      controller.abort(source.reason);
+      break;
+    }
+    const listener = () => controller.abort(source.reason);
+    source.addEventListener("abort", listener, { once: true });
+    listeners.push([source, listener]);
+  }
+  return { signal: controller.signal, dispose };
+}
+
 export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}): Promise<T> {
   const {
     retries = 1,
@@ -110,7 +145,8 @@ export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}):
     const signals = [callerSignal, timeoutController?.signal].filter(
       (signal): signal is AbortSignal => signal != null,
     );
-    const attemptSignal = signals.length > 0 ? AbortSignal.any(signals) : undefined;
+    const composed = signals.length > 0 ? composeSignals(signals) : null;
+    const attemptSignal = composed?.signal;
 
     try {
       const response = await fetch(url, {
@@ -167,6 +203,7 @@ export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}):
       // further attempt (never re-enters the loop).
       await sleepWithSignal(retryDelayMs * attempt, callerSignal);
     } finally {
+      composed?.dispose();
       if (timeoutHandle !== null) {
         clearTimeout(timeoutHandle);
       }

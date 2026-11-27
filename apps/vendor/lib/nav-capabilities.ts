@@ -70,7 +70,7 @@ export const NAV_CAPABILITIES_BUDGET_MS = 2000;
 export async function resolveVendorNavCapabilities(): Promise<VendorNavCapabilities> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const budget = new Promise<VendorNavCapabilities>((resolve) => {
-    timer = setTimeout(() => resolve(coreCapabilities()), NAV_CAPABILITIES_BUDGET_MS);
+    timer = setTimeout(() => resolve(fallbackCapabilities()), NAV_CAPABILITIES_BUDGET_MS);
   });
   try {
     return await Promise.race([resolveCapabilitiesUnbounded(), budget]);
@@ -79,8 +79,26 @@ export async function resolveVendorNavCapabilities(): Promise<VendorNavCapabilit
   }
 }
 
+/**
+ * Last fully-resolved capabilities on this server. When a probe is slow, optional
+ * entries (Offers, Payouts, Scan...) used to vanish from the nav until the next
+ * request; serving what we last knew keeps them stable. The per-vendor intake entry
+ * is never reused across requests, so it fails closed.
+ */
+let lastResolved: VendorNavCapabilities | null = null;
+
+/** Test hook. */
+export function resetLastResolvedCapabilities(): void {
+  lastResolved = null;
+}
+
+function fallbackCapabilities(): VendorNavCapabilities {
+  return lastResolved ? { ...lastResolved, intake: false } : coreCapabilities();
+}
+
 async function resolveCapabilitiesUnbounded(): Promise<VendorNavCapabilities> {
   const caps = coreCapabilities();
+  let complete = false;
 
   try {
     const [clips, intake, rfq, jobs, payouts, scan, offers, coupons] = await Promise.all([
@@ -106,12 +124,16 @@ async function resolveCapabilitiesUnbounded(): Promise<VendorNavCapabilities> {
     for (const key of CORE_VISIBLE) {
       caps[key] = true;
     }
+    complete = true;
   } catch {
     for (const key of CORE_VISIBLE) {
       caps[key] = true;
     }
   }
 
+  if (complete) {
+    lastResolved = caps;
+  }
   return caps;
 }
 
