@@ -140,9 +140,7 @@ class FakeQuery:
             updated: list[dict[str, Any]] = []
             for _index, row in enumerate(self._parent.rows):
                 if all(
-                    row.get(column) == value
-                    for op, column, value in self._filters
-                    if op == "eq"
+                    row.get(column) == value for op, column, value in self._filters if op == "eq"
                 ):
                     row.update(self._payload)
                     updated.append(dict(row))
@@ -168,9 +166,7 @@ class FakeQuery:
                 allowed = set(value)
                 filtered = [row for row in filtered if row.get(column) in allowed]
             elif op == "gte":
-                filtered = [
-                    row for row in filtered if str(row.get(column, "")) >= str(value)
-                ]
+                filtered = [row for row in filtered if str(row.get(column, "")) >= str(value)]
         return filtered
 
 
@@ -307,9 +303,7 @@ def _seed_t1_vendor(fake: FakeSupabaseClient, *, kyc_tier: int = 1, status: str 
             },
         ]
     )
-    fake.tables["platform_config"].rows.append(
-        {"key": "cod_cap_ngwee", "value": COD_CAP_NGWEE}
-    )
+    fake.tables["platform_config"].rows.append({"key": "cod_cap_ngwee", "value": COD_CAP_NGWEE})
 
 
 @pytest.fixture
@@ -644,9 +638,7 @@ def test_badge_grant_idempotent(
             {"id": order_id, "vendor_id": VENDOR_ID, "status": "completed"}
         )
         item_id = f"item-{index:02d}"
-        fake_client.tables["order_items"].rows.append(
-            {"id": item_id, "order_id": order_id}
-        )
+        fake_client.tables["order_items"].rows.append({"id": item_id, "order_id": order_id})
         fake_client.tables["reviews"].rows.append(
             {"order_item_id": item_id, "rating": 5, "status": "published"}
         )
@@ -693,9 +685,7 @@ def test_evaluate_refuses_under_min_completed_orders(
             {"id": order_id, "vendor_id": VENDOR_ID, "status": "completed"}
         )
         item_id = f"item-{index:02d}"
-        fake_client.tables["order_items"].rows.append(
-            {"id": item_id, "order_id": order_id}
-        )
+        fake_client.tables["order_items"].rows.append({"id": item_id, "order_id": order_id})
         fake_client.tables["reviews"].rows.append(
             {"order_item_id": item_id, "rating": 5, "status": "published"}
         )
@@ -726,9 +716,7 @@ def test_preferred_badge_job_runs_active_vendors_only(
             {"id": order_id, "vendor_id": VENDOR_ID, "status": "completed"}
         )
         item_id = f"item-{index:02d}"
-        fake_client.tables["order_items"].rows.append(
-            {"id": item_id, "order_id": order_id}
-        )
+        fake_client.tables["order_items"].rows.append({"id": item_id, "order_id": order_id})
         fake_client.tables["reviews"].rows.append(
             {"order_item_id": item_id, "rating": 5, "status": "published"}
         )
@@ -758,6 +746,42 @@ def test_kyc_status_endpoint(kyc_client: TestClient, fake_client: FakeSupabaseCl
     assert response.status_code == 200
     body = response.json()
     assert body["application_status"] == "draft"
+
+
+def test_kyc_status_reads_each_table_once_and_reports_approved_capabilities(
+    kyc_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The ownership dependency already loaded the vendor: no second vendor read, and the
+    latest and best-approved kyc_records reads happen once each."""
+    _seed_t1_vendor(fake_client)
+    fake_client.tables["kyc_records"].rows.append(
+        {
+            "id": KYC_RECORD_ID,
+            "vendor_id": VENDOR_ID,
+            "tier": 1,
+            "status": "approved",
+            "doc_storage_paths": [],
+            "created_at": "2026-01-01T00:00:00+00:00",
+        }
+    )
+    reads: list[str] = []
+    for name, table in fake_client.tables.items():
+        original = table.select
+
+        def counted(columns: str, *, count: str | None = None, _o=original, _n=name):  # type: ignore[no-untyped-def]
+            reads.append(_n)
+            return _o(columns, count=count)
+
+        monkeypatch.setattr(table, "select", counted)
+
+    response = kyc_client.get("/kyc/status", headers={"Authorization": f"Bearer {VALID_TOKEN}"})
+
+    assert response.status_code == 200
+    assert reads.count("vendors") == 1
+    assert reads.count("kyc_records") == 2
+    assert response.json()["application_status"] != "draft"
 
 
 def test_kyc_resubmit_only_after_rejection(
@@ -877,9 +901,7 @@ def test_kyc_resubmit_after_rejection_creates_one_owned_pending_application(
     assert audit[0]["before"]["kyc_record"]["status"] == "rejected"
     assert audit[0]["after"]["kyc_record"]["status"] == "submitted"
 
-    status = kyc_client.get(
-        "/kyc/status", headers={"Authorization": f"Bearer {VALID_TOKEN}"}
-    )
+    status = kyc_client.get("/kyc/status", headers={"Authorization": f"Bearer {VALID_TOKEN}"})
     assert status.status_code == 200, status.text
     assert status.json()["application_status"] == "submitted"
     assert status.json()["kyc_record_id"] == records[1]["id"]
@@ -1017,8 +1039,13 @@ def test_kyc_resubmit_requires_nonblank_documents(
         ),
     ],
     ids=[
-        "foreign", "malformed", "missing-type", "missing-object",
-        "storage-failure", "too-many-paths", "long-path",
+        "foreign",
+        "malformed",
+        "missing-type",
+        "missing-object",
+        "storage-failure",
+        "too-many-paths",
+        "long-path",
     ],
 )
 def test_kyc_submission_rejects_bad_document_evidence_before_provider_or_write(
