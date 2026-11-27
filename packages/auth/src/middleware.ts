@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { mergeSecureCookieOptions } from "./cookie-security";
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
+import { verifyLocalSession, type LocalSession } from "./local-session";
 import { getRolesFromClaims, hasRole, type AppRole } from "./roles";
 
 import type { SetAllCookies } from "@supabase/ssr";
@@ -178,6 +179,18 @@ export type UpdateSessionResult = {
   response: NextResponse;
   user: User | null;
   roles: AppRole[];
+  /** Set only in `verify: "local"` mode when the access token verified offline. */
+  localSession?: LocalSession | null;
+};
+
+export type UpdateSessionOptions = {
+  /**
+   * `server` (default): full `auth.getUser()` round trip plus claim checks, may
+   * refresh and rewrite cookies. `local`: PUBLIC pages only. Verifies the access
+   * token signature/exp/iss/aud offline, never touches the network per request,
+   * never writes cookies, and resolves any doubt to anonymous.
+   */
+  verify?: "server" | "local";
 };
 
 export function getLocaleFromPath(
@@ -370,7 +383,23 @@ export function isAdminBypassActive(): boolean {
   return process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_ADMIN_BYPASS === "true";
 }
 
-export async function updateSession(request: NextRequest): Promise<UpdateSessionResult> {
+export async function updateSession(
+  request: NextRequest,
+  options: UpdateSessionOptions = {},
+): Promise<UpdateSessionResult> {
+  if (options.verify === "local") {
+    const localSession = await verifyLocalSession(request, {
+      supabaseUrl: getSupabaseUrl(),
+      jwtSecret: process.env.SUPABASE_JWT_SECRET,
+    });
+    return {
+      response: NextResponse.next({ request }),
+      user: null,
+      roles: localSession?.roles ?? [],
+      localSession,
+    };
+  }
+
   let response = NextResponse.next({
     request,
   });

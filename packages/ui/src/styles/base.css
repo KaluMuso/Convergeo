@@ -1107,14 +1107,87 @@
   flex-direction: column;
   align-self: end;
   gap: var(--sp-3);
-  padding: var(--sp-12) var(--sp-5) var(--sp-14);
+  padding: var(--sp-12) var(--sp-5) calc(var(--sp-14) + var(--hero-overlap, 0px));
 }
 
 @media (min-width: 64rem) {
   .v-hero__content {
     gap: var(--sp-4);
-    padding: var(--sp-16) var(--sp-12) var(--sp-18);
+    padding: var(--sp-16) var(--sp-12) calc(var(--sp-18) + var(--hero-overlap, 0px));
   }
+}
+
+/* Invisible edge navigation: full-height hover zones on the left/right edges of the
+   hero. The buttons stay in the DOM, focusable and labelled (keyboard + screen
+   readers); pointers get a directional cursor and a subtle gradient on hover. Touch
+   devices swipe the strip instead, so the zones never intercept taps there. */
+.v-hero__zone {
+  position: absolute;
+  top: 0;
+  bottom: var(--hero-overlap, 0px);
+  z-index: 2;
+  width: 3rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--panel-text);
+  opacity: 1;
+  transition: background var(--dur) var(--ease-std);
+}
+
+.v-hero__zone--prev {
+  left: 0;
+  cursor: w-resize;
+}
+
+.v-hero__zone--next {
+  right: 0;
+  cursor: e-resize;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .v-hero__zone {
+    pointer-events: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .v-hero__zone--prev:hover {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--panel) 55%, transparent),
+      transparent
+    );
+  }
+
+  .v-hero__zone--next:hover {
+    background: linear-gradient(
+      270deg,
+      color-mix(in srgb, var(--panel) 55%, transparent),
+      transparent
+    );
+  }
+}
+
+.v-hero__zone:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--panel) 45%, transparent);
+}
+
+.v-hero__zone-chevron {
+  display: none;
+}
+
+.v-hero__zone:focus-visible .v-hero__zone-chevron {
+  display: inline;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.v-hero__dots-pill {
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
 }
 
 .v-hero__brand {
@@ -1215,6 +1288,79 @@
   font-weight: 700;
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Glass surfaces (frosted glass) ──────────────────────────────────────────
+   Translucent tint of --surface + backdrop blur + soft 1px light border + subtle
+   shadow. Variants: .v-glass--bar (sticky top/bottom bars), --overlay (modals,
+   sheets, drawers), --card (floating chips/cards over media). Compose with the
+   layout classes of the consumer; this only paints the surface.
+   Fallbacks: no backdrop-filter support => near-opaque surface (text stays
+   legible); prefers-reduced-transparency / prefers-contrast:more => opaque. */
+:root {
+  --glass-blur: 14px;
+  --glass-saturate: 1.5;
+  --glass-border: color-mix(in srgb, #ffffff 60%, transparent);
+  --glass-highlight: inset 0 1px 0 color-mix(in srgb, #ffffff 55%, transparent);
+  --glass-shadow: 0 1px 2px rgba(15, 42, 33, 0.06), 0 8px 24px rgba(15, 42, 33, 0.1);
+  --glass-bg-bar: color-mix(in srgb, var(--surface) 78%, transparent);
+  --glass-bg-overlay: color-mix(in srgb, var(--surface-elevated) 72%, transparent);
+  --glass-bg-card: color-mix(in srgb, var(--surface) 64%, transparent);
+  --glass-bg-fallback: color-mix(in srgb, var(--surface) 96%, transparent);
+}
+
+[data-theme="dark"] {
+  --glass-border: color-mix(in srgb, #ffffff 14%, transparent);
+  --glass-highlight: inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent);
+  --glass-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.45);
+  --glass-bg-bar: color-mix(in srgb, var(--surface) 70%, transparent);
+  --glass-bg-overlay: color-mix(in srgb, var(--surface-elevated) 66%, transparent);
+  --glass-bg-card: color-mix(in srgb, var(--surface) 58%, transparent);
+}
+
+.v-glass {
+  background: var(--glass-bg-fallback);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+}
+
+.v-glass--bar {
+  border-width: 0;
+  border-block-end-width: 1px;
+  box-shadow: var(--glass-highlight);
+}
+
+.v-glass--bar-bottom {
+  border-block-end-width: 0;
+  border-block-start-width: 1px;
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .v-glass {
+    -webkit-backdrop-filter: saturate(var(--glass-saturate)) blur(var(--glass-blur));
+    backdrop-filter: saturate(var(--glass-saturate)) blur(var(--glass-blur));
+  }
+  .v-glass--bar {
+    background: var(--glass-bg-bar);
+  }
+  .v-glass--overlay {
+    background: var(--glass-bg-overlay);
+  }
+  .v-glass--card {
+    background: var(--glass-bg-card);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .v-glass,
+  .v-glass--bar,
+  .v-glass--overlay,
+  .v-glass--card {
+    background: var(--surface-elevated);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-color: var(--border);
+  }
 }
 
 /* ── Mobile bottom nav (bottom-nav.tsx) — native-feeling tab bar ─────────── */

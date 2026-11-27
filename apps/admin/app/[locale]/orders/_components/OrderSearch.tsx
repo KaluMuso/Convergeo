@@ -54,6 +54,32 @@ function canPage(filters: Filters): boolean {
   return !filters.orderId.trim() && !filters.phone.trim() && !filters.vendor.trim();
 }
 
+/** Read filters back from a query string; unknown statuses are dropped, text is length-capped. */
+export function readFiltersFromSearch(search: string): Filters {
+  const params = new URLSearchParams(search);
+  const text = (key: string) => (params.get(key) ?? "").trim().slice(0, 80);
+  const status = params.get("status") ?? "";
+  return {
+    orderId: text("order_id"),
+    phone: text("phone"),
+    vendor: text("vendor"),
+    status: STATUS_VALUES.includes(status) ? status : "",
+  };
+}
+
+/** Mirror the applied filters into the address bar without adding history entries. */
+function writeFiltersToUrl(filters: Filters): void {
+  try {
+    const query = orderSearchParams(filters, null).toString();
+    const next = `${window.location.pathname}${query ? `?${query}` : ""}`;
+    if (next !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState(window.history.state, "", next);
+    }
+  } catch {
+    // History API unavailable (sandboxed frame): the search still works.
+  }
+}
+
 export function OrderSearch({ locale }: OrderSearchProps) {
   const t = useTranslations("admin.orders.search");
   const tEmpty = useTranslations("admin.boards.states.orders");
@@ -92,6 +118,7 @@ export function OrderSearch({ locale }: OrderSearchProps) {
         const page = Array.isArray(data) ? data : [];
         setResults((previous) => (cursor ? [...previous, ...page] : page));
         setApplied(filters);
+        if (!cursor) writeFiltersToUrl(filters);
         setHasMore(canPage(filters) && page.length >= ORDERS_PAGE_SIZE);
       } catch {
         if (current !== generation.current) return;
@@ -108,19 +135,19 @@ export function OrderSearch({ locale }: OrderSearchProps) {
     [orderId, phone, vendor, status, t],
   );
 
-  // Deep link from the Today board: /orders?status=placed runs that search once.
-  // Without one the page opens on the newest orders.
+  // Filters live in the URL (?order_id=&phone=&vendor=&status=) so a refresh, a shared link
+  // and the Today board deep link (/orders?status=placed) all reopen the same search.
+  // Without any filter the page opens on the newest orders.
   const initialised = useRef(false);
   useEffect(() => {
     if (initialised.current) return;
     initialised.current = true;
-    const wanted = new URLSearchParams(window.location.search).get("status");
-    if (wanted && STATUS_VALUES.includes(wanted)) {
-      setStatus(wanted);
-      void runSearch({ status: wanted });
-    } else {
-      void runSearch({ orderId: "", phone: "", vendor: "", status: "" });
-    }
+    const fromUrl = readFiltersFromSearch(window.location.search);
+    setOrderId(fromUrl.orderId);
+    setPhone(fromUrl.phone);
+    setVendor(fromUrl.vendor);
+    setStatus(fromUrl.status);
+    void runSearch(fromUrl);
   }, [runSearch]);
 
   const isRecent =

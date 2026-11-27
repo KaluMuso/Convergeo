@@ -82,6 +82,46 @@ describe("sponsored hero slides", () => {
     },
   );
 
+  it("links a vendor sponsored slide to both the promoted item and the vendor page", () => {
+    renderCarousel("en", [
+      {
+        ...ad,
+        target_href: "/p/steel-kettle",
+        vendor_href: "/v/acme-shop",
+        vendor_name: "Acme Shop",
+      },
+    ]);
+    const label = en.home.feed.sponsored;
+    expect(screen.getByRole("link", { name: `${label}: Shop now` })).toHaveAttribute(
+      "href",
+      "/en/p/steel-kettle",
+    );
+    expect(screen.getByTestId("hero-sponsored-vendor-cta")).toHaveAttribute(
+      "href",
+      "/en/v/acme-shop",
+    );
+    expect(screen.getByTestId("hero-sponsored-vendor-cta")).toHaveTextContent("Visit Acme Shop");
+    // The generic non-sponsored CTAs never appear on a sponsored slide.
+    const slide = document.querySelector(`[data-slide="sponsored-${ad.placement_id}"]`);
+    expect(slide).not.toHaveTextContent(en.home.hero.primaryCta);
+    expect(slide).not.toHaveTextContent(en.home.hero.secondaryCta);
+  });
+
+  it("links to the vendor page alone when the target is the vendor itself", () => {
+    renderCarousel("en", [{ ...ad, target_href: null, vendor_href: "/v/acme-shop" }]);
+    expect(
+      screen.getByRole("link", { name: `${en.home.feed.sponsored}: Shop now` }),
+    ).toHaveAttribute("href", "/en/v/acme-shop");
+    expect(screen.queryByTestId("hero-sponsored-vendor-cta")).toBeNull();
+  });
+
+  it("keeps the generic CTAs on the brand slide and the cta_href on house ads", () => {
+    renderCarousel("en", [ad]);
+    const brand = document.querySelector('[data-slide="brand"], li');
+    expect(brand).not.toBeNull();
+    expect(screen.getAllByText(en.home.hero.primaryCta).length).toBeGreaterThan(0);
+  });
+
   it("renders no sponsored slide when the API served none (expired, paused or blocked)", () => {
     renderCarousel("en", []);
     expect(document.querySelector('[data-slide^="sponsored-"]')).toBeNull();
