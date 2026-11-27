@@ -157,6 +157,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261124120000",
     # Ask Vergeo service-role checks use auth.role() (rewrite in place, no down).
     "20261126190000",
+    # Lock vendor payout columns + client dispute/return inserts (additive).
+    "20261128000000",
 }
 
 
