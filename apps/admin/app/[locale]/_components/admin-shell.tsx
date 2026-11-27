@@ -1,5 +1,6 @@
 "use client";
 
+import { glassClass } from "@vergeo/ui/src/glass";
 import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -315,7 +316,7 @@ export function AdminShell({ locale, children }: AdminShellProps) {
 
       {menuOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:hidden"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-[2px] lg:hidden"
           role="presentation"
           onClick={() => setMenuOpen(false)}
         >
@@ -324,7 +325,7 @@ export function AdminShell({ locale, children }: AdminShellProps) {
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${menuId}-title`}
-            className="max-h-[85dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 shadow-xl"
+            className={`${glassClass("overlay")} max-h-[85dvh] w-full overflow-y-auto rounded-t-2xl p-4`}
             onClick={(event) => event.stopPropagation()}
           >
             <header className="mb-4 flex items-center justify-between gap-2">

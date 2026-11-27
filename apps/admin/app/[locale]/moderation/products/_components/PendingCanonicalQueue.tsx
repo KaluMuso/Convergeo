@@ -2,6 +2,7 @@
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { formatK } from "@vergeo/i18n";
+import { glassClass } from "@vergeo/ui/src/glass";
 import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -260,12 +261,14 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
 
       {selected ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-[2px] sm:items-center"
           role="dialog"
           aria-modal="true"
           aria-labelledby="canonical-review-title"
         >
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-surface p-4 shadow-lg">
+          <div
+            className={`${glassClass("overlay")} max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg p-4`}
+          >
             <h3 id="canonical-review-title" className="font-serif text-lg text-text">
               {t("dialog.title")}
             </h3>

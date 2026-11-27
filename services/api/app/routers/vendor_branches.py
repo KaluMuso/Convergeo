@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -262,38 +263,52 @@ def _latest_notes(client: Any, branch_ids: list[str]) -> dict[str, str]:
 
 
 def _business_out(client: Any, business: dict[str, Any]) -> BusinessOut:
-    branches = _rows(
-        client.table("vendors")
-        .select(VENDOR_BRANCH_COLUMNS)
-        .eq("business_id", str(business["id"]))
-        .order("created_at")
-        .execute()
-    )
-    plan = _business_plan(client, branches)
-    allowance = shop_allowance(
-        pacra_number=business.get("pacra_number"), plan=plan, used=_active_count(branches)
-    )
-    branch_ids = [str(b["id"]) for b in branches]
-    kyc = (
-        _rows(
-            client.table("kyc_records")
-            .select("id")
-            .in_("vendor_id", branch_ids)
-            .eq("status", "approved")
-            .limit(1)
+    # Staff only needs the business id, so it starts with the branch read; plan, approved
+    # KYC and review notes only need the branch rows, so they run together afterwards
+    # (this used to be seven sequential round trips per business).
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        staff_future = pool.submit(
+            lambda: _rows(
+                client.table("vendor_business_staff")
+                .select("id, status")
+                .eq("business_id", str(business["id"]))
+                .execute()
+            )
+        )
+        branches = _rows(
+            client.table("vendors")
+            .select(VENDOR_BRANCH_COLUMNS)
+            .eq("business_id", str(business["id"]))
+            .order("created_at")
             .execute()
         )
-        if branch_ids
-        else []
-    )
-    staff = _rows(
-        client.table("vendor_business_staff")
-        .select("id, status")
-        .eq("business_id", str(business["id"]))
-        .execute()
-    )
-    notes = _latest_notes(
-        client, [str(b["id"]) for b in branches if not b.get("is_primary_branch")]
+        branch_ids = [str(b["id"]) for b in branches]
+        plan_future = pool.submit(_business_plan, client, branches)
+        kyc_future = pool.submit(
+            lambda: (
+                _rows(
+                    client.table("kyc_records")
+                    .select("id")
+                    .in_("vendor_id", branch_ids)
+                    .eq("status", "approved")
+                    .limit(1)
+                    .execute()
+                )
+                if branch_ids
+                else []
+            )
+        )
+        notes_future = pool.submit(
+            _latest_notes,
+            client,
+            [str(b["id"]) for b in branches if not b.get("is_primary_branch")],
+        )
+        plan = plan_future.result()
+        kyc = kyc_future.result()
+        staff = staff_future.result()
+        notes = notes_future.result()
+    allowance = shop_allowance(
+        pacra_number=business.get("pacra_number"), plan=plan, used=_active_count(branches)
     )
     seats = plan.get("staff_seats") if plan else 0
     return BusinessOut(
@@ -315,7 +330,7 @@ def _business_out(client: Any, business: dict[str, Any]) -> BusinessOut:
 # Reads
 # ---------------------------------------------------------------------------
 @router.get("", response_model=BusinessesResponse)
-async def list_my_businesses(
+def list_my_businesses(
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> BusinessesResponse:

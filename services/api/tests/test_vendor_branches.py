@@ -308,6 +308,40 @@ def test_list_returns_only_my_businesses_with_allowance(h: Harness) -> None:
     assert business["owner_kyc_approved"] is True
 
 
+def test_list_reads_plan_kyc_and_notes_concurrently(
+    h: Harness, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The reads that only need the branch rows must not queue behind each other."""
+    import threading
+    import time as _time
+
+    import app.routers.vendor_branches as module
+
+    threads: dict[str, str] = {}
+    real_plan, real_notes = module._business_plan, module._latest_notes
+
+    def slow_plan(client: Any, branches: list[dict[str, Any]]) -> Any:
+        threads["plan"] = threading.current_thread().name
+        _time.sleep(0.05)
+        return real_plan(client, branches)
+
+    def slow_notes(client: Any, ids: list[str]) -> Any:
+        threads["notes"] = threading.current_thread().name
+        _time.sleep(0.05)
+        return real_notes(client, ids)
+
+    monkeypatch.setattr(module, "_business_plan", slow_plan)
+    monkeypatch.setattr(module, "_latest_notes", slow_notes)
+
+    response = h.client.get("/vendor/businesses", headers=AUTH)
+
+    assert response.status_code == 200
+    assert threads["plan"] != threads["notes"]
+    business = response.json()["businesses"][0]
+    assert business["allowance"]["next_price_ngwee"] == 8900
+    assert business["owner_kyc_approved"] is True
+
+
 def test_customer_role_cannot_list_businesses(h: Harness) -> None:
     h.as_user(OWNER_A, "customer")
     assert h.client.get("/vendor/businesses", headers=AUTH).status_code == 403

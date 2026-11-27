@@ -9,6 +9,7 @@ import { TopUtilityBarSlot } from "../_components/top-utility-bar-slot";
 import { BottomNavClient } from "./_components/bottom-nav-client";
 import { LazyCartHostSlot } from "./_components/cart/lazy-cart-host-slot";
 import InstallPrompt from "./_components/install-prompt";
+import { buildMegaMenuLabels } from "./_components/mega-menu/labels";
 import { MEGA_MENU_FALLBACK_ROOT_SLUGS } from "./_components/mega-menu-fallback-slugs";
 import { MobileHeaderSearch } from "./_components/mobile-header-search";
 import { ServiceInfoBar } from "./_components/service-info-bar";
@@ -125,6 +126,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           featuredPromo: t("shop.featuredPromo"),
           featuredPromoCta: t("shop.featuredPromoCta"),
           fallbackCategoryRoots: fallbackCategoryRootLabels(t),
+          megaMenu: buildMegaMenuLabels(t),
           directory: t("shop.directory"),
           services: t("shop.services"),
           events: t("shop.events"),
