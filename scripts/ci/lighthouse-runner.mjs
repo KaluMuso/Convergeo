@@ -573,19 +573,44 @@ export const CHECKOUT_FIXTURE_LISTING_ID =
 export async function seedCheckoutCart(url, page) {
   const origin = new URL(url).origin;
   await page.goto(`${origin}/en`, { waitUntil: "domcontentloaded" });
-  const status = await page.evaluate(async (listingId) => {
-    const response = await fetch("/api/ci-perf/cart/items", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-        "Idempotency-Key": `ci-perf-checkout-${crypto.randomUUID()}`,
-      },
-      body: JSON.stringify({ listing_id: listingId, qty: 1 }),
-    });
-    return response.status;
-  }, CHECKOUT_FIXTURE_LISTING_ID);
-  if (status !== 200) throw new Error(`Checkout cart seed failed (${status})`);
+  // The home page's own cart request and the seed below both mint a guest cart
+  // (and a Set-Cookie) when no cookie exists yet. If the home request's response
+  // lands last, the jar points at an empty cart and /en/checkout redirects to the
+  // cart mid-measurement ("measured_page_missing_or_changed"). Let in-flight page
+  // requests finish first, then read the cart back through the same cookie jar the
+  // measured load will use, and re-seed if it is not there. Best-effort idle wait
+  // only: the readback below is what is enforced.
+  await page
+    .waitForNetworkIdle?.({ idleTime: 500, timeout: 10_000 })
+    .catch(() => undefined);
+  let result;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    result = await page.evaluate(async (listingId) => {
+      const response = await fetch("/api/ci-perf/cart/items", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": `ci-perf-checkout-${crypto.randomUUID()}`,
+        },
+        body: JSON.stringify({ listing_id: listingId, qty: 1 }),
+      });
+      if (response.status !== 200) return { status: response.status, items: 0 };
+      const read = await fetch("/api/ci-perf/cart", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      const payload = read.ok ? await read.json().catch(() => null) : null;
+      return {
+        status: response.status,
+        items: Array.isArray(payload?.items) ? payload.items.length : 0,
+      };
+    }, CHECKOUT_FIXTURE_LISTING_ID);
+    if (result.status !== 200)
+      throw new Error(`Checkout cart seed failed (${result.status})`);
+    if (result.items > 0) return;
+  }
+  throw new Error("Checkout cart seed was not readable after 3 attempts");
 }
 
 export async function auditWithChrome(

@@ -1460,10 +1460,11 @@ for (const status of [200, 409]) {
     const calls = [];
     const page = {
       goto: async (target, options) => calls.push(["goto", target, options]),
+      waitForNetworkIdle: async () => calls.push(["idle"]),
       evaluate: async (fn, listingId) => {
         calls.push(["evaluate", listingId]);
         assert.equal(typeof fn, "function");
-        return status;
+        return { status, items: 1 };
       },
     };
     const run = seedCheckoutCart("http://localhost:3000/en/checkout", page);
@@ -1471,7 +1472,37 @@ for (const status of [200, 409]) {
     else await assert.rejects(run, /Checkout cart seed failed \(409\)/);
     assert.deepEqual(calls, [
       ["goto", "http://localhost:3000/en", { waitUntil: "domcontentloaded" }],
+      ["idle"],
       ["evaluate", CHECKOUT_FIXTURE_LISTING_ID],
     ]);
   });
 }
+
+test("checkout cart seed is re-read and re-seeded until the cart is readable", async () => {
+  let evaluations = 0;
+  const page = {
+    goto: async () => undefined,
+    waitForNetworkIdle: async () => {
+      throw new Error("home page never went idle");
+    },
+    evaluate: async () => ({ status: 200, items: ++evaluations < 2 ? 0 : 1 }),
+  };
+  await seedCheckoutCart("http://localhost:3000/en/checkout", page);
+  assert.equal(evaluations, 2);
+});
+
+test("checkout cart seed fails when the cart never becomes readable", async () => {
+  let evaluations = 0;
+  const page = {
+    goto: async () => undefined,
+    evaluate: async () => {
+      evaluations++;
+      return { status: 200, items: 0 };
+    },
+  };
+  await assert.rejects(
+    seedCheckoutCart("http://localhost:3000/en/checkout", page),
+    /not readable after 3 attempts/,
+  );
+  assert.equal(evaluations, 3);
+});
