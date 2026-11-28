@@ -65,7 +65,7 @@ export default async function GiftReceiptPage({ params }: PageProps) {
           {receipt.items.map((item, index) => (
             <li key={`${item.title}-${index}`} className="flex justify-between gap-3 py-2 text-sm">
               <span className="text-display-ink">
-                {item.title}
+                {item.title ?? t("detail.untitledItem")}
                 {item.variant_options.length
                   ? ` · ${item.variant_options.map((option) => option.value).join(", ")}`
                   : ""}
