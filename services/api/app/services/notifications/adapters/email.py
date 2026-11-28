@@ -510,16 +510,12 @@ class ResendEmailAdapter:
             if response.status_code >= 400:
                 failure_kind = _map_resend_error(response.status_code)
                 error_detail = _format_resend_error_detail(response)
+                masked = _mask_email_address(to)
                 logger.warning(
-                    "Resend send failed",
+                    f"Resend send failed: {error_detail} to={masked}",
                     extra={
-                        "channel": "email",
-                        "template": message.template,
-                        "dedupe_key": message.dedupe_key,
-                        "recipient": _mask_email_address(to),
-                        "http_status": response.status_code,
                         "failure_kind": failure_kind,
-                        "resend_error": error_detail,
+                        "status_code": response.status_code,
                     },
                 )
                 return SendResult(
