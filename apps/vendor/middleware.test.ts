@@ -128,6 +128,15 @@ describe("vendor password recovery gate", () => {
     expect(isVendorPasswordRecoveryPath(path)).toBe(false),
   );
 
+  it.each(["/en/signup", "/bem/signup/"])("treats seller sign-up as public: %s", (path) =>
+    expect(isVendorAuthSetupPath(path)).toBe(true),
+  );
+
+  it.each(["/en/signup/admin", "/xx/signup", "/signup", "/en/signup-other"])(
+    "rejects lookalike sign-up paths: %s",
+    (path) => expect(isVendorAuthSetupPath(path)).toBe(false),
+  );
+
   it.each(["/xx/accept-invite", "/accept-invite", "/en/accept-invite//"])(
     "rejects lookalike invite paths: %s",
     (path) => expect(isVendorAuthSetupPath(path)).toBe(false),

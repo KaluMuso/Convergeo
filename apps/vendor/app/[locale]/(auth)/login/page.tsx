@@ -47,7 +47,7 @@ export default async function VendorLoginPage({ params, searchParams }: PageProp
           labels={labels}
           defaultNextPath={`/${locale}`}
           nextParam={next}
-          showSignupLink={false}
+          showSignupLink
           phoneEnabled
         />
       </main>

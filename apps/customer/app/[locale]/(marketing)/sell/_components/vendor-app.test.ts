@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   getVendorAppUrl,
+  getVendorJoinUrl,
   getVendorLoginUrl,
   getVendorSignupUrl,
   isVendorAppConfigured,
@@ -86,5 +87,19 @@ describe("getVendorLoginUrl (invite sign-in)", () => {
 
     expect(getVendorLoginUrl("en")).toBe("https://vendor.vergeo5.com/en/login");
     expect(getVendorLoginUrl("bem")).toBe("https://vendor.vergeo5.com/bem/login");
+  });
+});
+
+describe("getVendorJoinUrl (self-serve seller sign-up)", () => {
+  it("points at the vendor app sign-up page for the locale", () => {
+    vi.stubEnv("NEXT_PUBLIC_VENDOR_APP_URL", "https://vendor.example.test/");
+    expect(getVendorJoinUrl("en")).toBe("https://vendor.example.test/en/signup");
+    expect(getVendorJoinUrl("fr")).toBe("https://vendor.example.test/fr/signup");
+  });
+
+  it("falls back to the canonical production origin, never localhost", () => {
+    vi.stubEnv("NEXT_PUBLIC_VENDOR_APP_URL", "");
+    vi.stubEnv("NODE_ENV", "production");
+    expect(getVendorJoinUrl("en")).toBe("https://vendor.vergeo5.com/en/signup");
   });
 });
