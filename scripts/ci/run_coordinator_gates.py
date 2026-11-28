@@ -12,6 +12,7 @@ import http.client
 import json
 import re
 import shutil
+import sys
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -29,13 +30,13 @@ def inputs() -> dict[str, Any]:
     data: dict[str, Any] = json.loads(INPUTS.read_text())
     if data.get("schema") != "convergeo.coordinator.new-proposal.v1":
         raise RuntimeError("Unknown coordinator input contract")
-    for key, count in (("f3", 7), ("db", 26), ("review_db", 18), ("ui", 6), ("normal", 330)):
+    for key, count in (("f3", 7), ("db", 26), ("review_db", 18), ("ui", 6), ("normal", 333)):
         if len(data[key]) != count or len(set(data[key])) != count:
             raise RuntimeError("Retained identity inventory changed: " + key)
     actual = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
               for p in sorted((ROOT / "supabase/migrations").glob("*.sql"))}
-    if len(actual) != 201 or actual != data["migrations"]:
-        raise RuntimeError("Qualified 201-input source inventory differs")
+    if len(actual) != 203 or actual != data["migrations"]:
+        raise RuntimeError("Qualified 203-input source inventory differs")
     if any(hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != digest
            for path, digest in data["source_sha256"].items()):
         raise RuntimeError("Retained test/runner source binding differs")
@@ -202,7 +203,7 @@ class Runner(financial.Runner):
                 response = connection.getresponse()
                 body = response.read(65537)
                 if role == "service_role":
-                    if response.status != 201 or len(body) > 65536 or json.loads(body) != [
+                    if response.status != 200 or len(body) > 65536 or json.loads(body) != [
                         {"group_name": database, "database_name": database}
                     ]:
                         raise RuntimeError("REST database row binding differs")
@@ -350,6 +351,8 @@ def main() -> int:
         runner.execute_gate(args.gate)
     except Exception as exc:
         runner.results.update(accepted=False, error=runner.redact(str(exc)))
+        detail = str(runner.results["error"])[:2200]
+        print("::error::coordinator gate failure: " + detail, file=sys.stderr)
     finally:
         runner.finish()
     return 0 if runner.results["accepted"] else 1

@@ -15,7 +15,7 @@ CASES = (
         1,
         40,
     ),
-    ("Coordinator source inventory", "scripts/ci/coordinator-gate-inputs.json", 18, 64),
+    ("Coordinator source inventory", "scripts/ci/coordinator-gate-inputs.json", 20, 64),
     ("Published staging API image tag", ".github/workflows/api-image.yml", 1, 40),
 )
 

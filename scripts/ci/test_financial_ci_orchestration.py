@@ -94,10 +94,10 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: catalog moderation holds + ad targets (additive).
         # + 1 reviewed: T8 social contacts, requests, blocks, 1:1 chat (additive).
         # + 1 reviewed: Ask Vergeo service-role checks use auth.role().
-        # + 1 reviewed: service packages open ordered list, cap 10 (additive).
-        # + 1 reviewed: service archetypes + offer attributes (additive).
-        self.assertEqual(len(runner.FORWARD), 74)
-        self.assertEqual(len(set(runner.FORWARD)), 74)
+        # + 1 reviewed: Ask Vergeo answer log + auditor findings.
+        # + 1 reviewed: vendor sourcing hub.
+        self.assertEqual(len(runner.FORWARD), 76)
+        self.assertEqual(len(set(runner.FORWARD)), 76)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

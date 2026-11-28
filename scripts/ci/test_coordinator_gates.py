@@ -10,7 +10,9 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 from unittest.mock import MagicMock, patch
 
 import run_coordinator_gates as gates
@@ -121,8 +123,8 @@ class CoordinatorControls(unittest.TestCase):
         self.assertEqual(len(contract["db"]), 26)
         self.assertEqual(len(contract["review_db"]), 18)
         self.assertEqual(len(contract["ui"]), 6)
-        self.assertEqual(len(contract["normal"]), 330)
-        self.assertEqual(len(contract["migrations"]), 201)
+        self.assertEqual(len(contract["normal"]), 333)
+        self.assertEqual(len(contract["migrations"]), 203)
         self.assertEqual(sum(map(len, financial.financial_identities().values())), 877)
 
     def test_local_host_rejected_before_resource_allocation(self) -> None:
@@ -156,7 +158,7 @@ class CoordinatorControls(unittest.TestCase):
         self.assertEqual(len(prefix), 131)
         self.assertIn("20260929120003_adopt_existing_service_obligations.sql", prefix)
         self.assertNotIn(gates.F3_MIGRATION, prefix)
-        self.assertEqual(len([n for n in contract["migrations"] if n > gates.F3_MIGRATION]), 69)
+        self.assertEqual(len([n for n in contract["migrations"] if n > gates.F3_MIGRATION]), 71)
 
     def test_mounted_false_success_partial_skip_duplicate_and_exit_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -244,6 +246,54 @@ class CoordinatorControls(unittest.TestCase):
             self.assertEqual(test.call_args.args, ("rls", ["tests/rls"]))
             sql.assert_called_once_with("remove-owned-probe-before-rls",
                 "ci_coordinator_curated", "DROP TABLE public.ci_critical_binding_probe")
+
+def _load_probe_comparison() -> dict[str, object]:
+    """Load only the pure comparison helpers from the F2 upgrade probe.
+
+    The probe imports the API test package at module level, so execute just the
+    reviewed neutral-default table and the two helpers that use it.
+    """
+    import ast
+    source = (gates.ROOT / "scripts/drills/f2_upgrade_probe.py").read_text()
+    wanted = {"ADDITIVE_NEUTRAL_DEFAULTS", "_additive", "without_additive_nulls"}
+    keep = []
+    for node in ast.parse(source).body:
+        names = {t.id for t in getattr(node, "targets", []) if isinstance(t, ast.Name)}
+        target = getattr(node, "target", None)
+        if isinstance(target, ast.Name):
+            names.add(target.id)
+        if getattr(node, "name", None) in wanted or names & wanted:
+            keep.append(node)
+    namespace: dict[str, object] = {"Any": object}
+    exec(compile(ast.Module(body=keep, type_ignores=[]), "f2_probe_helpers", "exec"), namespace)
+    return namespace
+
+
+class UpgradeProbeNeutralDefaults(unittest.TestCase):
+    BEFORE = {"id": "o1", "total_ngwee": 5000}
+    NEUTRAL = {"delivery_funding": "customer", "delivery_funded_ngwee": 0,
+               "deliver_together": True, "ready_at": None}
+
+    def compare(self, extra: dict[str, object]) -> bool:
+        helper = cast(Callable[..., object], _load_probe_comparison()["without_additive_nulls"])
+        after = {**self.BEFORE, **extra}
+        return bool(helper(after, self.BEFORE) == self.BEFORE)
+
+    def test_logistics_neutral_defaults_on_legacy_rows_are_accepted(self) -> None:
+        self.assertTrue(self.compare(self.NEUTRAL))
+
+    def test_non_default_delivery_values_still_fail_the_money_check(self) -> None:
+        for column, value in (("delivery_funding", "vendor"),
+                              ("delivery_funding", "platform"),
+                              ("delivery_funded_ngwee", 1500),
+                              ("deliver_together", False)):
+            with self.subTest(column=column, value=value):
+                self.assertFalse(self.compare({**self.NEUTRAL, column: value}))
+
+    def test_changed_existing_column_still_fails(self) -> None:
+        helper = cast(Callable[..., object], _load_probe_comparison()["without_additive_nulls"])
+        after = {**self.BEFORE, **self.NEUTRAL, "total_ngwee": 5001}
+        self.assertNotEqual(helper(after, self.BEFORE), self.BEFORE)
 
 
 if __name__ == "__main__":

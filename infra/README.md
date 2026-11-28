@@ -111,7 +111,9 @@ Set SSL/TLS mode to **Full (strict)**.
 
 Follow `infra/vercel.md` — connect the GitHub repo, set monorepo build commands, add `NEXT_PUBLIC_*` env vars only.
 
-## 8. Vendor / admin on OCI (documented, not containerized in M01-P06)
+## 8. Vendor / admin standalone on a VM (legacy, not used in production)
+
+> **Superseded 2026-11-28 (D21 amended):** vendor and admin run on Vercel (see `infra/vercel.md`), with Cloudflare Access on admin. The steps below are kept only as a self-hosting fallback.
 
 Build standalone Next.js outputs on the VM or in CI, run on ports `3001` (vendor) and `3002` (admin), and set:
 
