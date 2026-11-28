@@ -52,7 +52,7 @@ class SyntheticHistoryControls(unittest.TestCase):
         self.assertEqual(len(keys), len(set(keys)))
         self.assertEqual(rows[114]["version"], "20260921155234")
         self.assertEqual(rows[130]["version"], installer.VERSION)
-        self.assertEqual(len(rows[131:]), 69)
+        self.assertEqual(len(rows[131:]), 70)
 
     def test_insert_preserves_null_empty_bounds_and_unique_metadata(self) -> None:
         for row in self.rows[:114]:

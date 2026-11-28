@@ -616,7 +616,7 @@
     "20261124120000_social_contacts.sql": "4b4605706cd4ca837b7354c3fce3891ef00cd46f4b76f0c45025fa531a9ec04e",
     "20261126190000_ask_service_role_auth_role.sql": "a77904aab6ba3e1600467dda12763c29398e95180c0c166f2b42440b5b44ec35",
     "20261127090000_ask_answer_log_audit.sql": "b7ca232c2057dd1e79214f178d4ecc77d7c41106c3f3171b1f3f473c025fa648",
-    "20261127100000_vendor_sourcing_hub.sql": "390a3b9fe9bc44249301da4cabadd4ec164865055c147e0647c7347f8b6cb2fb"
+    "20261127100000_vendor_sourcing_hub.sql": "f34416a5fb92af7eb26151e536a90d0f2ffd25c5ea08d0abb82c4a5305e41925"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
