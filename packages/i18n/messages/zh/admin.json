@@ -719,7 +719,8 @@
       "fulfilment": {
         "delivery": "配送",
         "pickup": "自提"
-      }
+      },
+      "untitledItem": "未命名商品"
     },
     "dispatch": {
       "title": "人工调度",
@@ -973,7 +974,8 @@
         "paymentLine": "{rail} · {status} · {amount} · {at}",
         "ledger": "账本",
         "ledgerEmpty": "暂无账本交易记录。",
-        "ledgerBalance": "过账合计：{balance} ngwee"
+        "ledgerBalance": "过账合计：{balance} ngwee",
+        "untitledItem": "未命名商品"
       },
       "decision": {
         "title": "决定",

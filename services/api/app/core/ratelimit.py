@@ -14,6 +14,7 @@ from supabase import Client
 
 from app.core.otp_ratelimit import check_otp_number_rate_limit
 from app.errors import AppError
+from app.services.analytics.client_key import trusted_client_key
 from app.supabase_client import get_supabase_service_client
 
 logger = logging.getLogger(__name__)
@@ -152,12 +153,12 @@ def compute_resend_cooldown_seconds(attempt: int, config: RateLimitConfig) -> in
 
 
 def get_client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    if request.client is not None and request.client.host:
-        return request.client.host
-    return "unknown"
+    """Client IP for rate limiting, safe against forged ``X-Forwarded-For``.
+
+    Delegates to :func:`trusted_client_key`: the rightmost forwarded hop, or the
+    ``CF-Connecting-IP`` value when that hop is a Cloudflare edge address.
+    """
+    return trusted_client_key(request)
 
 
 def auth_ip_key_func(request: Request) -> str:
