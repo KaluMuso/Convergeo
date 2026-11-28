@@ -638,7 +638,7 @@ def test_delivery_already_refunded_only_for_other_active_refunds() -> None:
 
     own = "return-b-refund"
     none = _RefundRowsClient([])
-    assert not _delivery_already_refunded(none, order_id="o1", own_source_key=own)  # type: ignore[arg-type]
+    assert not _delivery_already_refunded(none, order_id="o1", own_source_key=own)
     first = _RefundRowsClient(
         [
             {
@@ -648,7 +648,7 @@ def test_delivery_already_refunded_only_for_other_active_refunds() -> None:
             }
         ]
     )
-    assert _delivery_already_refunded(first, order_id="o1", own_source_key=own)  # type: ignore[arg-type]
+    assert _delivery_already_refunded(first, order_id="o1", own_source_key=own)
     failed = _RefundRowsClient(
         [
             {
@@ -658,11 +658,11 @@ def test_delivery_already_refunded_only_for_other_active_refunds() -> None:
             }
         ]
     )
-    assert not _delivery_already_refunded(failed, order_id="o1", own_source_key=own)  # type: ignore[arg-type]
+    assert not _delivery_already_refunded(failed, order_id="o1", own_source_key=own)
     replay = _RefundRowsClient(
         [{"source_key": own, "status": "completed", "breakdown": {"delivery_fee_ngwee": 5_000}}]
     )
-    assert not _delivery_already_refunded(replay, order_id="o1", own_source_key=own)  # type: ignore[arg-type]
+    assert not _delivery_already_refunded(replay, order_id="o1", own_source_key=own)
 
 
 @pytest.mark.parametrize(
@@ -680,7 +680,7 @@ def test_delivery_not_counted_when_earlier_refund_carried_no_delivery(
         [{"source_key": "return-a-refund", "status": "awaiting_payout", "breakdown": breakdown}]
     )
     assert not _delivery_already_refunded(
-        earlier,  # type: ignore[arg-type]
+        earlier,
         order_id="o1",
         own_source_key="return-b-refund",
     )
