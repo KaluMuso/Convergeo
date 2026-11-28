@@ -113,7 +113,8 @@
     "voiceUnsupported": "La saisie vocale n'est pas prise en charge par ce navigateur.",
     "close": "Fermer",
     "showFooter": "Afficher les liens du site",
-    "hideFooter": "Masquer les liens du site"
+    "hideFooter": "Masquer les liens du site",
+    "voiceDenied": "Le microphone est bloqué. Autorisez-le dans les paramètres du navigateur, ou tapez votre question."
   },
   "paymentTrust": {
     "footerSeal": "Payez en espèces à l'arrivée de votre commande",

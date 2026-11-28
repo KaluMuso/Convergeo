@@ -272,6 +272,8 @@ type AuthSignupShellProps = {
   loginPath?: string;
   defaultNextPath: string;
   nextParam?: string | null;
+  /** Which portal the new account is created for (vendor = seller sign-up). */
+  portal?: AuthPortal;
 };
 
 export function AuthSignupShell({
@@ -281,6 +283,7 @@ export function AuthSignupShell({
   loginPath = "/login",
   defaultNextPath,
   nextParam,
+  portal = "customer",
 }: AuthSignupShellProps) {
   const [method, setMethod] = useState<"phone" | "email">(isPhoneOtpEnabled() ? "phone" : "email");
   const [oauthError, setOauthError] = useState<string | null>(null);
@@ -289,7 +292,7 @@ export function AuthSignupShell({
 
   useOAuthCodeCompletion({
     locale,
-    portal: "customer",
+    portal,
     nextParam,
     defaultNextPath,
     genericError: labels.genericError,
@@ -304,13 +307,19 @@ export function AuthSignupShell({
       </header>
 
       {method === "phone" ? (
-        <PhoneForm locale={locale} labels={labels.phone} otpPath={otpPath} mode="signup" />
+        <PhoneForm
+          locale={locale}
+          labels={labels.phone}
+          otpPath={otpPath}
+          mode="signup"
+          nextParam={nextParam}
+        />
       ) : (
         <EmailForm
           locale={locale}
           labels={labels.email}
           mode="signup"
-          portal="customer"
+          portal={portal}
           defaultNextPath={defaultNextPath}
           nextParam={nextParam}
         />
