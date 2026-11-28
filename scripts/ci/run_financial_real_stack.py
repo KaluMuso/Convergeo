@@ -142,6 +142,8 @@ FORWARD = [
     "20261126190000_ask_service_role_auth_role.sql",
     # Ask Vergeo answer log + auditor findings (additive tables, trigger-based admin alert).
     "20261127090000_ask_answer_log_audit.sql",
+    # Vendor sourcing hub: supplier types, made-in-Zambia flag, import requests (additive, documented down).
+    "20261127100000_vendor_sourcing_hub.sql",
     # Vendor free-delivery terms + listing flag audit triggers (additive, atomic with the change).
     "20261128120000_vendor_delivery_terms_audit.sql",
 ]
@@ -525,7 +527,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 200 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 202 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

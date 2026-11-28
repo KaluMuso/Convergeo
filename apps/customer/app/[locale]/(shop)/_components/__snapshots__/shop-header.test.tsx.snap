@@ -2,7 +2,7 @@
 
 exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`] = `
 <header
-  class="v-shop-header sticky top-0 z-50 w-full"
+  class="v-shop-header sticky top-0 z-50 w-full max-w-[100vw] overflow-x-clip"
   data-scrolled="false"
   data-testid="shop-header"
 >
@@ -28,11 +28,11 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
         />
         <a
           aria-label="Convergeo"
-          class="inline-flex shrink-0 items-center rounded-sm transition-opacity duration-fast ease-std hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing"
+          class="inline-flex shrink-0 items-center rounded-sm transition-opacity duration-fast ease-std hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing min-w-0 max-w-[46%]"
           href="/en"
         >
           <span
-            class="inline-flex items-center"
+            class="inline-flex items-center min-w-0 max-w-[8.25rem]"
             data-testid="brand-logo"
           >
             <img
@@ -40,23 +40,23 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
               class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] mix-blend-multiply dark:hidden"
               data-nimg="1"
               decoding="async"
-              height="26"
+              height="22"
               src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75"
               srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75 2x"
-              style="color: transparent; height: 26px;"
-              width="152"
+              style="color: transparent; height: 22px;"
+              width="129"
             />
             <img
               alt="Convergeo"
               class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] hidden mix-blend-screen dark:block"
               data-nimg="1"
               decoding="async"
-              height="26"
+              height="22"
               loading="lazy"
               src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75"
               srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75 2x"
-              style="color: transparent; height: 26px;"
-              width="152"
+              style="color: transparent; height: 22px;"
+              width="129"
             />
           </span>
         </a>
