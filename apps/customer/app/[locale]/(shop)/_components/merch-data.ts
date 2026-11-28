@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 
+import { fetchCategoryPresentations } from "./category-presentation";
+
 export type MerchSlotRow = {
   id: string;
   slot_key: string;
@@ -35,6 +37,8 @@ export type CategoryRow = {
   position: number;
   parent_id: string | null;
   prohibited: boolean;
+  /** Admin-set Cloudinary icon (category_presentations); attached for the home grid. */
+  icon_public_id?: string | null;
 };
 
 export type HomeMerchData = {
@@ -80,19 +84,13 @@ export function isSlotInSchedule(
   return true;
 }
 
-export function filterActiveSlots(
-  slots: MerchSlotRow[],
-  now: Date = new Date(),
-): MerchSlotRow[] {
+export function filterActiveSlots(slots: MerchSlotRow[], now: Date = new Date()): MerchSlotRow[] {
   return slots
     .filter((slot) => isSlotInSchedule(slot, now))
     .sort((left, right) => left.position - right.position);
 }
 
-export function pickSlot(
-  slots: MerchSlotRow[],
-  slotKey: string,
-): MerchSlotRow | undefined {
+export function pickSlot(slots: MerchSlotRow[], slotKey: string): MerchSlotRow | undefined {
   return slots.find((slot) => slot.slot_key === slotKey);
 }
 
@@ -104,10 +102,7 @@ export const PLACEHOLDER_HERO_MESSAGE_KEYS = new Set([
   "merch.hero.placeholder.subtitle",
 ]);
 
-function readPayloadString(
-  payload: Record<string, unknown>,
-  key: string,
-): string | undefined {
+function readPayloadString(payload: Record<string, unknown>, key: string): string | undefined {
   const value = payload[key];
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
@@ -140,8 +135,7 @@ export function isPlaceholderHeroSlot(slot: MerchSlotRow): boolean {
   const subtitleKey = readPayloadString(payload, "subtitle_key");
 
   const titleIsPlaceholder = !titleKey || isPlaceholderHeroMessageKey(titleKey);
-  const subtitleIsPlaceholder =
-    !subtitleKey || isPlaceholderHeroMessageKey(subtitleKey);
+  const subtitleIsPlaceholder = !subtitleKey || isPlaceholderHeroMessageKey(subtitleKey);
 
   const hasCampaignAssets =
     readPayloadString(payload, "image_public_id") !== undefined ||
@@ -168,8 +162,7 @@ function hasFlashDealContent(
   slot: Pick<MerchSlotRow, "payload" | "schedule_to">,
   now: Date,
 ): boolean {
-  const endsAt =
-    readPayloadString(slot.payload, "ends_at") ?? slot.schedule_to ?? undefined;
+  const endsAt = readPayloadString(slot.payload, "ends_at") ?? slot.schedule_to ?? undefined;
   if (!endsAt) {
     return false;
   }
@@ -196,9 +189,7 @@ function hasEventsRowContent(payload: Record<string, unknown>): boolean {
   });
 }
 
-function hasFeaturedCollectionsContent(
-  payload: Record<string, unknown>,
-): boolean {
+function hasFeaturedCollectionsContent(payload: Record<string, unknown>): boolean {
   const rawCollections = payload.collections;
   if (!Array.isArray(rawCollections)) {
     return false;
@@ -232,10 +223,7 @@ function hasFeaturedCollectionsContent(
  * True when a merch slot would render buyer-visible campaign content (not the seed
  * placeholder hero or empty module shells).
  */
-export function hasSubstantiveMerchSlot(
-  slot: MerchSlotRow,
-  now: Date = new Date(),
-): boolean {
+export function hasSubstantiveMerchSlot(slot: MerchSlotRow, now: Date = new Date()): boolean {
   if (!isSlotInSchedule(slot, now)) {
     return false;
   }
@@ -263,10 +251,7 @@ export function hasSubstantiveMerchSlot(
  * Whether admin merchandising should take precedence over the catalogue-backed default
  * homepage. Placeholder-only seed config (hero ops copy, no other modules) returns false.
  */
-export function hasEffectiveMerchConfig(
-  slots: MerchSlotRow[],
-  now: Date = new Date(),
-): boolean {
+export function hasEffectiveMerchConfig(slots: MerchSlotRow[], now: Date = new Date()): boolean {
   return slots.some((slot) => hasSubstantiveMerchSlot(slot, now));
 }
 
@@ -278,18 +263,14 @@ export function getRenderableSectionKeys(
 
   return HOME_SECTION_ORDER.filter((sectionKey) => {
     if (sectionKey === "category_grid") {
-      return (
-        categories.length > 0 || pickSlot(active, sectionKey) !== undefined
-      );
+      return categories.length > 0 || pickSlot(active, sectionKey) !== undefined;
     }
 
     return pickSlot(active, sectionKey) !== undefined;
   });
 }
 
-export function getTopLevelCategories(
-  categories: CategoryRow[],
-): CategoryRow[] {
+export function getTopLevelCategories(categories: CategoryRow[]): CategoryRow[] {
   return categories
     .filter((category) => !category.prohibited && category.parent_id === null)
     .sort((left, right) => left.position - right.position);
@@ -301,9 +282,7 @@ async function fetchMerchSlots(): Promise<MerchSlotRow[]> {
 
   const { data, error } = await supabase
     .from("merch_slots")
-    .select(
-      "id, slot_key, variant_key, payload, schedule_from, schedule_to, position, active",
-    )
+    .select("id, slot_key, variant_key, payload, schedule_from, schedule_to, position, active")
     .order("position", { ascending: true });
 
   if (error || !data) {
@@ -313,16 +292,13 @@ async function fetchMerchSlots(): Promise<MerchSlotRow[]> {
   return data.map((row) => ({
     ...row,
     payload:
-      row.payload &&
-      typeof row.payload === "object" &&
-      !Array.isArray(row.payload)
+      row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
         ? (row.payload as Record<string, unknown>)
         : {},
   }));
 }
 
-export type CategoriesLoadFailureReason =
-  "config" | "unauthorized" | "upstream" | "malformed";
+export type CategoriesLoadFailureReason = "config" | "unauthorized" | "upstream" | "malformed";
 
 export type CategoriesLoadResult =
   | { ok: true; categories: CategoryRow[] }
@@ -467,17 +443,13 @@ export async function fetchCategories(): Promise<CategoryRow[]> {
   return result.ok ? result.categories : [];
 }
 
-export function mapResolvedMerchSlot(
-  row: ResolvedMerchSlotApiRow,
-): MerchSlotRow {
+export function mapResolvedMerchSlot(row: ResolvedMerchSlotApiRow): MerchSlotRow {
   return {
     id: row.id,
     slot_key: row.slot_key,
     variant_key: row.variant_key,
     payload:
-      row.payload &&
-      typeof row.payload === "object" &&
-      !Array.isArray(row.payload)
+      row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
         ? row.payload
         : {},
     schedule_from: row.schedule_from,
@@ -491,9 +463,7 @@ export function mapResolvedMerchSlot(
 export async function fetchMerchSlotsFromApi(
   merchPreview?: string | null,
 ): Promise<MerchSlotRow[]> {
-  const query = merchPreview
-    ? `?merch_preview=${encodeURIComponent(merchPreview)}`
-    : "";
+  const query = merchPreview ? `?merch_preview=${encodeURIComponent(merchPreview)}` : "";
   const url = absoluteApiUrl(`/merch/slots${query}`);
   if (!url) {
     return [];
@@ -512,9 +482,7 @@ export async function fetchMerchSlotsFromApi(
     }
     return data
       .filter((entry): entry is ResolvedMerchSlotApiRow => {
-        return Boolean(
-          entry && typeof entry === "object" && "slot_key" in entry,
-        );
+        return Boolean(entry && typeof entry === "object" && "slot_key" in entry);
       })
       .map((entry) => mapResolvedMerchSlot(entry));
   } catch {
@@ -533,14 +501,18 @@ export async function loadHomeMerchData(
   const { merchPreview = null } = options;
   const isPreviewMode = Boolean(merchPreview?.trim());
 
-  const [rawSlots, categories] = await Promise.all([
+  const [rawSlots, categories, presentations] = await Promise.all([
     isPreviewMode ? fetchMerchSlotsFromApi(merchPreview) : fetchMerchSlots(),
     fetchCategories(),
+    fetchCategoryPresentations(),
   ]);
 
   return {
     slots: isPreviewMode ? rawSlots : filterActiveSlots(rawSlots),
-    categories: getTopLevelCategories(categories),
+    categories: getTopLevelCategories(categories).map((category) => ({
+      ...category,
+      icon_public_id: presentations.get(category.slug)?.icon_public_id ?? null,
+    })),
     isPreviewMode,
   };
 }

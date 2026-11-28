@@ -165,6 +165,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261127120000",
     # Service archetypes + validated attribute blobs (additive, documented down).
     "20261128090000",
+    # Admin category presentation (additive, documented down).
+    "20261128190000",
 }
 
 

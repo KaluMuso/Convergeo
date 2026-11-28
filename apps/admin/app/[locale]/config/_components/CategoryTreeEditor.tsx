@@ -4,6 +4,9 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { configApi, type CategoryNode } from "./api";
+import { CategoryPresentationEditor } from "./CategoryPresentationEditor";
+
+import type { CategoryPresentation } from "./category-presentation-api";
 
 function sortSiblings(nodes: CategoryNode[]): CategoryNode[] {
   return [...nodes].sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
@@ -15,13 +18,24 @@ export function CategoryTreeEditor() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [moveChildrenId, setMoveChildrenId] = useState<string | null>(null);
+  const [presentations, setPresentations] = useState<Map<string, CategoryPresentation>>(
+    () => new Map(),
+  );
+  const [editingLookId, setEditingLookId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await configApi.request<CategoryNode[]>("/admin/config/categories");
+      const [data, looks] = await Promise.all([
+        configApi.request<CategoryNode[]>("/admin/config/categories"),
+        // Icons/banners are optional: a failure here must not hide the tree.
+        configApi
+          .request<CategoryPresentation[]>("/admin/config/categories/presentations")
+          .catch(() => [] as CategoryPresentation[]),
+      ]);
       setRows(data);
+      setPresentations(new Map(looks.map((look) => [look.category_id, look])));
     } catch {
       setError(t("common.error"));
     } finally {
@@ -100,7 +114,21 @@ export function CategoryTreeEditor() {
     }
   };
 
+  const handleLookSaved = (categoryId: string, saved: CategoryPresentation | null) => {
+    setPresentations((current) => {
+      const next = new Map(current);
+      if (saved) {
+        next.set(categoryId, saved);
+      } else {
+        next.delete(categoryId);
+      }
+      return next;
+    });
+    setEditingLookId(null);
+  };
+
   const renderNode = (node: CategoryNode, depth: number) => {
+    const look = presentations.get(node.id);
     const siblings = childrenByParent.get(node.parent_id) ?? [];
     const index = siblings.findIndex((item) => item.id === node.id);
     const rootCandidates = childrenByParent.get(null) ?? [];
@@ -116,6 +144,15 @@ export function CategoryTreeEditor() {
             <p className="font-mono text-xs text-muted">{node.path}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
+              aria-expanded={editingLookId === node.id}
+              data-testid={`category-look-${node.slug}`}
+              onClick={() => setEditingLookId(editingLookId === node.id ? null : node.id)}
+            >
+              {look ? t("categories.look.editButtonSet") : t("categories.look.editButton")}
+            </button>
             <button
               type="button"
               className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
@@ -159,6 +196,17 @@ export function CategoryTreeEditor() {
             </select>
           </div>
         </div>
+
+        {editingLookId === node.id ? (
+          <div style={{ marginLeft: depth * 12 }}>
+            <CategoryPresentationEditor
+              category={node}
+              presentation={look}
+              onSaved={(saved) => handleLookSaved(node.id, saved)}
+              onClose={() => setEditingLookId(null)}
+            />
+          </div>
+        ) : null}
 
         {moveChildrenId === node.id ? (
           <div

@@ -164,7 +164,7 @@ fi
 [[ ! -s "${tmp}/acl-long-stdout" ]]
 grep -Fx 'error: unbounded synthetic catalog evidence line' "${tmp}/acl-long-stderr" >/dev/null
 cp "${tmp}/synthetic-direct_role_acl-bad" "${tmp}/synthetic-acl-long-output"
-for ((index = 0; index < 201; index++)); do
+for ((index = 0; index < 204; index++)); do
   printf '%s\n' 'direct_acl_delta|unexpected|public|cart_merge_receipts|service_role|DELETE|postgres|false' \
     >>"${tmp}/synthetic-acl-long-output"
 done

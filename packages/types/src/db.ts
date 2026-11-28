@@ -1292,6 +1292,47 @@ export type Database = {
           },
         ]
       }
+      category_presentations: {
+        Row: {
+          banner_description_i18n: Json
+          banner_public_id: string | null
+          banner_title_i18n: Json
+          category_id: string
+          created_at: string
+          icon_public_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          banner_description_i18n?: Json
+          banner_public_id?: string | null
+          banner_title_i18n?: Json
+          category_id: string
+          created_at?: string
+          icon_public_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          banner_description_i18n?: Json
+          banner_public_id?: string | null
+          banner_title_i18n?: Json
+          category_id?: string
+          created_at?: string
+          icon_public_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_presentations_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: true
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       category_product_policies: {
         Row: {
           allowed_product_classes: string[]
@@ -10957,6 +10998,10 @@ export type Database = {
           product_id: string
           status: string
         }[]
+      }
+      is_valid_category_copy: {
+        Args: { copy: Json; max_len: number }
+        Returns: boolean
       }
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean }
       issue_birthday_greeting: {

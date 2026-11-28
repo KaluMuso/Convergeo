@@ -16,6 +16,11 @@ import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../../lib/api-base-ur
 import { fetchJson } from "../../../../../lib/fetch-json";
 import { categoryPlpRobots } from "../../../../../lib/seo/category-listing-eligibility";
 import { BackToTop } from "../../_components/back-to-top";
+import { CategoryBanner } from "../../_components/category-banner";
+import {
+  fetchCategoryPresentations,
+  resolveCategoryBanner,
+} from "../../_components/category-presentation";
 import { buildCategoryTree, categoryDisplayName } from "../../_components/category-tree";
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { attachOfferBadges } from "../../_components/offers/attach-offer-badges";
@@ -206,7 +211,10 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
   const t = await getCatalogTranslator(locale);
   const tNav = await getNavTranslator(locale);
   const categoryPath = slugToCategoryPath(slug);
-  const categoriesResult = await fetchCategoriesResult();
+  const [categoriesResult, presentations] = await Promise.all([
+    fetchCategoriesResult(),
+    fetchCategoryPresentations(),
+  ]);
   const categoryName =
     categoryDisplayName(
       categoriesResult.ok ? categoriesResult.categories : [],
@@ -248,6 +256,11 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
       ? categoryTree.map((entry) => ({ slug: entry.slug, name: entry.name }))
       : []);
   const childParentParts = activeNav ? [activeNav.slug] : [];
+  // Admin-set banner for the category being browsed (none on the "all" page).
+  const categoryBanner =
+    leafSlug && leafSlug !== "all"
+      ? resolveCategoryBanner(presentations.get(leafSlug), locale)
+      : null;
 
   const facetLabels = {
     heading: t("plp.facets.heading"),
@@ -323,6 +336,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
           { key: "category", label: categoryName },
         ]}
       />
+      {categoryBanner ? <CategoryBanner banner={categoryBanner} /> : null}
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-h1 text-display-ink">
           {t("plp.title", { category: categoryName })}

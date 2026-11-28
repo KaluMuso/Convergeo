@@ -178,6 +178,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261127120000",
     # Service archetypes + validated attribute blobs (additive, documented down).
     "20261128090000",
+    # Admin category presentation (additive, documented down).
+    "20261128190000",
 ]
 
 
@@ -221,7 +223,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 203
+    assert len(sql_files) == len(migrations) == 204
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -278,10 +280,11 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     sourcing_hub = ["20261127100000"]
     packages_open_list = ["20261127120000"]
     service_archetypes = ["20261128090000"]
+    category_presentation = ["20261128190000"]
     logistics = ["20261122100000", "20261122100100"]
     area_pricing = ["20261122100200", "20261122100300"]
     web_push = ["20261123090000"]
-    assert actual_versions[-64:] == (
+    assert actual_versions[-65:] == (
         repairs
         + post_repair
         + queued_features
@@ -318,6 +321,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + sourcing_hub
         + packages_open_list
         + service_archetypes
+        + category_presentation
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 

@@ -106,7 +106,11 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
       >
         {categories.map((category, index) => {
           const fill = pastelForIndex(index);
-          const imagePublicId = imageMap.get(category.slug) ?? defaultCategoryImage(category.slug);
+          // Campaign art (merch payload) > admin-set icon > built-in photography.
+          const imagePublicId =
+            imageMap.get(category.slug) ??
+            category.icon_public_id ??
+            defaultCategoryImage(category.slug);
 
           return (
             <li key={category.id} className="w-20 shrink-0 snap-start md:w-auto">

@@ -355,6 +355,11 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "GET /admin/clips/reports",
         "GET /admin/clips/{clip_id}",
         "GET /admin/config/categories",
+        # Category icon / banner / banner copy (20261128190000): same as the tree.
+        "GET /admin/config/categories/presentations",
+        "PUT /admin/config/categories/{category_id}/presentation",
+        "DELETE /admin/config/categories/{category_id}/presentation",
+        "POST /admin/config/category-media/sign",
         "GET /admin/config/commissions",
         "GET /admin/config/delivery-zones",
         "GET /admin/config/flags",
