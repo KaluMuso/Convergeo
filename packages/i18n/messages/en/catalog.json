@@ -5,7 +5,7 @@
   "plp": {
     "title": "Browse {category}",
     "meta": {
-      "description": "Browse {category} on Convergeo — compare sellers, prices, and availability across Zambia."
+      "description": "Browse {category} on Vergeo5 — compare sellers, prices, and availability across Zambia."
     },
     "defaultCategory": "All products",
     "breadcrumbAria": "Breadcrumb",
@@ -90,7 +90,7 @@
   "home": {
     "meta": {
       "title": "Shop products, services & events in Zambia",
-      "description": "Compare sellers, book services, and find events across Zambia on Convergeo — Mobile Money, card and escrow, COD up to K500, Lusaka delivery, nationwide pickup."
+      "description": "Compare sellers, book services, and find events across Zambia on Vergeo5 — Mobile Money, card and escrow, COD up to K500, Lusaka delivery, nationwide pickup."
     },
     "serviceBar": {
       "ariaLabel": "Delivery and pickup information",
@@ -104,12 +104,12 @@
       "fallbackTitle": "Shop products, services, and events across Zambia",
       "fallbackSubtitle": "Find sellers near you. Get it delivered in Lusaka, or collect it anywhere in Zambia.",
       "primaryCta": "Start browsing",
-      "secondaryCta": "Sell on Convergeo",
+      "secondaryCta": "Sell on Vergeo5",
       "placeholder": {
-        "title": "Welcome to Convergeo",
+        "title": "Welcome to Vergeo5",
         "subtitle": "Your config-driven storefront will appear here as merchandising slots go live."
       },
-      "escrowLine": "Pay with mobile money or card — held by Convergeo until you are happy.",
+      "escrowLine": "Pay with mobile money or card — held by Vergeo5 until you are happy.",
       "escrowStep1": "You order",
       "escrowStep2": "We deliver",
       "escrowStep3": "You pay on arrival",
@@ -139,11 +139,11 @@
       }
     },
     "trust": {
-      "ariaLabel": "Why shop on Convergeo",
+      "ariaLabel": "Why shop on Vergeo5",
       "sellers": "Every shop has its own page. See who you buy from.",
       "fulfillment": "Delivery in Lusaka. Pickup across Zambia.",
       "returns": "Broken or wrong item? Return it within 48 hours.",
-      "escrow": "You pay → Held by Convergeo → Released"
+      "escrow": "You pay → Held by Vergeo5 → Released"
     },
     "demo": {
       "sampleListing": "Sample listing"
@@ -170,7 +170,7 @@
       "browseLabel": "Browse {category}"
     },
     "rails": {
-      "newTitle": "New on Convergeo",
+      "newTitle": "New on Vergeo5",
       "departmentTitle": "New in {category}",
       "recentTitle": "Recently viewed",
       "recentView": "View",
@@ -196,7 +196,7 @@
       }
     },
     "sellCta": {
-      "title": "Want to sell on Convergeo?",
+      "title": "Want to sell on Vergeo5?",
       "body": "Create a seller account, verify your ID and start listing. See how it works.",
       "cta": "See how selling works"
     },
@@ -245,11 +245,11 @@
         "moreLoaded": "{count} more items loaded.",
         "emptyTitle": "New products are on the way",
         "emptyBody": "Sellers are listing more every week. Meanwhile, browse categories or start selling.",
-        "emptyCta": "Sell on Convergeo"
+        "emptyCta": "Sell on Vergeo5"
       }
     },
     "trustStrip": {
-      "ariaLabel": "Why shop on Convergeo",
+      "ariaLabel": "Why shop on Vergeo5",
       "cod": "Mobile Money escrow · COD under K500",
       "verified": "Verified sellers",
       "lusaka": "Lusaka delivery",
@@ -290,8 +290,8 @@
     },
     "meta": {
       "notFoundTitle": "Product not found",
-      "descriptionFallback": "Shop {name} on Convergeo",
-      "descriptionWithPrice": "Compare prices for {name} from {count, plural, one {# seller} other {# sellers}} on Convergeo. From {price}."
+      "descriptionFallback": "Shop {name} on Vergeo5",
+      "descriptionWithPrice": "Compare prices for {name} from {count, plural, one {# seller} other {# sellers}} on Vergeo5. From {price}."
     },
     "tabs": {
       "ariaLabel": "Product details",

@@ -8,7 +8,7 @@ import { resolveOgTagline } from "../../../lib/seo/og-tagline";
  * Title/price come from searchParams set by product/event/vendor pages.
  */
 export const runtime = "edge";
-export const alt = "Convergeo";
+export const alt = "Vergeo5";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -28,15 +28,9 @@ type ImageProps = {
   searchParams: Promise<{ name?: string; price?: string }>;
 };
 
-export default async function OpenGraphImage({
-  params,
-  searchParams,
-}: ImageProps) {
-  const [{ locale }, { name, price }] = await Promise.all([
-    params,
-    searchParams,
-  ]);
-  const displayName = name?.trim() || "Convergeo";
+export default async function OpenGraphImage({ params, searchParams }: ImageProps) {
+  const [{ locale }, { name, price }] = await Promise.all([params, searchParams]);
+  const displayName = name?.trim() || "Vergeo5";
   const displayPrice = price?.trim() || null;
 
   return new ImageResponse(
@@ -71,7 +65,7 @@ export default async function OpenGraphImage({
             background: COLORS.primary,
           }}
         />
-        Convergeo
+        Vergeo5
       </div>
 
       <div
@@ -106,9 +100,7 @@ export default async function OpenGraphImage({
         ) : null}
       </div>
 
-      <div style={{ fontSize: 24, color: COLORS.text2 }}>
-        {resolveOgTagline(locale)}
-      </div>
+      <div style={{ fontSize: 24, color: COLORS.text2 }}>{resolveOgTagline(locale)}</div>
     </div>,
     {
       ...size,

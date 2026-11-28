@@ -69,7 +69,7 @@ describe("deals and help social metadata", () => {
     const metadata = await helpArticleMeta({
       params: Promise.resolve({ locale: "en", slug: "how-escrow-works" }),
     });
-    expect(metadata.openGraph?.title).toBe("How escrow protects your money on Convergeo");
+    expect(metadata.openGraph?.title).toBe("How escrow protects your money on Vergeo5");
     expect(String(metadata.openGraph?.url)).toContain("/en/help/how-escrow-works");
   });
 });

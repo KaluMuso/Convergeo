@@ -15,7 +15,7 @@ import { resolveAdminActiveItem } from "./[locale]/_components/admin-nav-config"
  *    (fail closed), so a new page that nobody wired into the nav silently becomes
  *    superadmin-only: this test makes that a reviewed decision instead.
  * 2. Every server page exports a document title (`generateMetadata`), so browser
- *    tabs and history entries are not all just "Convergeo Admin".
+ *    tabs and history entries are not all just "Vergeo5 Admin".
  */
 const LOCALE_ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "[locale]");
 
