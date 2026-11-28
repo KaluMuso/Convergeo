@@ -24,6 +24,10 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
 from app.routers.admin_products import _cloudinary_delivery_url
+from app.services.catalog.listing_price_review import (
+    REVIEW_FLAG_PRICE_BELOW_CATEGORY_FLOOR,
+    listing_price_review_flags,
+)
 from app.services.catalog_visibility import load_targets, search_targets
 from fastapi import APIRouter, Depends, Query
 from postgrest.exceptions import APIError
@@ -124,6 +128,7 @@ class CatalogEntityOut(BaseModel):
     visible: bool
     href: str
     hold: HoldOut | None = None
+    review_flags: list[str] = Field(default_factory=list)
 
 
 def _rows(response: Any) -> list[dict[str, Any]]:
@@ -178,6 +183,65 @@ def _embed_product_name(row: dict[str, Any]) -> str | None:
     return None
 
 
+def _embed_category_path(row: dict[str, Any]) -> str | None:
+    products = row.get("products")
+    if not isinstance(products, dict):
+        return None
+    categories = products.get("categories")
+    if not isinstance(categories, dict):
+        return None
+    path = categories.get("path")
+    if isinstance(path, str) and path.strip():
+        return path.strip()
+    return None
+
+
+def _listing_title(row: dict[str, Any], *, product_label: str | None) -> str:
+    title = row.get("title_override")
+    if isinstance(title, str) and title.strip():
+        return title.strip()
+    return product_label or ""
+
+
+def _listing_review_flags(row: dict[str, Any]) -> list[str]:
+    price = row.get("price_ngwee")
+    price_ngwee = int(price) if isinstance(price, int) else None
+    return listing_price_review_flags(
+        price_ngwee=price_ngwee,
+        category_path=_embed_category_path(row),
+        title=_listing_title(row, product_label=_embed_product_name(row)),
+    )
+
+
+def _search_listings_below_price_floor(
+    client: Any, q: str, *, limit: int = 50
+) -> list[dict[str, Any]]:
+    """Scan active-ish listings for below-floor prices (admin filter; not a launch gate)."""
+    request = client.table("vendor_listings").select(
+        "id, title_override, price_ngwee, status, vendor_id"
+    )
+    term = q.strip()
+    if term:
+        request = request.ilike("title_override", f"%{term}%")
+    rows = _rows(request.limit(400).execute())
+    if not rows:
+        return []
+    ids = [str(row["id"]) for row in rows if row.get("id")]
+    detail = _rows(
+        client.table("vendor_listings")
+        .select("id, title_override, price_ngwee, products(name, categories(path))")
+        .in_("id", ids)
+        .execute()
+    )
+    by_id = {str(row["id"]): row for row in detail if row.get("id")}
+    matched: list[dict[str, Any]] = []
+    for row in rows:
+        detail_row = by_id.get(str(row["id"]), row)
+        if REVIEW_FLAG_PRICE_BELOW_CATEGORY_FLOOR in _listing_review_flags(detail_row):
+            matched.append(row)
+    return matched[:limit]
+
+
 def _listing_thumbnails(client: Any, listing_ids: list[str]) -> dict[str, str]:
     if not listing_ids:
         return {}
@@ -211,7 +275,10 @@ def _enrich_catalog_entities(
         ids = [entity.id for entity in entities]
         rows = _rows(
             client.table("vendor_listings")
-            .select("id, title_override, price_ngwee, vendors(display_name), products(name)")
+            .select(
+                "id, title_override, price_ngwee, vendors(display_name), "
+                "products(name, categories(path))"
+            )
             .in_("id", ids)
             .execute()
         )
@@ -231,6 +298,7 @@ def _enrich_catalog_entities(
             price = row.get("price_ngwee")
             entity.price_ngwee = int(price) if isinstance(price, int) else None
             entity.thumbnail_url = thumbs.get(entity.id)
+            entity.review_flags = _listing_review_flags(row)
         return
     if kind == "vendor":
         for entity in entities:
@@ -327,9 +395,13 @@ def _register(segment: str) -> None:
         service_client: Annotated[Any, Depends(get_supabase_client)],
         q: Annotated[str, Query(max_length=80)] = "",
         held_only: bool = False,
+        below_price_floor_only: bool = False,
     ) -> list[CatalogEntityOut]:
         client = service_client.client
-        if held_only:
+        if kind == "listing" and below_price_floor_only:
+            raw = _search_listings_below_price_floor(client, q)
+            rows = load_targets(client, kind, [str(row["id"]) for row in raw])
+        elif held_only:
             held = _rows(
                 client.table("catalog_moderation_holds")
                 .select("entity_id")

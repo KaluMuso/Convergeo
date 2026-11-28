@@ -3036,6 +3036,8 @@
     "search": "Search by name",
     "searchButton": "Search",
     "heldOnly": "Only hidden or blocked",
+    "belowTypicalPriceOnly": "Below typical price only",
+    "belowTypicalPriceBadge": "Below typical price",
     "loading": "Loading…",
     "loadError": "Could not load this list.",
     "permissionDenied": "You do not have permission to manage this tab.",

@@ -19,6 +19,7 @@ import {
   catalogPath,
   CATALOG_TABS,
   isValidReason,
+  LISTING_REVIEW_FLAG_BELOW_TYPICAL_PRICE,
   type CatalogAction,
   type CatalogEntity,
   type CatalogTab,
@@ -43,6 +44,7 @@ export function CatalogControlBoard({ locale }: { locale: string }) {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [heldOnly, setHeldOnly] = useState(false);
+  const [belowTypicalPriceOnly, setBelowTypicalPriceOnly] = useState(false);
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [pending, setPending] = useState<Pending>(null);
   const [reason, setReason] = useState("");
@@ -57,7 +59,7 @@ export function CatalogControlBoard({ locale }: { locale: string }) {
     setState({ kind: "loading" });
     try {
       const rows = await catalogApi.request<CatalogEntity[]>(
-        catalogPath(tab, submittedQuery, heldOnly),
+        catalogPath(tab, submittedQuery, heldOnly, belowTypicalPriceOnly),
         { cache: "no-store" },
       );
       setState({ kind: "ready", rows: Array.isArray(rows) ? rows : [] });
@@ -67,7 +69,7 @@ export function CatalogControlBoard({ locale }: { locale: string }) {
         permission: classifyAdminRequestError(error).kind === "permission",
       });
     }
-  }, [tab, submittedQuery, heldOnly]);
+  }, [tab, submittedQuery, heldOnly, belowTypicalPriceOnly]);
 
   useEffect(() => {
     if (grants && !canRead) {
@@ -182,6 +184,16 @@ export function CatalogControlBoard({ locale }: { locale: string }) {
           />
           {t("heldOnly")}
         </label>
+        {tab === "listings" ? (
+          <label className="flex min-h-11 items-center gap-2 text-sm text-text">
+            <input
+              type="checkbox"
+              checked={belowTypicalPriceOnly}
+              onChange={(event) => setBelowTypicalPriceOnly(event.target.checked)}
+            />
+            {t("belowTypicalPriceOnly")}
+          </label>
+        ) : null}
       </form>
 
       {state.kind === "loading" ? (
@@ -239,6 +251,11 @@ export function CatalogControlBoard({ locale }: { locale: string }) {
                     >
                       {entity.visible ? t("visible") : t("notVisible")}
                     </span>
+                    {entity.review_flags?.includes(LISTING_REVIEW_FLAG_BELOW_TYPICAL_PRICE) ? (
+                      <span className="inline-flex rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                        {t("belowTypicalPriceBadge")}
+                      </span>
+                    ) : null}
                     {entity.hold ? (
                       <p className="text-xs text-text-2">
                         {t("heldBy", { action: entity.hold.action, reason: entity.hold.reason })}

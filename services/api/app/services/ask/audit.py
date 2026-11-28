@@ -31,6 +31,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from app.services.ask.enrich import rows_of
+from app.services.catalog.listing_price_review import category_floor_ngwee
 
 logger = logging.getLogger(__name__)
 
@@ -41,38 +42,6 @@ MIN_PEERS_FOR_MEDIAN = 3
 LOW_MEDIAN_RATIO = Decimal("0.10")
 HIGH_MEDIAN_MULTIPLE = 10
 MAX_PEER_ROWS = 1000
-
-# Hard per-category floors (ngwee). First matching category-path prefix wins. Conservative
-# on purpose: these catch a flagrant mispricing, not a bargain.
-CATEGORY_FLOORS_NGWEE: tuple[tuple[str, int], ...] = (
-    ("electronics/mobile-phones", 30_000),  # K300
-    ("electronics/laptops-computers", 100_000),  # K1,000
-    ("electronics/cameras", 20_000),  # K200
-    ("electronics/tvs-audio", 10_000),  # K100
-)
-
-_ACCESSORY_WORDS = r"(case|cover|charger|cable|protector|glass|holder|stand|strap|adapter|pouch)"
-# Title fallback for listings that have no canonical category (standalone listings).
-TITLE_FLOORS: tuple[tuple[re.Pattern[str], int, str], ...] = (
-    (
-        re.compile(
-            r"^(?!.*\b"
-            + _ACCESSORY_WORDS
-            + r"\b).*\b(iphone|pixel\s?\d+|galaxy\s?[sazn]\d+|smartphone)\b",
-            re.IGNORECASE,
-        ),
-        30_000,
-        "phone",
-    ),
-    (
-        re.compile(
-            r"^(?!.*\b" + _ACCESSORY_WORDS + r"\b).*\b(macbook|laptop|thinkpad|chromebook)\b",
-            re.IGNORECASE,
-        ),
-        100_000,
-        "laptop",
-    ),
-)
 
 _KWACHA_RE = re.compile(r"(?<![A-Za-z0-9])K\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d])")
 
@@ -367,15 +336,7 @@ def format_ngwee(value: int) -> str:
 
 
 def category_floor(item: LiveEntity) -> tuple[int, str] | None:
-    path = item.category_path or ""
-    for prefix, floor in CATEGORY_FLOORS_NGWEE:
-        if path == prefix or path.startswith(prefix + "/"):
-            return floor, prefix
-    if item.title:
-        for pattern, floor, label in TITLE_FLOORS:
-            if pattern.search(item.title):
-                return floor, f"title:{label}"
-    return None
+    return category_floor_ngwee(category_path=item.category_path, title=item.title)
 
 
 def price_findings(
