@@ -9,7 +9,7 @@ describe("push payload", () => {
     expect(
       parsePushPayload(
         JSON.stringify({
-          title: "Convergeo",
+          title: "Vergeo5",
           body: "Order AB12 shipped",
           url: "/en/account/orders/1",
           badge: 3,
@@ -17,7 +17,7 @@ describe("push payload", () => {
         FALLBACK,
       ),
     ).toEqual({
-      title: "Convergeo",
+      title: "Vergeo5",
       body: "Order AB12 shipped",
       url: "/en/account/orders/1",
       badge: 3,
@@ -32,7 +32,7 @@ describe("push payload", () => {
 
   it("survives garbage input", () => {
     expect(parsePushPayload("not json", FALLBACK)).toEqual({
-      title: "Convergeo",
+      title: "Vergeo5",
       body: "",
       url: FALLBACK,
       badge: null,

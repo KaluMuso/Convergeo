@@ -1,7 +1,7 @@
 {
   "title": "Admin console",
   "shell": {
-    "eyebrow": "Convergeo operations",
+    "eyebrow": "Vergeo5 operations",
     "environment": "Secure admin workspace",
     "signOut": "Sign out",
     "navAriaLabel": "Admin navigation",
@@ -159,7 +159,7 @@
       "nav": "All apps — navigation labels",
       "auth": "All apps — sign in and sign up",
       "catalog": "Customer — product listings, detail, comparison",
-      "clips": "Customer — Convergeo Clips feed, playback and shoppable overlay",
+      "clips": "Customer — Vergeo5 Clips feed, playback and shoppable overlay",
       "search": "Customer — search and suggestions",
       "checkout": "Customer — cart and checkout",
       "orders": "Customer & vendor — order history and queue",
@@ -172,7 +172,7 @@
       "legal": "Customer — legal and policy pages",
       "notifications": "Server — WhatsApp, SMS and email templates",
       "account": "Customer — account and privacy",
-      "ai": "Customer — Ask Convergeo",
+      "ai": "Customer — Ask Vergeo5",
       "marketing": "Customer — about, contact, help, sell",
       "customer": "Customer app — shared strings and chrome",
       "social": "Customer — contacts, follows and people discovery"
@@ -736,8 +736,8 @@
     },
     "presets": {
       "slate": {
-        "name": "Convergeo Slate",
-        "blurb": "Neutral zinc surfaces with a green accent — the default Convergeo look."
+        "name": "Vergeo5 Slate",
+        "blurb": "Neutral zinc surfaces with a green accent — the default Vergeo5 look."
       },
       "harvest": {
         "name": "Harvest Gold",
@@ -955,7 +955,7 @@
     },
     "dispatch": {
       "title": "Manual dispatch",
-      "subtitle": "Record a courier you already booked outside Convergeo, then paste tracking for the customer timeline.",
+      "subtitle": "Record a courier you already booked outside Vergeo5, then paste tracking for the customer timeline.",
       "manualModelHint": "D16: Lusaka delivery is manual ops dispatch — no Yango/inDrive API integration in v1.",
       "courier": "Courier used (booked manually)",
       "couriers": {
@@ -972,7 +972,7 @@
         "ship": "Mark shipped",
         "mark_delivered": "Mark delivered"
       },
-      "confirmManual": "I confirm this courier was booked manually outside Convergeo and tracking is accurate.",
+      "confirmManual": "I confirm this courier was booked manually outside Vergeo5 and tracking is accurate.",
       "submit": "Record dispatch",
       "submitting": "Saving…",
       "success": "Dispatch recorded on the order timeline.",
@@ -1176,12 +1176,12 @@
       "products": "Products"
     },
     "aiUsage": {
-      "title": "Ask Convergeo AI",
+      "title": "Ask Vergeo5 AI",
       "subtitle": "Monthly spend vs platform cap",
       "noData": "Usage meter unavailable",
       "noDataHint": "ask_spend_monthly could not be read. Cap remains ${cap}/mo — not a fabricated spend figure.",
       "spendVsCap": "${spend} of ${cap} monthly cap",
-      "killed": "Kill-switch active — Ask Convergeo is blocked until reset."
+      "killed": "Kill-switch active — Ask Vergeo5 is blocked until reset."
     },
     "funnel": {
       "title": "Funnel snapshot",
@@ -1375,23 +1375,23 @@
     "templates": {
       "order_status_update": {
         "label": "Order status update",
-        "body": "Hi from Convergeo support — we're checking on your order and will update you shortly."
+        "body": "Hi from Vergeo5 support — we're checking on your order and will update you shortly."
       },
       "delivery_eta": {
         "label": "Delivery ETA",
-        "body": "Hi from Convergeo — your delivery is on the way. We'll share an ETA as soon as the courier confirms."
+        "body": "Hi from Vergeo5 — your delivery is on the way. We'll share an ETA as soon as the courier confirms."
       },
       "payment_reminder": {
         "label": "Payment reminder",
-        "body": "Hi from Convergeo — your order is awaiting payment. Open the app to complete checkout when ready."
+        "body": "Hi from Vergeo5 — your order is awaiting payment. Open the app to complete checkout when ready."
       },
       "apology_delay": {
         "label": "Apology for delay",
-        "body": "Hi from Convergeo — we're sorry for the delay on your order. Our team is prioritising it now."
+        "body": "Hi from Vergeo5 — we're sorry for the delay on your order. Our team is prioritising it now."
       },
       "pickup_ready": {
         "label": "Pickup ready",
-        "body": "Hi from Convergeo — your order is ready for pickup. Bring your order reference when you arrive."
+        "body": "Hi from Vergeo5 — your order is ready for pickup. Bring your order reference when you arrive."
       }
     },
     "errors": {
@@ -1400,7 +1400,7 @@
   },
   "intake": {
     "meta": {
-      "title": "WhatsApp intake — Convergeo Admin",
+      "title": "WhatsApp intake — Vergeo5 Admin",
       "description": "Review vendor product drafts submitted through the WhatsApp intake lane."
     },
     "title": "WhatsApp intake",
@@ -1477,7 +1477,7 @@
   },
   "clips": {
     "meta": {
-      "title": "Clip review — Convergeo Admin",
+      "title": "Clip review — Vergeo5 Admin",
       "description": "Review vendor clips before they appear in the customer feed."
     },
     "title": "Clip review",
@@ -2664,7 +2664,7 @@
   "coupons": {
     "manager": {
       "title": "Platform coupons",
-      "intro": "Codes paid for by Convergeo. Shops still get their full price.",
+      "intro": "Codes paid for by Vergeo5. Shops still get their full price.",
       "fundingNote": "Every platform discount comes out of the monthly promotions budget. When it's used up, platform coupons stop working until next month.",
       "createTitle": "New coupon",
       "code": "Code",

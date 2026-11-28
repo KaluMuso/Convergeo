@@ -38,7 +38,7 @@
   },
   "detail": {
     "metaTitle": "{title} — Services",
-    "metaDescription": "{title} à {area}. Consultez le portfolio et demandez un devis sur Convergeo.",
+    "metaDescription": "{title} à {area}. Consultez le portfolio et demandez un devis sur Vergeo5.",
     "about": "À propos de ce service",
     "whatsIncluded": "Ce qui est inclus",
     "includeMarker": "✓",
@@ -255,7 +255,7 @@
     "back": "← Retour aux missions",
     "empty": "Aucun devis actif pour l'instant — les prestataires répondent généralement sous un jour.",
     "unknownProvider": "Prestataire",
-    "preferredBadge": "Convergeo Recommandé",
+    "preferredBadge": "Vergeo5 Recommandé",
     "rating": "{rating}★ ({count, plural, one {# avis} other {# avis}})",
     "validUntil": "Valable jusqu'au {date}",
     "status": {
@@ -288,7 +288,7 @@
     "totalLabel": "Valeur totale de la mission",
     "depositLabel": "Acompte à payer maintenant",
     "balanceLabel": "Solde à la fin",
-    "escrowNote": "Votre acompte est conservé en toute sécurité par Convergeo et n'est versé au prestataire qu'une fois le travail confirmé.",
+    "escrowNote": "Votre acompte est conservé en toute sécurité par Vergeo5 et n'est versé au prestataire qu'une fois le travail confirmé.",
     "confirmCta": "Payer l'acompte de {amount}",
     "submitting": "Préparation de votre acompte…",
     "cancel": "Pas maintenant",

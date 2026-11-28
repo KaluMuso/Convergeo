@@ -1,7 +1,7 @@
 {
   "title": "Console d'administration",
   "shell": {
-    "eyebrow": "Opérations Convergeo",
+    "eyebrow": "Opérations Vergeo5",
     "environment": "Origine admin durcie",
     "signOut": "Déconnexion",
     "account": {
@@ -148,7 +148,7 @@
       "legal": "Client — pages légales et politiques",
       "notifications": "Serveur — modèles WhatsApp, SMS et e-mail",
       "account": "Client — compte et confidentialité",
-      "ai": "Client — Ask Convergeo",
+      "ai": "Client — Ask Vergeo5",
       "marketing": "Client — à propos, contact, aide, vendre"
     },
     "addLanguage": {
@@ -726,7 +726,7 @@
     },
     "dispatch": {
       "title": "Expédition manuelle",
-      "subtitle": "Enregistrez un livreur déjà réservé hors Convergeo, puis collez le suivi pour la chronologie client.",
+      "subtitle": "Enregistrez un livreur déjà réservé hors Vergeo5, puis collez le suivi pour la chronologie client.",
       "manualModelHint": "D16 : livraison Lusaka = dispatch manuel ops — pas d'intégration API Yango/inDrive en v1.",
       "courier": "Livreur utilisé (réservé manuellement)",
       "couriers": {
@@ -743,7 +743,7 @@
         "ship": "Marquer comme expédiée",
         "mark_delivered": "Marquer comme livrée"
       },
-      "confirmManual": "Je confirme que ce livreur a été réservé manuellement hors Convergeo et que le suivi est exact.",
+      "confirmManual": "Je confirme que ce livreur a été réservé manuellement hors Vergeo5 et que le suivi est exact.",
       "submit": "Enregistrer l'expédition",
       "submitting": "Enregistrement…",
       "success": "Expédition enregistrée dans la chronologie de la commande.",
@@ -892,12 +892,12 @@
       "products": "Produits"
     },
     "aiUsage": {
-      "title": "Ask Convergeo AI",
+      "title": "Ask Vergeo5 AI",
       "subtitle": "Dépenses mensuelles par rapport au plafond de la plateforme",
       "noData": "Compteur d'utilisation indisponible",
       "noDataHint": "ask_spend_monthly n'a pas pu être lu. Le plafond reste ${cap}/mois — ce n'est pas une dépense inventée.",
       "spendVsCap": "${spend} sur un plafond mensuel de ${cap}",
-      "killed": "Coupe-circuit actif — Ask Convergeo est bloqué jusqu'à réinitialisation."
+      "killed": "Coupe-circuit actif — Ask Vergeo5 est bloqué jusqu'à réinitialisation."
     },
     "funnel": {
       "title": "Aperçu de l'entonnoir",
@@ -1074,23 +1074,23 @@
     "templates": {
       "order_status_update": {
         "label": "Mise à jour du statut de commande",
-        "body": "Bonjour, ici l'assistance Convergeo — nous vérifions l'état de votre commande et vous tiendrons informé sous peu."
+        "body": "Bonjour, ici l'assistance Vergeo5 — nous vérifions l'état de votre commande et vous tiendrons informé sous peu."
       },
       "delivery_eta": {
         "label": "ETA de livraison",
-        "body": "Bonjour, ici Convergeo — votre livraison est en cours. Nous vous communiquerons une heure d'arrivée estimée dès que le livreur confirme."
+        "body": "Bonjour, ici Vergeo5 — votre livraison est en cours. Nous vous communiquerons une heure d'arrivée estimée dès que le livreur confirme."
       },
       "payment_reminder": {
         "label": "Rappel de paiement",
-        "body": "Bonjour, ici Convergeo — votre commande est en attente de paiement. Ouvrez l'application pour finaliser votre commande dès que vous êtes prêt."
+        "body": "Bonjour, ici Vergeo5 — votre commande est en attente de paiement. Ouvrez l'application pour finaliser votre commande dès que vous êtes prêt."
       },
       "apology_delay": {
         "label": "Excuses pour le retard",
-        "body": "Bonjour, ici Convergeo — nous sommes désolés pour le retard de votre commande. Notre équipe la traite désormais en priorité."
+        "body": "Bonjour, ici Vergeo5 — nous sommes désolés pour le retard de votre commande. Notre équipe la traite désormais en priorité."
       },
       "pickup_ready": {
         "label": "Prêt pour retrait",
-        "body": "Bonjour, ici Convergeo — votre commande est prête pour le retrait. Apportez votre référence de commande à votre arrivée."
+        "body": "Bonjour, ici Vergeo5 — votre commande est prête pour le retrait. Apportez votre référence de commande à votre arrivée."
       }
     },
     "errors": {
@@ -1562,7 +1562,7 @@
   "coupons": {
     "manager": {
       "title": "Coupons de la plateforme",
-      "intro": "Codes payés par Convergeo. Les boutiques reçoivent leur prix complet.",
+      "intro": "Codes payés par Vergeo5. Les boutiques reçoivent leur prix complet.",
       "fundingNote": "Chaque remise de la plateforme est prise sur le budget promotions mensuel. Une fois épuisé, les coupons de la plateforme s'arrêtent jusqu'au mois suivant.",
       "createTitle": "Nouveau coupon",
       "code": "Code",

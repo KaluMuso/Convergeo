@@ -20,7 +20,7 @@
   },
   "business": {
     "title": "Business mode",
-    "description": "Verify your business to unlock wholesale pricing and bulk ordering across Convergeo.",
+    "description": "Verify your business to unlock wholesale pricing and bulk ordering across Vergeo5.",
     "statusLabel": "Status",
     "status": {
       "none": "Not applied",
@@ -51,7 +51,7 @@
   },
   "profile": {
     "title": "Profile",
-    "description": "Update how we greet you and which language you prefer across Convergeo.",
+    "description": "Update how we greet you and which language you prefer across Vergeo5.",
     "nameLabel": "Display name",
     "namePlaceholder": "Your name",
     "localeLabel": "Language",
@@ -102,7 +102,7 @@
   },
   "preferences": {
     "title": "Preferences",
-    "description": "Manage display and how Convergeo reaches you about orders, tickets, and account updates.",
+    "description": "Manage display and how Vergeo5 reaches you about orders, tickets, and account updates.",
     "themeTitle": "Display",
     "themeDescription": "Choose light, dark, or match your device. Default is system.",
     "themeLight": "Light",
@@ -137,7 +137,7 @@
     "retentionNote": "Orders, payments, and tax records are retained in anonymised form for at least seven years as required by Zambian law. Ledger entries are never deleted.",
     "analytics": {
       "title": "Analytics",
-      "description": "Help us improve Convergeo by letting us see how you use it, such as which pages you visit.",
+      "description": "Help us improve Vergeo5 by letting us see how you use it, such as which pages you visit.",
       "toggleLabel": "Share usage analytics",
       "on": "On: we can see which pages you visit and, after you sign in, link them to your account. Links are deleted after 30 days.",
       "off": "Off: we keep only anonymous counts, such as how many people viewed a page. No journeys are recorded and nothing is linked to you.",
@@ -145,16 +145,16 @@
     },
     "export": {
       "title": "Export my data",
-      "description": "Download a copy of the personal data Convergeo holds about you — your profile, addresses, orders, tickets, and reviews — as a JSON file, as provided for under the Zambia Data Protection Act.",
+      "description": "Download a copy of the personal data Vergeo5 holds about you — your profile, addresses, orders, tickets, and reviews — as a JSON file, as provided for under the Zambia Data Protection Act.",
       "button": "Request data export",
       "loading": "Preparing your export…",
       "success": "Your export is ready — download it now. The link expires after a short time.",
       "error": "We could not prepare your export. Please try again.",
-      "policyLink": "Read the Convergeo privacy policy"
+      "policyLink": "Read the Vergeo5 privacy policy"
     },
     "delete": {
       "title": "Delete my account",
-      "description": "Permanently close your Convergeo account. Your sign-in is removed and your personal details are anonymised. To protect your account, deletion requires a typed confirmation phrase and a one-time code sent to your verified phone.",
+      "description": "Permanently close your Vergeo5 account. Your sign-in is removed and your personal details are anonymised. To protect your account, deletion requires a typed confirmation phrase and a one-time code sent to your verified phone.",
       "warning": "This cannot be undone. Your profile, saved addresses, and preferences will be permanently removed, and you will lose access to your order history. Orders, payments, and tax records are retained in anonymised form as required by Zambian law.",
       "confirmPhraseLabel": "To confirm, type DELETE MY ACCOUNT",
       "confirmPhraseHint": "DELETE MY ACCOUNT",
@@ -249,7 +249,7 @@
   },
   "hub": {
     "title": "Account overview",
-    "description": "Manage orders, saved products, delivery details, and how Convergeo looks on your device.",
+    "description": "Manage orders, saved products, delivery details, and how Vergeo5 looks on your device.",
     "backToShop": "Back to shopping",
     "ordersTitle": "Orders",
     "ordersBody": "Track delivery, pickup, and payment status for each seller.",
@@ -272,7 +272,7 @@
     "helpCta": "Visit help centre",
     "deviceNote": "Saved items and recently viewed stay on this device unless you clear them. They are not a stock or price hold.",
     "vendorPortalTitle": "Seller tools",
-    "vendorPortalBody": "You sell on Convergeo. Open your seller app to see products, orders and money.",
+    "vendorPortalBody": "You sell on Vergeo5. Open your seller app to see products, orders and money.",
     "vendorPortalCta": "Open seller app"
   },
   "saved": {
@@ -364,7 +364,7 @@
   },
   "rewards": {
     "title": "Rewards",
-    "description": "Convergeo Points for your orders and reviews.",
+    "description": "Vergeo5 Points for your orders and reviews.",
     "balanceLabel": "Your points",
     "balance": "{points, plural, one {# point} other {# points}}",
     "progress": "{remaining, plural, =0 {You've reached a reward coupon.} one {# point to your next reward coupon} other {# points to your next reward coupon}}",

@@ -66,7 +66,7 @@ const t = createTranslator({
   values?: Record<string, string | number>,
 ) => string;
 
-const OPERATIONAL_PLACEHOLDER_TITLE = "Welcome to Convergeo";
+const OPERATIONAL_PLACEHOLDER_TITLE = "Welcome to Vergeo5";
 const OPERATIONAL_PLACEHOLDER_SUBTITLE =
   "Your config-driven storefront will appear here as merchandising slots go live.";
 const BUYER_FALLBACK_TITLE =
@@ -253,7 +253,7 @@ describe("default homepage storefront rendering", () => {
         messages={{ catalog: catalogMessages }}
         onError={() => {}}
       >
-        <HomeHeroBand locale="en" t={t} brandName="Convergeo" />
+        <HomeHeroBand locale="en" t={t} brandName="Vergeo5" />
         <HomeProductRail
           id="home-rail-new"
           title={t("home.rails.newTitle")}
@@ -267,14 +267,14 @@ describe("default homepage storefront rendering", () => {
     );
 
     expect(screen.getByTestId("home-hero-brand")).toHaveTextContent(
-      "Convergeo",
+      "Vergeo5",
     );
     expect(
       screen.getByRole("heading", { level: 1, name: BUYER_FALLBACK_TITLE }),
     ).toBeInTheDocument();
     expect(screen.queryByText("You pay")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "New on Convergeo" }),
+      screen.getByRole("heading", { name: "New on Vergeo5" }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("product-card")).toBeInTheDocument();
     expect(

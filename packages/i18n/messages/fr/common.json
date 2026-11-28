@@ -1,11 +1,11 @@
 {
   "app": {
-    "name": "Convergeo",
+    "name": "Vergeo5",
     "tagline": "Le marché de la Zambie — payez à l'arrivée"
   },
   "meta": {
-    "defaultDescription": "Achetez des produits, réservez des services et trouvez des événements en Zambie sur Convergeo — la place de marché multi-vendeurs.",
-    "defaultTitle": "Convergeo — Produits, services et événements en Zambie"
+    "defaultDescription": "Achetez des produits, réservez des services et trouvez des événements en Zambie sur Vergeo5 — la place de marché multi-vendeurs.",
+    "defaultTitle": "Vergeo5 — Produits, services et événements en Zambie"
   },
   "common": {
     "loading": "Chargement…",
@@ -47,11 +47,11 @@
     "home": "Accueil"
   },
   "install": {
-    "title": "Installer Convergeo",
-    "body": "Ajoutez Convergeo à votre écran d'accueil pour un accès plus rapide et une application en plein écran.",
+    "title": "Installer Vergeo5",
+    "body": "Ajoutez Vergeo5 à votre écran d'accueil pour un accès plus rapide et une application en plein écran.",
     "action": "Installer l'application",
     "dismiss": "Plus tard",
-    "updateBody": "Une nouvelle version de Convergeo est prête.",
+    "updateBody": "Une nouvelle version de Vergeo5 est prête.",
     "updateAction": "Recharger pour mettre à jour"
   },
   "contact": {
@@ -60,10 +60,10 @@
   "utilityBar": {
     "ariaLabel": "Langue, contact et réseaux sociaux",
     "socialAria": "Réseaux sociaux",
-    "facebookAria": "Convergeo sur Facebook",
-    "twitterAria": "Convergeo sur X",
-    "instagramAria": "Convergeo sur Instagram",
-    "emailAria": "Envoyer un e-mail à Convergeo",
+    "facebookAria": "Vergeo5 sur Facebook",
+    "twitterAria": "Vergeo5 sur X",
+    "instagramAria": "Vergeo5 sur Instagram",
+    "emailAria": "Envoyer un e-mail à Vergeo5",
     "countryCode": "ZM"
   },
   "categorySelection": {
@@ -102,8 +102,8 @@
     "label": "Partager"
   },
   "fab": {
-    "ask": "Demander à Convergeo",
-    "askTitle": "Demander à Convergeo",
+    "ask": "Demander à Vergeo5",
+    "askTitle": "Demander à Vergeo5",
     "askHint": "Décrivez ce qu'il vous faut : un produit, un service ou un événement.",
     "askPlaceholder": "ex. panneau solaire à moins de 3 000 K à Lusaka",
     "send": "Demander",
@@ -138,8 +138,8 @@
       "savedAnnounce": "Saved to your list"
     },
     "trust": {
-      "ariaLabel": "Why it's safe to buy on Convergeo",
-      "escrow": "Held by Convergeo until you're happy",
+      "ariaLabel": "Why it's safe to buy on Vergeo5",
+      "escrow": "Held by Vergeo5 until you're happy",
       "verified": "Verified sellers",
       "returns": "Returns policy",
       "momoCod": "Pay with Mobile Money or cash on delivery"

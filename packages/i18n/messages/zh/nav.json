@@ -18,7 +18,7 @@
     "categoriesLoading": "正在加载类别…",
     "categoriesEmpty": "类别暂时不可用，请稍后重试。",
     "viewAllCategories": "查看全部分类",
-    "featuredTitle": "Convergeo 新品",
+    "featuredTitle": "Vergeo5 新品",
     "featuredPromo": "比较卖家，符合条件的订单可货到付现。",
     "featuredPromoCta": "搜索市场",
     "fallbackCategoryRoots": {
@@ -33,7 +33,7 @@
     "directory": "店铺",
     "services": "服务",
     "events": "活动",
-    "askVergeo": "问 Convergeo",
+    "askVergeo": "问 Vergeo5",
     "browseChipsAria": "按板块浏览"
   },
   "marketing": {
@@ -41,7 +41,7 @@
     "about": "关于",
     "contact": "联系",
     "help": "帮助",
-    "sell": "在 Convergeo 上销售",
+    "sell": "在 Vergeo5 上销售",
     "signIn": "登录",
     "account": "我的账户"
   },
@@ -74,7 +74,7 @@
     "services": "服务",
     "events": "活动",
     "deals": "优惠",
-    "sell": "在 Convergeo 开店",
+    "sell": "在 Vergeo5 开店",
     "helpSettings": "帮助与设置",
     "account": "我的账户",
     "orders": "我的订单",
