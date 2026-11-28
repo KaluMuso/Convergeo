@@ -163,6 +163,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261127100000",
     # Service packages become an open ordered list, cap 10 (additive, documented down).
     "20261127120000",
+    # Service archetypes + validated attribute blobs (additive, documented down).
+    "20261128090000",
 }
 
 

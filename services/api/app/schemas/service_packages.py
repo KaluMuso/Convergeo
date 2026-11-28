@@ -36,6 +36,9 @@ class PackageUpsertRequest(StrictModel):
     delivery_days: int = Field(ge=DELIVERY_DAYS_MIN, le=DELIVERY_DAYS_MAX)
     revisions: int | None = Field(default=None, ge=0, le=REVISIONS_MAX)
     includes: list[str] = Field(default_factory=list, max_length=INCLUDES_MAX)
+    #: Archetype-specific offer attributes; validated by the router against the
+    #: service's effective archetype (docs/plan/service-type-templates.md).
+    attributes: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -95,6 +98,7 @@ class PublicPackageOut(StrictModel):
     delivery_days: int
     revisions: int | None = None
     includes: list[str] = Field(default_factory=list)
+    attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class VendorPackageOut(PublicPackageOut):
@@ -123,6 +127,7 @@ def to_public(row: dict[str, Any]) -> PublicPackageOut:
         delivery_days=int_or_none(row.get("delivery_days")) or DELIVERY_DAYS_MIN,
         revisions=int_or_none(row.get("revisions")),
         includes=_includes(row.get("includes")),
+        attributes=dict(row["attributes"]) if isinstance(row.get("attributes"), dict) else {},
     )
 
 
