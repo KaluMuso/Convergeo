@@ -157,6 +157,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("Business Home SEO metadata", () => {
@@ -168,6 +169,28 @@ describe("Business Home SEO metadata", () => {
     expect(String(metadata.alternates?.canonical)).toContain("/en/v/mama-chanda");
     expect(metadata.openGraph?.images).toEqual(["https://res.cloudinary.com/demo/logo.png"]);
     expect(metadata.openGraph?.description).toBe("Home cooking in Kabwata since 2012.");
+  });
+
+  it("resolves a Cloudinary public id logo to an absolute image URL for previews", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "demo");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              ...PROFILE,
+              vendor: { ...PROFILE.vendor, logo_url: "vendors/mama/logo" },
+            }),
+            { status: 200 },
+          ),
+      ),
+    );
+    const metadata = await generateMetadata({ params: params() });
+    const images = metadata.openGraph?.images as string[];
+    expect(images).toHaveLength(1);
+    expect(images[0]).toMatch(/^https?:\/\//);
+    expect(images[0]).toContain("vendors/mama/logo");
   });
 
   it("noindexes a missing business", async () => {

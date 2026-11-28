@@ -1,11 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  OtherBranches,
-  type OtherBranch,
-  type OtherBranchesLabels,
-} from "./other-branches";
+import { OtherBranches, type OtherBranch, type OtherBranchesLabels } from "./other-branches";
 
 const labels: OtherBranchesLabels = {
   heading: "Other branches",
@@ -14,6 +10,7 @@ const labels: OtherBranchesLabels = {
   openNow: "Open now",
   closedNow: "Closed now",
   hours: "Opening hours",
+  dayClosed: "Closed",
   hoursLine: (day, hours) => `${day}: ${hours}`,
   phone: "Phone:",
   map: "Map",
@@ -59,34 +56,51 @@ describe("OtherBranches", () => {
     expect(cards).toHaveLength(2);
     expect(cards[0]?.textContent).toContain("Opposite Kabwata market · Plot 1");
     expect(cards[0]?.textContent).toContain("Open now");
-    expect(cards[0]?.textContent).toContain("mon: 08:00-18:00");
+    expect(cards[0]?.textContent).toContain("Mon: 08:00-18:00");
     expect(screen.getByTestId("branch-phone").tagName).toBe("SPAN"); // text, not a tel: link
     const visit = screen.getByRole("link", { name: "Visit Mwila Kabwata" });
     expect(visit.getAttribute("href")).toBe("/en/v/mwila-kabwata");
-    expect(screen.getByRole("link", { name: "Map" }).getAttribute("href")).toBe(
-      kabwata.map_url,
-    );
+    expect(screen.getByRole("link", { name: "Map" }).getAttribute("href")).toBe(kabwata.map_url);
     expect(cards[1]?.textContent).toContain("Closed now");
     expect(cards[1]?.querySelector("a[target]")).toBeNull(); // no map without a link
   });
 
-  it("renders nothing without branches", () => {
-    const { container } = render(
-      <OtherBranches locale="en" labels={labels} branches={[]} />,
+  it("renders per-day hour objects as text, never [object Object]", () => {
+    render(
+      <OtherBranches
+        locale="en"
+        labels={labels}
+        branches={[
+          {
+            ...kabwata,
+            hours: {
+              tue: { open: "09:00", close: "17:00", closed: false },
+              mon: { open: "08:00", close: "18:00" },
+              sun: { closed: true },
+            },
+          },
+        ]}
+      />,
     );
+    const text = screen.getByTestId("branch-card").textContent ?? "";
+    expect(text).not.toContain("[object Object]");
+    expect(text).toContain("Mon: 08:00–18:00");
+    expect(text).toContain("Tue: 09:00–17:00");
+    expect(text).toContain("Sun: Closed");
+    expect(text.indexOf("Mon:")).toBeLessThan(text.indexOf("Tue:"));
+  });
+
+  it("renders nothing without branches", () => {
+    const { container } = render(<OtherBranches locale="en" labels={labels} branches={[]} />);
     expect(container.innerHTML).toBe("");
   });
 
   it("shows distance only when the customer location is known", async () => {
-    const { unmount } = render(
-      <OtherBranches locale="en" labels={labels} branches={[kabwata]} />,
-    );
+    const { unmount } = render(<OtherBranches locale="en" labels={labels} branches={[kabwata]} />);
     expect(screen.queryByTestId("branch-distance")).toBeNull();
     unmount();
     window.sessionStorage.setItem("cv_near", "-15.42,28.28");
     render(<OtherBranches locale="en" labels={labels} branches={[kabwata]} />);
-    expect((await screen.findByTestId("branch-distance")).textContent).toMatch(
-      /^3\.\d km away$/,
-    );
+    expect((await screen.findByTestId("branch-distance")).textContent).toMatch(/^3\.\d km away$/);
   });
 });
