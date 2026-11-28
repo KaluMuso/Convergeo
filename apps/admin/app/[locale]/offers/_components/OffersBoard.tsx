@@ -1,6 +1,6 @@
 "use client";
 
-import { glassClass } from "@vergeo/ui/src/glass";
+import { Modal } from "@vergeo/ui/src/modal";
 import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -299,64 +299,62 @@ export function PauseDialog({ offer, pause, onClose, onDone }: PauseDialogProps)
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-[2px] sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="offer-pause-title"
+    <Modal
+      open
+      title={pause ? t("actions.pauseTitle") : t("actions.unpauseTitle")}
+      onClose={submitting ? () => undefined : onClose}
+      closeOnEscape={!submitting}
+      closeOnScrimClick={!submitting}
+      panelStyle={{ width: "min(100% - 2rem, 28rem)" }}
+      data-testid="offer-pause-dialog"
     >
-      <div className={`${glassClass("overlay")} w-full max-w-md rounded-lg p-4`}>
-        <h2 id="offer-pause-title" className="font-serif text-lg text-text">
-          {pause ? t("actions.pauseTitle") : t("actions.unpauseTitle")}
-        </h2>
-        <p className="mt-2 break-words text-sm text-muted">
-          {pause
-            ? t("actions.pauseBody", { title: offer.title })
-            : t("actions.unpauseBody", { title: offer.title })}
+      <p className="break-words text-sm text-muted">
+        {pause
+          ? t("actions.pauseBody", { title: offer.title })
+          : t("actions.unpauseBody", { title: offer.title })}
+      </p>
+      <label className="mt-4 block text-sm text-text">
+        {t("actions.noteLabel")}
+        <textarea
+          className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
+          rows={3}
+          maxLength={NOTE_MAX}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          placeholder={t("actions.notePlaceholder")}
+        />
+      </label>
+      <p className="mt-1 text-xs text-muted">{t("actions.audited")}</p>
+      {error ? (
+        <p className="mt-2 text-sm text-danger" role="alert">
+          {error}
         </p>
-        <label className="mt-4 block text-sm text-text">
-          {t("actions.noteLabel")}
-          <textarea
-            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
-            rows={3}
-            maxLength={NOTE_MAX}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder={t("actions.notePlaceholder")}
-          />
-        </label>
-        <p className="mt-1 text-xs text-muted">{t("actions.audited")}</p>
-        {error ? (
-          <p className="mt-2 text-sm text-danger" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            {t("actions.cancel")}
-          </button>
-          <button
-            type="button"
-            data-testid="offer-pause-confirm"
-            className={`inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium ${
-              pause ? "bg-danger text-on-danger" : "bg-primary text-[var(--primary-btn-fg)]"
-            }`}
-            onClick={() => void submit()}
-            disabled={submitting}
-          >
-            {submitting
-              ? t("actions.submitting")
-              : pause
-                ? t("actions.confirmPause")
-                : t("actions.confirmUnpause")}
-          </button>
-        </div>
+      ) : null}
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
+          onClick={onClose}
+          disabled={submitting}
+        >
+          {t("actions.cancel")}
+        </button>
+        <button
+          type="button"
+          data-testid="offer-pause-confirm"
+          className={`inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium ${
+            pause ? "bg-danger text-on-danger" : "bg-primary text-[var(--primary-btn-fg)]"
+          }`}
+          onClick={() => void submit()}
+          disabled={submitting}
+        >
+          {submitting
+            ? t("actions.submitting")
+            : pause
+              ? t("actions.confirmPause")
+              : t("actions.confirmUnpause")}
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }

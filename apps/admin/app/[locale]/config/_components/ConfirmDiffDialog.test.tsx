@@ -14,6 +14,7 @@ let container: HTMLDivElement | undefined;
 afterEach(async () => {
   await act(async () => root?.unmount());
   container?.remove();
+  document.body.innerHTML = "";
 });
 
 describe("ConfirmDiffDialog", () => {
@@ -34,11 +35,11 @@ describe("ConfirmDiffDialog", () => {
         />,
       ),
     );
-    const dialog = container.querySelector('[role="dialog"]')!;
+    const dialog = document.body.querySelector('[role="dialog"]')!;
     expect(dialog.getAttribute("aria-modal")).toBe("true");
-    expect(dialog.className).toContain("v-glass");
-    expect(dialog.className).toContain("v-glass--overlay");
-    // The opaque surface utilities are gone: they would fight the translucent glass tint.
-    expect(dialog.className).not.toContain("bg-surface");
+    const panel = dialog.querySelector(".v-glass--overlay");
+    expect(panel).not.toBeNull();
+    expect(panel!.className).toContain("v-glass");
+    expect(panel!.className).not.toContain("bg-surface");
   });
 });
