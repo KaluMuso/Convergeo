@@ -220,6 +220,18 @@ body {
   }
 }
 
+/* Section header rows ("All categories", "View all") keep their right-hand link
+   out of the floating-button column so the round buttons never cover it. */
+.v-fab-clear {
+  padding-right: calc(3.25rem + var(--sp-2));
+}
+
+@media (min-width: 48rem) {
+  .v-fab-clear {
+    padding-right: calc(3.25rem + var(--sp-3));
+  }
+}
+
 .v-fab {
   display: inline-grid;
   place-items: center;
