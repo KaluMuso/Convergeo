@@ -948,7 +948,8 @@
       "stepCurrent": "Current:",
       "stepUpcoming": "Upcoming:",
       "copyOrderId": "Copy order ID",
-      "advancedEscrow": "Advanced: manual escrow hold / release"
+      "advancedEscrow": "Advanced: manual escrow hold / release",
+      "untitledItem": "Unnamed item"
     },
     "dispatch": {
       "title": "Manual dispatch",
@@ -1261,7 +1262,8 @@
         "paymentLine": "{rail} · {status} · {amount} · {at}",
         "ledger": "Ledger",
         "ledgerEmpty": "No ledger transactions.",
-        "ledgerBalance": "Σ postings: {balance} ngwee"
+        "ledgerBalance": "Σ postings: {balance} ngwee",
+        "untitledItem": "Unnamed item"
       },
       "decision": {
         "title": "Decision",

@@ -10,6 +10,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
 from app.services.disputes.service import ResolveDecision, resolve
+from app.services.order_item_titles import display_title, resolve_missing_titles
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field, model_validator
 
@@ -335,15 +336,17 @@ def _build_order_context(
     items_response = (
         _table(service_client, "order_items").select("*").eq("order_id", order_id).execute()
     )
+    item_rows = list(_rows(items_response))
+    resolved_titles = resolve_missing_titles(service_client.client, item_rows)
     items = [
         OrderItemOut(
             id=row["id"],
             item_kind=row["item_kind"],
             qty=row["qty"],
             unit_price_ngwee=row["unit_price_ngwee"],
-            title_snapshot=row.get("title_snapshot"),
+            title_snapshot=display_title(row, resolved_titles),
         )
-        for row in _rows(items_response)
+        for row in item_rows
     ]
 
     payments_response = (
