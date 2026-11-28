@@ -13,6 +13,7 @@ export type FloatingActionsLabels = {
   voiceStop: string;
   listening: string;
   voiceUnsupported: string;
+  voiceDenied: string;
   close: string;
   showFooter: string;
   hideFooter: string;
@@ -33,7 +34,7 @@ type SpeechRecognitionLike = {
   continuous: boolean;
   onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((event?: { error?: string }) => void) | null;
   start: () => void;
   stop: () => void;
 };
@@ -99,6 +100,7 @@ export function FloatingActions({ locale, labels, footer }: FloatingActionsProps
   const [query, setQuery] = useState("");
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
+  const [voiceDenied, setVoiceDenied] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const askTriggerRef = useRef<HTMLButtonElement>(null);
@@ -156,6 +158,7 @@ export function FloatingActions({ locale, labels, footer }: FloatingActionsProps
     }
     const recognition = new Ctor();
     recognition.lang = SPEECH_LANG[locale] ?? "en-ZM";
+    setVoiceDenied(false);
     recognition.interimResults = true;
     recognition.continuous = false;
     recognition.onresult = (event) => {
@@ -166,7 +169,11 @@ export function FloatingActions({ locale, labels, footer }: FloatingActionsProps
       setQuery(text);
     };
     recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
+    recognition.onerror = (event) => {
+      setListening(false);
+      const code = event?.error;
+      setVoiceDenied(code === "not-allowed" || code === "service-not-allowed");
+    };
     recognitionRef.current = recognition;
     setListening(true);
     recognition.start();
@@ -351,6 +358,11 @@ export function FloatingActions({ locale, labels, footer }: FloatingActionsProps
               {labels.voiceUnsupported}
             </p>
           )}
+          {voiceDenied ? (
+            <p role="alert" className="m-0 mt-2 text-sm text-danger" data-testid="fab-voice-denied">
+              {labels.voiceDenied}
+            </p>
+          ) : null}
           <p aria-live="polite" className="sr-only">
             {listening ? labels.listening : ""}
           </p>

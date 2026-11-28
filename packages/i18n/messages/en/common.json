@@ -113,7 +113,8 @@
     "voiceUnsupported": "Voice input isn't supported in this browser.",
     "close": "Close",
     "showFooter": "Show site links",
-    "hideFooter": "Hide site links"
+    "hideFooter": "Hide site links",
+    "voiceDenied": "Microphone is blocked. Allow it in your browser settings, or type your question."
   },
   "paymentTrust": {
     "footerSeal": "You pay → Held by Convergeo → Released",

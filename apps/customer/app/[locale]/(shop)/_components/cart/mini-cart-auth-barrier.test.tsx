@@ -27,35 +27,21 @@ vi.mock("../../../../../lib/api-base-url", () => ({
 }));
 vi.mock("next-intl", () => ({
   // `.raw` feeds #762's variant line label templates.
-  useTranslations: () =>
-    Object.assign((key: string) => key, { raw: (key: string) => key }),
+  useTranslations: () => Object.assign((key: string) => key, { raw: (key: string) => key }),
 }));
 vi.mock("next/link", () => ({
-  default: ({
-    children,
-    href,
-  }: {
-    children: React.ReactNode;
-    href: string;
-  }) => <a href={href}>{children}</a>,
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
 }));
 vi.mock("@vergeo/ui/src/bottom-sheet", () => ({
-  BottomSheet: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open: boolean;
-  }) => (open ? <div role="dialog">{children}</div> : null),
+  BottomSheet: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
+    open ? <div role="dialog">{children}</div> : null,
 }));
 vi.mock("@vergeo/ui/src/link-button", () => ({
-  LinkButton: ({
-    children,
-    href,
-  }: {
-    children: React.ReactNode;
-    href: string;
-  }) => <a href={href}>{children}</a>,
+  LinkButton: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
 }));
 
 const labels = {
@@ -131,17 +117,13 @@ function response(value: unknown) {
 
 beforeEach(() => {
   vi.resetModules();
-  mocks.getSession
-    .mockReset()
-    .mockResolvedValue({ data: { session: null }, error: null });
+  mocks.getSession.mockReset().mockResolvedValue({ data: { session: null }, error: null });
   mocks.onAuthStateChange.mockReset();
   mocks.merge.mockReset();
   mocks.fetch
     .mockReset()
     .mockImplementation(async (url: string) =>
-      response(
-        url.endsWith("/cart/revalidate") ? { notices: [] } : cart("guest"),
-      ),
+      response(url.endsWith("/cart/revalidate") ? { notices: [] } : cart("guest")),
     );
   vi.stubGlobal("fetch", mocks.fetch);
 });
@@ -153,30 +135,24 @@ afterEach(() => {
 
 describe("mounted mini-cart identity barrier", () => {
   it("defers writes through SIGNED_IN, blocks failed reconciliation, then uses the retry identity", async () => {
-    let authEvent!: (
-      event: string,
-      value: ReturnType<typeof session> | null,
-    ) => void;
+    let authEvent!: (event: string, value: ReturnType<typeof session> | null) => void;
     mocks.onAuthStateChange.mockImplementation((callback) => {
       authEvent = callback;
       return { data: { subscription: { unsubscribe: vi.fn() } } };
     });
     const pending = deferred<void>();
-    mocks.merge
-      .mockReturnValueOnce(pending.promise)
-      .mockResolvedValueOnce(undefined);
+    mocks.merge.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(undefined);
     const mini = await import("./mini-cart-drawer");
+    const view = await import("./mini-cart-drawer-view");
     const customer = await import("../../../../../lib/customer-session");
-    render(<mini.CartHost locale="en" labels={labels} />);
+    render(<view.CartHost locale="en" labels={labels} />);
     await waitFor(() => expect(mocks.getSession).toHaveBeenCalledOnce());
 
     authEvent("SIGNED_IN", session("account-a"));
     const add = mini.addCartItem("listing-a", 1);
     await waitFor(() => expect(mocks.merge).toHaveBeenCalledOnce());
     expect(
-      mocks.fetch.mock.calls.filter(([url]) =>
-        String(url).endsWith("/cart/items"),
-      ),
+      mocks.fetch.mock.calls.filter(([url]) => String(url).endsWith("/cart/items")),
     ).toHaveLength(0);
     pending.reject(new Error("merge failed"));
     await expect(add).rejects.toThrow("merge failed");
@@ -190,38 +166,28 @@ describe("mounted mini-cart identity barrier", () => {
       if (error?.code !== "cart.session_changed") throw error;
       return mini.addCartItem("listing-a", 1);
     });
-    const itemCall = mocks.fetch.mock.calls.find(([url]) =>
-      String(url).endsWith("/cart/items"),
-    );
-    expect(new Headers(itemCall?.[1]?.headers).get("Authorization")).toBe(
-      "Bearer token-account-a",
-    );
+    const itemCall = mocks.fetch.mock.calls.find(([url]) => String(url).endsWith("/cart/items"));
+    expect(new Headers(itemCall?.[1]?.headers).get("Authorization")).toBe("Bearer token-account-a");
     expect(mocks.getSession).toHaveBeenCalledOnce();
   }, 30_000);
 
   it("drops a late old-account response after logout and account switch", async () => {
-    let authEvent!: (
-      event: string,
-      value: ReturnType<typeof session> | null,
-    ) => void;
+    let authEvent!: (event: string, value: ReturnType<typeof session> | null) => void;
     mocks.onAuthStateChange.mockImplementation((callback) => {
       authEvent = callback;
       return { data: { subscription: { unsubscribe: vi.fn() } } };
     });
     mocks.merge.mockResolvedValue(undefined);
     const mini = await import("./mini-cart-drawer");
+    const view = await import("./mini-cart-drawer-view");
     const customer = await import("../../../../../lib/customer-session");
     function CartName() {
       const { cart: current } = mini.useCartStore();
-      return (
-        <span data-testid="cart-name">
-          {current?.items[0]?.title_override ?? "empty"}
-        </span>
-      );
+      return <span data-testid="cart-name">{current?.items[0]?.title_override ?? "empty"}</span>;
     }
     render(
       <>
-        <mini.CartHost locale="en" labels={labels} />
+        <view.CartHost locale="en" labels={labels} />
         <CartName />
       </>,
     );
@@ -229,9 +195,7 @@ describe("mounted mini-cart identity barrier", () => {
     const late = deferred<ReturnType<typeof response>>();
     mocks.fetch.mockImplementation((url: string, init?: RequestInit) => {
       if (String(url).endsWith("/cart/items")) return late.promise;
-      const account = new Headers(init?.headers)
-        .get("Authorization")
-        ?.includes("account-b")
+      const account = new Headers(init?.headers).get("Authorization")?.includes("account-b")
         ? "account-b"
         : "account-a";
       return Promise.resolve(response(cart(account)));
@@ -242,26 +206,18 @@ describe("mounted mini-cart identity barrier", () => {
     // add issued while that refresh is in flight fails closed with
     // cart.session_changed (by design) before ever reaching /cart/items, which
     // is not the late-response race this test is about.
-    await waitFor(() =>
-      expect(screen.getByTestId("cart-name")).toHaveTextContent("account-a"),
-    );
+    await waitFor(() => expect(screen.getByTestId("cart-name")).toHaveTextContent("account-a"));
     const add = mini.addCartItem("listing-a", 1);
     await waitFor(() =>
-      expect(
-        mocks.fetch.mock.calls.some(([url]) =>
-          String(url).endsWith("/cart/items"),
-        ),
-      ).toBe(true),
+      expect(mocks.fetch.mock.calls.some(([url]) => String(url).endsWith("/cart/items"))).toBe(
+        true,
+      ),
     );
     authEvent("SIGNED_OUT", null);
-    await waitFor(() =>
-      expect(screen.getByTestId("cart-name")).toHaveTextContent("empty"),
-    );
+    await waitFor(() => expect(screen.getByTestId("cart-name")).toHaveTextContent("empty"));
     authEvent("SIGNED_IN", session("account-b"));
     await customer.getReadyCustomerSession();
-    await waitFor(() =>
-      expect(screen.getByTestId("cart-name")).toHaveTextContent("account-b"),
-    );
+    await waitFor(() => expect(screen.getByTestId("cart-name")).toHaveTextContent("account-b"));
     late.resolve(response(cart("account-a")));
     await expect(add).rejects.toMatchObject({
       code: "cart.auth_transition_changed",

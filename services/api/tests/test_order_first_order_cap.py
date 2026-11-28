@@ -118,9 +118,7 @@ def _mock_user_client(*, unit_price_ngwee: int) -> MagicMock:
     def table_side_effect(name: str) -> MagicMock:
         table = MagicMock()
         if name == "carts":
-            chain = (
-                table.select.return_value.eq.return_value.eq.return_value.limit.return_value
-            )
+            chain = table.select.return_value.eq.return_value.eq.return_value.limit.return_value
             chain.execute.return_value = MagicMock(
                 data=[{"id": CART_ID, "user_id": CUSTOMER_ID, "status": "active"}]
             )
@@ -436,3 +434,55 @@ class TestBusinessBuyerIsChargedRetail:
 
         assert response.status_code == 200
         assert seen["business_eligible"] is False
+
+
+class TestOrderLineTitleSnapshot:
+    """Order lines keep a real title when the listing has no override."""
+
+    @pytest.mark.parametrize(
+        ("override", "expected"),
+        [(None, "Pixel 10 Pro"), ("  ", "Pixel 10 Pro"), ("Boxed Pixel", "Boxed Pixel")],
+    )
+    def test_title_snapshot_falls_back_to_product_name(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        override: str | None,
+        expected: str,
+    ) -> None:
+        total = COD_CAP_NGWEE
+        session_id = str(uuid.uuid4())
+        service = _mock_service(session_id=session_id, total_ngwee=total)
+        monkeypatch.setattr(
+            "app.routers.orders_create.get_user_client",
+            lambda *_a, **_k: _mock_user_client(unit_price_ngwee=total),
+        )
+        listing = {
+            **_listing_row(total),
+            "title_override": override,
+            "products": {"name": "Pixel 10 Pro"},
+        }
+        monkeypatch.setattr(
+            "app.routers.orders_create.fetch_listings_for_items",
+            lambda items: {LISTING_ID: listing},
+        )
+        monkeypatch.setattr(
+            "app.services.kyc.caps.load_vendor_cap_limits_by_id",
+            lambda _sc, _vid, **_kw: _t1_limits(order_count=0),
+        )
+        captured: dict[str, Any] = {}
+
+        def _capture(**kwargs: Any) -> CreateOrdersResult:
+            captured.update(kwargs)
+            return _fake_create_result(total_ngwee=total)
+
+        monkeypatch.setattr("app.routers.orders_create.create_orders_atomic", _capture)
+        monkeypatch.setattr(
+            "app.routers.orders_create.emit_order_placed_funnel",
+            lambda **_kwargs: None,
+        )
+
+        client = _client_with_service(service)
+        response = _post_momo(client, session_id=session_id, total_ngwee=total)
+
+        assert response.status_code == 200
+        assert [line.title_snapshot for line in captured["cart_lines"]] == [expected]
