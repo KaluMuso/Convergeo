@@ -695,3 +695,27 @@ describe("admin middleware matrix", () => {
     expect(pattern.test("/favicon.ico")).toBe(false);
   });
 });
+
+describe("admin report-only CSP when theme hash fails", () => {
+  it("still serves the request when theme hash computation rejects", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.resetModules();
+    vi.doMock("@vergeo/config/security-headers", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@vergeo/config/security-headers")>();
+      return {
+        ...actual,
+        cspSha256Source: vi.fn(() => Promise.reject(new Error("hash unavailable"))),
+      };
+    });
+    resolveGatedRedirectMock.mockReturnValue(null);
+
+    const { default: freshMiddleware } = await import("./middleware");
+    const response = await freshMiddleware(new NextRequest("https://admin.vergeo5.com/en"));
+
+    expect(response.status).toBe(200);
+    const csp = response.headers.get(CSP_REPORT_ONLY_HEADER);
+    const scriptSrc = csp?.split("; ").find((directive) => directive.startsWith("script-src"));
+    expect(scriptSrc).toMatch(/'nonce-[^']+'/);
+    expect(scriptSrc).not.toMatch(/'sha256-/);
+  });
+});
