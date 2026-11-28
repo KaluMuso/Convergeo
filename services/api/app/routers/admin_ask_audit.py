@@ -22,6 +22,7 @@ from app.services.ask.citations import route_path
 from app.services.ask.enrich import rows_of
 from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends, Query
+from postgrest.exceptions import APIError
 from pydantic import BaseModel
 
 # Not named `router`: app.main auto-mounts any module-level `router` at the app root,
@@ -85,6 +86,20 @@ class AskAnswerPageOut(BaseModel):
     items: list[AskAnswerOut]
     next_before: datetime | None
     next_before_id: str | None = None
+
+
+def _missing_relation(exc: BaseException) -> bool:
+    if not isinstance(exc, APIError):
+        return False
+    code = str(getattr(exc, "code", "") or "")
+    message = str(getattr(exc, "message", "") or "").lower()
+    if code in {"42P01", "PGRST205", "PGRST204"}:
+        return True
+    return "relation" in message and "does not exist" in message
+
+
+def _empty_ask_page() -> AskAnswerPageOut:
+    return AskAnswerPageOut(items=[], next_before=None, next_before_id=None)
 
 
 def _clean_slug(value: Any) -> str | None:
@@ -165,18 +180,30 @@ def list_ask_answers(
         else:
             query = query.lt("created_at", before_iso)
 
-    rows = rows_of(query.execute())
+    try:
+        rows = rows_of(query.execute())
+    except Exception as exc:
+        if _missing_relation(exc):
+            return _empty_ask_page()
+        raise
     page = rows[:limit]
 
     findings_by_answer: dict[str, list[dict[str, Any]]] = {}
     if page:
-        for finding in rows_of(
-            client.table("ask_answer_findings")
-            .select(_FINDING_COLUMNS)
-            .in_("answer_id", [str(r["id"]) for r in page])
-            .order("created_at")
-            .execute()
-        ):
+        try:
+            finding_rows = rows_of(
+                client.table("ask_answer_findings")
+                .select(_FINDING_COLUMNS)
+                .in_("answer_id", [str(r["id"]) for r in page])
+                .order("created_at")
+                .execute()
+            )
+        except Exception as exc:
+            if _missing_relation(exc):
+                finding_rows = []
+            else:
+                raise
+        for finding in finding_rows:
             findings_by_answer.setdefault(str(finding["answer_id"]), []).append(finding)
 
     vendor_ids: set[str] = set()
