@@ -1,6 +1,7 @@
 "use client";
 
-import { CartHost, type MiniCartLabels } from "./mini-cart-drawer";
+import { type MiniCartLabels } from "./mini-cart-drawer";
+import { CartHost } from "./mini-cart-drawer-view";
 
 type CartHostSlotProps = {
   locale: string;

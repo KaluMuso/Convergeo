@@ -588,6 +588,37 @@ def test_list_vendor_listings_includes_pending_product_status(
     assert response.json()[0]["product_status"] == "pending_moderation"
 
 
+def test_in_review_count_counts_only_own_active_pending_listings(
+    manage_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    rows = fake_client.tables["vendor_listings"].rows
+    base = deepcopy(rows[0])
+    pending = {"name": "Demo Phone", "status": "pending_moderation"}
+    rows[0]["products"] = pending
+    for suffix, vendor, status, product in (
+        ("1", VENDOR_A_ID, "active", pending),
+        ("2", VENDOR_A_ID, "paused", pending),
+        ("3", VENDOR_A_ID, "active", {"name": "x", "status": "active"}),
+        ("4", VENDOR_B_ID, "active", pending),
+    ):
+        extra = deepcopy(base)
+        extra["id"] = f"99999999-9999-9999-9999-99999999999{suffix}"
+        extra["vendor_id"] = vendor
+        extra["status"] = status
+        extra["products"] = product
+        rows.append(extra)
+
+    response = manage_client.get("/vendor/listings/in-review-count", headers=_auth_headers(TOKEN_A))
+
+    assert response.status_code == 200
+    # the seeded listing + extra 1; paused, approved and other-vendor rows are excluded
+    assert response.json() == {"count": 2}
+
+
+def test_in_review_count_requires_a_vendor(manage_client: TestClient) -> None:
+    assert manage_client.get("/vendor/listings/in-review-count").status_code in (401, 403)
+
+
 def test_stock_adjust_updates_qty(
     manage_client: TestClient,
     fake_client: FakeSupabaseClient,

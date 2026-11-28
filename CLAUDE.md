@@ -11,8 +11,8 @@ Claude = architect/planner/prompt-writer/reviewer. Cursor Composer agents = impl
 ## Stack (LOCKED — D18–D24)
 
 - **Backend:** FastAPI (Python 3.12), Pydantic v2 strict; Supabase: Postgres 16 + pgvector, Auth (phone OTP/email/Google), Storage (private: KYC/invoices), RLS on EVERY table.
-- **Frontend:** Next.js 15 App Router + TS strict + Tailwind 4 + next-intl + PWA (serwist). THREE apps, one monorepo (pnpm + turborepo): `apps/customer` (Vercel, SSR/ISR, SEO), `apps/vendor`, `apps/admin` (OCI/Caddy, hardened origin) + `packages/ui|types|config|i18n`.
-- **Infra:** OCI Always-Free VM (Docker Compose: api, caddy, n8n) + Cloudflare + Vercel + Supabase cloud. Budget ceiling **$50/mo**.
+- **Frontend:** Next.js 15 App Router + TS strict + Tailwind 4 + next-intl + PWA (serwist). THREE apps, one monorepo (pnpm + turborepo): `apps/customer` (Vercel, SSR/ISR, SEO), `apps/vendor`, `apps/admin` (all three on Vercel; admin sits behind Cloudflare Access, D21 amended 2026-11-28) + `packages/ui|types|config|i18n`.
+- **Infra:** API on a Hetzner box (Docker, system Caddy; `api.vergeo5.com` is DNS-only, not proxied by Cloudflare), n8n + staging API + WAHA vendor-intake pilot on the same box, an OCI VM only for leftovers, Cloudflare (DNS, Access on admin) + Vercel (all three frontends) + Supabase cloud. Budget ceiling **$50/mo**.
 - **Payments:** Lenco only (abstraction seam for later). MoMo = direct USSD-push API; cards = Lenco hosted widget (NO direct card API — PCI). No refunds API ⇒ refunds are ledger-orchestrated payouts. Contract reference: `docs/ops/lenco/lenco-api-distilled.md`.
 - **Search/AI:** Postgres FTS + pg_trgm + pgvector, RRF fusion; same index feeds "Ask Vergeo" RAG (OpenRouter, workflow-first; daily quotas guest 3 / free 10 / premium 100, $15/mo kill-switch — D23).
 - **Media:** Cloudinary (public, f_auto/q_auto) + Supabase Storage (private). ≤8 images/listing.
