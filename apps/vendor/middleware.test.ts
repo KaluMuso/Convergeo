@@ -3,7 +3,9 @@ import {
   CSP_REPORT_ONLY_HEADER,
   updateSession,
 } from "@vergeo/auth/middleware";
+import { cspSha256Source } from "@vergeo/config/security-headers";
 import { LOCALES } from "@vergeo/i18n";
+import { THEME_SCRIPT } from "@vergeo/ui/src/theme-script";
 import { NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -128,6 +130,15 @@ describe("vendor password recovery gate", () => {
     expect(isVendorPasswordRecoveryPath(path)).toBe(false),
   );
 
+  it.each(["/en/signup", "/bem/signup/"])("treats seller sign-up as public: %s", (path) =>
+    expect(isVendorAuthSetupPath(path)).toBe(true),
+  );
+
+  it.each(["/en/signup/admin", "/xx/signup", "/signup", "/en/signup-other"])(
+    "rejects lookalike sign-up paths: %s",
+    (path) => expect(isVendorAuthSetupPath(path)).toBe(false),
+  );
+
   it.each(["/xx/accept-invite", "/accept-invite", "/en/accept-invite//"])(
     "rejects lookalike invite paths: %s",
     (path) => expect(isVendorAuthSetupPath(path)).toBe(false),
@@ -195,6 +206,10 @@ function expectNonceReportOnlyCsp(response: NextResponse): void {
   expect(scriptSrc).toContain("'strict-dynamic'");
   expect(scriptSrc).not.toContain("'unsafe-inline'");
   expect(scriptSrc).not.toContain("'unsafe-eval'");
+  // Static theme bootstrap is allowed by hash; report-only must not carry
+  // upgrade-insecure-requests (ignored there, and logs a console warning).
+  expect(scriptSrc).toMatch(/'sha256-[A-Za-z0-9+/]+=*'/);
+  expect(csp).not.toContain("upgrade-insecure-requests");
 }
 
 describe("vendor middleware CSP nonce", () => {
@@ -268,5 +283,13 @@ describe("vendor middleware — /health exemption", () => {
       [],
     );
     expect(response.status).toBe(307);
+  });
+});
+
+describe("vendor report-only CSP theme-script hash", () => {
+  it("allows exactly the theme bootstrap bytes by sha256", async () => {
+    const response = await middleware(new NextRequest("https://vendor.vergeo5.com/en"));
+    const scriptSrc = getScriptSrc(response.headers.get(CSP_REPORT_ONLY_HEADER));
+    expect(scriptSrc).toContain(await cspSha256Source(THEME_SCRIPT));
   });
 });
