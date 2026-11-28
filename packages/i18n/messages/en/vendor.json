@@ -1093,7 +1093,8 @@
       "empty": "No items",
       "variantOption": "{group}: {value}",
       "variantSeparator": " · ",
-      "sku": "SKU (item code) {sku}"
+      "sku": "SKU (item code) {sku}",
+      "untitledItem": "Unnamed item"
     },
     "timeline": {
       "heading": "What has happened",

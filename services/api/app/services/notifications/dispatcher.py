@@ -427,7 +427,10 @@ class NotificationDispatcher:
 
         payload = fresh.get("payload")
         payload_dict = dict(payload) if isinstance(payload, dict) else {}
-        recipient_id = payload_dict.get("recipient_id")
+        # Vendor-addressed templates (KYC, listing flags, clips, tickets) name the
+        # vendor owner as `owner_user_id` and carry no `recipient_id`; without this
+        # fallback they got no phone or email and every channel failed permanently.
+        recipient_id = payload_dict.get("recipient_id") or payload_dict.get("owner_user_id")
         recipient = self.fetch_recipient(str(recipient_id)) if recipient_id is not None else {}
         notif_prefs_raw = recipient.get("notif_prefs")
         notif_prefs = notif_prefs_raw if isinstance(notif_prefs_raw, dict) else {}

@@ -34,7 +34,8 @@
     "openDispute": "Signaler un problème",
     "variantOption": "{group} : {value}",
     "variantSeparator": " · ",
-    "discount": "Remise coupon"
+    "discount": "Remise coupon",
+    "untitledItem": "Article sans nom"
   },
   "status": {
     "placed": "Passée",

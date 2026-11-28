@@ -1093,7 +1093,8 @@
       "empty": "Aucun article",
       "variantOption": "{group} : {value}",
       "variantSeparator": " · ",
-      "sku": "SKU (code article) {sku}"
+      "sku": "SKU (code article) {sku}",
+      "untitledItem": "Article sans nom"
     },
     "timeline": {
       "heading": "Historique",
