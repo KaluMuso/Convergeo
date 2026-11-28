@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import httpx
@@ -51,6 +51,21 @@ def cancel(f: dict[str, Any], *, vendor: bool = False, refund_path: bool = False
         note="F2 synthetic cancellation authority",
         refund_path=refund_path,
     )
+
+
+def age_attempt(payment: str) -> None:
+    """Move a claimed attempt past the in-flight window.
+
+    A customer cancel is refused while a live Mobile Money attempt is inside
+    ``IN_FLIGHT_ATTEMPT_MAX_AGE_MINUTES``; the late-collection races below are
+    only reachable for an attempt that has outlived that window.
+    """
+    minutes = state.IN_FLIGHT_ATTEMPT_MAX_AGE_MINUTES + 1
+    result = _db().run(
+        f"UPDATE public.payments SET created_at = now() - interval '{minutes} minutes' "
+        f"WHERE id='{payment}' RETURNING status;"
+    )
+    assert result.ok and result.rows == ["initiated"], result.error
 
 
 def observe(f: dict[str, Any], payment: str, reference: str, leg: str) -> Any:
@@ -161,6 +176,7 @@ def test_receipt_and_cancellation_opposing_schedules(first: str) -> None:
     confirm(f)
     payment, reference, claimed = claim(f, "balance")
     assert claimed["result"] == "claimed"
+    age_attempt(payment)
     table = "orders" if first == "cancellation" else "ledger_transactions"
     predicate = (
         f"NEW.id='{f['order']}' AND NEW.status='cancelled'"
@@ -221,9 +237,22 @@ def test_claim_and_cancellation_opposing_schedules(first: str) -> None:
             _wait_for_db_lock("transactionid")
         finally:
             release()
-        leading_result, trailing_result = leading.result(timeout=20), trailing.result(timeout=20)
-    result = trailing_result if first == "cancellation" else leading_result
-    assert result[2]["result"] == ("order_not_payable" if first == "cancellation" else "claimed")
+        if first == "cancellation":
+            assert cast(Any, leading).result(timeout=20).to_status == state.OrderStatus.CANCELLED
+            assert cast(Any, trailing).result(timeout=20)[2]["result"] == "order_not_payable"
+        else:
+            # The claim committed first, so its attempt is live: the customer
+            # cancel must be refused (409) and must leave the order untouched.
+            payment, _, claimed = leading.result(timeout=20)
+            assert claimed["result"] == "claimed"
+            with pytest.raises(state.PaymentInFlightError):
+                trailing.result(timeout=20)
+            result = _db().run(f"SELECT status FROM public.orders WHERE id='{f['order']}';")
+            assert result.ok and result.rows == ["placed"], result.error
+            # Once the attempt has outlived the window the cancel goes through
+            # and the order can no longer be paid.
+            age_attempt(payment)
+            assert cancel(f).to_status == state.OrderStatus.CANCELLED
     assert claim(f, "deposit")[2]["result"] == "order_not_payable"
 
 
@@ -403,7 +432,7 @@ def test_adoption_holds_foreign_checkout_and_keeps_healthy_order() -> None:
     payment = fund(foreign, "deposit")
     result = _db().run(f"""INSERT INTO public.service_payment_obligations
       (order_id,job_id,checkout_group_id,leg,amount_ngwee) VALUES
-      ('{corrupt['order']}','{corrupt['job']}','{foreign['checkout']}','balance',30000);""")
+      ('{corrupt["order"]}','{corrupt["job"]}','{foreign["checkout"]}','balance',30000);""")
     assert result.ok, result.error
     fingerprint = f"""SELECT jsonb_build_object(
       'foreign',(SELECT to_jsonb(p) FROM public.payments p WHERE id='{payment}'),
@@ -411,9 +440,9 @@ def test_adoption_holds_foreign_checkout_and_keeps_healthy_order() -> None:
                  WHERE payment_id='{payment}'),
       'postings',(SELECT jsonb_agg(to_jsonb(lp) ORDER BY lp.id)
         FROM public.ledger_postings lp JOIN public.ledger_transactions t ON t.id=lp.transaction_id
-        WHERE t.order_id='{foreign['order']}'),
+        WHERE t.order_id='{foreign["order"]}'),
       'corrupt',(SELECT jsonb_agg(to_jsonb(ob) ORDER BY ob.id)
-        FROM public.service_payment_obligations ob WHERE order_id='{corrupt['order']}'))::text;"""
+        FROM public.service_payment_obligations ob WHERE order_id='{corrupt["order"]}'))::text;"""
     before = _db().run(fingerprint)
     assert before.ok, before.error
     directory = Path(__file__).resolve().parents[4] / "supabase/migrations"
@@ -427,12 +456,12 @@ def test_adoption_holds_foreign_checkout_and_keeps_healthy_order() -> None:
         after = _db().run(fingerprint)
         assert after.ok and after.rows == before.rows, after.error
     result = _db().run(f"""SELECT
-      (SELECT count(*) FROM public.service_payment_obligations WHERE order_id='{foreign['order']}'),
-      (SELECT count(*) FROM public.audit_log WHERE entity_id='{foreign['order']}'
+      (SELECT count(*) FROM public.service_payment_obligations WHERE order_id='{foreign["order"]}'),
+      (SELECT count(*) FROM public.audit_log WHERE entity_id='{foreign["order"]}'
         AND action='service.obligation_adoption_held'
         AND after->>'reason'='checkout_linked_to_other_obligation'),
       (SELECT count(*) FROM public.service_payment_obligations
-       WHERE order_id='{healthy['order']}');""")
+       WHERE order_id='{healthy["order"]}');""")
     assert result.ok and result.rows == ["0|1|2"], result.error
 
 
@@ -449,13 +478,25 @@ def test_native_cancellation_records_locked_state_and_one_affected_row(
       SELECT id,status FROM public.orders WHERE id='{f["order"]}' FOR UPDATE;
       UPDATE public.orders SET status=status WHERE id='{f["order"]}' RETURNING status;
       ROLLBACK;""")
-    request.node.user_properties.append(("legacy_psql_result", json.dumps({
-        "ok": probe.ok, "rows": probe.rows, "error": probe.error,
-    })))
+    request.node.user_properties.append(
+        (
+            "legacy_psql_result",
+            json.dumps(
+                {
+                    "ok": probe.ok,
+                    "rows": probe.rows,
+                    "error": probe.error,
+                }
+            ),
+        )
+    )
     assert probe.ok and probe.rows == ["UPDATE 1"], probe.error
     assert cancel(f).to_status == state.OrderStatus.CANCELLED
-    records = [json.loads(value) for name, value in request.node.user_properties
-               if name == "order_transition_sql_result"]
+    records = [
+        json.loads(value)
+        for name, value in request.node.user_properties
+        if name == "order_transition_sql_result"
+    ]
     assert records[-1]["locked_rows"] == [f"{f['order']}|placed"]
     assert records[-1]["returned_status_rows"] == ["cancelled"]
     assert records[-1]["affected_rows"] == 1
@@ -469,8 +510,10 @@ def test_concurrent_adoption_creates_one_pair_of_obligations() -> None:
     from threading import Barrier
 
     f = seed(obligations=False)
-    path = (Path(__file__).resolve().parents[4]
-            / "supabase/migrations/20260930203100_service_adoption_ambiguity_holds.sql")
+    path = (
+        Path(__file__).resolve().parents[4]
+        / "supabase/migrations/20260930203100_service_adoption_ambiguity_holds.sql"
+    )
     barrier = Barrier(2)
 
     def adopt() -> None:
@@ -483,8 +526,8 @@ def test_concurrent_adoption_creates_one_pair_of_obligations() -> None:
         for future in futures:
             future.result(timeout=30)
     result = _db().run(f"""SELECT
-      (SELECT count(*) FROM public.service_payment_obligations WHERE order_id='{f['order']}'),
+      (SELECT count(*) FROM public.service_payment_obligations WHERE order_id='{f["order"]}'),
       (SELECT count(*) FROM public.checkout_groups
-       WHERE idempotency_key='service-balance-{f['order']}'),
-      (SELECT count(*) FROM public.ledger_transactions WHERE order_id='{f['order']}');""")
+       WHERE idempotency_key='service-balance-{f["order"]}'),
+      (SELECT count(*) FROM public.ledger_transactions WHERE order_id='{f["order"]}');""")
     assert result.ok and result.rows == ["2|1|0"], result.error
