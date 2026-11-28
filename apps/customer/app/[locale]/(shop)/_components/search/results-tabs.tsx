@@ -336,7 +336,7 @@ export function SearchProductCard({
       {card}
       {distance ? (
         <span
-          className="pointer-events-none absolute left-1.5 top-1.5 z-[2] rounded-full bg-panel/85 px-2 py-0.5 text-[0.7rem] font-medium text-panel-text"
+          className="pointer-events-none absolute left-1.5 top-1.5 z-[2] rounded-full bg-panel/85 px-2 py-0.5 text-micro font-medium text-panel-text"
           data-testid="search-result-distance"
         >
           {distance}
@@ -344,7 +344,7 @@ export function SearchProductCard({
       ) : null}
       {openStatus ? (
         <span
-          className="pointer-events-none absolute right-1.5 top-1.5 z-[2] rounded-full bg-panel/85 px-2 py-0.5 text-[0.7rem] font-medium text-panel-text"
+          className="pointer-events-none absolute right-1.5 top-1.5 z-[2] rounded-full bg-panel/85 px-2 py-0.5 text-micro font-medium text-panel-text"
           data-testid="search-result-open-now"
         >
           {openStatus}

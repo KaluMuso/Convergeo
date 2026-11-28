@@ -179,7 +179,7 @@ function ComparisonValueExtras({
           {listing.valueChips.map((chip) => (
             <li
               key={chip}
-              className="rounded-full border border-border bg-bg px-2 py-0.5 text-[11px] font-medium text-text"
+              className="rounded-full border border-border bg-bg px-2 py-0.5 text-micro font-medium text-text"
             >
               {chipLabel(chip)}
             </li>

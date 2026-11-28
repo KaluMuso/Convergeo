@@ -19,8 +19,6 @@ const TEXT_WHITE = /(?<![\w-])text-white(?![\w-])/;
 
 /** Owned by other in-flight tasks; remove an entry once its file is fixed. */
 const PENDING = new Set([
-  "[locale]/moderation/products/_components/MergeConfirmDialog.tsx",
-  "[locale]/moderation/products/_components/RelatedProductsEditor.tsx",
   "[locale]/moderation/flags/_components/FlagActionDialog.tsx",
   "[locale]/offers/_components/OffersBoard.tsx",
 ]);

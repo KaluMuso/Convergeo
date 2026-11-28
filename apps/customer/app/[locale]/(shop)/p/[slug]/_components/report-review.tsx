@@ -114,16 +114,11 @@ export function ReportReview({ reviewId, labels }: ReportReviewProps) {
       }}
     >
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-display-ink">
-          {labels.heading}
-        </legend>
+        <legend className="text-sm font-medium text-display-ink">{labels.heading}</legend>
         <p className="text-xs text-text-2">{labels.reasonLegend}</p>
         <div className="space-y-1">
           {reasons.map((option) => (
-            <label
-              key={option.value}
-              className="flex min-h-11 items-center gap-2 text-sm"
-            >
+            <label key={option.value} className="flex min-h-11 items-center gap-2 text-sm">
               <input
                 type="radio"
                 name={groupId}
@@ -148,7 +143,7 @@ export function ReportReview({ reviewId, labels }: ReportReviewProps) {
         <button
           type="submit"
           disabled={status === "submitting" || !reason}
-          className="inline-flex min-h-11 items-center rounded bg-primary px-3 text-sm font-medium text-white disabled:opacity-50"
+          className="inline-flex min-h-11 items-center rounded bg-primary px-3 text-sm font-medium text-[var(--primary-btn-fg)] disabled:opacity-50"
         >
           {labels.submit}
         </button>

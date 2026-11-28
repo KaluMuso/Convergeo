@@ -306,7 +306,7 @@ export function RelatedProductsEditor() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm text-white disabled:opacity-40"
+              className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm text-[var(--primary-btn-fg)] disabled:opacity-40"
               onClick={() => void save()}
               disabled={saving || loadingRelated}
             >

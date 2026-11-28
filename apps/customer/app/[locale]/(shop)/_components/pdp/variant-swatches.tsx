@@ -71,7 +71,7 @@ export function VariantSwatches({
                 {value.label}
               </span>
             )}
-            <span className="text-[11px] text-text-2">
+            <span className="text-micro text-text-2">
               {fromNgwee !== null
                 ? fromPriceLabel.replace("{price}", formatK(fromNgwee))
                 : value.label}
