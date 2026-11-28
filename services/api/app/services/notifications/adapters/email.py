@@ -230,6 +230,19 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             ),
         },
     },
+    "import_quote_ready": {
+        "en": {
+            "subject_key": "notifications.email.import_quote_ready.subject",
+            "subject": "Your import quote is ready on Convergeo",
+            "body_key": "notifications.email.import_quote_ready.body",
+            "body": (
+                "<p>We prepared a landed-cost estimate for <strong>{import_title}</strong>: "
+                "about <strong>K{import_total}</strong> in total.</p>"
+                "<p>This is an estimate, not an offer. Open Source in the Convergeo "
+                "vendor app to see the full breakdown.</p>"
+            ),
+        },
+    },
     "order_cancelled": {
         "en": {
             "subject_key": "notifications.email.order_cancelled.subject",
@@ -375,6 +388,8 @@ def render_email_html(
         "track_url": html.escape(str(payload.get("track_url") or "")),
         "review_url": html.escape(str(payload.get("review_url") or "")),
         "quote_price": html.escape(_ngwee_field(payload, "quote_price_ngwee")),
+        "import_title": html.escape(str(payload.get("title") or "your import request")),
+        "import_total": html.escape(_ngwee_field(payload, "total_ngwee")),
         "refund_detail": html.escape(
             str(payload.get("refund_detail") or "If you already paid, we will handle your refund.")
         ),

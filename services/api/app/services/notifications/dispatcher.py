@@ -62,6 +62,7 @@ TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
     "event_schedule_changed": TemplateClass.TRANSACTIONAL,
     # Never-silent lifecycle events (E1/E4) — transactional, never deferred.
     "rfq_quoted": TemplateClass.TRANSACTIONAL,
+    "import_quote_ready": TemplateClass.TRANSACTIONAL,
     "service_quote_accepted": TemplateClass.TRANSACTIONAL,
     "order_cancelled": TemplateClass.TRANSACTIONAL,
     "payment_failed": TemplateClass.TRANSACTIONAL,
