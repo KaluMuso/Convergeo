@@ -32,10 +32,7 @@ const t = createTranslator({
   locale: "en",
   messages: { catalog: catalogMessages },
   namespace: "catalog",
-}) as unknown as (
-  key: string,
-  values?: Record<string, string | number>,
-) => string;
+}) as unknown as (key: string, values?: Record<string, string | number>) => string;
 
 function makeSlot(overrides: Partial<MerchSlotRow> = {}): MerchSlotRow {
   return {
@@ -97,9 +94,7 @@ describe("merch slot scheduling", () => {
     ];
 
     const keys = getRenderableSectionKeys(slots, []);
-    expect(keys.indexOf("events_row")).toBeLessThan(
-      keys.indexOf("featured_collections"),
-    );
+    expect(keys.indexOf("events_row")).toBeLessThan(keys.indexOf("featured_collections"));
   });
 });
 
@@ -144,7 +139,7 @@ describe("HomeHero fallback", () => {
     expect(
       screen.getByText("Shop products, services, and events across Zambia"),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Welcome to Convergeo")).not.toBeInTheDocument();
+    expect(screen.queryByText("Welcome to Vergeo5")).not.toBeInTheDocument();
     expect(
       screen.queryByText(
         "Your config-driven storefront will appear here as merchandising slots go live.",
@@ -169,7 +164,7 @@ describe("HomeHero fallback", () => {
     expect(
       screen.getByText("Shop products, services, and events across Zambia"),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Welcome to Convergeo")).not.toBeInTheDocument();
+    expect(screen.queryByText("Welcome to Vergeo5")).not.toBeInTheDocument();
   });
 });
 

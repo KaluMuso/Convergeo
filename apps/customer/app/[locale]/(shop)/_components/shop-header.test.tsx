@@ -73,7 +73,7 @@ afterEach(() => {
 });
 
 const labels = {
-  appName: "Convergeo",
+  appName: "Vergeo5",
   skipToContent: "Skip to content",
   navAriaLabel: "Shop navigation",
   desktopAriaLabel: "Primary navigation",
@@ -84,7 +84,7 @@ const labels = {
   categoriesLoading: "Loading…",
   categoriesEmpty: "Empty",
   viewAllCategories: "View all",
-  featuredTitle: "New on Convergeo",
+  featuredTitle: "New on Vergeo5",
   featuredPromo: "Compare sellers online.",
   featuredPromoCta: "Search marketplace",
   megaMenu: TEST_LABELS,

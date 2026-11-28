@@ -5,7 +5,7 @@
   "plp": {
     "title": "Parcourir {category}",
     "meta": {
-      "description": "Parcourez {category} sur Convergeo — comparez vendeurs, prix et disponibilité en Zambie."
+      "description": "Parcourez {category} sur Vergeo5 — comparez vendeurs, prix et disponibilité en Zambie."
     },
     "defaultCategory": "Tous les produits",
     "breadcrumbAria": "Fil d'Ariane",
@@ -90,7 +90,7 @@
   "home": {
     "meta": {
       "title": "Découvrez la Zambie",
-      "description": "Comparez les vendeurs, réservez des services et trouvez des événements partout en Zambie sur Convergeo — paiement à la livraison, livraison à Lusaka, retrait dans tout le pays."
+      "description": "Comparez les vendeurs, réservez des services et trouvez des événements partout en Zambie sur Vergeo5 — paiement à la livraison, livraison à Lusaka, retrait dans tout le pays."
     },
     "serviceBar": {
       "ariaLabel": "Informations sur la livraison et le retrait",
@@ -101,9 +101,9 @@
       "fallbackTitle": "Achetez produits, services et événements partout en Zambie",
       "fallbackSubtitle": "Trouvez des vendeurs près de chez vous. Livraison à Lusaka ou retrait partout en Zambie.",
       "primaryCta": "Commencer à parcourir",
-      "secondaryCta": "Vendre sur Convergeo",
+      "secondaryCta": "Vendre sur Vergeo5",
       "placeholder": {
-        "title": "Bienvenue sur Convergeo",
+        "title": "Bienvenue sur Vergeo5",
         "subtitle": "Votre vitrine configurable apparaîtra ici au fur et à mesure de l'activation des espaces de vente."
       },
       "escrowLine": "Payez en espèces à la livraison. Le paiement en ligne arrive bientôt.",
@@ -136,7 +136,7 @@
       }
     },
     "trust": {
-      "ariaLabel": "Pourquoi acheter sur Convergeo",
+      "ariaLabel": "Pourquoi acheter sur Vergeo5",
       "sellers": "Chaque boutique a sa page. Voyez à qui vous achetez.",
       "fulfillment": "Livraison à Lusaka. Retrait partout en Zambie.",
       "returns": "Article cassé ou incorrect ? Retournez-le sous 48 heures.",
@@ -167,7 +167,7 @@
       "browseLabel": "Parcourir {category}"
     },
     "rails": {
-      "newTitle": "Nouveau sur Convergeo",
+      "newTitle": "Nouveau sur Vergeo5",
       "departmentTitle": "Nouveautés dans {category}",
       "viewAll": "Voir tout",
       "servicesTitle": "Services",
@@ -193,7 +193,7 @@
       "recentViewProduct": "Voir {name}"
     },
     "sellCta": {
-      "title": "Vous voulez vendre sur Convergeo ?",
+      "title": "Vous voulez vendre sur Vergeo5 ?",
       "body": "Créez un compte vendeur, vérifiez votre identité et commencez à publier. Voyez comment ça marche.",
       "cta": "Comment vendre"
     },
@@ -242,11 +242,11 @@
         "moreLoaded": "{count} articles de plus chargés.",
         "emptyTitle": "De nouveaux produits arrivent",
         "emptyBody": "Les vendeurs ajoutent des articles chaque semaine. En attendant, parcourez les catégories ou commencez à vendre.",
-        "emptyCta": "Vendre sur Convergeo"
+        "emptyCta": "Vendre sur Vergeo5"
       }
     },
     "trustStrip": {
-      "ariaLabel": "Pourquoi acheter sur Convergeo",
+      "ariaLabel": "Pourquoi acheter sur Vergeo5",
       "cod": "Paiement à la livraison",
       "verified": "Vendeurs vérifiés",
       "lusaka": "Livraison à Lusaka",
@@ -287,8 +287,8 @@
     },
     "meta": {
       "notFoundTitle": "Produit introuvable",
-      "descriptionFallback": "Achetez {name} sur Convergeo",
-      "descriptionWithPrice": "Comparez les prix de {name} chez {count, plural, one {# vendeur} other {# vendeurs}} sur Convergeo. À partir de {price}."
+      "descriptionFallback": "Achetez {name} sur Vergeo5",
+      "descriptionWithPrice": "Comparez les prix de {name} chez {count, plural, one {# vendeur} other {# vendeurs}} sur Vergeo5. À partir de {price}."
     },
     "tabs": {
       "ariaLabel": "Détails du produit",

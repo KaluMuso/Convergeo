@@ -32,7 +32,7 @@
   "title": "Account yanga",
   "hub": {
     "title": "Chidziwitso cha account",
-    "description": "Yang'anani ma-order, zosungidwa, delivery, ndi mawonekedwe a Convergeo.",
+    "description": "Yang'anani ma-order, zosungidwa, delivery, ndi mawonekedwe a Vergeo5.",
     "backToShop": "Bwererani ku shopping",
     "ordersTitle": "Ma-order",
     "ordersBody": "Tsatirani delivery, pickup, ndi payment pa seller aliyense.",
@@ -116,7 +116,7 @@
     },
     "analytics": {
       "title": "Analytics",
-      "description": "Tithandizeni kukonza Convergeo potilola momwe mumagwiritsira ntchito, mwachitsanzo masamba omwe mumawerenga.",
+      "description": "Tithandizeni kukonza Vergeo5 potilola momwe mumagwiritsira ntchito, mwachitsanzo masamba omwe mumawerenga.",
       "toggleLabel": "Gawani zomwe mumagwiritsa ntchito",
       "on": "Yayatsidwa: titha kuona masamba omwe mumapitako ndi kuwalumikiza ku akaunti yanu mukalowa. Maulalo amachotsedwa pakatha masiku 30.",
       "off": "Yazimitsidwa: timasunga chiwerengero chopanda dzina chokha, monga kuti anthu angati aona tsamba. Palibe mbiri ya zomwe mwachita, ndipo palibe cholumikizidwa ndi inu.",
@@ -167,7 +167,7 @@
   },
   "rewards": {
     "title": "⚠ Rewards",
-    "description": "⚠ Convergeo Points for your orders and reviews.",
+    "description": "⚠ Vergeo5 Points for your orders and reviews.",
     "balanceLabel": "⚠ Your points",
     "balance": "⚠ {points, plural, one {# point} other {# points}}",
     "progress": "⚠ {remaining, plural, =0 {You've reached a reward coupon.} one {# point to your next reward coupon} other {# points to your next reward coupon}}",

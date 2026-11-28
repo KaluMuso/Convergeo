@@ -7,4 +7,6 @@ export const SERVICE_VERTICALS = [
   "tech-services",
   "cleaning",
   "tailoring",
+  "logistics",
+  "packaging",
 ] as const;

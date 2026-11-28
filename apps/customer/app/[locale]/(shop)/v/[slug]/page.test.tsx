@@ -163,7 +163,7 @@ describe("Business Home SEO metadata", () => {
   it("is ISR-cached and indexable with the shop's own name, canonical and sign", async () => {
     expect(revalidate).toBe(3600);
     const metadata = await generateMetadata({ params: params() });
-    expect(metadata.title).toBe("Mama Chanda's Kitchen on Convergeo");
+    expect(metadata.title).toBe("Mama Chanda's Kitchen on Vergeo5");
     expect(metadata.robots).toEqual({ index: true, follow: true });
     expect(String(metadata.alternates?.canonical)).toContain("/en/v/mama-chanda");
     expect(metadata.openGraph?.images).toEqual(["https://res.cloudinary.com/demo/logo.png"]);
@@ -215,7 +215,7 @@ describe("Business Home page", () => {
     expect(jsonLd?.textContent).toContain('"addressCountry":"ZM"');
     expect(screen.getByRole("region", { name: "Find us" })).toHaveTextContent("08:00–17:00");
     expect(
-      screen.getByText("Only customers who bought here through Convergeo can leave a review."),
+      screen.getByText("Only customers who bought here through Vergeo5 can leave a review."),
     ).toBeInTheDocument();
     // Flags off / nothing live: no clips row, no offers block, no empty Events tab.
     expect(screen.queryByTestId("bh-clips")).toBeNull();

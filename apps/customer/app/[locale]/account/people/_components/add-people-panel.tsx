@@ -27,7 +27,7 @@ export function AddPeoplePanel({ locale, siteOrigin }: AddPeoplePanelProps) {
   const [discoveryEnabled, setDiscoveryEnabled] = useState(false);
   const [pepperOk, setPepperOk] = useState(false);
   const inviteText = useMemo(
-    () => `Join me on Convergeo: ${siteOrigin}/${locale}/account/people/add`,
+    () => `Join me on Vergeo5: ${siteOrigin}/${locale}/account/people/add`,
     [locale, siteOrigin],
   );
 
@@ -102,7 +102,7 @@ export function AddPeoplePanel({ locale, siteOrigin }: AddPeoplePanelProps) {
       : `${siteOrigin}/${locale}/account/people/add`;
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: "Convergeo", url: shareUrl, text: inviteText });
+        await navigator.share({ title: "Vergeo5", url: shareUrl, text: inviteText });
         return;
       } catch {
         /* fall through */

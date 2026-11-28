@@ -62,7 +62,7 @@
     "body": "请尝试清除筛选或搜索其他商家。"
   },
   "profile": {
-    "metaDescription": "在 Convergeo 上从 {name} 购物",
+    "metaDescription": "在 Vergeo5 上从 {name} 购物",
     "about": "关于",
     "hours": "营业时间",
     "location": "位置",
@@ -75,7 +75,7 @@
     "noReviews": "暂无评价",
     "preferredBadge": "优选店铺",
     "verifiedBadge": "已认证卖家（身份已核实）",
-    "shareTitle": "Convergeo 上的 {name}",
+    "shareTitle": "Vergeo5 上的 {name}",
     "statRating": "评分",
     "statReviews": "评价",
     "statListings": "商品",
@@ -116,7 +116,7 @@
       "compareOthers": "{count, plural, other {与另外 # 家店比较}}",
       "compareFrom": "{price} 起",
       "compareAria": "在其他店铺比较 {title}",
-      "verifiedOnly": "只有通过 Convergeo 在此购买过的顾客才能评价。",
+      "verifiedOnly": "只有通过 Vergeo5 在此购买过的顾客才能评价。",
       "clipsHeading": "短视频",
       "clipWatch": "观看短视频",
       "offersHeading": "优惠",
