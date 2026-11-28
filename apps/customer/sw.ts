@@ -166,7 +166,10 @@ export const cacheRules: NamedRule[] = [
           handlerDidError: async () =>
             new Response(JSON.stringify({ error: "unavailable" }), {
               status: 503,
-              headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store",
+              },
             }),
         },
       ],
@@ -184,6 +187,16 @@ export const cacheRules: NamedRule[] = [
           maxAgeSeconds: 60 * 60 * 24 * 30,
           purgeOnQuotaError: true,
         }),
+        {
+          // Offline / CDN unreachable with nothing cached: answer 503 instead of
+          // rejecting the FetchEvent (an uncaught `no-response` console error).
+          // The <img> shows its normal broken/fallback state either way.
+          handlerDidError: async () =>
+            new Response(null, {
+              status: 503,
+              headers: { "Cache-Control": "no-store" },
+            }),
+        },
       ],
     }),
   },
@@ -231,7 +244,10 @@ export const cacheRules: NamedRule[] = [
           handlerDidError: async () =>
             new Response(JSON.stringify({ error: "unavailable" }), {
               status: 503,
-              headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store",
+              },
             }),
         },
       ],
@@ -249,7 +265,10 @@ export const runtimeCaching: RuntimeCaching[] = [
  * SAFE update policy — both OFF so a new SW never takes over silently. The
  * app surfaces an update prompt and posts `SKIP_WAITING` on user confirm.
  */
-export const SW_UPDATE_POLICY = { skipWaiting: false, clientsClaim: false } as const;
+export const SW_UPDATE_POLICY = {
+  skipWaiting: false,
+  clientsClaim: false,
+} as const;
 
 // ── Service-worker instantiation (skipped outside a SW context, e.g. tests) ──
 

@@ -12,8 +12,10 @@ from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services import busy_mode
 from app.services.analytics.search_log import log_ask_query
+from app.services.ask.answer_log import log_and_audit
 from app.services.ask.cache import cache_lookup, cache_write, normalize_query
 from app.services.ask.citations import CitationRef, ValidatedAnswer, validate_citations
+from app.services.ask.enrich import attach_vendor_info
 from app.services.ask.faq import FaqRef
 from app.services.ask.filters import extract_filters
 from app.services.ask.intents import (
@@ -27,7 +29,7 @@ from app.services.ask.prompt import build_prompt, call_answer_model
 from app.services.ask.retrieve import top_k
 from app.services.ask.spend import tokens_to_usd_micros
 from app.settings import get_settings
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from pydantic import Field
 
 logger = logging.getLogger(__name__)
@@ -65,6 +67,10 @@ class AskRequest(StrictModel):
     # Optional device location for "near me" — used for this request only, never stored.
     lat: float | None = Field(default=None, ge=-90, le=90)
     lng: float | None = Field(default=None, ge=-180, le=180)
+    # UI locale the customer was reading (recorded in the answer log only).
+    locale: str | None = Field(
+        default=None, max_length=16, pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})?$"
+    )
 
 
 class AskQuota(StrictModel):
@@ -95,6 +101,8 @@ class AskResponse(StrictModel):
     needs_location: bool = False
     sign_in_required: bool = False
     quota: AskQuota | None = None
+    # Which model produced the answer; recorded in the answer log, never sent to clients.
+    model: str | None = Field(default=None, exclude=True)
 
 
 # ---------------------------------------------------------------------------
@@ -284,6 +292,7 @@ def _refusal_response(query: str) -> AskResponse:
         cached=False,
         refused=True,
         message_key=REFUSAL_MESSAGE_KEY,
+        model="none",
     )
 
 
@@ -335,6 +344,7 @@ def _response_from_cache(query: str, cached_payload: dict[str, Any]) -> AskRespo
         cached=True,
         refused=refused,
         message_key=message_key,
+        model="cache",
     )
 
 
@@ -351,6 +361,7 @@ def _response_from_workflow(query: str, result: WorkflowResult) -> AskResponse:
         orders=result.orders,
         needs_location=result.needs_location,
         sign_in_required=result.sign_in_required,
+        model="workflow",
     )
 
 
@@ -370,6 +381,7 @@ async def _fallback_response(
         answer=FALLBACK_TEXT,
         citations=cards,
         source="fallback",
+        model="fallback",
         notice_key=notice_key,
         signup_prompt_key=signup_prompt_key,
         faq=faq,
@@ -394,7 +406,7 @@ def _notice_for_quota_error(exc: AppError) -> tuple[str, str | None]:
 # ---------------------------------------------------------------------------
 
 
-async def run_ask(
+async def _run_ask_pipeline(
     *,
     client: Any,
     query: str,
@@ -602,7 +614,41 @@ async def run_ask(
     )
 
     response = _response_from_validated(query=trimmed, validated=validated, cached=False)
+    response.model = model_result.model
     response.quota = quota_now
+    return response
+
+
+async def run_ask(
+    *,
+    client: Any,
+    query: str,
+    user_id: str | None,
+    guest_key: str,
+    model_caller: Any | None = None,
+    retriever: Any | None = None,
+    client_ip: str | None = None,
+    lat: float | None = None,
+    lng: float | None = None,
+    enable_workflow: bool = True,
+    workflow_retriever: WorkflowRetriever | None = None,
+) -> AskResponse:
+    """Ask pipeline plus citation enrichment (seller + customer paths) on every source."""
+    response = await _run_ask_pipeline(
+        client=client,
+        query=query,
+        user_id=user_id,
+        guest_key=guest_key,
+        model_caller=model_caller,
+        retriever=retriever,
+        client_ip=client_ip,
+        lat=lat,
+        lng=lng,
+        enable_workflow=enable_workflow,
+        workflow_retriever=workflow_retriever,
+    )
+    if response.citations:
+        response.citations = attach_vendor_info(client, response.citations)
     return response
 
 
@@ -610,6 +656,7 @@ async def run_ask(
 async def ask_vergeo(
     request: Request,
     body: AskRequest,
+    background_tasks: BackgroundTasks,
     supabase: Annotated[Any, Depends(get_supabase_client)],
 ) -> AskResponse:
     service_client = supabase.client
@@ -627,7 +674,7 @@ async def ask_vergeo(
     guest_key = _guest_key(request)
 
     try:
-        return await run_ask(
+        response = await run_ask(
             client=service_client,
             query=body.query,
             user_id=user_id,
@@ -642,7 +689,7 @@ async def ask_vergeo(
         # Last-resort guard: even an unexpected failure returns a renderable fallback.
         logger.exception("Unexpected Ask Vergeo failure; serving fallback")
         try:
-            return await _fallback_response(
+            response = await _fallback_response(
                 client=service_client,
                 query=body.query.strip(),
                 notice_key=FALLBACK_AI_UNAVAILABLE_KEY,
@@ -654,6 +701,17 @@ async def ask_vergeo(
                 http_status=503,
                 details={"reason": exc.__class__.__name__},
             ) from exc
+
+    # Answer log + deterministic audit run after the response is sent (never blocks it).
+    background_tasks.add_task(
+        log_and_audit,
+        service_client,
+        response=response,
+        user_id=user_id,
+        guest_key=guest_key,
+        locale=body.locale,
+    )
+    return response
 
 
 @router.get("/quota", response_model=AskQuota | None)

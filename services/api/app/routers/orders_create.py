@@ -19,6 +19,7 @@ from app.routers.checkout import (
     resolve_address_zone,
 )
 from app.routers.checkout_payment import _load_cod_cap_ngwee, _validate_payment_method
+from app.services.cart.grouping import listing_display_title
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.tickets import (
     TicketCartLine,
@@ -519,7 +520,9 @@ async def create_orders(
     for item in items:
         listing_id = str(item["listing_id"])
         listing = listings_by_id.get(listing_id, {})
-        title = listing.get("title_override")
+        # Most listings carry no override; fall back to the product name so the
+        # order line keeps a real title (admin/vendor order views read it).
+        title = listing_display_title(listing)
         qty_raw = item.get("qty", 0)
         price_raw = item.get("unit_price_ngwee", 0)
         if not isinstance(qty_raw, int) or not isinstance(price_raw, int):
@@ -536,7 +539,7 @@ async def create_orders(
                 vendor_id=str(listing.get("vendor_id", "")),
                 qty=qty_raw,
                 unit_price_ngwee=price_raw,
-                title_snapshot=title if isinstance(title, str) else None,
+                title_snapshot=title,
                 listing_variant_id=variant_id,
                 variant_snapshot=variant_snapshot,
             )

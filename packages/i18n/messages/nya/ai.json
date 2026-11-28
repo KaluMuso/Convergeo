@@ -27,5 +27,8 @@
   "ai.faq.cod.a": "⚠ During the pilot every order is cash on delivery: nothing is charged online and you pay when your order arrives. Some orders may not qualify; checkout tells you before you place it.",
   "ai.faq.escrow.a": "⚠ Online payment with escrow buyer protection is coming soon. Until then, you pay cash when your order arrives.",
   "ai.faq.payment.a": "⚠ During the pilot you pay cash on delivery. Mobile money and card payments are coming soon.",
-  "ai.faq.returns.a": "⚠ Report a problem from your order page and our team will review it. We will arrange any approved refund with you directly."
+  "ai.faq.returns.a": "⚠ Report a problem from your order page and our team will review it. We will arrange any approved refund with you directly.",
+  "ai.ask.voiceDenied": "⚠ Microphone is blocked. Allow it in your browser settings, or type your question.",
+  "ai.ask.speak": "⚠ Read the answer aloud",
+  "ai.ask.speakStop": "⚠ Stop reading"
 }

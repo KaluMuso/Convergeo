@@ -3,16 +3,12 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { buildPageMetadata } from "../../../../../../lib/page-title";
-import {
-  PendingPaymentShell,
-  type PendingLabels,
-} from "../../_components/ussd-wait";
-import {
-  groupRoutesFromQuery,
-  type SearchParams,
-} from "../../_lib/group-checkout";
+import { PendingPaymentShell, type PendingLabels } from "../../_components/ussd-wait";
+import { groupRoutesFromQuery, type SearchParams } from "../../_lib/group-checkout";
 
 import type { Metadata } from "next";
+
+import { codTrustLine } from "@/lib/cod-trust";
 
 export async function generateMetadata({
   params,
@@ -38,10 +34,7 @@ export function generateStaticParams() {
   }));
 }
 
-function buildPendingLabels(
-  locale: string,
-  messages: AbstractIntlMessages,
-): PendingLabels {
+function buildPendingLabels(locale: string, messages: AbstractIntlMessages): PendingLabels {
   const t = createTranslator({ locale, messages, namespace: "checkout" });
 
   return {
@@ -65,7 +58,7 @@ function buildPendingLabels(
       step2Body: t("checkout.pending.cod.step2Body"),
       step3Title: t("checkout.pending.cod.step3Title"),
       step3Body: t.raw("checkout.pending.cod.step3Body") as string,
-      trustLine: createTranslator({ locale, messages, namespace: "codTrust" })("line"),
+      trustLine: codTrustLine(locale, messages),
       helpTitle: t("checkout.pending.cod.helpTitle"),
       helpBody: t("checkout.pending.cod.helpBody"),
       contactCta: t("checkout.pending.cod.contactCta"),
@@ -97,10 +90,7 @@ function buildPendingLabels(
   };
 }
 
-export default async function PendingCheckoutPage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function PendingCheckoutPage({ params, searchParams }: PageProps) {
   const { locale, groupId } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {

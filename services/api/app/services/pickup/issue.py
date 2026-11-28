@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from app.errors import AppError
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.orders.state import sql_uuid
-from app.services.pickup.tokens import generate_pin, hash_pin, sign_pickup_qr_token
+from app.services.pickup.tokens import derive_pin, hash_pin, sign_pickup_qr_token
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,7 +78,7 @@ def issue_pickup_tokens(*, order_id: str, reissue: bool = False) -> PickupIssueR
     next_version = current_version + 1
     vendor_id = str(row["vendor_id"])
     nonce = secrets.token_urlsafe(16)
-    pin = generate_pin()
+    pin = derive_pin(order_id=order_id, version=next_version)
     qr_token = sign_pickup_qr_token(
         order_id=order_id,
         vendor_id=vendor_id,

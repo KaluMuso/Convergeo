@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -501,7 +502,100 @@ async def test_email_adapter_sends_resend_payload() -> None:
     result = await adapter.send(message)
     assert result.success is True
     assert "ord-99" in captured["body"]
-    assert "notifications.email.receipt.subject" in captured["body"]
+    # Resend rejects tag values containing dots (422), so the i18n keys are sanitised.
+    assert "notifications_email_receipt_subject" in captured["body"]
+    assert "notifications.email.receipt.subject" not in captured["body"]
+
+
+@pytest.mark.asyncio
+async def test_email_adapter_tag_values_are_resend_safe_for_every_template() -> None:
+    """Regression: dotted i18n keys in tags made Resend answer 422 validation_error."""
+    import json
+    import re
+
+    from app.services.notifications.adapters.email import EMAIL_TEMPLATES
+
+    allowed = re.compile(r"^[A-Za-z0-9_-]+$")
+    bodies: list[dict[str, Any]] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json={"id": "email-1"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    adapter = ResendEmailAdapter(
+        api_key="re_test", from_email="notifications@vergeo5.com", client=client
+    )
+    for template in EMAIL_TEMPLATES:
+        message = OutboxMessage(
+            id=f"msg-{template}",
+            dedupe_key=f"{template}:email",
+            channel=CHANNEL_EMAIL,
+            template=template,
+            payload={"email": "buyer@example.com", "order_id": "ord-1"},
+        )
+        assert (await adapter.send(message)).success is True
+    assert len(bodies) == len(EMAIL_TEMPLATES)
+    for body in bodies:
+        for tag in body["tags"]:
+            assert allowed.match(tag["name"]), tag
+            assert allowed.match(tag["value"]), tag
+
+
+@pytest.mark.asyncio
+async def test_resend_adapter_logs_422_response_body(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            422,
+            json={
+                "statusCode": 422,
+                "name": "validation_error",
+                "message": "The `to` field must be a valid email address.",
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    client = httpx.AsyncClient(transport=transport)
+    adapter = ResendEmailAdapter(
+        api_key="re_secret_test_key",
+        from_email="notifications@vergeo5.com",
+        client=client,
+    )
+    message = OutboxMessage(
+        id="msg-422",
+        dedupe_key="payment:pay-422:email",
+        channel=CHANNEL_EMAIL,
+        template="payment_receipt",
+        payload={
+            "email": "buyer@example.com",
+            "order_id": "ord-422",
+            "amount_ngwee": 10000,
+        },
+    )
+
+    with caplog.at_level(logging.WARNING):
+        result = await adapter.send(message)
+
+    assert result.success is False
+    assert result.failure_kind == FailureKind.PERMANENT
+    assert result.message == "Resend HTTP 422"
+
+    failure_records = [r for r in caplog.records if r.getMessage() == "Resend send failed"]
+    assert len(failure_records) == 1
+    record = failure_records[0]
+    assert record.http_status == 422  # type: ignore[attr-defined]
+    assert "validation_error" in record.resend_error  # type: ignore[attr-defined]
+    assert "status=422" in record.resend_error  # type: ignore[attr-defined]
+    assert record.recipient == "b***@example.com"  # type: ignore[attr-defined]
+
+    combined = " ".join(
+        f"{r.getMessage()} {getattr(r, 'resend_error', '')}" for r in caplog.records
+    )
+    assert "buyer@example.com" not in combined
+    assert "re_secret_test_key" not in combined
+    assert "Bearer" not in combined
 
 
 def test_get_channel_adapter_resolves_by_name(noop: NoopAdapter) -> None:

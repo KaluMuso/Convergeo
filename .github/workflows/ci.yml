@@ -1152,7 +1152,7 @@ jobs:
       EXPECTED_VECTOR_VERSION: "0.8.2"
       EXPECTED_PG_GRAPHQL_VERSION: "1.6.1"
       EXPECTED_PGCRYPTO_VERSION: "1.3"
-      EXPECTED_TYPEGEN_MIGRATION_COUNT: "199"
+      EXPECTED_TYPEGEN_MIGRATION_COUNT: "200"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -1445,6 +1445,8 @@ jobs:
 
       - name: Execute exact critical identities on isolated PostgreSQL and PostgREST
         shell: bash
+        env:
+          CI_POSTGREST_MIRROR: "1"
         run: bash scripts/ci/run-critical-real-stack.sh
 
       - name: Retain critical execution identity and JUnit evidence
@@ -1503,6 +1505,8 @@ jobs:
         run: python -m unittest discover -s scripts/ci -p test_guard_shared_service_adoption.py -v
       - name: Execute real financial database gates
         shell: bash
+        env:
+          CI_POSTGREST_MIRROR: "1"
         run: python scripts/ci/run_financial_real_stack.py
       - name: Rehearse guarded adoption catalog and atomic history
         env:
@@ -1585,6 +1589,8 @@ jobs:
       - name: Coordinator orchestration controls
         run: python -m unittest discover -s scripts/ci -p test_coordinator_gates.py -v
       - name: Execute retained acceptance contracts
+        env:
+          CI_POSTGREST_MIRROR: "1"
         run: python scripts/ci/run_coordinator_gates.py ${{ matrix.gate }}
       - name: Retain sanitized gate evidence
         if: always()

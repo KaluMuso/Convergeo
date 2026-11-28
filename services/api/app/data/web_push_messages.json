@@ -2,6 +2,7 @@
   "bem": {
     "inApp": {
       "admin": {
+        "ask_answer_flagged": "⚠ Ask Vergeo gave a suspicious answer. Open it to investigate.",
         "dispute_opened": "Ubwafya bupya pa order {ref}.",
         "extras_requested": "⚠ A seller requested an extra: {name}.",
         "kyc_submitted": "KYC iipya ilelolela ukumonwa."
@@ -48,6 +49,7 @@
   "en": {
     "inApp": {
       "admin": {
+        "ask_answer_flagged": "Ask Vergeo gave a suspicious answer. Open it to investigate.",
         "dispute_opened": "New dispute opened on order {ref}.",
         "extras_requested": "A seller requested an extra: {name}.",
         "kyc_submitted": "New KYC submission waiting for review."
@@ -94,6 +96,7 @@
   "fr": {
     "inApp": {
       "admin": {
+        "ask_answer_flagged": "Ask Vergeo a donné une réponse suspecte. Ouvrez-la pour vérifier.",
         "dispute_opened": "Nouveau litige ouvert sur la commande {ref}.",
         "extras_requested": "Un vendeur a demandé une option : {name}.",
         "kyc_submitted": "Nouvelle demande KYC en attente d'examen."
@@ -140,6 +143,7 @@
   "nya": {
     "inApp": {
       "admin": {
+        "ask_answer_flagged": "⚠ Ask Vergeo gave a suspicious answer. Open it to investigate.",
         "dispute_opened": "Mkangano watsopano pa order {ref}.",
         "extras_requested": "⚠ A seller requested an extra: {name}.",
         "kyc_submitted": "KYC yatsopano ikudikira kuunikidwa."
@@ -186,6 +190,7 @@
   "zh": {
     "inApp": {
       "admin": {
+        "ask_answer_flagged": "Ask Vergeo 给出了可疑的回答，请打开查看。",
         "dispute_opened": "订单 {ref} 有新的争议。",
         "extras_requested": "有卖家申请了增值服务：{name}。",
         "kyc_submitted": "有新的 KYC 申请待审核。"

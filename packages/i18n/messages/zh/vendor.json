@@ -52,21 +52,19 @@
   "vendor.listings.count": "{count, plural, one {# 件商品} other {# 件商品}}",
   "vendor.payout.pending": "待处理结算：{amount}",
   "pitch": {
-    "signupUnavailable": "尚未开放公开商家注册。卖家入驻目前为邀请制（礼宾试用）；若您已获邀请，请联系 Convergeo。",
-    "inviteOnlyNotice": "邀请制卖家试用。公开自助开店尚未开放。受邀卖家可使用收到的链接继续入驻。",
     "meta": {
-      "title": "在 Convergeo 上销售——邀请制卖家试用",
-      "description": "试点期间 Convergeo 卖家入驻仅限邀请/礼宾制。了解佣金与认证——公开自助注册尚未开放。"
+      "title": "在 Convergeo 开店 — 开设您的店铺",
+      "description": "创建免费卖家账号，验证身份，即可在 Convergeo 上架商品。注册前先了解佣金与验证流程。"
     },
     "hero": {
-      "eyebrow": "邀请制卖家试用",
+      "eyebrow": "在 Convergeo 开店",
       "headline": "免费上架。",
       "headlineEmphasis": "售出才付费。",
       "subheadline": "通过商品、服务、活动、供货和您的商户主页触达赞比亚各地的买家——尽在一个商家应用。",
-      "primaryCta": "继续卖家邀请",
+      "primaryCta": "开始开店 — 创建账号",
       "secondaryCta": "查看佣金",
       "existingSellerCta": "Already selling? Open vendor portal",
-      "freeTierNote": "受邀卖家在管理员批准后可使用免费套餐（最多 30 个商品）。公开注册尚未开放。"
+      "freeTierNote": "身份验证并获批后，卖家可使用免费套餐（最多 30 个商品）。"
     },
     "valueProps": {
       "heading": "五种增长方式",
@@ -160,7 +158,7 @@
     "payout": {
       "heading": "线上结算：即将推出",
       "promise": "试点期间，买家货到付款。",
-      "body": "移动支付结算与买家保障即将推出。在此之前，订单在送达时以现金支付，我们会与每位受邀卖家确认结算细节。"
+      "body": "买家付款将托管至送达。结算到您的 Mobile Money 号码即将上线；在此之前，我们会与每位卖家确认结算细节。"
     },
     "faq": {
       "heading": "常见问题",
@@ -171,7 +169,7 @@
         },
         "payout": {
           "question": "我什么时候收款？",
-          "answer": "试点期间买家货到付款。线上结算即将推出——我们会与每位受邀卖家确认时间。"
+          "answer": "买家可用 Mobile Money、银行卡或货到付款。在线结算即将上线——我们会与每位卖家确认时间。"
         },
         "whatCanISell": {
           "question": "我可以卖什么？",
@@ -184,21 +182,21 @@
       }
     },
     "cta": {
-      "heading": "已获邀在 Convergeo 开店？",
-      "body": "试点期间卖家入驻为邀请/礼宾制。若您有邀请，请继续下方流程——上架工具仅在管理员批准后解锁。",
-      "button": "继续卖家邀请",
+      "heading": "准备好在 Convergeo 开店了吗？",
+      "body": "创建卖家账号，验证身份，获批后即可开始上架。上架工具仅在管理员批准后解锁。",
+      "button": "创建卖家账号",
       "loadingLabel": "正在打开邀请入驻",
-      "haveInviteSignIn": "我有邀请——登录"
+      "haveAccountSignIn": "已有卖家账号？登录"
     }
   },
   "onboarding": {
     "meta": {
-      "title": "卖家邀请入驻 — Convergeo",
-      "description": "完成邀请制卖家申请并验证您的身份。商品上架在管理员批准前保持锁定。"
+      "title": "卖家入驻 — Convergeo",
+      "description": "完成卖家申请并验证身份。在管理员批准前，商品上架保持锁定。"
     },
     "invite": {
-      "eyebrow": "您已受邀",
-      "body": "您正在完成卖家邀请申请。在 Convergeo 验证您的身份并授予卖家权限前，目录、结算与商家控制台保持锁定。"
+      "eyebrow": "完成您的卖家申请",
+      "body": "在 Convergeo 验证您的身份并授予卖家权限前，目录、结算与商家控制台保持锁定。"
     },
     "steps": {
       "business": "商户",
@@ -1095,7 +1093,8 @@
       "empty": "没有商品",
       "variantOption": "{group}：{value}",
       "variantSeparator": " · ",
-      "sku": "SKU（商品编码）{sku}"
+      "sku": "SKU（商品编码）{sku}",
+      "untitledItem": "未命名商品"
     },
     "timeline": {
       "heading": "订单进度",

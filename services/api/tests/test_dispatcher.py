@@ -111,9 +111,7 @@ class InMemoryOutboxStore:
         self.user_emails: dict[str, str] = {}
         self.last_pending_query: dict[str, Any] | None = None
         # Mirror the supabase client's auth.admin surface used by lookup_user_email.
-        self.auth = SimpleNamespace(
-            admin=SimpleNamespace(get_user_by_id=self._get_user_by_id)
-        )
+        self.auth = SimpleNamespace(admin=SimpleNamespace(get_user_by_id=self._get_user_by_id))
 
     def _get_user_by_id(self, user_id: str) -> SimpleNamespace:
         email = self.user_emails.get(user_id)
@@ -181,8 +179,7 @@ class InMemoryOutboxStore:
             rows = [
                 row
                 for row in rows
-                if row.get("next_retry_at") is None
-                or _parse_ts(row["next_retry_at"]) <= now
+                if row.get("next_retry_at") is None or _parse_ts(row["next_retry_at"]) <= now
             ]
 
         if order:
@@ -644,3 +641,72 @@ def test_internal_dispatch_accepts_valid_token(
         "skipped": 0,
         "retried": 0,
     }
+
+
+@pytest.mark.asyncio
+async def test_vendor_owner_payload_without_recipient_id_gets_email(
+    store: InMemoryOutboxStore,
+    noop: NoopAdapter,
+    dispatcher: NotificationDispatcher,
+) -> None:
+    """KYC rows name the vendor owner as owner_user_id only; they must still be addressed."""
+    store.user_emails["owner-1"] = "vendor@example.com"
+    _seed_row(
+        store,
+        event_type="kyc_approved",
+        entity_id="kyc-7",
+        channel="email",
+        payload={
+            "vendor_id": "vendor-1",
+            "owner_user_id": "owner-1",
+            "kyc_record_id": "kyc-7",
+            "tier": "t1",
+        },
+    )
+
+    stats = await dispatcher.run_batch()
+
+    assert stats.sent == 1
+    assert noop.sent[0].payload["email"] == "vendor@example.com"
+
+
+@pytest.mark.asyncio
+async def test_vendor_owner_payload_gets_phone_for_whatsapp(
+    store: InMemoryOutboxStore,
+    noop: NoopAdapter,
+    dispatcher: NotificationDispatcher,
+) -> None:
+    store.profiles["owner-1"] = {"id": "owner-1", "phone": "+260970000001", "notif_prefs": {}}
+    _seed_row(
+        store,
+        event_type="kyc_under_review",
+        entity_id="kyc-8",
+        payload={"vendor_id": "vendor-1", "owner_user_id": "owner-1", "kyc_record_id": "kyc-8"},
+    )
+
+    stats = await dispatcher.run_batch()
+
+    assert stats.sent == 1
+    assert noop.sent[0].payload["to"] == "+260970000001"
+
+
+@pytest.mark.asyncio
+async def test_explicit_recipient_id_wins_over_owner_user_id(
+    store: InMemoryOutboxStore,
+    noop: NoopAdapter,
+    dispatcher: NotificationDispatcher,
+) -> None:
+    store.user_emails["user-1"] = "buyer@example.com"
+    store.user_emails["owner-1"] = "vendor@example.com"
+    _seed_row(
+        store,
+        event_type="payment_receipt",
+        entity_id="ord-12",
+        channel="email",
+        payload={"recipient_id": "user-1", "owner_user_id": "owner-1"},
+    )
+
+    stats = await dispatcher.run_batch()
+
+    assert stats.sent == 1
+    assert noop.sent[0].payload["email"] == "buyer@example.com"

@@ -25,6 +25,22 @@ def generate_pin() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
+def derive_pin(*, order_id: str, version: int, secret: str | None = None) -> str:
+    """Deterministic 6-digit PIN for one (order, token version).
+
+    Re-computable server-side so the customer's order page can show the PIN
+    the vendor will ask for, without storing it in plain text. Only the PBKDF2
+    hash is stored; entropy is unchanged (6 digits, rate-limited verify).
+    """
+    pepper = secret or resolve_signing_secret()
+    digest = hmac.new(
+        pepper.encode("utf-8"),
+        f"pickup-pin-derive:{order_id}:{version}".encode(),
+        hashlib.sha256,
+    ).digest()
+    return f"{int.from_bytes(digest[:8], 'big') % 1_000_000:06d}"
+
+
 def hash_pin(*, pin: str, order_id: str, secret: str | None = None) -> str:
     if not _PIN_RE.match(pin):
         raise ValueError("PIN must be exactly 6 digits")

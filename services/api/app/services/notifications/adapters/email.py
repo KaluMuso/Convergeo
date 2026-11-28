@@ -3,10 +3,12 @@ from __future__ import annotations
 import html
 import logging
 import os
+import re
 from dataclasses import dataclass
 from typing import Any
 
 import httpx
+from app.core.sentry import scrub
 from app.services.notifications.adapters.base import (
     ChannelAdapter,
     FailureKind,
@@ -406,12 +408,63 @@ def render_email_html(
     return subject, wrapped, subject_key, body_key
 
 
+_RESEND_TAG_INVALID = re.compile(r"[^A-Za-z0-9_-]")
+
+
+def _resend_tag_value(value: str) -> str:
+    """Resend tag names/values allow only ASCII letters, digits, underscore and dash.
+
+    i18n keys like ``notifications.email.kyc.approved.subject`` contain dots and make
+    Resend answer 422 validation_error, so map every other character to ``_``.
+    """
+    return _RESEND_TAG_INVALID.sub("_", value)[:256] or "unknown"
+
+
 def _map_resend_error(status_code: int) -> FailureKind:
     if status_code in {400, 401, 403, 404, 422}:
         return FailureKind.PERMANENT
     if status_code in {429, 500, 502, 503, 504}:
         return FailureKind.RETRYABLE
     return FailureKind.RETRYABLE
+
+
+def _mask_email_address(email: str) -> str:
+    """Mask recipient for logs — never emit the full local-part."""
+    normalized = email.strip()
+    if not normalized or "@" not in normalized:
+        return "***"
+    local, _, domain = normalized.partition("@")
+    if not local:
+        masked_local = "***"
+    elif len(local) == 1:
+        masked_local = "*"
+    else:
+        masked_local = f"{local[0]}***"
+    return f"{masked_local}@{domain}"
+
+
+def _format_resend_error_detail(response: httpx.Response) -> str:
+    """Build a short, scrubbed summary of Resend's error JSON (max 500 chars)."""
+    status = response.status_code
+    name = ""
+    message = ""
+    try:
+        payload = response.json()
+        if isinstance(payload, dict):
+            name = str(payload.get("name") or "").strip()
+            message = str(payload.get("message") or "").strip()
+    except (ValueError, TypeError):
+        message = (response.text or "").strip()
+
+    parts: list[str] = [f"status={status}"]
+    if name:
+        parts.append(f"name={name}")
+    if message:
+        parts.append(f"message={message}")
+    detail = str(scrub("; ".join(parts)))
+    if len(detail) > 500:
+        return detail[:499] + "…"
+    return detail
 
 
 @dataclass
@@ -461,16 +514,33 @@ class ResendEmailAdapter:
                     "subject": subject,
                     "html": html_body,
                     "tags": [
-                        {"name": "template", "value": message.template or "payment_receipt"},
-                        {"name": "subject_key", "value": subject_key},
-                        {"name": "body_key", "value": body_key},
+                        {
+                            "name": "template",
+                            "value": _resend_tag_value(message.template or "payment_receipt"),
+                        },
+                        {"name": "subject_key", "value": _resend_tag_value(subject_key)},
+                        {"name": "body_key", "value": _resend_tag_value(body_key)},
                     ],
                 },
             )
             if response.status_code >= 400:
+                failure_kind = _map_resend_error(response.status_code)
+                error_detail = _format_resend_error_detail(response)
+                logger.warning(
+                    "Resend send failed",
+                    extra={
+                        "channel": "email",
+                        "template": message.template,
+                        "dedupe_key": message.dedupe_key,
+                        "recipient": _mask_email_address(to),
+                        "http_status": response.status_code,
+                        "failure_kind": failure_kind,
+                        "resend_error": error_detail,
+                    },
+                )
                 return SendResult(
                     success=False,
-                    failure_kind=_map_resend_error(response.status_code),
+                    failure_kind=failure_kind,
                     message=f"Resend HTTP {response.status_code}",
                 )
 
