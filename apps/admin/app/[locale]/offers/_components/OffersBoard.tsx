@@ -1,6 +1,6 @@
 "use client";
 
-import { glassClass } from "@vergeo/ui/src/glass";
+import { Modal } from "@vergeo/ui/src/modal";
 import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -299,17 +299,17 @@ export function PauseDialog({ offer, pause, onClose, onDone }: PauseDialogProps)
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-[2px] sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="offer-pause-title"
+    <Modal
+      open
+      onClose={submitting ? () => undefined : onClose}
+      title={pause ? t("actions.pauseTitle") : t("actions.unpauseTitle")}
+      closeOnEscape={!submitting}
+      closeOnScrimClick={!submitting}
+      panelStyle={{ width: "min(100% - 2rem, 28rem)" }}
+      data-testid="offer-pause-dialog"
     >
-      <div className={`${glassClass("overlay")} w-full max-w-md rounded-lg p-4`}>
-        <h2 id="offer-pause-title" className="font-serif text-lg text-text">
-          {pause ? t("actions.pauseTitle") : t("actions.unpauseTitle")}
-        </h2>
-        <p className="mt-2 break-words text-sm text-muted">
+      <div className="space-y-2">
+        <p className="break-words text-sm text-muted">
           {pause
             ? t("actions.pauseBody", { title: offer.title })
             : t("actions.unpauseBody", { title: offer.title })}
@@ -357,6 +357,6 @@ export function PauseDialog({ offer, pause, onClose, onDone }: PauseDialogProps)
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

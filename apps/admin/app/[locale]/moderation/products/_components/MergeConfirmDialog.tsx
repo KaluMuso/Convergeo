@@ -1,5 +1,6 @@
 "use client";
 
+import { Modal } from "@vergeo/ui/src/modal";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -46,19 +47,17 @@ export function MergeConfirmDialog({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-panel/50 p-4 sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="merge-dialog-title"
+    <Modal
+      open
+      onClose={submitting ? () => undefined : onCancel}
+      title={t("confirmTitle")}
+      closeOnEscape={!submitting}
+      closeOnScrimClick={!submitting}
+      panelStyle={{ width: "min(100% - 2rem, 32rem)" }}
+      data-testid="merge-confirm-dialog"
     >
-      <div className="w-full max-w-lg space-y-4 rounded-lg border border-border bg-surface p-4 shadow-lg">
-        <header className="space-y-1">
-          <h2 id="merge-dialog-title" className="font-serif text-lg text-text">
-            {t("confirmTitle")}
-          </h2>
-          <p className="text-sm text-muted">{t("confirmBody")}</p>
-        </header>
+      <div className="space-y-4">
+        <p className="text-sm text-muted">{t("confirmBody")}</p>
         <div className="space-y-2 text-sm">
           <p>
             <span className="text-muted">{t("confirmSurvivor")}</span>
@@ -81,7 +80,7 @@ export function MergeConfirmDialog({
           </button>
           <button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-white"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)]"
             onClick={() => void handleConfirm()}
             disabled={submitting}
           >
@@ -89,6 +88,6 @@ export function MergeConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

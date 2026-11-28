@@ -1,6 +1,6 @@
 "use client";
 
-import { glassClass } from "@vergeo/ui/src/glass";
+import { Modal } from "@vergeo/ui/src/modal";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -39,17 +39,17 @@ export function FlagActionDialog({ item, action, onClose, onComplete }: FlagActi
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-[2px] sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="flag-action-title"
+    <Modal
+      open
+      onClose={submitting ? () => undefined : onClose}
+      title={t(`${action}.title`)}
+      closeOnEscape={!submitting}
+      closeOnScrimClick={!submitting}
+      panelStyle={{ width: "min(100% - 2rem, 28rem)" }}
+      data-testid="flag-action-dialog"
     >
-      <div className={`${glassClass("overlay")} w-full max-w-md rounded-lg p-4`}>
-        <h2 id="flag-action-title" className="font-serif text-lg text-text">
-          {t(`${action}.title`)}
-        </h2>
-        <p className="mt-2 text-sm text-muted">{t(`${action}.body`)}</p>
+      <div className="space-y-2">
+        <p className="text-sm text-muted">{t(`${action}.body`)}</p>
         {destructive ? (
           <p className="mt-2 text-sm font-medium text-danger">{t(`${action}.warning`)}</p>
         ) : null}
@@ -85,6 +85,6 @@ export function FlagActionDialog({ item, action, onClose, onComplete }: FlagActi
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
