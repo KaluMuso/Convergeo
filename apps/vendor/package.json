@@ -7,7 +7,7 @@
     "dev": "next dev --port 3001",
     "build": "next build",
     "start": "next start --port 3001",
-    "lint": "eslint app lib/api-base-url.ts lib/api-base-url.test.ts middleware.ts middleware.test.ts",
+    "lint": "eslint app lib/api-base-url.ts lib/api-base-url.test.ts middleware.ts middleware.test.ts sw.ts sw-scanner.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
@@ -23,9 +23,11 @@
     "next": "^15.5.29",
     "next-intl": "^4.15.1",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "serwist": "^9.5.13"
   },
   "devDependencies": {
+    "@serwist/next": "^9.5.13",
     "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.3",

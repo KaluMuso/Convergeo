@@ -11,6 +11,7 @@ import { resolveVendorNavCapabilities } from "../../lib/nav-capabilities";
 import { BASE_SPEC, pickMessages, specNamespaces } from "../../lib/route-messages";
 import { SentryInit } from "../sentry-init";
 
+import { ServiceWorkerRegister } from "./_components/service-worker-register";
 import { VendorShell } from "./_components/vendor-shell";
 
 import type { Metadata, Viewport } from "next";
@@ -82,6 +83,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
           <NextIntlClientProvider messages={messages as AbstractIntlMessages}>
             {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
             <SentryInit />
+            <ServiceWorkerRegister />
             {/* Authenticated chrome; header + nav, bare children on the login route. */}
             <ToastProvider dismissLabel={toastDismiss} copy={toastCopy}>
               <VendorShell locale={locale} capabilities={navCapabilities}>

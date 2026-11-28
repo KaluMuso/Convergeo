@@ -1,3 +1,4 @@
+import withSerwistInit from "@serwist/next";
 import createNextIntlPlugin from "next-intl/plugin";
 import { assertVercelPublicSupabaseEnv } from "@vergeo/config";
 import {
@@ -16,6 +17,20 @@ import type { NextConfig } from "next";
 assertVercelPublicSupabaseEnv();
 
 const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
+
+/**
+ * PWA / serwist — compiles `sw.ts` to `public/sw.js`. Disabled in dev so HMR is
+ * not shadowed by a cached shell. Registration is gated by `ServiceWorkerRegister`
+ * after a same-origin probe of `/sw.js`.
+ */
+const withSerwist = withSerwistInit({
+  swSrc: "sw.ts",
+  swDest: "public/sw.js",
+  cacheOnNavigation: true,
+  reloadOnOnline: true,
+  register: false,
+  disable: process.env.NODE_ENV === "development",
+});
 
 /**
  * Security headers & CSP — M15-P03 + security audit wave (vendor origin, behind Caddy on OCI).
@@ -152,4 +167,4 @@ const nextConfig: NextConfig = {
 
 // NOTE (M16-P06): Sentry is lazy-loaded off first-load JS (`app/sentry-init.tsx`), not
 // wired via `withSentryConfig`, which would inject the SDK into every route's first-load.
-export default withNextIntl(nextConfig);
+export default withNextIntl(withSerwist(nextConfig));
