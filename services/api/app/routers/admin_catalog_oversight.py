@@ -71,7 +71,7 @@ def _with_packages(
         try:
             response = (
                 service.client.table(package_state.TABLE)
-                .select("id,service_id,tier,name,price_ngwee,delivery_days,status")
+                .select("id,service_id,tier,name,price_ngwee,delivery_days,sort_order,status")
                 .in_("service_id", ids)
                 .execute()
             )
@@ -86,11 +86,12 @@ def _with_packages(
                     "name": row.get("name"),
                     "price_ngwee": package_state.int_or_none(row.get("price_ngwee")),
                     "delivery_days": package_state.int_or_none(row.get("delivery_days")),
+                    "sort_order": package_state.int_or_none(row.get("sort_order")) or 0,
                     "status": row.get("status"),
                 }
             )
     return [
-        {**item, "packages": package_state.sort_by_tier(grouped.get(str(item.get("id")), []))}
+        {**item, "packages": package_state.sort_packages(grouped.get(str(item.get("id")), []))}
         for item in items
         if isinstance(item, dict)
     ]

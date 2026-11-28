@@ -107,7 +107,7 @@ class RfqMessageResponse(StrictModel):
 
 class RfqPackageSnapshot(StrictModel):
     package_id: str
-    tier: str
+    tier: str | None = None
     name: str
     price_ngwee: int | None
     delivery_days: int | None

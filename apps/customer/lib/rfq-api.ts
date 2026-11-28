@@ -28,7 +28,8 @@ export type RfqThread = {
 /** What the customer saw when they asked about a service package (money in ngwee). */
 export type RfqPackageSnapshot = {
   package_id: string;
-  tier: string;
+  /** Legacy Basic/Standard/Premium label; null for open-list packages. */
+  tier?: string | null;
   name: string;
   price_ngwee: number | null;
   delivery_days: number | null;
@@ -74,9 +75,11 @@ export function createRfqApiClient(getToken: () => string | null | Promise<strin
         limit: String(limit),
         offset: String(offset),
       });
-      return client.request<{ items: RfqThread[]; limit: number; offset: number }>(
-        `/rfq?${params.toString()}`,
-      );
+      return client.request<{
+        items: RfqThread[];
+        limit: number;
+        offset: number;
+      }>(`/rfq?${params.toString()}`);
     },
     getThread(threadId: string) {
       return client.request<RfqThread>(`/rfq/${threadId}`);
