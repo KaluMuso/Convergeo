@@ -7,7 +7,8 @@ rider; nothing is charged). The pricing rules live in
 ``app.services.logistics.delivery_pricing`` and snapshot the result on each order at
 checkout, so changing these terms never touches an order that already exists.
 
-Money-adjacent: every change is audit-logged (before/after) and rate limited.
+Money-adjacent: rate limited, and every change is audit-logged by a database trigger
+(migration 20261128120000) in the same transaction as the UPDATE, so it can never land unlogged.
 Per-listing "free delivery" and shipping weight live on ``PATCH /vendor/listings/{id}``.
 """
 
@@ -120,15 +121,4 @@ async def update_delivery_terms(
         )
     after = _terms_from_row({**before.model_dump(), **row})
 
-    client.table("audit_log").insert(
-        {
-            "actor": current_user.id,
-            "actor_roles": ["vendor"],
-            "action": "vendor.delivery_terms.update",
-            "entity_type": "vendor",
-            "entity_id": vendor_id,
-            "before": before.model_dump(),
-            "after": after.model_dump(),
-        }
-    ).execute()
     return after

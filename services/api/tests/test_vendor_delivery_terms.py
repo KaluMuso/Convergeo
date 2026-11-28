@@ -141,9 +141,7 @@ def test_get_returns_current_terms(client: TestClient) -> None:
     }
 
 
-def test_patch_updates_only_own_shop_and_writes_audit_row(
-    client: TestClient, fake: FakeClient
-) -> None:
+def test_patch_updates_only_own_shop(client: TestClient, fake: FakeClient) -> None:
     response = client.patch(
         "/vendor/delivery-terms",
         headers=_h(),
@@ -158,20 +156,14 @@ def test_patch_updates_only_own_shop_and_writes_audit_row(
     assert rows[VENDOR_A_ID]["free_delivery_all"] is True
     assert rows[VENDOR_B_ID]["free_delivery_all"] is False
     assert rows[VENDOR_B_ID]["free_delivery_method"] == "platform_courier"
-    audit = fake.tables["audit_log"].rows
-    assert len(audit) == 1
-    assert audit[0]["action"] == "vendor.delivery_terms.update"
-    assert audit[0]["entity_id"] == VENDOR_A_ID
-    assert audit[0]["before"]["free_delivery_all"] is False
-    assert audit[0]["after"]["free_delivery_all"] is True
 
 
-def test_patch_with_no_change_writes_nothing(client: TestClient, fake: FakeClient) -> None:
+def test_patch_with_no_change_returns_current_terms(client: TestClient, fake: FakeClient) -> None:
     response = client.patch(
         "/vendor/delivery-terms", headers=_h(), json={"free_delivery_all": False}
     )
     assert response.status_code == 200
-    assert fake.tables["audit_log"].rows == []
+    assert response.json()["free_delivery_all"] is False
 
 
 @pytest.mark.parametrize(
@@ -189,7 +181,6 @@ def test_patch_rejects_bad_or_unknown_fields(
     response = client.patch("/vendor/delivery-terms", headers=_h(), json=payload)
     assert response.status_code == 422
     assert fake.tables["vendors"].rows[0]["free_delivery_all"] is False
-    assert fake.tables["audit_log"].rows == []
 
 
 def test_patch_is_rate_limited(

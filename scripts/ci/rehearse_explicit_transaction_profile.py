@@ -139,6 +139,8 @@ REVIEWED_SUFFIX = (
     "20261126190000_ask_service_role_auth_role.sql",
     # Ask Vergeo answer log + auditor findings (additive tables, trigger-based admin alert).
     "20261127090000_ask_answer_log_audit.sql",
+    # Vendor free-delivery terms + listing flag audit triggers (additive, atomic with the change).
+    "20261128120000_vendor_delivery_terms_audit.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
