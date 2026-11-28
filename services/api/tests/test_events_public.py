@@ -10,6 +10,7 @@ from app.errors import AppError
 from app.main import create_app
 from app.routers.events_public import (
     LUSAKA_TZ,
+    _fetch_event_by_slug,
     build_browse_response,
     build_detail_response,
     instance_in_window,
@@ -125,7 +126,8 @@ class FakeQuery:
 
             rows = sorted(rows, key=sort_key, reverse=desc)
         if self._maybe_single:
-            return FakeResponse(rows[0] if rows else None)
+            # Match postgrest-py 2.x: zero rows → None (not FakeResponse(None)).
+            return FakeResponse(rows[0]) if rows else None
         return FakeResponse(rows)
 
 
@@ -656,6 +658,33 @@ def test_get_event_not_found(client: TestClient) -> None:
     response = client.get("/events/missing-event")
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "event.not_found"
+
+
+def test_get_event_not_found_when_maybe_single_returns_none(client: TestClient) -> None:
+    """postgrest-py returns None (not a response object) for zero-row maybe_single()."""
+
+    class _NullExecuteQuery:
+        def select(self, *_args: Any, **_kwargs: Any) -> _NullExecuteQuery:
+            return self
+
+        def eq(self, *_args: Any, **_kwargs: Any) -> _NullExecuteQuery:
+            return self
+
+        def maybe_single(self) -> _NullExecuteQuery:
+            return self
+
+        def execute(self) -> None:
+            return None
+
+    class _NullClient:
+        def table(self, _name: str) -> _NullExecuteQuery:
+            return _NullExecuteQuery()
+
+    assert _fetch_event_by_slug(_NullClient(), "ghost-event") is None
+    with pytest.raises(AppError) as exc_info:
+        build_detail_response(_NullClient(), "ghost-event")
+    assert exc_info.value.http_status == 404
+    assert exc_info.value.code == "event.not_found"
 
 
 # --- Wave A / M10-P10: visibility gating + private-event access code ---------

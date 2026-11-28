@@ -22,4 +22,8 @@ describe("detail fetch", () => {
       kind: "private_access",
     });
   });
+  it("event 404 without private gate", async () => {
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 404 })) as typeof fetch;
+    await expect(fetchEventDetail("no-such-event")).resolves.toEqual({ kind: "not_found" });
+  });
 });
