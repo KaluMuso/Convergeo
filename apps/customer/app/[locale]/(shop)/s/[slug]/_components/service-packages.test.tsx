@@ -16,12 +16,16 @@ import { buildPrefill, normalisePackages, type ServicePackage } from "./service-
 
 import type { RequestQuoteLabels } from "../../../_components/pdp/request-quote-button";
 
-vi.mock("../../../../../../lib/customer-session", () => ({ useSession: vi.fn() }));
+vi.mock("../../../../../../lib/customer-session", () => ({
+  useSession: vi.fn(),
+}));
 vi.mock("next/navigation", () => ({ usePathname: () => "/en/s/svc-1" }));
 
 const createRfq = vi.fn();
 vi.mock("../../../../../../lib/rfq-api", () => ({
-  createRfqApiClient: () => ({ createRfq: (...args: unknown[]) => createRfq(...args) }),
+  createRfqApiClient: () => ({
+    createRfq: (...args: unknown[]) => createRfq(...args),
+  }),
   RFQ_DETAILS_MAX_CHARS: 4000,
 }));
 
@@ -39,7 +43,6 @@ const quoteLabels = catalogMessages.pdp.requestQuote as RequestQuoteLabels;
 
 const BASIC: ServicePackage = {
   id: "pkg-basic",
-  tier: "basic",
   name: "Logo only",
   description: "One concept",
   price_ngwee: 75_000,
@@ -49,7 +52,6 @@ const BASIC: ServicePackage = {
 };
 const PREMIUM: ServicePackage = {
   id: "pkg-premium",
-  tier: "premium",
   name: "Full brand",
   description: null,
   price_ngwee: null,
@@ -64,18 +66,38 @@ afterEach(() => {
 });
 
 describe("normalisePackages", () => {
-  it("orders by tier, drops duplicates and junk, and never keeps non-integer money", () => {
+  it("keeps the vendor's order, drops duplicates and junk, and never keeps non-integer money", () => {
     const out = normalisePackages([
       PREMIUM,
       { ...BASIC, price_ngwee: 750.5 },
-      { ...BASIC, id: "dup" },
-      { id: "x", tier: "deluxe" },
+      { ...BASIC, name: "duplicate id" },
+      { id: "x", tier: "deluxe", name: "Odd label" },
       null,
-      "nope",
+      "junk",
     ]);
-    expect(out.map((p) => p.tier)).toEqual(["basic", "premium"]);
-    expect(out[0]?.price_ngwee).toBeNull();
-    expect(out[0]?.id).toBe("pkg-basic");
+    expect(out.map((p) => p.id)).toEqual(["pkg-premium", "pkg-basic", "x"]);
+    expect(out[1]?.price_ngwee).toBeNull(); // 750.5 is not integer ngwee
+    expect(out[2]?.tier).toBeNull(); // unknown legacy label is dropped, package kept
+  });
+
+  it("accepts the legacy tier label but does not order by it", () => {
+    const out = normalisePackages([
+      { ...PREMIUM, tier: "premium" },
+      { ...BASIC, tier: "basic" },
+    ]);
+    expect(out.map((p) => p.tier)).toEqual(["premium", "basic"]);
+  });
+
+  it("shows up to ten packages and no more", () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({
+      ...BASIC,
+      id: `p${i}`,
+      name: `P${i}`,
+    }));
+    const out = normalisePackages(many);
+    expect(out).toHaveLength(10);
+    expect(out[0]?.id).toBe("p0");
+    expect(out[9]?.id).toBe("p9");
   });
 
   it("returns [] for anything that is not a list", () => {
@@ -85,9 +107,8 @@ describe("normalisePackages", () => {
 });
 
 describe("buildPrefill", () => {
-  it("names the tier, package, formatted price and delivery", () => {
+  it("names the package, formatted price and delivery", () => {
     const text = buildPrefill(BASIC, t, formatK);
-    expect(text).toContain("Basic");
     expect(text).toContain("Logo only");
     expect(text).toContain(formatK(75_000));
     expect(text).toContain("3 days");
@@ -125,7 +146,7 @@ describe("ServicePackages", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("compares tiers with price, delivery and revisions", () => {
+  it("compares packages with price, delivery and revisions", () => {
     render(
       <ServicePackages
         locale="en"
@@ -136,14 +157,36 @@ describe("ServicePackages", () => {
         quoteLabels={quoteLabels}
       />,
     );
-    const basic = screen.getByTestId("service-package-basic");
+    const basic = screen.getByTestId("service-package-pkg-basic");
     expect(within(basic).getByTestId("service-package-price")).toHaveTextContent(formatK(75_000));
     expect(basic).toHaveTextContent("Delivered in 3 days");
     expect(basic).toHaveTextContent("1 revision");
-    const premium = screen.getByTestId("service-package-premium");
+    const premium = screen.getByTestId("service-package-pkg-premium");
     expect(premium).toHaveTextContent("Price on request");
     expect(premium).toHaveTextContent("Revisions not applicable");
     expect(screen.getByText(servicesMessages.packages.noPaymentNote)).toBeInTheDocument();
+  });
+
+  it("renders ten packages in the vendor's order", () => {
+    const ten = Array.from({ length: 10 }, (_, i) => ({
+      ...BASIC,
+      id: `p${i}`,
+      name: `Pack ${i}`,
+    }));
+    render(
+      <ServicePackages
+        locale="en"
+        serviceId="svc-1"
+        vendorName="Shop"
+        packages={ten}
+        t={t}
+        quoteLabels={quoteLabels}
+      />,
+    );
+    const cards = screen.getAllByTestId(/^service-package-p\d$/);
+    expect(cards.map((c) => within(c).getByRole("heading", { level: 3 }).textContent)).toEqual(
+      ten.map((p) => p.name),
+    );
   });
 
   it("opens the quote request prefilled and sends the package id", async () => {
@@ -158,7 +201,7 @@ describe("ServicePackages", () => {
         quoteLabels={quoteLabels}
       />,
     );
-    await user.click(screen.getByTestId("service-package-cta-basic"));
+    await user.click(screen.getByTestId("service-package-cta-pkg-basic"));
     const textarea = await screen.findByTestId("pdp-request-quote-details");
     expect((textarea as HTMLTextAreaElement).value).toContain("Logo only");
 

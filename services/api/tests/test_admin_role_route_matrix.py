@@ -114,6 +114,15 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     "products.manage": frozenset(
         {
             # Admin catalog control (T4): listings.
+            # Admin category manager (taxonomy).
+            "DELETE /admin/catalog/taxonomy/{umbrella}/{node_id}",
+            "GET /admin/catalog/taxonomy",
+            "PATCH /admin/catalog/taxonomy/{umbrella}/{node_id}",
+            "POST /admin/catalog/taxonomy",
+            "POST /admin/catalog/taxonomy/image/sign",
+            "POST /admin/catalog/taxonomy/{umbrella}/reorder",
+            "POST /admin/catalog/taxonomy/{umbrella}/{node_id}/move",
+            "POST /admin/catalog/taxonomy/{umbrella}/{node_id}/status",
             "GET /admin/catalog/listings",
             "PATCH /admin/catalog/listings/{entity_id}",
             "POST /admin/catalog/listings/{entity_id}/moderate",
@@ -140,6 +149,9 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "POST /admin/catalog/vendors/{entity_id}/moderate",
             "POST /admin/catalog/vendors/{entity_id}/restore",
             # Multi-branch review (#807): mapped to vendors.manage in auth.py.
+            # Event sponsor approval queue (founder decision, 27 Nov).
+            "GET /admin/event-sponsors",
+            "POST /admin/event-sponsors/{event_id}/review",
             "GET /admin/branches",
             "GET /admin/branches/flags",
             "GET /admin/branches/{branch_id}",
@@ -152,6 +164,13 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "GET /admin/business",
             # Paid extras requests (20261117020000): mapped to vendors.manage in auth.py.
             "GET /admin/extras/requests",
+            # Vendor sourcing hub import requests: mapped to vendors.manage in auth.py.
+            "GET /admin/import-requests",
+            "POST /admin/import-requests/{request_id}/quotes",
+            "POST /admin/import-requests/{request_id}/status",
+            # Made in Zambia claim review: mapped to vendors.manage in auth.py.
+            "GET /admin/made-in-zambia-claims",
+            "POST /admin/made-in-zambia-claims/{listing_id}/decision",
             "GET /admin/intake",
             "GET /admin/intake/{session_id}",
             "GET /admin/kyc",
@@ -273,6 +292,14 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
 MODERATOR_ROUTES: frozenset[str] = frozenset(
     {
         # Admin catalog control (T4): moderators hold products.manage and vendors.manage.
+        "DELETE /admin/catalog/taxonomy/{umbrella}/{node_id}",
+        "GET /admin/catalog/taxonomy",
+        "PATCH /admin/catalog/taxonomy/{umbrella}/{node_id}",
+        "POST /admin/catalog/taxonomy",
+        "POST /admin/catalog/taxonomy/image/sign",
+        "POST /admin/catalog/taxonomy/{umbrella}/reorder",
+        "POST /admin/catalog/taxonomy/{umbrella}/{node_id}/move",
+        "POST /admin/catalog/taxonomy/{umbrella}/{node_id}/status",
         "GET /admin/catalog/listings",
         "GET /admin/catalog/vendors",
         "PATCH /admin/catalog/listings/{entity_id}",
@@ -291,6 +318,13 @@ MODERATOR_ROUTES: frozenset[str] = frozenset(
         # Paid extras requests: moderators hold vendors.manage.
         "GET /admin/extras/requests",
         "POST /admin/extras/requests/{request_id}/transition",
+        # Import requests: moderators hold vendors.manage.
+        "GET /admin/import-requests",
+        "POST /admin/import-requests/{request_id}/quotes",
+        "POST /admin/import-requests/{request_id}/status",
+        # Made in Zambia claims: moderators hold vendors.manage.
+        "GET /admin/made-in-zambia-claims",
+        "POST /admin/made-in-zambia-claims/{listing_id}/decision",
         "DELETE /admin/products/{product_id}/images/{image_id}",
         "GET /admin/products/{product_id}/images",
         "POST /admin/products/{product_id}/images",
@@ -358,6 +392,8 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         # unrestricted only.
         "GET /admin/extras",
         "GET /admin/trials",
+        # Ask Vergeo answer log + auditor findings (20261127090000): admin / superadmin only.
+        "GET /admin/ask-audit",
         "PATCH /admin/extras/{extra_key}",
         "POST /admin/extras",
         "POST /admin/trials/{business_id}",

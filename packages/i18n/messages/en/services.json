@@ -165,16 +165,16 @@
       "titleInvalid": "Enter a title with at least two characters.",
       "bookablePrice": "Set a fixed booking price greater than zero to allow direct booking.",
       "authRequired": "Sign in to manage your services.",
-      "freeHasPrice": "A free service cannot have a price."
+      "freeHasPrice": "A free service cannot have a price.",
+      "invalidCategory": "That category is not available. Pick another one."
     },
     "packages": {
       "title": "Packages",
-      "intro": "Offer up to three packages so customers can compare them and ask for a quote on exactly what they want.",
+      "intro": "Offer up to {max} packages. Give each a name, price, delivery time and what's included, so customers can compare them and ask for a quote on exactly what they want.",
       "count": "{count} of {max} packages offered",
-      "limitReached": "You can offer up to {max} packages per service: one each of Basic, Standard and Premium. Remove one to offer a different one.",
+      "limitReached": "You can offer up to {max} packages per service. Remove one to add another.",
       "codNote": "No payment is taken when a customer picks a package — they send you a quote request, and you agree the final price in the chat.",
       "offer": "Offer this package",
-      "notOffered": "Not offered",
       "archived": "Removed — save to offer it again",
       "nameLabel": "Package name",
       "nameHint": "Short and specific, e.g. \"Logo only\" or \"Logo + business cards\".",
@@ -193,7 +193,6 @@
       "saved": "Package saved.",
       "archive": "Remove package",
       "guidance": {
-        "order": "Your {higher} package costs less than your {lower} package. Customers usually expect higher tiers to cost more.",
         "fromPrice": "Tip: set your service's \"from price\" to your lowest package price so search shows the right number."
       },
       "errors": {
@@ -210,8 +209,16 @@
         "loadFailed": "Could not load packages.",
         "invalidTransition": "This package can't be changed that way.",
         "conflict": "This package was just changed. Reload and try again.",
-        "notFound": "Package not found."
-      }
+        "notFound": "Package not found.",
+        "limitReached": "You already have {max} packages on this service. Remove one before adding another.",
+        "orderMismatch": "Your packages changed since this page loaded. Reload and try again.",
+        "reorderFailed": "Could not change the order."
+      },
+      "addPackage": "Add a package",
+      "packageHeading": "Package {number}",
+      "newPackage": "New package",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down"
     }
   },
   "postJob": {
@@ -458,11 +465,6 @@
     "heading": "Choose a package",
     "subheading": "Compare what each package includes, then ask {vendor} for a quote on the one you want.",
     "compareHint": "Swipe to compare packages",
-    "tier": {
-      "basic": "Basic",
-      "standard": "Standard",
-      "premium": "Premium"
-    },
     "priceQuote": "Price on request",
     "deliveryLabel": "Delivery time",
     "delivery": "{days, plural, one {Delivered in # day} other {Delivered in # days}}",
@@ -472,7 +474,7 @@
     "includeMarker": "✓",
     "cta": "Request this package",
     "dialogTitle": "Request a quote: {name}",
-    "prefill": "I'd like the {tier} package ({name}). Listed price: {price}. Delivery: {days} days.\n\nMy details: ",
+    "prefill": "I'd like the \"{name}\" package. Listed price: {price}. Delivery: {days} days.\n\nMy details: ",
     "prefillPriceQuote": "to be quoted",
     "noPaymentNote": "Requesting a package does not charge you. You agree the final price with the provider in the quote chat.",
     "errors": {

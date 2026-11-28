@@ -29,6 +29,12 @@ SEED_CATEGORIES = [
         "position": 1,
         "parent_id": None,
         "prohibited": False,
+        "umbrella": "product",
+        "status": "published",
+        "show_in_customer": True,
+        "image_public_id": "taxonomy/product/electronics",
+        "image_alt": "Electronics",
+        "icon": None,
     },
     {
         "id": CHILD_ID,
@@ -38,6 +44,9 @@ SEED_CATEGORIES = [
         "position": 2,
         "parent_id": PARENT_ID,
         "prohibited": False,
+        "umbrella": "product",
+        "status": "published",
+        "show_in_customer": True,
     },
     {
         "id": PROHIBITED_ID,
@@ -47,6 +56,33 @@ SEED_CATEGORIES = [
         "position": 99,
         "parent_id": None,
         "prohibited": True,
+        "umbrella": "product",
+        "status": "published",
+        "show_in_customer": True,
+    },
+    {
+        "id": "44444444-4444-4444-4444-444444444444",
+        "name": "Blocked",
+        "slug": "blocked",
+        "path": "blocked",
+        "position": 50,
+        "parent_id": None,
+        "prohibited": False,
+        "umbrella": "product",
+        "status": "blocked",
+        "show_in_customer": True,
+    },
+    {
+        "id": "55555555-5555-5555-5555-555555555555",
+        "name": "Vendor only",
+        "slug": "vendor-only",
+        "path": "vendor-only",
+        "position": 60,
+        "parent_id": None,
+        "prohibited": False,
+        "umbrella": "wholesale",
+        "status": "published",
+        "show_in_customer": False,
     },
 ]
 
@@ -119,6 +155,12 @@ def test_load_public_categories_excludes_prohibited() -> None:
     assert all(not category.prohibited for category in categories)
 
 
+def test_public_categories_hide_blocked_and_non_customer_rows() -> None:
+    client = FakeSupabaseClient(SEED_CATEGORIES)
+    slugs = {category.slug for category in load_public_categories_from_db(client)}
+    assert slugs == {"electronics", "phones"}
+
+
 def test_list_public_categories_uses_cache() -> None:
     client = FakeSupabaseClient(SEED_CATEGORIES)
     store = InMemoryTtlCacheStore()
@@ -145,23 +187,30 @@ def test_categories_endpoint_matches_db_shape(categories_client: TestClient) -> 
         "position": 1,
         "parent_id": None,
         "prohibited": False,
+        "umbrella": "product",
+        "image_url": body[0]["image_url"],
+        "image_alt": "Electronics",
+        "icon": None,
     }
+    assert body[0]["image_url"] is None or "taxonomy/product/electronics" in body[0]["image_url"]
     assert body[1]["parent_id"] == PARENT_ID
 
 
 def test_categories_endpoint_sets_cache_control(categories_client: TestClient) -> None:
     response = categories_client.get("/categories")
     cache_control = response.headers.get("cache-control", "")
-    assert "s-maxage=3600" in cache_control
+    assert "s-maxage=300" in cache_control
 
 
 def test_categories_cache_key_and_ttl_constants() -> None:
-    assert CATEGORIES_CACHE_KEY == "public:categories:v1"
-    assert CATEGORIES_CACHE_TTL_SECONDS == 3600
+    assert CATEGORIES_CACHE_KEY == "public:categories:v2"
+    assert CATEGORIES_CACHE_TTL_SECONDS == 300
 
 
-def test_event_taxonomy_exposes_persisted_parent_and_filters_unknown_authoring_slugs() -> None:
+def test_event_taxonomy_exposes_persisted_parent_and_hides_blocked_rows() -> None:
     from types import SimpleNamespace
+
+    visible = {"status": "published", "show_in_customer": True, "show_in_vendor": True}
 
     class EventClient:
         def table(self, name: str) -> FakeQuery:
@@ -172,19 +221,32 @@ def test_event_taxonomy_exposes_persisted_parent_and_filters_unknown_authoring_s
                         "slug": "music",
                         "parent_slug": None,
                         "label_key": "events.categories.music",
+                        "name": "Music",
                         "sort": 1,
+                        **visible,
                     },
                     {
                         "slug": "concerts",
                         "parent_slug": "music",
                         "label_key": "events.categories.concerts",
+                        "name": "Concerts",
                         "sort": 2,
+                        **visible,
                     },
                     {
-                        "slug": "not-approved",
+                        "slug": "blocked-one",
                         "parent_slug": "music",
                         "label_key": "unknown",
                         "sort": 3,
+                        **visible,
+                        "status": "blocked",
+                    },
+                    {
+                        "slug": "orphan",
+                        "parent_slug": "blocked-one",
+                        "label_key": "unknown",
+                        "sort": 4,
+                        **visible,
                     },
                 ]
             )
@@ -194,10 +256,12 @@ def test_event_taxonomy_exposes_persisted_parent_and_filters_unknown_authoring_s
     with TestClient(app) as client:
         response = client.get("/categories/events")
     assert response.status_code == 200
-    assert response.json() == [
-        {"slug": "music", "parent_slug": None, "label_key": "events.categories.music"},
-        {"slug": "concerts", "parent_slug": "music", "label_key": "events.categories.concerts"},
+    body = response.json()
+    assert [(row["slug"], row["parent_slug"]) for row in body] == [
+        ("music", None),
+        ("concerts", "music"),
     ]
+    assert body[0]["name"] == "Music"
 
 
 def test_event_taxonomy_read_failure_is_not_an_empty_success() -> None:

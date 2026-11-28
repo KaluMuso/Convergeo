@@ -140,8 +140,22 @@ FORWARD = [
     "20261124120000_social_contacts.sql",
     # Ask Vergeo service-role checks use auth.role() (rewrite in place, no down).
     "20261126190000_ask_service_role_auth_role.sql",
+    # Ask Vergeo answer log + auditor findings (additive tables, trigger-based admin alert).
+    "20261127090000_ask_answer_log_audit.sql",
+    # Vendor sourcing hub: supplier types, made-in-Zambia flag, import requests (additive, documented down).
+    "20261127100000_vendor_sourcing_hub.sql",
+    # Service packages become an open ordered list, cap 10 (additive, documented down).
+    "20261127120000_service_packages_open_list.sql",
+    # Admin-controlled catalog taxonomy (additive, documented down).
+    "20261127130000_catalog_taxonomy_admin_control.sql",
+    # Event archetype templates: events.archetype + archetype_details (additive, documented down).
+    "20261127150000_event_archetypes.sql",
     # Lock vendor payout columns + client dispute/return inserts (additive).
     "20261128000000_lock_vendor_payout_columns_and_client_inserts.sql",
+    # Service archetypes + validated attribute blobs (additive, documented down).
+    "20261128090000_service_archetypes.sql",
+    # Seed archetype service verticals into the admin-controlled taxonomy (additive, idempotent).
+    "20261128100000_service_categories_archetype_seed.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -521,7 +535,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 200 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 207 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

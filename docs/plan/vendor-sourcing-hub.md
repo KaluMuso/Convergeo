@@ -15,18 +15,18 @@ Founder ask: give vendors an Alibaba-style place to find what to stock or buy, w
 
 ## 2. What already exists (searched in code)
 
-| Need | Exists | Where |
-| --- | --- | --- |
-| Wholesale listing, tier prices, MOQ | yes | `vendor_listings.wholesale`, `price_tiers jsonb` (validated by `is_valid_price_tiers`), `moq` (0003); `_enforce_wholesale_tier` in `routers/vendor_listings.py` |
-| Wholesale hidden from customers | yes, locked | D28/D36, `catalog.py`, `directory.py`, `test_customer_no_wholesale_pricing.py`: wholesale prices are **vendor-app only** |
-| Business buyer verification | yes (customer side) | `business_buyers`, `services/business/access.py` (does not unlock wholesale on customer paths) |
-| Operating archetype | partial | `vendors.business_archetype` (`manufacturer`, `importer_wholesaler`, `service_professional`, ...) is an onboarding/education driver, single-valued, not discovery-facing. `vendors.archetype` is the merchandise category |
-| Vendor trust signals | yes | `vendors.kyc_tier`, `status`, `preferred_badge`, `commercial_tier` |
-| Contact | yes | `vendors.whatsapp_msisdn` (public wa.me contact), `vendor_locations.landmark/lat/lng` |
-| RFQ | partial | `rfq_threads` (0095) supports services and `product_class = E` listings only; wholesale listings 404 for non-business buyers. Service RFQ works for any signed-in user, including a vendor |
-| Services | yes | `services` (vertical in `ServiceVertical`: `printing-creative`, `tech-services`, ...). `services.category` is free text, so `logistics` and `packaging` need a code constant only, no seed |
-| Manufacturer / made-in flag | **no** | nothing on vendors or listings |
-| Import path | **no** | nothing |
+| Need                                | Exists              | Where                                                                                                                                                                                                                     |
+| ----------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wholesale listing, tier prices, MOQ | yes                 | `vendor_listings.wholesale`, `price_tiers jsonb` (validated by `is_valid_price_tiers`), `moq` (0003); `_enforce_wholesale_tier` in `routers/vendor_listings.py`                                                           |
+| Wholesale hidden from customers     | yes, locked         | D28/D36, `catalog.py`, `directory.py`, `test_customer_no_wholesale_pricing.py`: wholesale prices are **vendor-app only**                                                                                                  |
+| Business buyer verification         | yes (customer side) | `business_buyers`, `services/business/access.py` (does not unlock wholesale on customer paths)                                                                                                                            |
+| Operating archetype                 | partial             | `vendors.business_archetype` (`manufacturer`, `importer_wholesaler`, `service_professional`, ...) is an onboarding/education driver, single-valued, not discovery-facing. `vendors.archetype` is the merchandise category |
+| Vendor trust signals                | yes                 | `vendors.kyc_tier`, `status`, `preferred_badge`, `commercial_tier`                                                                                                                                                        |
+| Contact                             | yes                 | `vendors.whatsapp_msisdn` (public wa.me contact), `vendor_locations.landmark/lat/lng`                                                                                                                                     |
+| RFQ                                 | partial             | `rfq_threads` (0095) supports services and `product_class = E` listings only; wholesale listings 404 for non-business buyers. Service RFQ works for any signed-in user, including a vendor                                |
+| Services                            | yes                 | `services` (vertical in `ServiceVertical`: `printing-creative`, `tech-services`, ...). `services.category` is free text, so `logistics` and `packaging` need a code constant only, no seed                                |
+| Manufacturer / made-in flag         | **no**              | nothing on vendors or listings                                                                                                                                                                                            |
+| Import path                         | **no**              | nothing                                                                                                                                                                                                                   |
 
 ## 3. Data model gaps (one additive, reversible migration)
 
@@ -54,11 +54,11 @@ Vendor submits request, status `submitted`. Admin queue in the admin app lists a
 
 ## 6. RBAC summary
 
-| Actor | Search hub | Create / list import requests | Quote |
-| --- | --- | --- | --- |
-| anonymous / customer | no (403) | no | no |
-| vendor | yes | own only (list by `vendor_id` of the caller) | read own |
-| admin | n/a | read all | create, status change; review Made in Zambia claims (`vendors.manage`, audited) |
+| Actor                | Search hub | Create / list import requests                | Quote                                                                           |
+| -------------------- | ---------- | -------------------------------------------- | ------------------------------------------------------------------------------- |
+| anonymous / customer | no (403)   | no                                           | no                                                                              |
+| vendor               | yes        | own only (list by `vendor_id` of the caller) | read own                                                                        |
+| admin                | n/a        | read all                                     | create, status change; review Made in Zambia claims (`vendors.manage`, audited) |
 
 ## 7. Founder decisions (27 Nov 2026)
 

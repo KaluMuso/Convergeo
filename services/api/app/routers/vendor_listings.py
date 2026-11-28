@@ -395,7 +395,7 @@ def _load_category_commission_key(
 ) -> tuple[str, str]:
     response = (
         service_client.client.table("categories")
-        .select("id, name, commission_key, prohibited")
+        .select("id, name, commission_key, prohibited, status, show_in_vendor")
         .eq("id", category_id)
         .maybe_single()
         .execute()
@@ -420,6 +420,15 @@ def _load_category_commission_key(
                 "matched": str(row.get("name", "")),
             },
         )
+    if row.get("status", "published") != "published" or row.get("show_in_vendor") is False:
+        # Admin blocked/drafted the category (or hid it from vendors): no NEW listings in it.
+        # Existing listings are untouched and stay readable.
+        raise AppError(
+            code="category_unavailable",
+            message="This category is not available for new listings",
+            http_status=422,
+            details={"message_key": "vendor.listings.errors.categoryUnavailable"},
+        )
     return str(row["name"]), str(row["commission_key"])
 
 
@@ -442,7 +451,7 @@ async def list_listing_categories(
 ) -> list[CategoryOption]:
     response = (
         service_client.client.table("categories")
-        .select("id, name, parent_id, commission_key, prohibited, position")
+        .select("id, name, parent_id, commission_key, prohibited, position, status, show_in_vendor")
         .eq("prohibited", False)
         .order("position")
         .execute()
@@ -452,6 +461,9 @@ async def list_listing_categories(
     options: list[CategoryOption] = []
     for row in rows:
         if not isinstance(row, dict):
+            continue
+        # Admin-controlled taxonomy: blocked/draft or vendor-hidden nodes are not offered.
+        if row.get("status", "published") != "published" or row.get("show_in_vendor") is False:
             continue
         commission_key = str(row.get("commission_key", "default"))
         options.append(

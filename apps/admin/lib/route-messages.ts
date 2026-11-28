@@ -28,6 +28,7 @@ export const ROUTE_SPEC = {
   accounts: { admin: ["accountsUi", "boards", "common"] },
   advertising: { admin: ["advertising", "common"] },
   analytics: { admin: ["analytics"] },
+  "ask-audit": { admin: ["askAudit", "common"] },
   "audit-log": { admin: ["auditLogUi", "common"] },
   branches: { admin: ["branches"] },
   business: { admin: ["business"] },

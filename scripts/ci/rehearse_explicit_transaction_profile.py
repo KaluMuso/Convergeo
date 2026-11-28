@@ -137,8 +137,22 @@ REVIEWED_SUFFIX = (
     "20261124120000_social_contacts.sql",
     # Ask Vergeo service-role checks use auth.role() (rewrite in place, no down).
     "20261126190000_ask_service_role_auth_role.sql",
+    # Ask Vergeo answer log + auditor findings (additive tables, trigger-based admin alert).
+    "20261127090000_ask_answer_log_audit.sql",
+    # Vendor sourcing hub: supplier types, made-in-Zambia flag, import requests (additive, documented down).
+    "20261127100000_vendor_sourcing_hub.sql",
+    # Service packages become an open ordered list, cap 10 (additive, documented down).
+    "20261127120000_service_packages_open_list.sql",
+    # Admin-controlled catalog taxonomy (additive, documented down).
+    "20261127130000_catalog_taxonomy_admin_control.sql",
+    # Event archetype templates: events.archetype + archetype_details (additive, documented down).
+    "20261127150000_event_archetypes.sql",
     # Lock vendor payout columns + client dispute/return inserts (additive).
     "20261128000000_lock_vendor_payout_columns_and_client_inserts.sql",
+    # Service archetypes + validated attribute blobs (additive, documented down).
+    "20261128090000_service_archetypes.sql",
+    # Seed archetype service verticals into the admin-controlled taxonomy (additive, idempotent).
+    "20261128100000_service_categories_archetype_seed.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
@@ -733,9 +747,9 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 200 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 207 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 200 source migrations",
+            "disposable copy does not match 207 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
@@ -818,10 +832,10 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                         raise RehearsalError(
                             "failure cleanup did not restore full history"
                         )
-                    print("failure_cleanup|restored_198|PASS")
+                    print("failure_cleanup|restored_207|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 200 migrations",
+                        "error: disposable failure cleanup could not restore 207 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -1191,7 +1205,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 200 migrations"
+                    "normal full replay did not restore 207 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")

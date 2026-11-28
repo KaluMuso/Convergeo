@@ -94,9 +94,10 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: catalog moderation holds + ad targets (additive).
         # + 1 reviewed: T8 social contacts, requests, blocks, 1:1 chat (additive).
         # + 1 reviewed: Ask Vergeo service-role checks use auth.role().
-        # + 1 reviewed: lock vendor payout columns and client dispute/return inserts.
-        self.assertEqual(len(runner.FORWARD), 73)
-        self.assertEqual(len(set(runner.FORWARD)), 73)
+        # + 1 reviewed: Ask Vergeo answer log + auditor findings.
+        # + 1 reviewed: vendor sourcing hub.
+        self.assertEqual(len(runner.FORWARD), 80)
+        self.assertEqual(len(set(runner.FORWARD)), 80)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)
