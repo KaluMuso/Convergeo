@@ -133,6 +133,7 @@
     "branchOpenNow": "Ouvert maintenant",
     "branchClosedNow": "Fermé maintenant",
     "branchHours": "Horaires d'ouverture",
+    "branchDayClosed": "Fermé",
     "branchPhone": "Téléphone :",
     "branchMap": "Carte",
     "branchVisit": "Visiter {name}",

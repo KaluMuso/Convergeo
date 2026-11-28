@@ -20,7 +20,7 @@ import { buildCategoryTree, categoryDisplayName } from "../../_components/catego
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { attachOfferBadges } from "../../_components/offers/attach-offer-badges";
 import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
-import { buildCatalogQuery } from "../../_components/plp/catalog-query";
+import { buildCatalogQuery, buildDisplaySearchParams } from "../../_components/plp/catalog-query";
 import { ChildCategoryNav } from "../../_components/plp/child-category-nav";
 import {
   catalogDeliveryLabels,
@@ -216,7 +216,8 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
   const catalog = await fetchCatalog(queryString);
   const catalogUnavailable = catalog === null;
 
-  const filterState = decodePlpFilters(new URLSearchParams(queryString));
+  const displaySearchParams = buildDisplaySearchParams(resolvedSearch);
+  const filterState = decodePlpFilters(displaySearchParams);
   const sort = (resolvedSearch.sort as CatalogSort | undefined) ?? "relevance";
   const hasLocation = Boolean(filterState.lat && filterState.lng);
 
@@ -308,7 +309,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
   ]);
 
   const plpPathname = `/${locale}/c/${slug.join("/")}`;
-  const activeSearchParams = new URLSearchParams(queryString);
+  const activeSearchParams = displaySearchParams;
 
   return (
     // Shop layout already provides the page <main> landmark — avoid nesting.

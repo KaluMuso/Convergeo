@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCatalogQuery } from "./catalog-query";
+import { buildCatalogQuery, buildDisplaySearchParams } from "./catalog-query";
 
 describe("buildCatalogQuery", () => {
   it("converts kwacha min_price and max_price to ngwee for the catalog API", () => {
@@ -14,5 +14,15 @@ describe("buildCatalogQuery", () => {
     expect(params.get("min_price")).toBe("10000");
     expect(params.get("max_price")).toBe("25050");
     expect(params.get("sort")).toBe("newest");
+  });
+
+  it("keeps display params in kwacha so filter state does not re-scale prices", () => {
+    const raw = { min_price: "50", sort: "newest", slug: ["x"], empty: "" };
+    const display = buildDisplaySearchParams(raw);
+    expect(display.get("min_price")).toBe("50");
+    expect(display.get("sort")).toBe("newest");
+    expect(display.has("slug")).toBe(false);
+    expect(display.has("category_path")).toBe(false);
+    expect(new URLSearchParams(buildCatalogQuery("a", raw)).get("min_price")).toBe("5000");
   });
 });

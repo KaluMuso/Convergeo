@@ -616,8 +616,26 @@ def _first_image_by(client: Any, table: str, key: str, ids: list[str]) -> dict[s
     return {owner: public_id for owner, (_, public_id) in best.items()}
 
 
+def _first_jsonb_image_by(client: Any, table: str, column: str, ids: list[str]) -> dict[str, str]:
+    """First Cloudinary public id of a jsonb image-array column per row id; fails soft."""
+    if not ids:
+        return {}
+    try:
+        response = client.table(table).select(f"id, {column}").in_("id", sorted(set(ids))).execute()
+    except Exception:
+        logger.warning("search.image_lookup_failed", extra={"table": table}, exc_info=True)
+        return {}
+    found: dict[str, str] = {}
+    for row in _rows(response):
+        images = row.get(column)
+        first = images[0] if isinstance(images, list) and images else None
+        if row.get("id") and isinstance(first, str) and first.strip():
+            found[str(row["id"])] = first.strip()
+    return found
+
+
 def attach_hit_images(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
-    """Fill ``image_public_id`` on product / listing hits for the result cards.
+    """Fill ``image_public_id`` on product / listing / event / service hits.
 
     ``search_documents`` carries no image, and the customer card used to look for
     one in ``boost_signals`` (never populated), so every card rendered the
@@ -625,7 +643,9 @@ def attach_hit_images(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
     """
     listing_ids = [hit.entity_id for hit in hits if hit.entity_kind == "listing"]
     product_ids = [hit.entity_id for hit in hits if hit.entity_kind == "product"]
-    if not listing_ids and not product_ids:
+    event_ids = [hit.entity_id for hit in hits if hit.entity_kind == "event"]
+    service_ids = [hit.entity_id for hit in hits if hit.entity_kind == "service"]
+    if not (listing_ids or product_ids or event_ids or service_ids):
         return hits
 
     listing_product: dict[str, str] = {}
@@ -671,10 +691,17 @@ def attach_hit_images(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
         sorted(set(product_ids) | set(listing_product.values())),
     )
 
+    event_images = _first_jsonb_image_by(client, "events", "images", event_ids)
+    service_images = _first_jsonb_image_by(client, "services", "portfolio_images", service_ids)
+
     enriched: list[SearchHit] = []
     for hit in hits:
         image: str | None = None
-        if hit.entity_kind == "listing":
+        if hit.entity_kind == "event":
+            image = event_images.get(hit.entity_id)
+        elif hit.entity_kind == "service":
+            image = service_images.get(hit.entity_id)
+        elif hit.entity_kind == "listing":
             image = listing_images.get(hit.entity_id) or product_images.get(
                 listing_product.get(hit.entity_id, "")
             )

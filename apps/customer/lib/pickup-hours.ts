@@ -11,7 +11,7 @@ const DAY_REFERENCE_UTC: Record<(typeof DAY_ORDER)[number], number> = {
   sun: Date.UTC(2024, 0, 7),
 };
 
-function dayLabel(day: string, locale: string): string {
+export function dayLabel(day: string, locale: string): string {
   const key = day.trim().toLowerCase() as (typeof DAY_ORDER)[number];
   const reference = DAY_REFERENCE_UTC[key];
   if (reference === undefined) {
@@ -43,6 +43,25 @@ function span(value: unknown): string | null {
     }
   }
   return null;
+}
+
+/** One day's hours as text ("08:00–17:00", the closed label, or null when unusable). */
+export function formatDayHours(value: unknown, closedLabel: string): string | null {
+  const isClosed =
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    (value as Record<string, unknown>).closed === true;
+  return isClosed ? closedLabel : span(value);
+}
+
+/** Sort `[day, value]` hours entries Monday-first; unknown keys go last. */
+export function sortHoursEntries<T>(entries: Array<[string, T]>): Array<[string, T]> {
+  const rank = (day: string) => {
+    const index = DAY_ORDER.indexOf(day.trim().toLowerCase() as (typeof DAY_ORDER)[number]);
+    return index === -1 ? 99 : index;
+  };
+  return [...entries].sort(([a], [b]) => rank(a) - rank(b));
 }
 
 /**

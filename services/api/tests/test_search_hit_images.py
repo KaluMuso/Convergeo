@@ -104,3 +104,25 @@ def test_lookup_failure_leaves_hits_untouched() -> None:
 
     (hit,) = attach_hit_images(Boom(), [_hit("listing", LISTING)])
     assert hit.image_public_id is None
+
+
+def test_event_and_service_hits_get_first_jsonb_image() -> None:
+    event_id = "55555555-5555-4555-8555-555555555555"
+    service_id = "66666666-6666-4666-8666-666666666666"
+    bare_event = "77777777-7777-4777-8777-777777777777"
+    client = _Client(
+        {
+            "events": [
+                {"id": event_id, "images": ["ev-1", "ev-2"]},
+                {"id": bare_event, "images": []},
+            ],
+            "services": [{"id": service_id, "portfolio_images": ["svc-1"]}],
+        }
+    )
+    hits = attach_hit_images(
+        client, [_hit("event", event_id), _hit("event", bare_event), _hit("service", service_id)]
+    )
+    by_id = {h.entity_id: h.image_public_id for h in hits}
+    assert by_id[event_id] == "ev-1"
+    assert by_id[bare_event] is None
+    assert by_id[service_id] == "svc-1"
