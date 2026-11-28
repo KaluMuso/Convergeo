@@ -545,7 +545,7 @@ def _get_pickup(
     with TestClient(app, raise_server_exceptions=False) as client:
         response = client.get(f"/account/orders/{ORDER_A_ID}", headers=_auth_headers())
         assert response.status_code == 200
-        pickup = response.json()["pickup"]
+        pickup: dict[str, object] | None = response.json()["pickup"]
     app.dependency_overrides.clear()
     return pickup
 
