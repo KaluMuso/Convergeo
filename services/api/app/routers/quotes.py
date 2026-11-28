@@ -173,7 +173,7 @@ def _load_job_service_area(client: Any, job_id: str) -> str:
         .eq("entity_type", "job")
         .eq("entity_id", job_id)
         .eq("action", "job.created")
-        .order("created_at", desc=False)
+        .order("at", desc=False)
         .limit(1)
         .execute()
     )
