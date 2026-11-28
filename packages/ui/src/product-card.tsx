@@ -45,6 +45,10 @@ export type ProductCardProps = {
   unavailable?: boolean;
   /** Optional secondary meta (fulfillment, etc.) — never invent content here. */
   meta?: ReactNode;
+  /** One trust ribbon, pinned flush to the lower-left of the media. */
+  ribbon?: ReactNode;
+  /** Up to two signal badges under the title (parent enforces the cap). */
+  signals?: ReactNode;
 };
 
 function cx(...parts: Array<string | false | undefined>): string {
@@ -103,6 +107,8 @@ export function ProductCard({
   density = "default",
   unavailable = false,
   meta,
+  ribbon,
+  signals,
 }: ProductCardProps) {
   if (skeleton) {
     return <ProductCardSkeleton className={className} />;
@@ -142,6 +148,14 @@ export function ProductCard({
               </span>
             ) : null}
             {badge}
+          </div>
+        ) : null}
+        {ribbon ? (
+          <div
+            className="absolute bottom-0 left-0 z-[1] max-w-[75%]"
+            data-testid="product-card-ribbon"
+          >
+            {ribbon}
           </div>
         ) : null}
         {onWishlistToggle ? (
@@ -196,6 +210,7 @@ export function ProductCard({
         <h3 className={cx("v-card__title m-0 line-clamp-2", compact && "v-card__title--compact")}>
           {title}
         </h3>
+        {signals ? <div data-testid="product-card-signals">{signals}</div> : null}
         {/* Stars only when real reviews exist: no "no reviews" filler, no zero-star rows. */}
         {reviewCount > 0 ? (
           <StarRating
