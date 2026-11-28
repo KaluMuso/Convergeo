@@ -126,7 +126,8 @@ class FakeQuery:
 
             rows = sorted(rows, key=sort_key, reverse=desc)
         if self._maybe_single:
-            return FakeResponse(rows[0] if rows else None)
+            # Match postgrest-py 2.x: zero rows → None (not FakeResponse(None)).
+            return FakeResponse(rows[0]) if rows else None
         return FakeResponse(rows)
 
 
