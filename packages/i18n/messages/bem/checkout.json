@@ -443,6 +443,30 @@
         "tooMany": "Too many changes. Wait a few minutes.",
         "featureUnavailable": "Gifts aren't available yet."
       }
+    },
+    "retry": "Wesheni limbi",
+    "backToCart": "Bwelelani ku cart",
+    "group": {
+      "pageTitle": "Mupwishe ukulipila",
+      "loading": "Tulelayanda ukulipila kwenu…",
+      "error": "Tatwaishibe ukwibula uku kulipila. Moneni internet yenu, mwesheni limbi.",
+      "loginRequired": "Ingileni pa kulipila",
+      "forbidden": "Uku kulipila kwa account imbi. Ingileni na account mwabukilepo.",
+      "notFound": "Tatwasanga uku kulipila. Kuti kwafumishiwa.",
+      "expired": "Inshita yapwa pa kulipila uku. Bwelelani ku event nangu ku job mutendeke limbi.",
+      "notPayable": "Uku kulipila kwapwa kale nangu kwaigalwa. Ubuleni order yenu ukumona ifingi.",
+      "ticketHeading": "Matikiti ya event",
+      "serviceHeading": "Ukubuka kwa service",
+      "providerLabel": "Provider",
+      "tierLine": "{tier} × {qty}",
+      "subtotal": "Matikiti",
+      "platformFee": "Ndalama ya ukubuka",
+      "total": "Yonse ya kulipila",
+      "serviceNote": "Ici e mwalipila nomba, ngefyo mwasumina pa mutengo.",
+      "payCta": "Lipileni {amount}",
+      "viewOrder": "Moneni order yandi",
+      "viewTickets": "Moneni matikiti yandi",
+      "viewJob": "Bwelelani ku job"
     }
   },
   "variant": {

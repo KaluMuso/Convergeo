@@ -443,6 +443,30 @@
         "tooMany": "Too many changes. Wait a few minutes.",
         "featureUnavailable": "Gifts aren't available yet."
       }
+    },
+    "retry": "Yesaninso",
+    "backToCart": "Bwererani ku cart",
+    "group": {
+      "pageTitle": "Malizitsani kulipira",
+      "loading": "Tikutsegula kulipira kwanu…",
+      "error": "Sitinathe kutsegula kulipira uku. Onani intaneti yanu ndipo yesaninso.",
+      "loginRequired": "Lowani kuti mulipire",
+      "forbidden": "Kulipira kumeneku ndi kwa akaunti ina. Lowani ndi akaunti imene munasungitsirapo.",
+      "notFound": "Sitinapeze kulipira kumeneku. Mwina kwachotsedwa.",
+      "expired": "Nthawi yatha yolipira. Bwererani ku event kapena job muyambirenso.",
+      "notPayable": "Kulipira kumeneku kwatha kale kapena kwatsekedwa. Tsegulani order yanu kuti muone zambiri.",
+      "ticketHeading": "Matikiti a event",
+      "serviceHeading": "Kusungitsa service",
+      "providerLabel": "Provider",
+      "tierLine": "{tier} × {qty}",
+      "subtotal": "Matikiti",
+      "platformFee": "Ndalama yosungitsa",
+      "total": "Yonse yolipira",
+      "serviceNote": "Ichi ndi chimene mulipire tsopano, monga mwagwirizana pa mtengo munavomereza.",
+      "payCta": "Lipirani {amount}",
+      "viewOrder": "Onani order yanga",
+      "viewTickets": "Onani matikiti anga",
+      "viewJob": "Bwererani ku job"
     }
   },
   "variant": {
