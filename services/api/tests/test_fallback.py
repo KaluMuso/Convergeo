@@ -502,7 +502,44 @@ async def test_email_adapter_sends_resend_payload() -> None:
     result = await adapter.send(message)
     assert result.success is True
     assert "ord-99" in captured["body"]
-    assert "notifications.email.receipt.subject" in captured["body"]
+    # Resend rejects tag values containing dots (422), so the i18n keys are sanitised.
+    assert "notifications_email_receipt_subject" in captured["body"]
+    assert "notifications.email.receipt.subject" not in captured["body"]
+
+
+@pytest.mark.asyncio
+async def test_email_adapter_tag_values_are_resend_safe_for_every_template() -> None:
+    """Regression: dotted i18n keys in tags made Resend answer 422 validation_error."""
+    import json
+    import re
+
+    from app.services.notifications.adapters.email import EMAIL_TEMPLATES
+
+    allowed = re.compile(r"^[A-Za-z0-9_-]+$")
+    bodies: list[dict[str, Any]] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json={"id": "email-1"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    adapter = ResendEmailAdapter(
+        api_key="re_test", from_email="notifications@vergeo5.com", client=client
+    )
+    for template in EMAIL_TEMPLATES:
+        message = OutboxMessage(
+            id=f"msg-{template}",
+            dedupe_key=f"{template}:email",
+            channel=CHANNEL_EMAIL,
+            template=template,
+            payload={"email": "buyer@example.com", "order_id": "ord-1"},
+        )
+        assert (await adapter.send(message)).success is True
+    assert len(bodies) == len(EMAIL_TEMPLATES)
+    for body in bodies:
+        for tag in body["tags"]:
+            assert allowed.match(tag["name"]), tag
+            assert allowed.match(tag["value"]), tag
 
 
 @pytest.mark.asyncio

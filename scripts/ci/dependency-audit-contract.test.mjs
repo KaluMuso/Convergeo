@@ -40,10 +40,11 @@ const auditCommands = new Map([
 function assertStrictAudit(source) {
   const audit = job(source, "deps-audit");
   assert.match(audit, /^ {4}name: Dependency audit$/m);
-  // The only permitted condition is the job-level docs-only path-tier skip (#903):
-  // every code change still runs the audit, and no step may be conditional.
+  // The only permitted condition is the job-level draft-PR skip plus the docs-only
+  // path-tier skip (#903): every ready PR and every code change still runs the
+  // audit, and no step may be conditional.
   const docsOnlyGuard =
-    "    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}\n";
+    "    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}\n";
   const jobIfs = audit.match(/^ {4}if:.*$/gm) ?? [];
   assert.ok(jobIfs.length <= 1, "deps-audit may carry at most the docs-only job guard");
   if (jobIfs.length === 1) assert.equal(`${jobIfs[0]}\n`, docsOnlyGuard);
@@ -533,8 +534,13 @@ test("secret scan stays blocking, pinned, redacted and includes its boundary tes
   assert.doesNotMatch(scanner, /^\s+continue-on-error:/m);
   // Only the redacted report upload may run after a failed scan; every
   // scanning and self-test step stays unconditional and blocking.
+  // The only job-level condition allowed is the draft-PR skip; ready PRs, master
+  // pushes and scheduled runs always scan.
+  const jobIfs = scanner.match(/^ {4}if:.*$/gm) ?? [];
+  assert.deepEqual(jobIfs, ["    if: github.event.pull_request.draft != true"]);
   const conditional = scanner
     .split(/(?=^ {6}- name: )/m)
+    .slice(1)
     .filter((item) => /^\s+if:/m.test(item))
     .map((item) => item.split("\n", 1)[0]);
   assert.deepEqual(conditional, ["      - name: Upload projected Gitleaks report"]);

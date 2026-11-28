@@ -34,6 +34,11 @@ def _gate_lines(header: str) -> list[str]:
     return [line.strip() for line in header.splitlines() if line.startswith("    if:")]
 
 
+# Draft PRs skip every job (ready_for_review starts the real run); `draft` is null on
+# push/schedule events, so the guard must be `!= true`, never `== false`.
+_DRAFT_SKIP = "github.event.pull_request.draft != true && "
+
+
 def _tier_gate(output: str, *, extra: str = "") -> str:
     """The only job-level condition a blocking gate may carry (CI-SPEED).
 
@@ -41,7 +46,7 @@ def _tier_gate(output: str, *, extra: str = "") -> str:
     `changes` job itself does not succeed, the gate runs.
     """
     return (
-        f"if: ${{{{ !cancelled() && {extra}(needs.changes.result != 'success' || "
+        f"if: ${{{{ !cancelled() && {_DRAFT_SKIP}{extra}(needs.changes.result != 'success' || "
         f"needs.changes.outputs.{output} == 'true') }}}}"
     )
 
@@ -51,7 +56,7 @@ def test_python_api_context_aggregates_every_shard() -> None:
     shard = job_block("python-shard")
 
     assert "needs: [changes, python-shard]" in python
-    assert "if: ${{ always() }}" in python
+    assert "if: ${{ always() && github.event.pull_request.draft != true }}" in python
     # Success requires the shards to pass; a skip is only accepted when `changes`
     # succeeded and reported no Python-affecting change (docs-only PRs).
     assert '[ "${{ needs.python-shard.result }}" = "success" ]' in python
