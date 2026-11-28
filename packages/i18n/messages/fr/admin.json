@@ -719,7 +719,8 @@
       "fulfilment": {
         "delivery": "Livraison",
         "pickup": "Retrait"
-      }
+      },
+      "untitledItem": "Article sans nom"
     },
     "dispatch": {
       "title": "Expédition manuelle",
@@ -973,7 +974,8 @@
         "paymentLine": "{rail} · {status} · {amount} · {at}",
         "ledger": "Grand livre",
         "ledgerEmpty": "Aucune transaction dans le grand livre.",
-        "ledgerBalance": "Σ écritures : {balance} ngwee"
+        "ledgerBalance": "Σ écritures : {balance} ngwee",
+        "untitledItem": "Article sans nom"
       },
       "decision": {
         "title": "Décision",
