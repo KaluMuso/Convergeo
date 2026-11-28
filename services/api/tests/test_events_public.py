@@ -856,13 +856,12 @@ def test_detail_without_archetype_columns_is_generic(store: FakeSupabaseStore) -
 def test_browse_filters_archetype_free_and_price(store: FakeSupabaseStore) -> None:
     store.events[0]["category_slug"] = "concerts"  # tonight-gig, K500
     store.events[1]["category_slug"] = "church"  # weekend-market, K1500
-    kwargs = {"ref": REF_THURSDAY}
-    items = build_browse_response(store, archetype="concert", **kwargs).items
+    items = build_browse_response(store, archetype="concert", ref=REF_THURSDAY).items
     assert {i.slug for i in items} == {"tonight-gig"}
     assert items[0].archetype == "concert"
-    free = build_browse_response(store, free_only=True, **kwargs).items
+    free = build_browse_response(store, free_only=True, ref=REF_THURSDAY).items
     assert {i.slug for i in free} == {"free-meetup"}
-    cheap = build_browse_response(store, price_max_ngwee=60000, **kwargs).items
+    cheap = build_browse_response(store, price_max_ngwee=60000, ref=REF_THURSDAY).items
     assert "tonight-gig" in {i.slug for i in cheap}
     assert "weekend-market" not in {i.slug for i in cheap}
 
