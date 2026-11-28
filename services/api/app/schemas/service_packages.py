@@ -1,4 +1,9 @@
-"""Pydantic v2 strict models for service packages (docs/plan/service-packages.md)."""
+"""Pydantic v2 strict models for service packages (docs/plan/service-packages.md).
+
+A service carries an open, vendor-ordered list of packages (cap 10, see
+``state.MAX_ACTIVE_PACKAGES``). ``tier`` is only a legacy label on rows that
+predate the open list.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +12,7 @@ from typing import Any, Literal
 from pydantic import Field, field_validator
 
 from app.schemas.base import NgweeInt, StrictModel
-from app.services.service_packages.state import int_or_none
+from app.services.service_packages.state import MAX_ACTIVE_PACKAGES, int_or_none
 
 Tier = Literal["basic", "standard", "premium"]
 PackageStatus = Literal["active", "archived"]
@@ -23,7 +28,7 @@ INCLUDE_ITEM_MAX = 120
 
 
 class PackageUpsertRequest(StrictModel):
-    """Create or update one tier. ``price_ngwee=None`` means "request a quote"."""
+    """Create or update one package. ``price_ngwee=None`` means "request a quote"."""
 
     name: str = Field(min_length=NAME_MIN, max_length=NAME_MAX)
     description: str | None = Field(default=None, max_length=DESCRIPTION_MAX)
@@ -66,9 +71,24 @@ class PackageUpsertRequest(StrictModel):
         return cleaned
 
 
+class PackageReorderRequest(StrictModel):
+    """The full desired order of the service's ACTIVE packages (ids, first = top)."""
+
+    ids: list[str] = Field(min_length=1, max_length=MAX_ACTIVE_PACKAGES)
+
+    @field_validator("ids")
+    @classmethod
+    def _unique_ids(cls, ids: list[str]) -> list[str]:
+        if len(set(ids)) != len(ids):
+            msg = "package ids must be unique"
+            raise ValueError(msg)
+        return ids
+
+
 class PublicPackageOut(StrictModel):
     id: str
-    tier: Tier
+    tier: Tier | None = None
+    sort_order: int = 0
     name: str
     description: str | None = None
     price_ngwee: int | None = None
@@ -84,6 +104,7 @@ class VendorPackageOut(PublicPackageOut):
 
 class VendorPackageListResponse(StrictModel):
     service_id: str
+    max_packages: int = MAX_ACTIVE_PACKAGES
     items: list[VendorPackageOut]
 
 
@@ -94,7 +115,8 @@ def _includes(value: Any) -> list[str]:
 def to_public(row: dict[str, Any]) -> PublicPackageOut:
     return PublicPackageOut(
         id=str(row["id"]),
-        tier=row["tier"],
+        tier=row.get("tier") or None,
+        sort_order=int_or_none(row.get("sort_order")) or 0,
         name=str(row.get("name") or ""),
         description=row.get("description") or None,
         price_ngwee=int_or_none(row.get("price_ngwee")),

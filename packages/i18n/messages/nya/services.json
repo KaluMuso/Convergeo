@@ -27,7 +27,9 @@
     "home-services": "Home services",
     "tech-services": "Tech services",
     "cleaning": "Cleaning",
-    "tailoring": "Tailoring"
+    "tailoring": "Tailoring",
+    "logistics": "Logistics",
+    "packaging": "Packaging"
   },
   "badges": {
     "fast": "Oyankha mwachangu",
@@ -36,7 +38,7 @@
   },
   "detail": {
     "metaTitle": "{title} — Services",
-    "metaDescription": "{title} mu {area}. Onani portfolio ndi kupempha quote pa Convergeo.",
+    "metaDescription": "{title} mu {area}. Onani portfolio ndi kupempha quote pa Vergeo5.",
     "about": "Za service iyi",
     "whatsIncluded": "Zomwe zili mkati",
     "includeMarker": "✓",
@@ -138,12 +140,11 @@
     },
     "packages": {
       "title": "Maphukusi",
-      "intro": "Offer up to three packages so customers can compare them and ask for a quote on exactly what they want.",
+      "intro": "Offer up to {max} packages. Give each a name, price, delivery time and what's included, so customers can compare them and ask for a quote on exactly what they want.",
       "count": "{count} mwa {max} packages zaperekedwa",
-      "limitReached": "Mutha kupereka packages {max} pa service iliyonse: imodzi ya Basic, Standard ndi Premium. Chotsani imodzi kuti mupereke ina.",
+      "limitReached": "You can offer up to {max} packages per service. Remove one to add another.",
       "codNote": "No payment is taken when a customer picks a package — they send you a quote request, and you agree the final price in the chat.",
       "offer": "Offer this package",
-      "notOffered": "Not offered",
       "archived": "Removed — save to offer it again",
       "nameLabel": "Package name",
       "nameHint": "Short and specific, e.g. \"Logo only\" or \"Logo + business cards\".",
@@ -162,7 +163,6 @@
       "saved": "Package saved.",
       "archive": "Remove package",
       "guidance": {
-        "order": "Your {higher} package costs less than your {lower} package. Customers usually expect higher tiers to cost more.",
         "fromPrice": "Tip: set your service's \"from price\" to your lowest package price so search shows the right number."
       },
       "errors": {
@@ -179,8 +179,16 @@
         "loadFailed": "Could not load packages.",
         "invalidTransition": "This package can't be changed that way.",
         "conflict": "This package was just changed. Reload and try again.",
-        "notFound": "Package not found."
-      }
+        "notFound": "Package not found.",
+        "limitReached": "You already have {max} packages on this service. Remove one before adding another.",
+        "orderMismatch": "Your packages changed since this page loaded. Reload and try again.",
+        "reorderFailed": "Could not change the order."
+      },
+      "addPackage": "Add a package",
+      "packageHeading": "Package {number}",
+      "newPackage": "New package",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down"
     }
   },
   "postJob": {
@@ -195,7 +203,9 @@
       "home_services": "Home services",
       "tech_services": "Tech services",
       "cleaning": "Cleaning",
-      "tailoring": "Tailoring"
+      "tailoring": "Tailoring",
+      "logistics": "Logistics",
+      "packaging": "Packaging"
     },
     "description": {
       "label": "Chiyani mukufuna kuchita?",
@@ -256,7 +266,7 @@
     "back": "← Bwerani ku ntchito",
     "empty": "Palibe quotes za active pano — providers nthawi zambiri amayankha mkati mwa tsiku.",
     "unknownProvider": "Provider",
-    "preferredBadge": "Convergeo Preferred",
+    "preferredBadge": "Vergeo5 Preferred",
     "rating": "{rating}★ ({count, plural, one {# review} other {# reviews}})",
     "validUntil": "Valid mpaka {date}",
     "status": {
@@ -289,7 +299,7 @@
     "totalLabel": "Total value ya ntchito",
     "depositLabel": "Deposit yofunika tsopano",
     "balanceLabel": "Balance pa completion",
-    "escrowNote": "Deposit yanu yasungidwa ndi Convergeo ndipo imatulutsidwa kwa provider pokhapokha ntchito yatsimikizidwa.",
+    "escrowNote": "Deposit yanu yasungidwa ndi Vergeo5 ndipo imatulutsidwa kwa provider pokhapokha ntchito yatsimikizidwa.",
     "confirmCta": "Lipirani deposit ya {amount}",
     "submitting": "Ikukonza deposit yanu…",
     "cancel": "Osati tsopano",
@@ -371,7 +381,7 @@
     "priceLabel": "Fixed price",
     "depositLabel": "Deposit yofunika tsopano",
     "balanceLabel": "Balance pa completion",
-    "escrowNote": "Mulipira → Yasungidwa ndi Convergeo → Yatulusidwa kwa provider mukatsimikiza kuti ntchito yatha.",
+    "escrowNote": "Mulipira → Yasungidwa ndi Vergeo5 → Yatulusidwa kwa provider mukatsimikiza kuti ntchito yatha.",
     "bookCta": "Bookani ndi kulipira deposit ya {amount}",
     "submitting": "Ikubooka…",
     "errors": {
@@ -425,11 +435,6 @@
     "heading": "Sankhani phukusi",
     "subheading": "Compare what each package includes, then ask {vendor} for a quote on the one you want.",
     "compareHint": "Sunthani kuti muyerekeze maphukusi",
-    "tier": {
-      "basic": "Basic",
-      "standard": "Standard",
-      "premium": "Premium"
-    },
     "priceQuote": "Mtengo pofunsa",
     "deliveryLabel": "Delivery time",
     "delivery": "{days, plural, one {Delivered in # day} other {Delivered in # days}}",
@@ -439,7 +444,7 @@
     "includeMarker": "✓",
     "cta": "Pemphani phukusi ili",
     "dialogTitle": "Request a quote: {name}",
-    "prefill": "I'd like the {tier} package ({name}). Listed price: {price}. Delivery: {days} days.\n\nMy details: ",
+    "prefill": "I'd like the \"{name}\" package. Listed price: {price}. Delivery: {days} days.\n\nMy details: ",
     "prefillPriceQuote": "to be quoted",
     "noPaymentNote": "Requesting a package does not charge you. You agree the final price with the provider in the quote chat.",
     "errors": {

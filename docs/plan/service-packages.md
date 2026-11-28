@@ -1,4 +1,8 @@
-# Service packages (Basic / Standard / Premium) — design
+# Service packages — design
+
+> **Amended 2026-11-27 — open list (migration `20261127120000`).** Founder decision: SP-2 and the
+> "≤3 by construction" rule are superseded. A service now has an **open, vendor-ordered list of up to
+> 10 active packages**; `tier` is only an optional legacy label. See "Open list amendment" at the end.
 
 **Status:** built on `feat/clips-pilot-service-packages` (2026-11-13). Additive; no flag
 needed because a service with no packages renders exactly as before.
@@ -78,3 +82,28 @@ package** instead of describing the job from scratch.
   no client write grants, unique tier).
 - RLS live-DB tests + matrix row (run in CI against `supabase db reset`).
 - vitest: package comparison rendering + prefill text, vendor editor validation.
+
+## Open list amendment (2026-11-27)
+
+Supersedes SP-2 (fixed tiers) and the SP-4 tier-order warning; everything else stands.
+
+- **Schema** (`20261127120000_service_packages_open_list.sql`, additive, reversible): `tier` is
+  nullable (`NULL` or `basic|standard|premium`), the `unique (service_id, tier)` key is dropped,
+  `sort_order` is added (backfilled basic 0 / standard 1 / premium 2 so existing services render
+  unchanged), and a trigger caps **active** packages at 10 per service (advisory-locked per service;
+  archived packages do not count). Down: documented at the top of the migration.
+- **API**: `POST /vendor/services/{id}/packages` (create, cap 10 → `409 package_limit_reached`),
+  `PUT .../packages/{package_id}` (update; re-activating an archived one also respects the cap),
+  `DELETE .../packages/{package_id}` (hard delete, audited as `service_package.deleted`; RFQ threads
+  keep their immutable snapshot, the FK is `ON DELETE SET NULL`), `POST .../packages/reorder`
+  (`{ids}` must be exactly the active ids, else `409 package_order_mismatch`),
+  `POST .../packages/{package_id}/archive` (unchanged semantics, now by id). The old
+  `PUT .../packages/{tier}` routes are removed. Clients cannot set `tier`.
+- **Money**: unchanged. `price_ngwee` is integer ngwee (NULL = quote); the only reader of a package
+  price is the RFQ snapshot (`package_snapshot.price_ngwee`), which now carries `tier: null` for
+  open-list packages. No order/payment/booking code reads packages (SP-1).
+- **Vendor app**: add / remove / move up-down, "N of 10" counter, limit message. **Customer page**:
+  cards in the vendor's order (snap row on mobile, 2 columns from `sm`, 3 from `lg`), no tier
+  heading. **Admin** oversight lists name/price/status without a tier.
+- **Locales**: new/changed keys are translated for en, fr and zh; bem and nya fall back to English
+  copy for the new vendor-editor strings (same as the rest of that editor).

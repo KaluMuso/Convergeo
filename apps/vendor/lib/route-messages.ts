@@ -58,6 +58,7 @@ export const ROUTE_SPEC = {
     events: true,
   },
   settings: { vendor: ["settings"] },
+  source: { vendor: ["source"] },
 } as const satisfies Record<string, MessageSpec>;
 
 export type RouteKey = keyof typeof ROUTE_SPEC;

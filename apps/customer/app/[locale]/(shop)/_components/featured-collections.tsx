@@ -23,10 +23,7 @@ type CollectionGroup = {
   items: CollectionItem[];
 };
 
-function parseCollections(
-  payload: Record<string, unknown>,
-  locale: string,
-): CollectionGroup[] {
+function parseCollections(payload: Record<string, unknown>, locale: string): CollectionGroup[] {
   const rawCollections = payload.collections;
   if (!Array.isArray(rawCollections)) {
     return [];
@@ -57,8 +54,7 @@ function parseCollections(
           }
 
           const item = itemEntry as Record<string, unknown>;
-          const itemTitle =
-            typeof item.title === "string" ? item.title : undefined;
+          const itemTitle = typeof item.title === "string" ? item.title : undefined;
           if (!itemTitle) {
             return [];
           }
@@ -70,17 +66,12 @@ function parseCollections(
                   ? item.key
                   : `collection-${collectionIndex}-item-${itemIndex}`,
               title: itemTitle,
-              href:
-                typeof item.href === "string" ? item.href : `/${locale}/search`,
+              href: typeof item.href === "string" ? item.href : `/${locale}/search`,
               imagePublicId:
-                typeof item.image_public_id === "string"
-                  ? item.image_public_id
-                  : undefined,
+                typeof item.image_public_id === "string" ? item.image_public_id : undefined,
               ngwee: typeof item.ngwee === "number" ? item.ngwee : 0,
               vendorLabel:
-                typeof item.vendor_label === "string"
-                  ? item.vendor_label
-                  : "Convergeo vendor",
+                typeof item.vendor_label === "string" ? item.vendor_label : "Vergeo5 vendor",
             },
           ];
         })
@@ -88,10 +79,7 @@ function parseCollections(
 
     return [
       {
-        key:
-          typeof record.key === "string"
-            ? record.key
-            : `collection-${collectionIndex}`,
+        key: typeof record.key === "string" ? record.key : `collection-${collectionIndex}`,
         title,
         items,
       },
@@ -105,11 +93,7 @@ type FeaturedCollectionsProps = {
   t: CatalogTranslator;
 };
 
-export function FeaturedCollections({
-  slot,
-  locale,
-  t,
-}: FeaturedCollectionsProps) {
+export function FeaturedCollections({ slot, locale, t }: FeaturedCollectionsProps) {
   const collections = slot ? parseCollections(slot.payload, locale) : [];
 
   if (collections.length === 0) {
@@ -117,21 +101,13 @@ export function FeaturedCollections({
   }
 
   return (
-    <section
-      aria-labelledby="home-featured-heading"
-      className="flex flex-col gap-4"
-    >
-      <h2
-        id="home-featured-heading"
-        className="font-display text-h2 text-display-ink"
-      >
+    <section aria-labelledby="home-featured-heading" className="flex flex-col gap-4">
+      <h2 id="home-featured-heading" className="font-display text-h2 text-display-ink">
         {t("home.featured.title")}
       </h2>
       {collections.map((collection) => (
         <div key={collection.key} className="flex flex-col gap-3">
-          <h3 className="text-h3 font-semibold text-text">
-            {collection.title}
-          </h3>
+          <h3 className="text-h3 font-semibold text-text">{collection.title}</h3>
           {collection.items.length > 0 ? (
             <ul className="grid list-none grid-cols-2 gap-2 p-0 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {collection.items.map((item) => (

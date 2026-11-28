@@ -51,6 +51,8 @@ export function resolveAdminNavCapabilities(
     // Platform-funded coupons spend the promotions budget: admin / superadmin only.
     coupons: unrestricted,
     extras: has("vendors.manage"),
+    importRequests: has("vendors.manage"),
+    madeInZambia: has("vendors.manage"),
     trials: unrestricted,
     // Ask Vergeo answer log + auditor: admin / superadmin only (API: unrestricted route).
     askAudit: unrestricted,

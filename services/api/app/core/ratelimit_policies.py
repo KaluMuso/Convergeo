@@ -538,8 +538,11 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /vendor/intake/sessions/{session_id}/submit": SENSITIVE_WRITE,
     "POST /vendor/listings": STANDARD_WRITE,
     # Service packages (docs/plan/service-packages.md).
-    "PUT /vendor/services/{service_id}/packages/{tier}": STANDARD_WRITE,
-    "POST /vendor/services/{service_id}/packages/{tier}/archive": STANDARD_WRITE,
+    "POST /vendor/services/{service_id}/packages": STANDARD_WRITE,
+    "PUT /vendor/services/{service_id}/packages/{package_id}": STANDARD_WRITE,
+    "DELETE /vendor/services/{service_id}/packages/{package_id}": STANDARD_WRITE,
+    "POST /vendor/services/{service_id}/packages/reorder": STANDARD_WRITE,
+    "POST /vendor/services/{service_id}/packages/{package_id}/archive": STANDARD_WRITE,
     "PATCH /vendors/{vendor_id}/status": ADMIN_WRITE,
     "POST /vendor/listings/{listing_id}/images": STANDARD_WRITE,
     "POST /vendor/listings/{listing_id}/pause": STANDARD_WRITE,

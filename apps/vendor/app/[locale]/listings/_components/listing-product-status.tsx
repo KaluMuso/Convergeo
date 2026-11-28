@@ -13,7 +13,7 @@ type ListingProductStatusProps = {
 
 /**
  * Buyer-visible truth: a listing can be Live while its canonical product is still
- * in moderation, so shoppers do not see it on Convergeo yet.
+ * in moderation, so shoppers do not see it on Vergeo5 yet.
  */
 export function ListingProductStatusChip({
   listingStatus,

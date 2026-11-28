@@ -21,8 +21,8 @@ type ServicePackagesProps = {
 
 /**
  * Package comparison — server-rendered; the only client JS is the existing
- * request-quote modal per card. 360px-first: one card per tier in a horizontal
- * snap row (swipe to compare); three columns from `sm`.
+ * request-quote modal per card. 360px-first: one card per package in a horizontal
+ * snap row (swipe to compare); two columns from `sm`, three from `lg`.
  *
  * Choosing a package never takes payment (SP-1): it opens the quote request,
  * prefilled with the package and carrying its id so the vendor quotes against it.
@@ -56,19 +56,16 @@ export function ServicePackages({
       </div>
 
       <ul
-        className="-mx-4 flex snap-x snap-mandatory list-none gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0"
+        className="-mx-4 flex snap-x snap-mandatory list-none gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:px-0"
         aria-label={t("heading")}
       >
         {packages.map((pkg) => (
           <li
             key={pkg.id}
             className="flex shrink-0 basis-4/5 snap-start flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-1 sm:basis-auto"
-            data-testid={`service-package-${pkg.tier}`}
+            data-testid={`service-package-${pkg.id}`}
           >
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-3">
-                {t(`tier.${pkg.tier}`)}
-              </p>
               <h3 className="font-semibold text-text">{pkg.name}</h3>
               <p
                 className="font-display text-h3 text-display-ink"
@@ -115,8 +112,8 @@ export function ServicePackages({
                 packageId={pkg.id}
                 vendorName={vendorName}
                 initialDetails={buildPrefill(pkg, t, formatK)}
-                ctaTestId={`service-package-cta-${pkg.tier}`}
-                variant={pkg.tier === "standard" ? "primary" : "secondary"}
+                ctaTestId={`service-package-cta-${pkg.id}`}
+                variant={packages.length === 1 ? "primary" : "secondary"}
                 className="w-full rounded-md text-sm font-semibold"
                 labels={{
                   ...quoteLabels,
