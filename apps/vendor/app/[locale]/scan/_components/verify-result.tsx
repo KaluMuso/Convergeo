@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
+import { formatOrderCode } from "../../_lib/order-code";
 import { Button } from "../../listings/new/_lib/ui";
 import { verifyErrorMessageKey } from "../_lib/verify-errors";
 
@@ -50,7 +51,7 @@ export function VerifyResult({ state, onScanAnother, onRetry }: VerifyResultProp
           {t("scan.success.title")}
         </p>
         <p style={{ margin: "var(--sp-2) 0 var(--sp-4)", color: "var(--text-2)" }}>
-          {t("scan.success.body", { orderId: state.orderId.slice(0, 8) })}
+          {t("scan.success.body", { orderId: formatOrderCode(state.orderId) })}
         </p>
         <Button
           type="button"

@@ -1067,6 +1067,9 @@
     "title": "Order",
     "loading": "Loading order…",
     "back": "Back to orders",
+    "detail": {
+      "orderCode": "Order {code}"
+    },
     "status": {
       "placed": "Placed",
       "confirmed": "Confirmed",
@@ -1237,7 +1240,8 @@
       "orders": "Orders",
       "ordersCaption": "30 days",
       "gmv": "Sales",
-      "gmvCaption": "30 days"
+      "gmvCaption": "30 days",
+      "unavailable": "We couldn't load shop stats. Check your connection and pull to refresh."
     },
     "needsAction": {
       "heading": "Do this now",
@@ -1361,6 +1365,7 @@
       "shopLive": "Shop live",
       "idVerified": "ID verified",
       "payoutSet": "Payout number set",
+      "payoutsStartSoon": "Payouts start soon",
       "yes": "Yes",
       "notYet": "Not yet"
     },
@@ -1551,7 +1556,7 @@
     },
     "eyebrow": "Pickup",
     "title": "Scan pickup",
-    "intro": "Scan the customer's QR or enter their order ID and PIN. Verification needs an internet connection.",
+    "intro": "Scan the customer's QR or enter their order code and PIN. Verification needs an internet connection.",
     "verifying": "Verifying pickup…",
     "offline": {
       "title": "You're offline",
@@ -1568,9 +1573,13 @@
     },
     "pin": {
       "heading": "Enter pickup PIN",
-      "intro": "The customer received a 6-digit PIN on WhatsApp. Enter their order ID and PIN.",
-      "orderIdLabel": "Order ID",
-      "orderIdPlaceholder": "Paste or type order ID",
+      "intro": "The customer received a 6-digit PIN on WhatsApp. Enter their 8-character order code (or pick an order below) and the PIN.",
+      "pickOrderLabel": "Orders ready for pickup",
+      "pickOrderPlaceholder": "Choose an order (optional)",
+      "pickOrderOption": "{code} — {title}",
+      "loadingReady": "Loading orders ready for pickup…",
+      "orderIdLabel": "Order code",
+      "orderIdPlaceholder": "8-character code or full order ID",
       "pinLabel": "6-digit PIN",
       "pinPlaceholder": "000000",
       "submit": "Verify pickup",
@@ -2251,7 +2260,27 @@
       "order": "Order {id}",
       "refund": "Refund if accepted: {amount}",
       "evidence": "{count, plural, one {# photo attached} other {# photos attached}}",
+      "evidenceThumb": "Photo {n}",
+      "noEvidence": "No photos attached",
+      "reasonLane1": "The customer says the item is faulty or not what they ordered.",
+      "reasonLane2": "The customer wants to return an unused item under the change-of-mind policy.",
+      "reasonGeneric": "The customer asked to return this item.",
+      "status": "Status: {status}",
+      "lane": "Lane {lane}",
       "viewOrder": "View order"
+    },
+    "confirm": {
+      "acceptTitle": "Accept this return?",
+      "acceptBody": "You will refund {amount} for {title}. This cannot be undone.",
+      "acceptCta": "Yes, refund buyer",
+      "contestTitle": "Contest this return?",
+      "contestBody": "Convergeo will review {title} with your evidence and the buyer's photos.",
+      "contestCta": "Send to admin review",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "accepted": "Refund of {amount} is on its way to the buyer.",
+      "contested": "Return sent for admin review."
     },
     "actions": {
       "accept": "Accept return",

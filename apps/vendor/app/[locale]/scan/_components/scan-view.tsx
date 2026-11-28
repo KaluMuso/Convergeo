@@ -3,11 +3,12 @@
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError } from "@vergeo/config";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { resolveOrderIdFromInput } from "../../_lib/order-code";
 import { Spinner } from "../../listings/new/_lib/ui";
 import { playPickupSuccessHaptic } from "../_lib/haptics";
-import { createPickupClient } from "../_lib/pickup-client";
+import { createPickupClient, type PickupReadyOrder } from "../_lib/pickup-client";
 import {
   appendRecentVerification,
   readRecentVerifications,
@@ -37,7 +38,38 @@ export function ScanView(_props: ScanViewProps) {
   const [cameraDenied, setCameraDenied] = useState(false);
   const [resultState, setResultState] = useState<VerifyResultState>({ kind: "idle" });
   const [recent, setRecent] = useState<RecentVerification[]>(() => readRecentVerifications());
+  const [readyOrders, setReadyOrders] = useState<PickupReadyOrder[]>([]);
+  const [readyOrdersLoading, setReadyOrdersLoading] = useState(false);
   const verifyingRef = useRef(false);
+
+  useEffect(() => {
+    if (!session?.access_token) {
+      setReadyOrders([]);
+      return;
+    }
+    let cancelled = false;
+    setReadyOrdersLoading(true);
+    void client
+      .listReadyForPickup()
+      .then((rows) => {
+        if (!cancelled) {
+          setReadyOrders(rows);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReadyOrders([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setReadyOrdersLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [client, session?.access_token]);
 
   const resetForAnotherScan = useCallback(() => {
     verifyingRef.current = false;
@@ -93,9 +125,19 @@ export function ScanView(_props: ScanViewProps) {
 
   const handlePinSubmit = useCallback(
     (orderId: string, pin: string) => {
-      void runVerify(() => client.verifyPin(orderId, pin), "pin");
+      const resolved =
+        resolveOrderIdFromInput(orderId, readyOrders) ??
+        resolveOrderIdFromInput(
+          orderId,
+          recent.map((row) => ({ id: row.orderId })),
+        );
+      if (!resolved) {
+        setResultState({ kind: "error", errorKind: "invalid_pin" });
+        return;
+      }
+      void runVerify(() => client.verifyPin(resolved, pin), "pin");
     },
-    [client, runVerify],
+    [client, readyOrders, recent, runVerify],
   );
 
   const handleCameraDenied = useCallback(() => {
@@ -162,6 +204,8 @@ export function ScanView(_props: ScanViewProps) {
             <PinFallback
               disabled={!online}
               isSubmitting={isVerifying}
+              readyOrders={readyOrders}
+              readyOrdersLoading={readyOrdersLoading}
               onSubmit={handlePinSubmit}
               onUseCamera={
                 cameraDenied
