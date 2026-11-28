@@ -23,7 +23,7 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 203
+MIGRATION_COUNT = 204
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
 # Reviewed variants (#762), money-path reconciliation (#759 into #718) and the
 # 2026-11 queued features (#764-#768) replay after repairs, in filename order.
@@ -124,6 +124,8 @@ POST_REPAIR_ORDER = [
     "20261127100000",
     # Service packages become an open ordered list, cap 10 (additive, documented down).
     "20261127120000",
+    # Service archetypes + validated attribute blobs (additive, documented down).
+    "20261128090000",
     # Admin category icon / banner / banner copy (additive table, documented down).
     "20261128190000",
 ]

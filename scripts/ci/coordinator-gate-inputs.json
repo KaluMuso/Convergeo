@@ -618,6 +618,7 @@
     "20261127090000_ask_answer_log_audit.sql": "b7ca232c2057dd1e79214f178d4ecc77d7c41106c3f3171b1f3f473c025fa648",
     "20261127100000_vendor_sourcing_hub.sql": "f34416a5fb92af7eb26151e536a90d0f2ffd25c5ea08d0abb82c4a5305e41925",
     "20261127120000_service_packages_open_list.sql": "778f6a4028f4d90996ede2ada4836ab1a9179ad9a3a7b2b70fa94d8ef7f139c6",
+    "20261128090000_service_archetypes.sql": "7cf1c0ad6699ab199cddc19dcc9ec01914e2268e3f2d3cf47f444dd7fe4fa39a",
     "20261128190000_category_presentations.sql": "cdbcdb237cc762e3a2a6c08bbe2c13ec0acc3073099998537dc320fb9a69d95a"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
@@ -634,7 +635,7 @@
     "scripts/ci/critical-real-stack-nodes.txt": "19b1ce00d621f4fe39c521e799f31f23fdbd6d8a736e07525bee5b4444abb496",
     "scripts/ci/migration-replay.sh": "9556f94d0ab002c8eb3e2f7e200d52ccf72e56d7479489ecd7fecf2281dedaed",
     "scripts/ci/run-critical-real-stack.sh": "66c7f5bb889c8fbfcc7da88bdf4be6a14485e99850192fcd490f038eb152335c",
-    "scripts/ci/run_financial_real_stack.py": "056c19b0988fb790375e78afe4e9b99d07921bcafd418f01cb24d31f43f388f0",
+    "scripts/ci/run_financial_real_stack.py": "f5c35e6850fdc94e15d55e0f637bf82ce7040d08236a8a705e0f1831f4893072",
     "scripts/drills/f2_collection_manifest.py": "655cdeafbaf6017870dadb9677a3e7315bc7d25f245528440048220ecb8c782e",
     "scripts/drills/f2_real_stack_report.py": "ac274ad1292f6998e17514d268c3c9bc0692730122c2ca2e46c7c76891ca75c8",
     "scripts/drills/f2_upgrade_probe.py": "e475fa8843d5a921755ce8e8f7cdf35a3611a25ad43b45252341948b7ad4cf6c",

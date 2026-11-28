@@ -113,6 +113,8 @@ class RfqPackageSnapshot(StrictModel):
     delivery_days: int | None
     revisions: int | None
     includes: list[str]
+    #: Archetype-specific offer attributes the customer saw (docs/plan/service-type-templates.md).
+    attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class RfqThreadResponse(StrictModel):
