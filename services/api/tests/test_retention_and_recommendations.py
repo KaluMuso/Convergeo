@@ -155,7 +155,7 @@ def _service(
         id=sid,
         slug=sid,
         title=sid,
-        category=category,  # type: ignore[arg-type]
+        category=category,
         from_price_ngwee=price,
         provider=ProviderSummary(
             id=provider, slug=provider, display_name=provider, preferred_badge=preferred

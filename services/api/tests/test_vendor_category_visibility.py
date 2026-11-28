@@ -64,7 +64,7 @@ def test_new_listing_in_blocked_category_is_rejected(
         client = fake_client
 
     try:
-        _load_category_commission_key(Wrapper(), CATEGORY_ID)  # type: ignore[arg-type]
+        _load_category_commission_key(Wrapper(), CATEGORY_ID)
     except Exception as exc:  # noqa: BLE001
         assert getattr(exc, "code", "") == "category_unavailable"
     else:
