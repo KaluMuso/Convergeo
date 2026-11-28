@@ -96,8 +96,8 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: Ask Vergeo service-role checks use auth.role().
         # + 1 reviewed: Ask Vergeo answer log + auditor findings.
         # + 1 reviewed: vendor sourcing hub.
-        self.assertEqual(len(runner.FORWARD), 76)
-        self.assertEqual(len(set(runner.FORWARD)), 76)
+        self.assertEqual(len(runner.FORWARD), 79)
+        self.assertEqual(len(set(runner.FORWARD)), 79)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

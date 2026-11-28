@@ -6,9 +6,11 @@ from typing import Any
 
 from app.core.ttl_cache import get_cached_json, set_cached_json
 from app.schemas.base import StrictModel
+from app.services.categories.taxonomy import cloudinary_image_url
 
-CATEGORIES_CACHE_KEY = "public:categories:v1"
-CATEGORIES_CACHE_TTL_SECONDS = 3600  # 1 hour
+CATEGORIES_CACHE_KEY = "public:categories:v2"
+# Short TTL: admin publish/block must reach the customer menu within minutes.
+CATEGORIES_CACHE_TTL_SECONDS = 300
 
 
 class PublicCategory(StrictModel):
@@ -19,6 +21,10 @@ class PublicCategory(StrictModel):
     position: int
     parent_id: str | None = None
     prohibited: bool = False
+    umbrella: str = "product"
+    image_url: str | None = None
+    image_alt: str | None = None
+    icon: str | None = None
 
 
 def _rows(response: Any) -> list[dict[str, Any]]:
@@ -31,8 +37,13 @@ def _rows(response: Any) -> list[dict[str, Any]]:
 def load_public_categories_from_db(client: Any) -> list[PublicCategory]:
     response = (
         client.table("categories")
-        .select("id, name, slug, path, position, parent_id, prohibited")
+        .select(
+            "id, name, slug, path, position, parent_id, prohibited, umbrella, "
+            "image_public_id, image_alt, icon"
+        )
         .eq("prohibited", False)
+        .eq("status", "published")
+        .eq("show_in_customer", True)
         .order("position")
         .execute()
     )
@@ -57,6 +68,14 @@ def load_public_categories_from_db(client: Any) -> list[PublicCategory]:
                 position=position,
                 parent_id=str(parent_id) if parent_id else None,
                 prohibited=bool(row.get("prohibited")),
+                umbrella=str(row.get("umbrella") or "product"),
+                image_url=cloudinary_image_url(
+                    row.get("image_public_id")
+                    if isinstance(row.get("image_public_id"), str)
+                    else None
+                ),
+                image_alt=row.get("image_alt") if isinstance(row.get("image_alt"), str) else None,
+                icon=row.get("icon") if isinstance(row.get("icon"), str) else None,
             )
         )
     return categories
@@ -88,7 +107,8 @@ def list_public_categories(
 
 
 def invalidate_public_categories_cache() -> None:
-    """Best-effort cache bust (used by admin mutations in future)."""
-    from app.core.ttl_cache import set_cached_json
+    """Bust public taxonomy caches after an admin mutation (readers reload on non-list)."""
+    from app.services.categories import taxonomy_public
 
-    set_cached_json(CATEGORIES_CACHE_KEY, [], ttl_seconds=1)
+    set_cached_json(CATEGORIES_CACHE_KEY, {"stale": True}, ttl_seconds=1)
+    taxonomy_public.invalidate()

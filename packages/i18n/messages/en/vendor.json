@@ -560,6 +560,7 @@
     "errors": {
       "required": "Please fill this in",
       "submitFailed": "We couldn't save your product. Check your internet and try again.",
+      "categoryUnavailable": "That category is not available right now. Pick another one.",
       "standalone_required": "For D and E, use One-off item.",
       "wholesale_requires_t2": "Bulk prices need a business papers check first.",
       "product_not_found": "We couldn't find that product. Search again.",

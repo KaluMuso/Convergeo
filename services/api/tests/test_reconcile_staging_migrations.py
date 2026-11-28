@@ -163,8 +163,14 @@ PENDING_REPAIR_VERSIONS = {
     "20261127100000",
     # Service packages become an open ordered list, cap 10 (additive, documented down).
     "20261127120000",
+    # Admin-controlled catalog taxonomy (additive, documented down).
+    "20261127130000",
+    # Event archetype templates: events.archetype + archetype_details (additive, documented down).
+    "20261127150000",
     # Service archetypes + validated attribute blobs (additive, documented down).
     "20261128090000",
+    # Seed archetype service verticals into the admin-controlled taxonomy (additive, idempotent).
+    "20261128100000",
 }
 
 

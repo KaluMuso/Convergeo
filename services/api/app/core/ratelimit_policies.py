@@ -153,6 +153,14 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /ads/placements": ADMIN_WRITE,
     "PATCH /ads/placements/{placement_id}": ADMIN_WRITE,
     "POST /ads/placements/{placement_id}/transition": ADMIN_WRITE,
+    # Admin category manager (admin_taxonomy.py). Image signing mints Cloudinary slots.
+    "POST /catalog/taxonomy": ADMIN_WRITE,
+    "POST /catalog/taxonomy/image/sign": SENSITIVE_WRITE,
+    "POST /catalog/taxonomy/{umbrella}/reorder": ADMIN_WRITE,
+    "PATCH /catalog/taxonomy/{umbrella}/{node_id}": ADMIN_WRITE,
+    "POST /catalog/taxonomy/{umbrella}/{node_id}/status": ADMIN_WRITE,
+    "POST /catalog/taxonomy/{umbrella}/{node_id}/move": ADMIN_WRITE,
+    "DELETE /catalog/taxonomy/{umbrella}/{node_id}": ADMIN_WRITE,
     "POST /catalog/listings/{entity_id}/moderate": ADMIN_WRITE,
     "POST /catalog/listings/{entity_id}/restore": ADMIN_WRITE,
     "PATCH /catalog/listings/{entity_id}": ADMIN_WRITE,
@@ -236,6 +244,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PUT /admin/roles/{key}/users/{user_id}": ADMIN_WRITE,
     "DELETE /admin/roles/{key}/users/{user_id}": ADMIN_WRITE,
     "POST /admin/events/{event_id}/high-value-verify": ADMIN_WRITE,
+    "POST /admin/event-sponsors/{event_id}/review": ADMIN_WRITE,
     "POST /admin/event-advance-debts/repayments": PAYMENT_WRITE,
     # 2026-11 governance: scoped operator tools and admin account lifecycle.
     "PATCH /admin/services/{service_id}/status": ADMIN_WRITE,

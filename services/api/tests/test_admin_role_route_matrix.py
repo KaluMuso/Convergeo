@@ -114,6 +114,15 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     "products.manage": frozenset(
         {
             # Admin catalog control (T4): listings.
+            # Admin category manager (taxonomy).
+            "DELETE /admin/catalog/taxonomy/{umbrella}/{node_id}",
+            "GET /admin/catalog/taxonomy",
+            "PATCH /admin/catalog/taxonomy/{umbrella}/{node_id}",
+            "POST /admin/catalog/taxonomy",
+            "POST /admin/catalog/taxonomy/image/sign",
+            "POST /admin/catalog/taxonomy/{umbrella}/reorder",
+            "POST /admin/catalog/taxonomy/{umbrella}/{node_id}/move",
+            "POST /admin/catalog/taxonomy/{umbrella}/{node_id}/status",
             "GET /admin/catalog/listings",
             "PATCH /admin/catalog/listings/{entity_id}",
             "POST /admin/catalog/listings/{entity_id}/moderate",
@@ -140,6 +149,9 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "POST /admin/catalog/vendors/{entity_id}/moderate",
             "POST /admin/catalog/vendors/{entity_id}/restore",
             # Multi-branch review (#807): mapped to vendors.manage in auth.py.
+            # Event sponsor approval queue (founder decision, 27 Nov).
+            "GET /admin/event-sponsors",
+            "POST /admin/event-sponsors/{event_id}/review",
             "GET /admin/branches",
             "GET /admin/branches/flags",
             "GET /admin/branches/{branch_id}",
@@ -280,6 +292,14 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
 MODERATOR_ROUTES: frozenset[str] = frozenset(
     {
         # Admin catalog control (T4): moderators hold products.manage and vendors.manage.
+        "DELETE /admin/catalog/taxonomy/{umbrella}/{node_id}",
+        "GET /admin/catalog/taxonomy",
+        "PATCH /admin/catalog/taxonomy/{umbrella}/{node_id}",
+        "POST /admin/catalog/taxonomy",
+        "POST /admin/catalog/taxonomy/image/sign",
+        "POST /admin/catalog/taxonomy/{umbrella}/reorder",
+        "POST /admin/catalog/taxonomy/{umbrella}/{node_id}/move",
+        "POST /admin/catalog/taxonomy/{umbrella}/{node_id}/status",
         "GET /admin/catalog/listings",
         "GET /admin/catalog/vendors",
         "PATCH /admin/catalog/listings/{entity_id}",
