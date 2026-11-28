@@ -26,7 +26,7 @@
       "fallbackTitle": "Gulani zinthu, services, ndi events mu Zambia",
       "placeholder": {
         "subtitle": "Storefront yanu ya config idzaonekera apa pamene merchandising slots ziyamba.",
-        "title": "Takulandirani ku Convergeo"
+        "title": "Takulandirani ku Vergeo5"
       },
       "primaryCta": "Yambani kuyang'ana",
       "secondaryCta": "Phunzirani za kugulitsa",
@@ -56,7 +56,7 @@
       }
     },
     "meta": {
-      "description": "⚠ Compare sellers, book services, and find events across Zambia on Convergeo — pay cash on delivery, Lusaka delivery, nationwide pickup.",
+      "description": "⚠ Compare sellers, book services, and find events across Zambia on Vergeo5 — pay cash on delivery, Lusaka delivery, nationwide pickup.",
       "title": "Pezani Zambia"
     },
     "serviceBar": {
@@ -65,7 +65,7 @@
     },
     "rails": {
       "departmentTitle": "Zatsopano mu {category}",
-      "newTitle": "Zatsopano pa Convergeo",
+      "newTitle": "Zatsopano pa Vergeo5",
       "services": {
         "fromPrice": "Kuyambira",
         "noReviews": "Provider watsopano",
@@ -92,10 +92,10 @@
     "sellCta": {
       "body": "⚠ Create a seller account, verify your ID and start listing. See how it works.",
       "cta": "Phunzirani za kugulitsa",
-      "title": "⚠ Want to sell on Convergeo?"
+      "title": "⚠ Want to sell on Vergeo5?"
     },
     "trust": {
-      "ariaLabel": "Chifukwa chiyeni mugule pa Convergeo",
+      "ariaLabel": "Chifukwa chiyeni mugule pa Vergeo5",
       "escrow": "⚠ Pay when it arrives — cash on delivery during the pilot",
       "fulfillment": "Delivery ya Lusaka kapena pickup nationwide pamene listing imalola",
       "returns": "Malangizo a returns ndi refunds pa ma-order oyenera",
@@ -139,7 +139,7 @@
       }
     },
     "trustStrip": {
-      "ariaLabel": "⚠ Why shop on Convergeo",
+      "ariaLabel": "⚠ Why shop on Vergeo5",
       "cod": "⚠ Mobile Money escrow · COD under K500",
       "verified": "⚠ Verified sellers",
       "lusaka": "⚠ Lusaka delivery",
@@ -249,8 +249,8 @@
     "unavailableBody": "Sitinathe kutenga chinthu ichi pano. Onani connection yanu ndiye yesaninso.",
     "unavailableRetry": "Yesaninso",
     "meta": {
-      "descriptionFallback": "Gulani {name} pa Convergeo",
-      "descriptionWithPrice": "Fananirani mitengo ya {name} kuchokera kwa {count, plural, one {# wogulitsa} other {# ogulitsa}} pa Convergeo. Kuyambira {price}.",
+      "descriptionFallback": "Gulani {name} pa Vergeo5",
+      "descriptionWithPrice": "Fananirani mitengo ya {name} kuchokera kwa {count, plural, one {# wogulitsa} other {# ogulitsa}} pa Vergeo5. Kuyambira {price}.",
       "notFoundTitle": "Chinthu sichipezeka"
     },
     "overview": {
@@ -306,7 +306,7 @@
     "contactVendor": {
       "cta": "Lankhulani ndi wogulitsa",
       "dialogTitle": "Funsani za chinthu ichi",
-      "dialogHint": "Uthenga wanu ukapita kwa {vendor} pa listing iyi. Mayankho akhalabe pa Convergeo — sitigawana nambala ya foni mu uthenga.",
+      "dialogHint": "Uthenga wanu ukapita kwa {vendor} pa listing iyi. Mayankho akhalabe pa Vergeo5 — sitigawana nambala ya foni mu uthenga.",
       "messageLabel": "Funso lanu",
       "messagePlaceholder": "Mwachitsanzo: Chilipo mu stock? Mungathe kutumiza ku Kabulonga?",
       "submit": "Tumizani uthenga",

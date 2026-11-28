@@ -633,7 +633,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
       <JsonLdScript data={jsonLd} />
 
       {/* The sign (§8.3): the business's own cover, logo and name come first;
-          Convergeo is the street, not the shop sign. */}
+          Vergeo5 is the street, not the shop sign. */}
       <header className="relative">
         {vendor.cover_url ? (
           <div aria-hidden className="h-28 overflow-hidden rounded-lg bg-panel sm:h-40">

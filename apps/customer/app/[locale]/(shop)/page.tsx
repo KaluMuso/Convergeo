@@ -290,9 +290,9 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   );
   const showEventsRow = plan.campaignSectionKeys.includes("events_row");
 
-  const organizationJsonLd = buildOrganizationJsonLd({ name: "Convergeo" });
+  const organizationJsonLd = buildOrganizationJsonLd({ name: "Vergeo5" });
   const websiteJsonLd = buildWebSiteJsonLd({
-    name: "Convergeo",
+    name: "Vergeo5",
     url: buildAbsoluteUrl(buildLocaleCanonical(DEFAULT_LOCALE)),
     searchUrlTemplate: buildSearchActionUrlTemplate(DEFAULT_LOCALE),
   });

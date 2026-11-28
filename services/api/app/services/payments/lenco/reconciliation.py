@@ -254,6 +254,12 @@ class LencoReconciliationAdapter:
         page_count = _required_nonnegative_int(typed.get("pageCount"), field_name="meta.pageCount")
         per_page = _required_nonnegative_int(typed.get("perPage"), field_name="meta.perPage")
         total = _required_nonnegative_int(typed.get("total"), field_name="meta.total")
+        # Lenco answers a day with no movements as page 1 of pageCount 0 and
+        # total 0 (observed live 27 Nov 2026).  That page was still observed,
+        # so record it as the single empty page of one.  Anything else with a
+        # zero count stays a schema error.
+        if page_count == 0 and total == 0 and current == 1:
+            page_count = 1
         if current < 1 or page_count < 1 or per_page < 1:
             raise ValueError("transaction pagination values must be positive")
         if current > page_count:

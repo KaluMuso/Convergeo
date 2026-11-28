@@ -296,7 +296,7 @@ def _map_order_cancelled(payload: Mapping[str, Any]) -> tuple[str, ...]:
         _optional_str(
             payload,
             "refund_detail",
-            fallback="If you already paid, Convergeo will handle your refund and keep you updated.",
+            fallback="If you already paid, Vergeo5 will handle your refund and keep you updated.",
         ),
     )
 
@@ -304,21 +304,21 @@ def _map_order_cancelled(payload: Mapping[str, Any]) -> tuple[str, ...]:
 def _map_payment_failed(payload: Mapping[str, Any]) -> tuple[str, ...]:
     return (
         format_k(_require_int(payload, "amount_ngwee")),
-        _optional_str(payload, "retry_url", fallback="your orders in the Convergeo app"),
+        _optional_str(payload, "retry_url", fallback="your orders in the Vergeo5 app"),
     )
 
 
 def _map_order_completed(payload: Mapping[str, Any]) -> tuple[str, ...]:
     return (
         _require_str(payload, "order_reference"),
-        _optional_str(payload, "order_url", fallback="the Convergeo app"),
+        _optional_str(payload, "order_url", fallback="the Vergeo5 app"),
     )
 
 
 def _map_ticket_issued(payload: Mapping[str, Any]) -> tuple[str, ...]:
     return (
         _require_str(payload, "event_title"),
-        _optional_str(payload, "ticket_url", fallback="My tickets in the Convergeo app"),
+        _optional_str(payload, "ticket_url", fallback="My tickets in the Vergeo5 app"),
     )
 
 

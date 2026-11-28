@@ -62,7 +62,7 @@
     "body": "Yesani kuchotsa filters kapena kusaka business ina."
   },
   "profile": {
-    "metaDescription": "Gulani kuchokera kwa {name} pa Convergeo",
+    "metaDescription": "Gulani kuchokera kwa {name} pa Vergeo5",
     "about": "Za",
     "hours": "Maola otsegula",
     "location": "Location",
@@ -75,7 +75,7 @@
     "noReviews": "Palibe reviews pano",
     "preferredBadge": "Preferred shop",
     "verifiedBadge": "Verified seller (ID checked)",
-    "shareTitle": "{name} pa Convergeo",
+    "shareTitle": "{name} pa Vergeo5",
     "statRating": "Rating",
     "statReviews": "Reviews",
     "statListings": "Zinthu",
@@ -116,7 +116,7 @@
       "compareOthers": "{count, plural, one {Compare with # other shop} other {Compare with # other shops}}",
       "compareFrom": "from {price}",
       "compareAria": "Compare {title} at other shops",
-      "verifiedOnly": "Only customers who bought here through Convergeo can leave a review.",
+      "verifiedOnly": "Only customers who bought here through Vergeo5 can leave a review.",
       "clipsHeading": "Clips",
       "clipWatch": "Watch clip",
       "offersHeading": "Offers",
