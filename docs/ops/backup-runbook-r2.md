@@ -19,11 +19,11 @@ so this independent copy is the only production backup.
 | --- | --- | --- |
 | Daily backup | 02:00 and 14:00 | `db/daily/` |
 | Weekly copy | Sunday 03:30 | `db/weekly/` |
-| Weekly restore drill (throwaway Postgres) | Sunday 04:30 | result marker in `db/drill/` |
-| Monthly timed restore onto staging | first Saturday, supervised | log entry in `docs/ops/drill-log.md` |
+| Weekly checksum check (no decryption) | Sunday, by the operator or a staging job: download the newest daily object, run `sha256sum -c`, confirm the recipient with `gpg --list-packets` | none |
+| Monthly timed restore onto staging | first Saturday, supervised, with the offline key | log entry in `docs/ops/drill-log.md` |
 | Freshness watchdog (n8n, email) | hourly; alerts when the newest `db/daily/` object is 14 hours old or more | n/a |
 
-## Retention and expiry (every rule is at least 30 days)
+## Retention and expiry (approved by the founder, every rule is at least 30 days)
 
 The bucket lock keeps every object for 30 days, so lifecycle rules must never expire sooner.
 
@@ -38,17 +38,16 @@ Cost: each encrypted dump is about 1.3 MB today. Roughly 70 daily plus 17 weekly
 copies is under 300 MB, inside the R2 free tier (10 GB). Expected cost is $0 per month; recheck if the
 database passes 1 GB.
 
-## Keys and custody
+## Keys and custody (decided 28 Nov)
 
 - Backups are encrypted to a public GPG key. The private key is held offline by the founder.
 - The server holds only the public key, so a stolen bucket or R2 token cannot read a backup.
+- **No decryption key lives on the production server.** Any interim passphrase file used for the first
+  one-off dump must be deleted once that dump is re-encrypted to the public key.
 - The R2 token on the server is scoped to this one bucket (Object Read and Write; R2 has no write-only token).
-- The weekly automatic drill must decrypt. Decision needed (default: option A):
-  - **A (recommended).** Add a second recipient, an on-host drill key (`BACKUP_EXTRA_FPR`). Anyone who
-    already controls the host can read the database through its connection string, so this adds little
-    risk, and the drill proves the real restore path every week. Bucket-only leaks stay unreadable.
-  - **B.** No drill key. The weekly drill only checks size, checksum and recipient, and the full restore
-    is manual each month with the offline key. Safer against host compromise, weaker proof.
+- Until a staging box exists the drill is: weekly checksum check, plus a manual restore each month using the
+  offline key. When the staging box exists, the drill key lives there and `infra/scripts/db-restore-drill-r2.sh`
+  runs there, not on the production host.
 
 ## Restore (real incident)
 
@@ -74,5 +73,6 @@ Launch gate G7 passes only after one timed restore of a real R2 object is logged
 ## Follow-ups not done in this change
 
 - Weekly copy of the Supabase Storage buckets (about 240 kB today).
-- A second watchdog check on `db/drill/` that alerts if no passing drill marker exists for 9 days.
+- A second watchdog check on `db/drill/` that alerts if no passing drill marker exists for 9 days (only once drills write markers).
+- A small script for the weekly checksum check, so the operator does not run it by hand.
 - Remove the OCI path (`db-dump.sh`, `infra/n8n/backup.json`, validators and tests) once nothing depends on it.
