@@ -16,6 +16,14 @@ from app.services.categories.public import list_public_categories
 from app.services.db_chunk import POSTGREST_PAGE_SIZE, chunked_in_query
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import fetch_demo_listing_ids
+from app.services.signals import ListingSignals
+from app.services.signals.loader import (
+    facts_for_inputs,
+    load_approved_tiers,
+    load_made_in_zambia_approved,
+)
+from app.services.signals.models import SignalFacts, SignalInput
+from app.services.signals.rules import parse_timestamp
 from app.services.vendor_plans.canonical_photos import load_canonical_images
 from app.services.vendor_plans.resolver import shared_photos_enabled
 from fastapi import APIRouter, Depends, Query, Request, Response
@@ -57,6 +65,9 @@ class FacetCounts(BaseModel):
     availability: list[FacetBucket] = Field(default_factory=list)
     rating: list[FacetBucket] = Field(default_factory=list)
     price: list[FacetBucket] = Field(default_factory=list)
+    #: Signal filter boxes: ``verified`` / ``deals`` / ``made_in_zambia`` counts
+    #: (``made_in_zambia`` omitted until approved claims exist).
+    signals: list[FacetBucket] = Field(default_factory=list)
 
 
 class CatalogListingItem(BaseModel):
@@ -88,6 +99,8 @@ class CatalogListingItem(BaseModel):
     #: W8 live offer this listing takes part in (flag `bundles`); attached
     #: server-side by surfaces that render cards (home feed, stream).
     offer_badge: OfferBadgeOut | None = None
+    #: Badges / ribbon / market facts (docs/plan/product-signals.md); null when unavailable.
+    signals: ListingSignals | None = None
 
 
 class CatalogListResponse(BaseModel):
@@ -151,6 +164,10 @@ class PlpFilterState(BaseModel):
     lat: float | None = None
     lng: float | None = None
     radius_km: float | None = Field(default=None, gt=0, le=500)
+    #: Signal filter boxes (all default off; see docs/plan/product-signals.md).
+    verified: bool = False
+    deals: bool = False
+    made_in_zambia: bool = False
     cursor: int = Field(default=0, ge=0)
     limit: int = Field(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE)
 
@@ -297,6 +314,12 @@ def encode_plp_filters(state: PlpFilterState) -> dict[str, str]:
         params["lng"] = str(state.lng)
     if state.radius_km is not None:
         params["radius_km"] = str(state.radius_km)
+    if state.verified:
+        params["verified"] = "1"
+    if state.deals:
+        params["deals"] = "1"
+    if state.made_in_zambia:
+        params["made_in_zambia"] = "1"
     if state.cursor > 0:
         params["cursor"] = encode_plp_cursor(state.cursor)
     if state.limit != DEFAULT_PAGE_SIZE:
@@ -345,6 +368,9 @@ def decode_plp_filters(params: dict[str, str | list[str] | None]) -> PlpFilterSt
     radius_raw = _one("radius_km")
     limit_raw = _one("limit")
 
+    def _flag(key: str) -> bool:
+        return (_one(key) or "").strip().lower() in ("1", "true", "yes")
+
     parsed_limit = int(limit_raw) if limit_raw is not None else DEFAULT_PAGE_SIZE
     return PlpFilterState(
         category_path=_one("category_path"),
@@ -357,6 +383,9 @@ def decode_plp_filters(params: dict[str, str | list[str] | None]) -> PlpFilterSt
         lat=float(lat_raw) if lat_raw is not None else None,
         lng=float(lng_raw) if lng_raw is not None else None,
         radius_km=float(radius_raw) if radius_raw is not None else None,
+        verified=_flag("verified"),
+        deals=_flag("deals"),
+        made_in_zambia=_flag("made_in_zambia"),
         cursor=decode_plp_cursor(_one("cursor")),
         limit=min(max(parsed_limit, 1), MAX_PAGE_SIZE),
     )
@@ -775,9 +804,29 @@ class _CatalogCandidate(BaseModel):
     review_count: int
     in_stock: bool
     distance_m: float | None = None
+    #: Highest approved KYC tier (kyc_records), never the bare ``vendors.kyc_tier``.
+    vendor_tier: int | None = None
+    made_in_zambia: bool = False
 
 
 CatalogCandidate = _CatalogCandidate
+
+
+def _candidate_verified(candidate: _CatalogCandidate) -> bool:
+    return bool(candidate.vendor.get("preferred_badge")) or candidate.vendor_tier is not None
+
+
+def _candidate_is_deal(candidate: _CatalogCandidate) -> bool:
+    from app.services.signals.rules import deal_percent
+
+    return (
+        deal_percent(
+            candidate.search_doc.price_min_ngwee or 0,
+            candidate.listing.compare_at_ngwee,
+            in_stock=candidate.in_stock,
+        )
+        is not None
+    )
 
 
 def _matches_filters(
@@ -808,6 +857,15 @@ def _matches_filters(
         if candidate.rating < filters.min_rating:
             return False
 
+    if "verified" not in ignore and filters.verified and not _candidate_verified(candidate):
+        return False
+
+    if "deals" not in ignore and filters.deals and not _candidate_is_deal(candidate):
+        return False
+
+    if "made_in_zambia" not in ignore and filters.made_in_zambia and not candidate.made_in_zambia:
+        return False
+
     if "location" not in ignore and filters.radius_km is not None:
         if filters.lat is None or filters.lng is None:
             return False
@@ -836,6 +894,11 @@ def _build_candidates(client: Any, category_path: str | None) -> list[_CatalogCa
     enriched = _fetch_listings_enriched(client, listing_ids)
     ratings = _fetch_listing_ratings(client, listing_ids)
     released_classes = _customer_released_product_classes(client)
+    vendor_tiers = load_approved_tiers(
+        client,
+        [str(b["vendor"]["id"]) for b in enriched.values() if b.get("vendor", {}).get("id")],
+    )
+    miz_listing_ids = load_made_in_zambia_approved(client, list(enriched))
 
     candidates: list[_CatalogCandidate] = []
     for doc in search_docs:
@@ -869,6 +932,8 @@ def _build_candidates(client: Any, category_path: str | None) -> list[_CatalogCa
                 rating=rating,
                 review_count=review_count,
                 in_stock=in_stock,
+                vendor_tier=vendor_tiers.get(str(vendor.get("id"))),
+                made_in_zambia=doc.entity_id in miz_listing_ids,
             )
         )
     return candidates
@@ -985,7 +1050,24 @@ def compute_facet_counts(
         else:
             price_buckets["over_500k"] += 1
 
+    signal_counts = {"verified": 0, "deals": 0, "made_in_zambia": 0}
+    for key, check in (
+        ("verified", _candidate_verified),
+        ("deals", _candidate_is_deal),
+        ("made_in_zambia", lambda c: c.made_in_zambia),
+    ):
+        for candidate in candidates:
+            if _matches_filters(candidate, filters=filters, ignore={key}) and check(candidate):
+                signal_counts[key] += 1
+    signal_buckets = [
+        FacetBucket(value=k, count=v)
+        for k, v in signal_counts.items()
+        # Made in Zambia is hidden entirely until at least one approved claim exists.
+        if k != "made_in_zambia" or v > 0 or filters.made_in_zambia
+    ]
+
     return FacetCounts(
+        signals=signal_buckets,
         condition=[FacetBucket(value=k, count=v) for k, v in condition_counts.items()],
         availability=[FacetBucket(value=k, count=v) for k, v in availability_counts.items()],
         rating=[FacetBucket(value=k, count=v) for k, v in rating_counts.items()],
@@ -1182,6 +1264,63 @@ def build_catalog_candidates(
     return [row for row in candidates if not row.listing.wholesale]
 
 
+def signal_input_from_candidate(row: _CatalogCandidate) -> SignalInput:
+    logistics = _listing_logistics_fields(row)
+    return SignalInput(
+        listing_id=row.listing.id,
+        product_id=row.listing.product_id,
+        vendor_id=row.listing.vendor_id,
+        price_ngwee=row.search_doc.price_min_ngwee or 0,
+        compare_at_ngwee=row.listing.compare_at_ngwee,
+        in_stock=row.in_stock,
+        stock_mode=row.listing.stock_mode,
+        stock_qty=row.listing.stock_qty,
+        fulfilment_mode=row.listing.fulfilment_mode,
+        lead_time_days=row.listing.lead_time_days,
+        created_at=parse_timestamp(row.listing.created_at),
+        rating=row.rating,
+        review_count=row.review_count,
+        lat=row.search_doc.lat,
+        lng=row.search_doc.lng,
+        delivery_available=logistics["delivery_available"],
+        vendor_preferred=bool(row.vendor.get("preferred_badge")),
+        vendor_tier=row.vendor_tier,
+        made_in_zambia=row.made_in_zambia,
+    )
+
+
+def candidate_signal_facts(
+    client: Any,
+    rows: list[_CatalogCandidate],
+    *,
+    lat: float | None = None,
+    lng: float | None = None,
+) -> dict[str, SignalFacts]:
+    """Fail-soft signal facts for catalogue candidates (zero listing re-reads)."""
+    try:
+        return facts_for_inputs(
+            client,
+            [signal_input_from_candidate(r) for r in rows],
+            user_lat=lat,
+            user_lng=lng,
+        )
+    except Exception:
+        logger.warning("catalog_signals_failed", exc_info=True)
+        return {}
+
+
+def _attach_candidate_signals(
+    client: Any,
+    rows: list[_CatalogCandidate],
+    items: list[CatalogListingItem],
+    filters: PlpFilterState,
+) -> None:
+    facts = candidate_signal_facts(client, rows, lat=filters.lat, lng=filters.lng)
+    for item in items:
+        fact = facts.get(item.id)
+        item.signals = fact.to_wire() if fact is not None else None
+
+
 def list_catalog(
     client: Any,
     filters: PlpFilterState,
@@ -1208,6 +1347,7 @@ def list_catalog(
         page_rows = [_with_distance(row, lat=filters.lat, lng=filters.lng) for row in page_rows]
 
     items = [catalog_item_from_candidate(row) for row in page_rows]
+    _attach_candidate_signals(client, page_rows, items, filters)
 
     next_cursor = encode_plp_cursor(end) if end < total else None
     return CatalogListResponse(items=items, facets=facets, total=total, next_cursor=next_cursor)
@@ -1228,6 +1368,9 @@ async def catalog_listings(
     lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
     lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
     radius_km: Annotated[float | None, Query(gt=0, le=500)] = None,
+    verified: Annotated[bool, Query()] = False,
+    deals: Annotated[bool, Query()] = False,
+    made_in_zambia: Annotated[bool, Query()] = False,
     cursor: Annotated[str | None, Query(max_length=32)] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> CatalogListResponse:
@@ -1242,6 +1385,9 @@ async def catalog_listings(
         "lat": str(lat) if lat is not None else None,
         "lng": str(lng) if lng is not None else None,
         "radius_km": str(radius_km) if radius_km is not None else None,
+        "verified": "1" if verified else None,
+        "deals": "1" if deals else None,
+        "made_in_zambia": "1" if made_in_zambia else None,
         "cursor": cursor,
         "limit": str(limit),
     }

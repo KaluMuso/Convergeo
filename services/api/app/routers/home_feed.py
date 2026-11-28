@@ -28,6 +28,7 @@ from app.services.home_feed.stream import (
     build_stream_page,
 )
 from app.services.offers.badges import listing_badges
+from app.services.signals import attach_catalog_signals
 from app.settings import get_settings
 from fastapi import APIRouter, Depends, Query, Request, Response
 
@@ -70,6 +71,15 @@ def _rate_limit(request: Request, client: Any, *, scope: str, limit: int, window
             message_key="home.errors.rate_limited",
             message="Too many home feed requests",
         )
+
+
+def _attach_signals(client: Any, listings: list[Any]) -> None:
+    """Product signals (badges / ribbon / seller count) on feed + stream cards.
+
+    Attached before the page is cached, like offer badges, so the shared cached
+    page is location-free: ``near_you`` is never computed here (no shopper point).
+    """
+    attach_catalog_signals(client, listings)
 
 
 def _attach_offer_badges(client: Any, listings: list[Any]) -> None:
@@ -132,9 +142,9 @@ async def home_feed(
         raise AppError(
             code="validation_error", message="Invalid feed cursor", http_status=422
         ) from exc
-    _attach_offer_badges(
-        supabase.client, [listing for section in page.sections for listing in section.listings]
-    )
+    _feed_listings = [listing for section in page.sections for listing in section.listings]
+    _attach_offer_badges(supabase.client, _feed_listings)
+    _attach_signals(supabase.client, _feed_listings)
 
     if user_id is None:
         set_cached_json(cache_key, page.model_dump(mode="json"), ttl_seconds=FEED_CACHE_TTL_SECONDS)
@@ -178,6 +188,7 @@ async def home_stream(
             pass
     page = build_stream_page(supabase.client, cursor=cursor, limit=limit)
     _attach_offer_badges(supabase.client, list(page.items))
+    _attach_signals(supabase.client, list(page.items))
     set_cached_json(cache_key, page.model_dump(mode="json"), ttl_seconds=FEED_CACHE_TTL_SECONDS)
     response.headers["Cache-Control"] = cache_control
     return page
