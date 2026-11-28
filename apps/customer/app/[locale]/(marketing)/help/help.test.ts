@@ -54,7 +54,7 @@ describe("help content collection", () => {
     expect(escrow?.category).toBe("escrow");
     // Real content, not a stub.
     expect(escrow?.body.length ?? 0).toBeGreaterThan(1200);
-    expect(escrow?.body.toLowerCase()).toContain("held by convergeo");
+    expect(escrow?.body.toLowerCase()).toContain("held by vergeo5");
   });
 });
 
@@ -103,9 +103,9 @@ describe("payment help copy (live MoMo + escrow)", () => {
     }
   });
 
-  it("never says the old brand name", () => {
+  it("never uses the company name in place of the public brand", () => {
     for (const article of getAllArticles()) {
-      expect(article.body, article.slug).not.toMatch(/vergeo5/i);
+      expect(article.body, article.slug).not.toMatch(/convergeo/i);
     }
   });
 });

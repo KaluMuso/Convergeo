@@ -144,7 +144,7 @@ describe("HomeHero fallback", () => {
     expect(
       screen.getByText("Shop products, services, and events across Zambia"),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Welcome to Convergeo")).not.toBeInTheDocument();
+    expect(screen.queryByText("Welcome to Vergeo5")).not.toBeInTheDocument();
     expect(
       screen.queryByText(
         "Your config-driven storefront will appear here as merchandising slots go live.",
@@ -169,7 +169,7 @@ describe("HomeHero fallback", () => {
     expect(
       screen.getByText("Shop products, services, and events across Zambia"),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Welcome to Convergeo")).not.toBeInTheDocument();
+    expect(screen.queryByText("Welcome to Vergeo5")).not.toBeInTheDocument();
   });
 });
 

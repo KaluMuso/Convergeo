@@ -1,13 +1,13 @@
 {
   "about": {
     "meta": {
-      "title": "About Convergeo",
-      "description": "Convergeo is Zambia's mobile-first marketplace for products, services and events — pay with mobile money, card, or cash on delivery."
+      "title": "About Vergeo5",
+      "description": "Vergeo5 is Zambia's mobile-first marketplace for products, services and events — pay with mobile money, card, or cash on delivery."
     },
     "hero": {
       "eyebrow": "About us",
       "headline": "Zambia's marketplace, built for trust",
-      "subhead": "Convergeo brings products, services and events into one place — with escrow on online payments and cash on delivery where offered."
+      "subhead": "Vergeo5 brings products, services and events into one place — with escrow on online payments and cash on delivery where offered."
     },
     "mission": {
       "heading": "Our mission",
@@ -17,7 +17,7 @@
       "heading": "What we stand for",
       "trust": {
         "title": "Trust first",
-        "body": "Online payments are held by Convergeo until you confirm delivery. Cash on delivery stays available on eligible orders."
+        "body": "Online payments are held by Vergeo5 until you confirm delivery. Cash on delivery stays available on eligible orders."
       },
       "local": {
         "title": "Built for Zambia",
@@ -33,7 +33,7 @@
       }
     },
     "howItWorks": {
-      "heading": "How Convergeo works",
+      "heading": "How Vergeo5 works",
       "step1": "Discover products, services and events from sellers across Zambia.",
       "step2": "Pay with MTN or Airtel mobile money, card, or cash on delivery when your order qualifies.",
       "step3": "Your order is delivered or ready for pickup.",
@@ -48,8 +48,8 @@
   },
   "contact": {
     "meta": {
-      "title": "Contact Convergeo",
-      "description": "Reach the Convergeo team on WhatsApp for the fastest reply, or send us a message and we'll get back to you by email."
+      "title": "Contact Vergeo5",
+      "description": "Reach the Vergeo5 team on WhatsApp for the fastest reply, or send us a message and we'll get back to you by email."
     },
     "hero": {
       "eyebrow": "Contact",
@@ -94,7 +94,7 @@
   "help": {
     "meta": {
       "title": "Help Centre",
-      "description": "Answers about payments, delivery, returns, tickets and selling on Convergeo."
+      "description": "Answers about payments, delivery, returns, tickets and selling on Vergeo5."
     },
     "hero": {
       "eyebrow": "Help Centre",
@@ -115,7 +115,7 @@
       "delivery": "Delivery & pickup",
       "returns": "Returns & refunds",
       "events": "Events & tickets",
-      "selling": "Selling on Convergeo",
+      "selling": "Selling on Vergeo5",
       "account": "Account & privacy"
     },
     "article": {
@@ -157,13 +157,13 @@
   },
   "beta": {
     "meta": {
-      "title": "Convergeo beta access",
-      "description": "Convergeo is in invite-only beta. Enter your invite code to get early access to Zambia's marketplace."
+      "title": "Vergeo5 beta access",
+      "description": "Vergeo5 is in invite-only beta. Enter your invite code to get early access to Zambia's marketplace."
     },
     "hero": {
       "eyebrow": "Private beta",
       "headline": "You're early",
-      "subhead": "Convergeo is in invite-only beta. Enter your invite code below to get in."
+      "subhead": "Vergeo5 is in invite-only beta. Enter your invite code below to get in."
     },
     "form": {
       "codeLabel": "Invite code",
@@ -174,7 +174,7 @@
     },
     "success": {
       "heading": "You're in!",
-      "body": "Your invite worked. Welcome to the Convergeo beta.",
+      "body": "Your invite worked. Welcome to the Vergeo5 beta.",
       "cta": "Start exploring"
     },
     "errors": {

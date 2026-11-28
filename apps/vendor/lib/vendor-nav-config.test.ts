@@ -25,6 +25,7 @@ describe("vendor-nav-config", () => {
       home: true,
       orders: true,
       listings: true,
+      source: true,
       scan: true,
       returns: true,
       analytics: true,
@@ -43,9 +44,7 @@ describe("vendor-nav-config", () => {
       coupons: false,
       extras: false,
     };
-    const keys = filterVendorNavGroups(caps).flatMap((g) =>
-      g.items.map((i) => i.key),
-    );
+    const keys = filterVendorNavGroups(caps).flatMap((g) => g.items.map((i) => i.key));
     expect(keys).not.toContain("clips");
     expect(keys).not.toContain("intake");
   });
@@ -55,6 +54,7 @@ describe("vendor-nav-config", () => {
       home: true,
       orders: true,
       listings: true,
+      source: false,
       scan: false,
       returns: false,
       analytics: false,

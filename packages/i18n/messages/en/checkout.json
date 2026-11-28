@@ -110,7 +110,7 @@
     "codStep2": "We deliver",
     "codStep3": "You pay on arrival",
     "escrowStep1": "You pay",
-    "escrowStep2": "Held by Convergeo",
+    "escrowStep2": "Held by Vergeo5",
     "escrowStep3": "Released after you confirm delivery",
     "leadTimeWhen": {
       "oneDay": "within a day",
@@ -285,7 +285,7 @@
       "payerNumber": "Paying phone: {number}",
       "escrowTitle": "How it works",
       "escrowStep1": "You pay with Mobile Money or card",
-      "escrowStep2": "Held by Convergeo",
+      "escrowStep2": "Held by Vergeo5",
       "escrowStep3": "Released after you confirm delivery",
       "consentLabel": "I agree to the Terms & Conditions and Privacy Policy",
       "consentRequired": "Tick the box to agree to the Terms, then place your order.",
@@ -309,7 +309,7 @@
       },
       "deliveryConsent": {
         "label": "Share my name, phone and address with the delivery partner to deliver this order",
-        "hint": "Optional. A licensed courier may deliver your order. Without this, Convergeo staff deliver it or call you first. Change it any time in Account → Privacy.",
+        "hint": "Optional. A licensed courier may deliver your order. Without this, Vergeo5 staff deliver it or call you first. Change it any time in Account → Privacy.",
         "saveFailed": "We couldn't save this choice. You can still place your order."
       },
       "typeProducts": "Products",
@@ -385,7 +385,7 @@
       "pendingBody": "We are waiting for Lenco to confirm. This page updates by itself.",
       "error": "Something went wrong. Check your internet and try again.",
       "widgetUnavailable": "Card payment is not working right now. Try mobile money, or try again later.",
-      "widgetLabel": "Convergeo order",
+      "widgetLabel": "Vergeo5 order",
       "secureNote": "Safe card page by Lenco, our payment partner (PCI compliant)"
     },
     "group": {
@@ -420,7 +420,7 @@
       "applying": "Checking code…",
       "remove": "Remove",
       "applied": "{code} applied: {amount} off",
-      "paidByPlatform": "Convergeo pays this discount. The shop still gets its full price.",
+      "paidByPlatform": "Vergeo5 pays this discount. The shop still gets its full price.",
       "paidByShop": "This discount is a gift from the shop.",
       "prepaidOnly": "Coupons work with mobile money or card, not cash on delivery.",
       "errors": {
@@ -448,7 +448,7 @@
       "recipientPhoneHelp": "A Zambian mobile number. We send them one message about the gift.",
       "message": "Gift message (optional)",
       "messageHelp": "Up to 200 characters. No links.",
-      "consent": "They agreed to share their phone (and address, for delivery) with Convergeo for this gift.",
+      "consent": "They agreed to share their phone (and address, for delivery) with Vergeo5 for this gift.",
       "pickupNote": "Pickup: we send the pickup PIN to them, not to you.",
       "deliveryNote": "Delivery: use their landmark in the delivery step.",
       "privacyNote": "We use their details only for this gift and delete them after it's done. Their receipt shows no prices.",

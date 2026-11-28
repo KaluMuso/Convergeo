@@ -62,6 +62,6 @@ describe("site-wide payment trust copy (live online payments)", () => {
 
   it("English footer mentions escrow or mobile money", () => {
     expect(enCommon.paymentTrust.footerPaymentNote).toMatch(/mobile money|escrow|MoMo/i);
-    expect(enCommon.paymentTrust.footerSeal).toMatch(/Held by Convergeo/i);
+    expect(enCommon.paymentTrust.footerSeal).toMatch(/Held by Vergeo5/i);
   });
 });
