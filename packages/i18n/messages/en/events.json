@@ -5,6 +5,8 @@
     "subtitle": "Discover workshops, shows, and community gatherings across Zambia.",
     "emptyTitle": "No events in this window",
     "emptyBody": "Try another date filter or check back soon for new listings.",
+    "emptyStateTitle": "No events yet",
+    "emptyStateBody": "Workshops, shows, and gatherings across Zambia will appear here as organisers publish them.",
     "soldOut": "Sold out",
     "sellingFast": "Selling fast",
     "free": "Free",
