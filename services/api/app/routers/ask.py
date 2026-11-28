@@ -10,6 +10,7 @@ from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limi
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services import busy_mode
 from app.services.analytics.search_log import log_ask_query
 from app.services.ask.cache import cache_lookup, cache_write, normalize_query
 from app.services.ask.citations import CitationRef, ValidatedAnswer, validate_citations
@@ -612,6 +613,13 @@ async def ask_vergeo(
     supabase: Annotated[Any, Depends(get_supabase_client)],
 ) -> AskResponse:
     service_client = supabase.client
+    if busy_mode.feature_paused(supabase, busy_mode.Feature.ASK_VERGEO):
+        raise AppError(
+            code="ask_unavailable",
+            message="Ask Vergeo is temporarily unavailable",
+            http_status=503,
+            details={"reason": "busy_mode"},
+        )
     _rate_limit_ask(request, service_client)
 
     current_user = await _optional_current_user(request)

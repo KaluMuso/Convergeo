@@ -6,6 +6,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../../../../lib/api-base-url", () => ({
   absoluteApiUrl: (path: string) => `https://api.example${path}`,
 }));
+const busyMode = vi.hoisted(() => ({
+  value: { level: 0, pausedFeatures: [] as string[], ready: true },
+}));
+vi.mock("../../../../../lib/use-busy-mode", () => ({
+  useBusyMode: () => busyMode.value,
+}));
 vi.mock("@vergeo/ui/src/media/cloudinary-image-static", () => ({
   CloudinaryImageStatic: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
@@ -46,6 +52,7 @@ const railsOnly = (fetcher: (url: string, init?: unknown) => unknown) =>
       : fetcher(url, init),
   );
 afterEach(() => {
+  busyMode.value = { level: 0, pausedFeatures: [], ready: true };
   cleanup();
   vi.unstubAllGlobals();
 });
@@ -58,16 +65,26 @@ describe("RelatedProductRails", () => {
         ok: true,
         json: async () => ({
           ...data,
-          same_category: [item("vendor-product"), item("current"), item("category-product")],
+          same_category: [
+            item("vendor-product"),
+            item("current"),
+            item("category-product"),
+          ],
         }),
       }),
     );
     render(<RelatedProductRails {...props} />);
     expect(screen.getByRole("status")).toHaveTextContent(labels.loading);
-    expect(await screen.findByRole("region", { name: "More from Shop" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: labels.categoryHeading })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("region", { name: "More from Shop" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: labels.categoryHeading }),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole("link")).toHaveLength(2);
-    expect(screen.getByRole("link", { name: /vendor-product/ })).toHaveAttribute(
+    expect(
+      screen.getByRole("link", { name: /vendor-product/ }),
+    ).toHaveAttribute(
       "href",
       "/en/p/vendor-product?listing=offer-vendor-product",
     );
@@ -82,7 +99,9 @@ describe("RelatedProductRails", () => {
       }),
     );
     render(<RelatedProductRails {...props} />);
-    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByRole("status")).not.toBeInTheDocument(),
+    );
     expect(screen.queryByRole("heading")).not.toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
@@ -104,7 +123,11 @@ describe("RelatedProductRails", () => {
         }),
       );
       render(<RelatedProductRails {...props} />);
-      await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(labels.unavailable));
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveTextContent(
+          labels.unavailable,
+        ),
+      );
       expect(screen.queryByRole("link")).not.toBeInTheDocument();
     },
   );
@@ -134,10 +157,14 @@ describe("RelatedProductRails", () => {
     await act(async () => {
       oldResolve({ ok: true, json: async () => data });
     });
-    expect(screen.queryByRole("heading", { name: "More from Shop" })).not.toBeInTheDocument();
-    expect(fetcher.mock.calls.some(([url]) => String(url).includes("listing_id=second"))).toBe(
-      true,
-    );
+    expect(
+      screen.queryByRole("heading", { name: "More from Shop" }),
+    ).not.toBeInTheDocument();
+    expect(
+      fetcher.mock.calls.some(([url]) =>
+        String(url).includes("listing_id=second"),
+      ),
+    ).toBe(true);
     expect(routed).toHaveBeenCalled();
   });
   it("hides already rendered cards while a new seller request is pending", async () => {
@@ -185,7 +212,9 @@ describe("RelatedProductRails", () => {
     expect(
       await screen.findByRole("region", { name: "Similar in this category" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "More from this store" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "More from this store" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(labels.loading)).not.toBeInTheDocument();
   });
 
@@ -216,12 +245,33 @@ describe("RelatedProductRails", () => {
         }}
       />,
     );
-    expect(await screen.findByRole("region", { name: "More from this store" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Similar in this category" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("region", { name: "More from this store" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Similar in this category" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /store-item/ })).toHaveAttribute(
       "href",
       "/en/p/store-item?listing=offer-store-item",
     );
-    expect(fetcher.mock.calls.some(([url]) => String(url).includes("related-rails"))).toBe(false);
+    expect(
+      fetcher.mock.calls.some(([url]) => String(url).includes("related-rails")),
+    ).toBe(false);
+  });
+
+  it("renders nothing and makes no API calls when busy mode pauses rails", () => {
+    busyMode.value = {
+      level: 2,
+      pausedFeatures: ["recommendation_rails"],
+      ready: true,
+    };
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    const { container } = render(
+      <RelatedProductRails {...props} labels={labels} />,
+    );
+    expect(container).toBeEmptyDOMElement();
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });

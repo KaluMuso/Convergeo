@@ -5,6 +5,7 @@ from typing import Annotated, Any
 
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.deps import get_supabase_client
+from app.services import busy_mode
 from app.services.business.access import BusinessAccess, get_business_access
 from app.services.offers.badges import listing_badges, product_badges
 from app.services.search import SearchResponse, SuggestResponse, run_search, run_suggest
@@ -135,6 +136,8 @@ async def suggest(
     kind: Annotated[SearchKind | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=20)] = 8,
 ) -> SuggestResponse:
+    if busy_mode.feature_paused(supabase, busy_mode.Feature.SEARCH_SUGGEST):
+        return SuggestResponse(query=q.strip(), suggestions=[])
     return run_suggest(
         supabase.client,
         query=q,

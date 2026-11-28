@@ -3,6 +3,9 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { isPaused } from "../../../../lib/busy-mode";
+import { useBusyMode } from "../../../../lib/use-busy-mode";
+
 import { ClipCard } from "./clip-card";
 import { DataSaverToggle } from "./data-saver-toggle";
 import { FeedEmpty, FeedError, FeedSkeleton } from "./feed-states";
@@ -61,6 +64,8 @@ export function ClipsFeed({
   // first frame to guess "off" — and guessing "off" spends someone's bundle.
   const [dataSaverOn, setDataSaverOn] = useState(true);
   const [connection, setConnection] = useState<ConnectionKind>("unknown");
+  // Busy mode (light+) behaves like data saver: no autoplay, smaller renditions.
+  const busyMode = useBusyMode();
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const [inViewId, setInViewId] = useState<string | null>(initialItems[0]?.id ?? null);
@@ -150,7 +155,8 @@ export function ClipsFeed({
     [items, inViewId],
   );
 
-  const rendition = preferredRendition(dataSaverOn, connection);
+  const saverEffective = dataSaverOn || isPaused(busyMode, "clips_autoplay");
+  const rendition = preferredRendition(saverEffective, connection);
   const playingClip = useMemo(
     () => items.find((clip) => clip.id === playingId) ?? null,
     [items, playingId],
@@ -189,14 +195,14 @@ export function ClipsFeed({
     }
     const allowed = mayAutoplay({
       connection,
-      dataSaverOn,
+      dataSaverOn: saverEffective,
       prefersReducedMotion,
       inView: true,
     });
     if (allowed) {
       setPlayingId(inViewId);
     }
-  }, [inViewId, playingId, connection, dataSaverOn, prefersReducedMotion]);
+  }, [inViewId, playingId, connection, saverEffective, prefersReducedMotion]);
 
   const onPlay = useCallback((clipId: string) => {
     setFailedId(null);
@@ -309,7 +315,7 @@ export function ClipsFeed({
             playsInline
             muted
             controls
-            preload={preloadMode(dataSaverOn, connection)}
+            preload={preloadMode(saverEffective, connection)}
             poster={playingClip.poster_url ?? undefined}
             onEnded={onStop}
             onError={() => {

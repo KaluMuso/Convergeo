@@ -12,7 +12,8 @@ type ConfigPageShellProps = {
     | "platform"
     | "flags"
     | "categories"
-    | "vendor-plans";
+    | "vendor-plans"
+    | "busy-mode";
   titleKey: string;
   subtitleKey: string;
   children: React.ReactNode;
@@ -26,6 +27,7 @@ const TABS = [
   { slug: "flags", key: "flags" },
   { slug: "categories", key: "categories" },
   { slug: "vendor-plans", key: "vendorPlans" },
+  { slug: "busy-mode", key: "busyMode" },
 ] as const;
 
 export async function ConfigPageShell({
