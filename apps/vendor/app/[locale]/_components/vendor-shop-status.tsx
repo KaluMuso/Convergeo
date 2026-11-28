@@ -7,12 +7,15 @@ type VendorShopStatusCardProps = {
   shopLive: boolean;
   idVerified: boolean;
   payoutSet: boolean | null;
+  /** Pilot: payouts screen is informational only. */
+  payoutsEnabled?: boolean;
 };
 
 export function VendorShopStatusCard({
   shopLive,
   idVerified,
   payoutSet,
+  payoutsEnabled = true,
 }: VendorShopStatusCardProps) {
   const t = useTranslations("vendor");
   return (
@@ -41,8 +44,10 @@ export function VendorShopStatusCard({
         </li>
         <li className="flex items-center justify-between gap-2 text-sm">
           <span className="text-text-2">{t("home.shopStatus.payoutSet")}</span>
-          {payoutSet === null ? (
-            <span className="text-xs text-text-3">—</span>
+          {!payoutsEnabled ? (
+            <StatusChip tone="info" label={t("home.shopStatus.payoutsStartSoon")} />
+          ) : payoutSet === null ? (
+            <span className="text-sm text-text-3">—</span>
           ) : (
             <StatusChip
               tone={payoutSet ? "success" : "warning"}

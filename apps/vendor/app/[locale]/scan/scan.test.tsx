@@ -11,6 +11,7 @@ import vendorMessages from "../../../../../packages/i18n/messages/en/vendor.json
 
 const verifyQrMock = vi.fn();
 const verifyPinMock = vi.fn();
+const listReadyForPickupMock = vi.fn().mockResolvedValue([]);
 
 vi.mock("@vergeo/auth/use-session", () => ({
   useSession: () => ({
@@ -24,6 +25,7 @@ vi.mock("./_lib/pickup-client", () => ({
   createPickupClient: () => ({
     verifyQr: verifyQrMock,
     verifyPin: verifyPinMock,
+    listReadyForPickup: listReadyForPickupMock,
   }),
 }));
 
@@ -63,7 +65,7 @@ function mockCameraDenied(): void {
 }
 
 async function submitPin(orderId: string, pin: string): Promise<void> {
-  fireEvent.change(screen.getByLabelText(/Order ID/i), { target: { value: orderId } });
+  fireEvent.change(screen.getByLabelText(/Order code/i), { target: { value: orderId } });
   fireEvent.change(screen.getByLabelText(/6-digit PIN/i), { target: { value: pin } });
   await userEvent.setup().click(screen.getByRole("button", { name: /Verify pickup/i }));
 }
@@ -108,6 +110,36 @@ describe("recent verifications storage", () => {
 });
 
 describe("ScanView flows", () => {
+  it("resolves an 8-character order code before verifying PIN", async () => {
+    listReadyForPickupMock.mockResolvedValue([
+      {
+        id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        preview_title: "Blue shirt",
+        status: "ready",
+        fulfilment: "pickup",
+      },
+    ]);
+    verifyPinMock.mockResolvedValue({
+      order_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      from_status: "ready",
+      to_status: "delivered",
+      event: "verify_pickup",
+      token_version: 1,
+    });
+
+    render(<ScanView />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("scan-pin-fallback")).toBeInTheDocument();
+    });
+
+    await submitPin("AAAAAAAA", "123456");
+
+    await waitFor(() => {
+      expect(verifyPinMock).toHaveBeenCalledWith("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "123456");
+    });
+  });
+
   it("PIN fallback verifies pickup successfully", async () => {
     verifyPinMock.mockResolvedValue({
       order_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
