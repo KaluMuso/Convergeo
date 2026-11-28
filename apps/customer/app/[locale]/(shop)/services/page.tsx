@@ -179,6 +179,8 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
       "tech-services": t("categories.tech-services"),
       cleaning: t("categories.cleaning"),
       tailoring: t("categories.tailoring"),
+      logistics: t("categories.logistics"),
+      packaging: t("categories.packaging"),
     },
   };
 

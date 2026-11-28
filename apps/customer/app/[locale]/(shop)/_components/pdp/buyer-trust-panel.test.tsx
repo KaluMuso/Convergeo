@@ -23,20 +23,15 @@ describe("BuyerTrustPanel", () => {
         logisticsPillLabels={pillLabels}
         returnsLabel="Returns & refunds"
         returnsHref="/en/legal/returns"
-        escrowLabel="When online payment is available, Convergeo holds your money until delivery."
+        escrowLabel="When online payment is available, Vergeo5 holds your money until delivery."
       />,
     );
 
-    expect(screen.getByTestId("pdp-trust-seller")).toHaveTextContent(
-      "Preferred seller",
-    );
+    expect(screen.getByTestId("pdp-trust-seller")).toHaveTextContent("Preferred seller");
     expect(screen.getByTestId("pdp-trust-escrow")).toHaveTextContent(
       "When online payment is available",
     );
-    expect(screen.getByTestId("pdp-trust-returns")).toHaveAttribute(
-      "href",
-      "/en/legal/returns",
-    );
+    expect(screen.getByTestId("pdp-trust-returns")).toHaveAttribute("href", "/en/legal/returns");
     expect(screen.queryByTestId("pdp-trust-logistics")).not.toBeInTheDocument();
   });
 

@@ -29,6 +29,8 @@ export type AdminNavItemKey =
   | "inventory"
   | "coupons"
   | "extras"
+  | "importRequests"
+  | "madeInZambia"
   | "trials"
   | "askAudit";
 
@@ -81,6 +83,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "inventory", href: "inventory" },
       { key: "coupons", href: "coupons" },
       { key: "extras", href: "extras" },
+      { key: "importRequests", href: "import-requests" },
+      { key: "madeInZambia", href: "made-in-zambia" },
       { key: "trials", href: "trials" },
     ],
   },

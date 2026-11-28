@@ -26,7 +26,7 @@ export const TEST_LABELS: MegaMenuLabels = {
   services: "Services",
   events: "Events",
   deals: "Deals",
-  sell: "Sell on Convergeo",
+  sell: "Sell on Vergeo5",
   helpSettings: "Help & settings",
   account: "Your account",
   orders: "Your orders",

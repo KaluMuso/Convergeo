@@ -55,7 +55,7 @@ describe("MobileDrawer", () => {
     expect(within(main).getByRole("button", { name: "Services" })).toBeInTheDocument();
     expect(within(main).getByRole("button", { name: "Events" })).toBeInTheDocument();
     expect(within(main).getByRole("link", { name: "Deals" })).toHaveAttribute("href", "/en/deals");
-    expect(within(main).getByRole("link", { name: "Sell on Convergeo" })).toHaveAttribute(
+    expect(within(main).getByRole("link", { name: "Sell on Vergeo5" })).toHaveAttribute(
       "href",
       "/en/sell",
     );

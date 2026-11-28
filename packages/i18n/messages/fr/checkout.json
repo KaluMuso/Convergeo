@@ -381,7 +381,7 @@
       "pendingBody": "Nous attendons la confirmation de Lenco. Cette page se met à jour toute seule.",
       "error": "Un problème est survenu. Vérifiez votre connexion et réessayez.",
       "widgetUnavailable": "Le paiement par carte ne fonctionne pas pour le moment. Essayez le mobile money ou réessayez plus tard.",
-      "widgetLabel": "Commande Convergeo",
+      "widgetLabel": "Commande Vergeo5",
       "secureNote": "Page de carte sécurisée par Lenco, notre partenaire de paiement (conforme PCI)"
     },
     "tickets": {
@@ -394,7 +394,7 @@
       "applying": "Vérification…",
       "remove": "Retirer",
       "applied": "{code} appliqué : {amount} de remise",
-      "paidByPlatform": "Convergeo paie cette remise. La boutique reçoit son prix complet.",
+      "paidByPlatform": "Vergeo5 paie cette remise. La boutique reçoit son prix complet.",
       "paidByShop": "Cette remise est offerte par la boutique.",
       "prepaidOnly": "Les coupons fonctionnent avec le mobile money ou la carte, pas le paiement à la livraison.",
       "errors": {
@@ -422,7 +422,7 @@
       "recipientPhoneHelp": "Un numéro mobile zambien. Nous lui envoyons un seul message à propos du cadeau.",
       "message": "Message (facultatif)",
       "messageHelp": "200 caractères maximum. Pas de liens.",
-      "consent": "Cette personne a accepté de partager son téléphone (et son adresse, pour la livraison) avec Convergeo pour ce cadeau.",
+      "consent": "Cette personne a accepté de partager son téléphone (et son adresse, pour la livraison) avec Vergeo5 pour ce cadeau.",
       "pickupNote": "Retrait : nous lui envoyons le code PIN de retrait, pas à vous.",
       "deliveryNote": "Livraison : indiquez son repère à l'étape de livraison.",
       "privacyNote": "Ses données servent uniquement à ce cadeau et sont supprimées ensuite. Son reçu n'affiche aucun prix.",
