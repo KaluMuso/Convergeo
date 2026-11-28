@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from tests import test_home_feed as _base
 from tests.test_home_feed import ADMIN_ID, CUSTOMER_ID, FakeClient, _login
@@ -16,7 +19,9 @@ OTHER = "cccccccc-0000-4000-8000-000000000003"
 BASE = "/admin/catalog/taxonomy"
 
 
-def _row(node_id: str, slug: str, parent: str | None, position: int, **extra: object) -> dict:
+def _row(
+    node_id: str, slug: str, parent: str | None, position: int, **extra: object
+) -> dict[str, object]:
     return {
         "id": node_id,
         "slug": slug,
@@ -270,7 +275,8 @@ def test_image_sign_scopes_folder_and_caps_size(
     from app.settings import Settings, get_settings
 
     headers = _admin(monkeypatch)
-    http.app.dependency_overrides[get_settings] = lambda: _FakeSettings()  # type: ignore[assignment]
+    app = cast(FastAPI, http.app)
+    app.dependency_overrides[get_settings] = lambda: _FakeSettings()
     try:
         too_big = http.post(
             f"{BASE}/image/sign",
@@ -283,7 +289,7 @@ def test_image_sign_scopes_folder_and_caps_size(
         assert ok.json()["folder"] == "taxonomy/event"
         assert "api_secret" not in ok.text
     finally:
-        http.app.dependency_overrides.pop(get_settings, None)
+        app.dependency_overrides.pop(get_settings, None)
     _ = Settings
 
 
