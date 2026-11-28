@@ -10,14 +10,13 @@
 import { buildAbsoluteUrl, buildLocaleCanonical, getSiteUrl } from "@vergeo/ui/src/seo/json-ld";
 
 import { coerceSitemapId, sitemapLocales, SITEMAP_STATIC_SEGMENTS } from "./sitemap-eligibility";
+import { fetchEventSitemapSlugs } from "./sitemap-events";
 import {
   fetchCategorySitemapEntries,
   fetchProductSitemapSlugs,
   fetchServiceSitemapSlugs,
   fetchVendorSitemapSlugs,
 } from "./sitemap-sources";
-
-import { fetchEventSitemapSlugs } from "./sitemap-events";
 
 import type { MetadataRoute } from "next";
 
