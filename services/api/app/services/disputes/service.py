@@ -407,8 +407,10 @@ def resolve(
     # leaves the dispute in `under_review` and re-drivable — not stuck resolved-but-
     # unpaid. Pre-check the guard here (transition_dispute re-checks + optimistic-locks
     # on commit); execute_refund threads this idempotency_key into post_transaction +
-    # the payout reference and is backstopped by the refunds(order_id) partial unique
-    # index (0032), so a retry collapses to one ledger drain + one payout.
+    # the payout reference and is backstopped by the refunds(source_key) partial unique
+    # index (0065; the per-order unique index of 0032 was dropped), so a retry collapses
+    # to one ledger drain + one payout. Distinct refunds on one order are bounded by the
+    # cumulative paid-amount cap enforced inside execute_refund.
     if (
         resolve_transition(from_status=snapshot.status, event=event, actor_role=ActorRole.ADMIN)
         is None

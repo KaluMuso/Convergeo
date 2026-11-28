@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import logging
 import os
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -422,6 +423,18 @@ def render_email_html(
     return subject, wrapped, subject_key, body_key
 
 
+_RESEND_TAG_INVALID = re.compile(r"[^A-Za-z0-9_-]")
+
+
+def _resend_tag_value(value: str) -> str:
+    """Resend tag names/values allow only ASCII letters, digits, underscore and dash.
+
+    i18n keys like ``notifications.email.kyc.approved.subject`` contain dots and make
+    Resend answer 422 validation_error, so map every other character to ``_``.
+    """
+    return _RESEND_TAG_INVALID.sub("_", value)[:256] or "unknown"
+
+
 def _map_resend_error(status_code: int) -> FailureKind:
     if status_code in {400, 401, 403, 404, 422}:
         return FailureKind.PERMANENT
@@ -516,9 +529,12 @@ class ResendEmailAdapter:
                     "subject": subject,
                     "html": html_body,
                     "tags": [
-                        {"name": "template", "value": message.template or "payment_receipt"},
-                        {"name": "subject_key", "value": subject_key},
-                        {"name": "body_key", "value": body_key},
+                        {
+                            "name": "template",
+                            "value": _resend_tag_value(message.template or "payment_receipt"),
+                        },
+                        {"name": "subject_key", "value": _resend_tag_value(subject_key)},
+                        {"name": "body_key", "value": _resend_tag_value(body_key)},
                     ],
                 },
             )
