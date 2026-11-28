@@ -266,6 +266,8 @@ export function HeroCarousel({
         color: "var(--panel-text)",
         isolation: "isolate",
         background: "var(--panel)",
+        // Keep slide CTAs above the absolutely positioned dot pill on narrow viewports.
+        ["--hero-dots-clearance" as string]: total > 1 ? "3rem" : "0px",
       }}
     >
       <div
