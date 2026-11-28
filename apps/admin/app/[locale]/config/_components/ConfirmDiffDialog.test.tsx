@@ -34,11 +34,11 @@ describe("ConfirmDiffDialog", () => {
         />,
       ),
     );
-    const dialog = container.querySelector('[role="dialog"]')!;
+    const dialog = document.body.querySelector('[role="dialog"]')!;
     expect(dialog.getAttribute("aria-modal")).toBe("true");
-    expect(dialog.className).toContain("v-glass");
-    expect(dialog.className).toContain("v-glass--overlay");
-    // The opaque surface utilities are gone: they would fight the translucent glass tint.
-    expect(dialog.className).not.toContain("bg-surface");
+    expect(dialog.className).toContain("v-glass-scrim");
+    const panel = dialog.querySelector(".v-glass--overlay");
+    expect(panel).toBeTruthy();
+    expect(panel?.className).not.toContain("bg-surface");
   });
 });
