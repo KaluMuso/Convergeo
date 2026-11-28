@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const nav = vi.hoisted(() => ({ pathname: "/en", push: vi.fn() }));
@@ -28,6 +28,7 @@ const labels = {
   voiceStop: "Stop listening",
   listening: "Listening…",
   voiceUnsupported: "Voice input isn't supported",
+  voiceDenied: "Microphone is blocked",
   close: "Close",
   showFooter: "Show site links",
   hideFooter: "Hide site links",
@@ -104,6 +105,31 @@ describe("FloatingActions", () => {
       "aria-pressed",
       "true",
     );
+  });
+
+  it("shows a message instead of silence when the microphone is blocked", () => {
+    nav.pathname = "/en/c/all";
+    const created: Array<{ onerror: ((e: { error: string }) => void) | null }> = [];
+    class FakeRecognition {
+      lang = "";
+      interimResults = false;
+      continuous = false;
+      onresult = null;
+      onend = null;
+      onerror: ((e: { error: string }) => void) | null = null;
+      start = vi.fn();
+      stop = vi.fn();
+      constructor() {
+        created.push(this);
+      }
+    }
+    (window as unknown as { webkitSpeechRecognition: unknown }).webkitSpeechRecognition =
+      FakeRecognition;
+    render(<FloatingActions locale="en" labels={labels} footer={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Ask Vergeo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speak your question" }));
+    act(() => created[0]?.onerror?.({ error: "not-allowed" }));
+    expect(screen.getByTestId("fab-voice-denied")).toHaveTextContent("Microphone is blocked");
   });
 
   it("explains when voice input is unavailable", () => {

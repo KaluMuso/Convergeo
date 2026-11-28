@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { getVendorLoginUrl } from "./vendor-app";
+import { getVendorJoinUrl, getVendorLoginUrl } from "./vendor-app";
 
 type PitchTranslator = {
   (key: string, values?: Record<string, string | number>): string;
@@ -16,6 +16,7 @@ const BUTTON_CLASS =
 
 export function Cta({ locale, t }: CtaProps) {
   const loginUrl = getVendorLoginUrl(locale);
+  const joinUrl = getVendorJoinUrl(locale);
 
   return (
     <section aria-labelledby="cta-heading" className="border-t border-border bg-bg px-4 py-12">
@@ -24,19 +25,16 @@ export function Cta({ locale, t }: CtaProps) {
           {t("cta.heading")}
         </h2>
         <p className="text-body text-text-2">{t("cta.body")}</p>
-        <p className="text-sm font-medium text-text-2" data-testid="sell-invite-only-notice">
-          {t("inviteOnlyNotice")}
-        </p>
-        <Link className={BUTTON_CLASS} data-testid="vendor-signup-cta" href={loginUrl}>
+        <Link className={BUTTON_CLASS} data-testid="vendor-signup-cta" href={joinUrl}>
           {t("cta.button")}
         </Link>
         <p className="text-sm text-text-2">
           <a
             className="font-medium text-primary underline-offset-2 hover:underline"
-            data-testid="vendor-cta-invite-signin-link"
+            data-testid="vendor-cta-signin-link"
             href={loginUrl}
           >
-            {t("cta.haveInviteSignIn")}
+            {t("cta.haveAccountSignIn")}
           </a>
         </p>
       </div>
