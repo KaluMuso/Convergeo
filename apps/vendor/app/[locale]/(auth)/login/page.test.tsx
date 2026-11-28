@@ -89,7 +89,7 @@ describe("vendor login page", () => {
     );
   });
 
-  it("renders no signup link", async () => {
+  it("links new sellers to self-serve sign-up (no invite needed)", async () => {
     render(
       await VendorLoginPage({
         params: Promise.resolve({ locale: "en" }),
@@ -97,8 +97,9 @@ describe("vendor login page", () => {
       }),
     );
 
-    expect(
-      screen.queryByRole("link", { name: /create an account|sign up/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /create a seller account/i })).toHaveAttribute(
+      "href",
+      "/en/signup",
+    );
   });
 });

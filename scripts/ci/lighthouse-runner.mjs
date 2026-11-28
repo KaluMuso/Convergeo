@@ -878,8 +878,19 @@ export async function runPerformance(
             run: run + 1,
             ...result.contentReadiness,
           });
-          if (result.contentReadiness?.passed !== true)
+          if (result.contentReadiness?.passed !== true) {
+            // Log-only diagnostic: the readiness report is otherwise only in
+            // the uploaded artifact. Bounded, no thresholds touched.
+            console.error(
+              "content-readiness-diagnostic: " +
+                JSON.stringify({
+                  url,
+                  run: run + 1,
+                  ...result.contentReadiness,
+                }).slice(0, 4000),
+            );
             throw new Error("Measured content readiness failed");
+          }
         }
       } catch (error) {
         errors.push({ url, run: run + 1, message: error.message });

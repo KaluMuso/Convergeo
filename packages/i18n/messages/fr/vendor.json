@@ -52,21 +52,19 @@
   "vendor.listings.count": "{count, plural, one {# annonce} other {# annonces}}",
   "vendor.payout.pending": "Versement en attente : {amount}",
   "pitch": {
-    "signupUnavailable": "L'inscription publique des vendeurs n'est pas ouverte. L'onboarding vendeur est sur invitation pendant la bêta concierge — contactez Convergeo si vous avez été invité.",
-    "inviteOnlyNotice": "Bêta vendeur sur invitation. La vente en libre-service publique n'est pas encore ouverte. Les vendeurs invités peuvent poursuivre l'onboarding avec le lien reçu.",
     "meta": {
-      "title": "Vendez sur Convergeo — bêta vendeur sur invitation",
-      "description": "L'accueil des vendeurs Convergeo se fait sur invitation/concierge pendant le pilote. Découvrez les commissions et la vérification — l'inscription libre n'est pas encore ouverte."
+      "title": "Vendre sur Convergeo — ouvrez votre boutique",
+      "description": "Créez un compte vendeur gratuit, vérifiez votre identité et commencez à publier sur Convergeo. Découvrez les commissions et la vérification avant de vous inscrire."
     },
     "hero": {
-      "eyebrow": "Bêta vendeur sur invitation",
+      "eyebrow": "Vendre sur Convergeo",
       "headline": "Publication gratuite.",
       "headlineEmphasis": "Payez seulement quand vous vendez.",
       "subheadline": "Touchez des acheteurs dans toute la Zambie avec des produits, services, événements, fournitures et votre profil professionnel — le tout depuis une seule application vendeur.",
-      "primaryCta": "Continuer l'invitation vendeur",
+      "primaryCta": "Commencer à vendre — créer un compte",
       "secondaryCta": "Voir les commissions",
       "existingSellerCta": "Already selling? Open vendor portal",
-      "freeTierNote": "Les vendeurs invités obtiennent l'offre gratuite (jusqu'à 30 annonces) après approbation. L'inscription publique n'est pas ouverte."
+      "freeTierNote": "Les vendeurs bénéficient de l'offre gratuite (jusqu'à 30 annonces) une fois leur identité vérifiée et approuvée."
     },
     "valueProps": {
       "heading": "Cinq façons de vous développer",
@@ -160,7 +158,7 @@
     "payout": {
       "heading": "Versements en ligne : bientôt disponibles",
       "promise": "Pendant le pilote, les clients paient en espèces à la livraison.",
-      "body": "Les versements par mobile money et la protection des acheteurs arrivent bientôt. D'ici là, les commandes sont payées en espèces à la livraison, et nous confirmerons les modalités de règlement avec chaque vendeur invité."
+      "body": "Les paiements des clients sont conservés sous séquestre jusqu'à la livraison. Les versements vers votre numéro Mobile Money arrivent bientôt ; d'ici là, nous confirmerons les détails de règlement avec chaque vendeur."
     },
     "faq": {
       "heading": "Questions fréquentes",
@@ -171,7 +169,7 @@
         },
         "payout": {
           "question": "Quand suis-je payé ?",
-          "answer": "Pendant le pilote, les clients paient en espèces à la livraison. Les versements en ligne arrivent bientôt — nous confirmerons le calendrier avec chaque vendeur invité."
+          "answer": "Les clients paient par Mobile Money, carte ou paiement à la livraison. Les versements en ligne arrivent bientôt — nous confirmerons le calendrier avec chaque vendeur."
         },
         "whatCanISell": {
           "question": "Que puis-je vendre ?",
@@ -184,21 +182,21 @@
       }
     },
     "cta": {
-      "heading": "Invité à vendre sur Convergeo ?",
-      "body": "L'accueil des vendeurs se fait sur invitation/concierge pendant le pilote. Si vous avez une invitation, continuez ci-dessous — les outils de publication ne se débloquent qu'après approbation par l'administrateur.",
-      "button": "Continuer l'invitation vendeur",
+      "heading": "Prêt à vendre sur Convergeo ?",
+      "body": "Créez votre compte vendeur, vérifiez votre identité et commencez à publier dès votre approbation. Les outils d'annonces ne se débloquent qu'après l'approbation par un administrateur.",
+      "button": "Créer un compte vendeur",
       "loadingLabel": "Ouverture de l'onboarding invitation",
-      "haveInviteSignIn": "J'ai une invitation — me connecter"
+      "haveAccountSignIn": "Vous avez déjà un compte vendeur ? Connectez-vous"
     }
   },
   "onboarding": {
     "meta": {
-      "title": "Onboarding invitation vendeur — Convergeo",
-      "description": "Complétez votre candidature vendeur sur invitation et vérifiez votre identité. Les annonces restent verrouillées jusqu'à l'approbation de l'administrateur."
+      "title": "Inscription vendeur — Convergeo",
+      "description": "Terminez votre candidature vendeur et vérifiez votre identité. Les annonces restent verrouillées jusqu'à l'approbation par un administrateur."
     },
     "invite": {
-      "eyebrow": "Vous êtes invité",
-      "body": "Vous terminez une candidature vendeur sur invitation. Catalogue, versements et tableau de bord restent verrouillés tant que Convergeo n'a pas vérifié votre identité et accordé l'accès vendeur."
+      "eyebrow": "Terminez votre candidature vendeur",
+      "body": "Catalogue, versements et tableau de bord restent verrouillés tant que Convergeo n'a pas vérifié votre identité et accordé l'accès vendeur."
     },
     "steps": {
       "business": "Entreprise",

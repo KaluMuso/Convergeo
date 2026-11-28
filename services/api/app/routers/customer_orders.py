@@ -8,6 +8,7 @@ from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.listings.variants import snapshot_options
 from app.services.order_item_titles import display_title, resolve_missing_titles
+from app.services.pickup.tokens import derive_pin, verify_pin
 from app.services.refunds.constants import AWAITING_PROVIDER_STATUSES
 from fastapi import APIRouter, Depends
 from pydantic import Field
@@ -530,23 +531,31 @@ def _load_pickup_credentials(
         # The recipient collects; the payer never sees the PIN or QR.
         return PickupCredentialsOut(stub=False, sent_to_recipient=True)
 
-    # M09-P03 fields — read when present; stub gracefully when unmerged.
+    # Issued by services.pickup.issue: the signed QR token and the PIN hash live
+    # in pickup_qr_secret / pickup_pin_hash. The PIN is re-derived server-side and
+    # shown only if it matches the stored hash (older random PINs stay hidden and
+    # arrive by WhatsApp/SMS only).
     qr_token: str | None = None
     pin: str | None = None
     try:
         extended = (
             service_client.client.table("orders")
-            .select("pickup_qr_token, pickup_pin")
+            .select("pickup_qr_secret, pickup_pin_hash, pickup_token_version")
             .eq("id", str(order_row["id"]))
             .maybe_single()
             .execute()
         )
         row = _single_row(extended)
         if isinstance(row, dict):
-            raw_qr = row.get("pickup_qr_token")
-            raw_pin = row.get("pickup_pin")
+            raw_qr = row.get("pickup_qr_secret")
             qr_token = str(raw_qr) if isinstance(raw_qr, str) and raw_qr.strip() else None
-            pin = str(raw_pin) if isinstance(raw_pin, str) and raw_pin.strip() else None
+            raw_hash = row.get("pickup_pin_hash")
+            version = int(row.get("pickup_token_version") or 0)
+            if isinstance(raw_hash, str) and raw_hash and version >= 1:
+                order_id = str(order_row["id"])
+                candidate = derive_pin(order_id=order_id, version=version)
+                if verify_pin(pin=candidate, order_id=order_id, pin_hash=raw_hash):
+                    pin = candidate
     except Exception:
         qr_token = None
         pin = None

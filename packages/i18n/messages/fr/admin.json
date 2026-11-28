@@ -53,7 +53,8 @@
     "coupons": "Coupons",
     "branches": "Vérification des succursales",
     "extras": "Demandes d'options",
-    "trials": "Essais gratuits"
+    "trials": "Essais gratuits",
+    "askAudit": "Audit Ask Vergeo"
   },
   "boards": {
     "states": {
@@ -1923,5 +1924,55 @@
       "notLater": "La nouvelle fin doit être postérieure à l'actuelle.",
       "alreadyEnded": "Cet essai est déjà terminé."
     }
+  },
+  "askAudit": {
+    "title": "Audit Ask Vergeo",
+    "subtitle": "Chaque réponse d'Ask Vergeo montrée aux clients, comparée aux prix, annonces et vendeurs réels. Ouvrez l'annonce et le vendeur pour enquêter et le contacter.",
+    "filters": {
+      "label": "Filtres",
+      "flaggedOnly": "Signalées uniquement",
+      "severity": "Gravité",
+      "severityAll": "Toutes les gravités"
+    },
+    "severity": {
+      "critical": "Critique",
+      "warning": "Avertissement",
+      "info": "Info"
+    },
+    "status": {
+      "pending": "En attente d'audit",
+      "passed": "Conforme",
+      "flagged": "Signalée",
+      "error": "Échec de l'audit"
+    },
+    "asker": {
+      "customer": "Client connecté",
+      "guest": "Invité"
+    },
+    "question": "Question",
+    "answer": "Réponse affichée",
+    "findings": "Constats",
+    "citedItems": "Articles cités",
+    "viewItem": "Voir l'annonce",
+    "viewVendor": "Voir le vendeur {vendor}",
+    "vendor": "Vendeur",
+    "rules": {
+      "entity_missing": "L'article cité n'existe pas",
+      "entity_inactive": "L'article cité n'est pas en ligne",
+      "vendor_inactive": "Le vendeur n'est pas actif",
+      "vendor_mismatch": "Mauvais vendeur",
+      "price_mismatch": "Prix différent de l'annonce",
+      "price_below_category_floor": "Prix sous le plancher de la catégorie",
+      "price_far_below_median": "Prix très inférieur à la médiane de la catégorie",
+      "price_far_above_median": "Prix très supérieur à la médiane de la catégorie",
+      "text_price_unsupported": "Prix de la réponse absent des articles cités"
+    },
+    "loading": "Chargement des réponses…",
+    "error": "Impossible de charger le journal des réponses.",
+    "permissionDenied": "Seuls les administrateurs peuvent consulter l'audit Ask Vergeo.",
+    "retry": "Réessayer",
+    "empty": "Aucune réponse enregistrée.",
+    "emptyFlagged": "Aucune réponse signalée. Décochez « Signalées uniquement » pour tout voir.",
+    "loadMore": "Charger plus"
   }
 }
