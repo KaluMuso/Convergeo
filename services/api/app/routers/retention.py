@@ -9,6 +9,7 @@ follows are ``vendor_follows``.
 from __future__ import annotations
 
 import re
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
@@ -20,6 +21,7 @@ from app.core.ratelimit_policies import (
     STANDARD_WRITE,
     RateLimitPolicy,
 )
+from app.core.ttl_cache import get_cached_json, set_cached_json
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.catalog import (
@@ -437,22 +439,72 @@ def live_deals(client: Any, *, now: datetime, limit: int) -> list[DealOut]:
     return out
 
 
-@router.get("/deals", response_model=DealsOut)
-def list_deals(
-    request: Request,
-    supabase: Annotated[Any, Depends(get_supabase_client)],
-    limit: Annotated[int, Query(ge=1, le=48)] = 24,
-) -> DealsOut:
+DEALS_CACHE_TTL_SECONDS = 20
+DEALS_CACHE_KEY_PREFIX = "retention:deals:v1:"
+PUBLIC_DEALS_CACHE_CONTROL = "public, s-maxage=15, stale-while-revalidate=30"
+
+
+def _still_live(item: dict[str, Any], now: datetime) -> bool:
     try:
-        _limit(supabase.client, PUBLIC_DISCOVERY_READ, get_client_ip(request))
+        return datetime.fromisoformat(str(item["ends_at"])) > now
+    except (KeyError, ValueError):
+        return False
+
+
+def _cached_live_deals(client: Any, *, now: datetime, limit: int) -> list[DealOut]:
+    """Anonymous, identical-for-everyone deals list memoised for a short TTL.
+
+    A miss costs the flash_deals query plus the catalogue candidate seam (itself
+    cached but expensive to rehydrate); a hit is one cache read. Deals that
+    expired inside the TTL are dropped at read time.
+    """
+    key = f"{DEALS_CACHE_KEY_PREFIX}{limit}"
+    cached = get_cached_json(key)
+    if isinstance(cached, list):
+        try:
+            return [
+                DealOut.model_validate(item)
+                for item in cached
+                if isinstance(item, dict) and _still_live(item, now)
+            ]
+        except Exception:  # noqa: BLE001 — corrupt cache entry falls through to a rebuild.
+            pass
+    deals = live_deals(client, now=now, limit=limit)
+    set_cached_json(
+        key,
+        [deal.model_dump(mode="json") for deal in deals],
+        ttl_seconds=DEALS_CACHE_TTL_SECONDS,
+    )
+    return deals
+
+
+def _limit_public_read(client: Any, ip: str) -> None:
+    try:
+        _limit(client, PUBLIC_DISCOVERY_READ, ip)
     except AppError:
         raise
     except Exception:  # noqa: BLE001 — public read fails open on limiter outage.
         pass
+
+
+@router.get("/deals", response_model=DealsOut)
+def list_deals(
+    request: Request,
+    response: Response,
+    supabase: Annotated[Any, Depends(get_supabase_client)],
+    limit: Annotated[int, Query(ge=1, le=48)] = 24,
+) -> DealsOut:
     now = datetime.now(UTC)
-    return DealsOut(
-        server_time=now.isoformat(), items=live_deals(supabase.client, now=now, limit=limit)
-    )
+    ip = get_client_ip(request)
+    # The limiter RPC is independent of the deals read: overlap the round trips.
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        limiter = pool.submit(_limit_public_read, supabase.client, ip)
+        try:
+            items = _cached_live_deals(supabase.client, now=now, limit=limit)
+        finally:
+            limiter.result()  # re-raises a 429 AppError
+    response.headers["Cache-Control"] = PUBLIC_DEALS_CACHE_CONTROL
+    return DealsOut(server_time=now.isoformat(), items=items)
 
 
 # ---------------------------------------------------------------------------
