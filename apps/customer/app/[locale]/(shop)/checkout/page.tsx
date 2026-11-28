@@ -18,6 +18,8 @@ import type { GroupCheckoutLabels } from "./_components/group-checkout";
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
 
+import { codTrustLine } from "@/lib/cod-trust";
+
 // Message-object nodes read with t.raw (objects, not leaf keys for the i18n sweep).
 const COUPON_LABELS_KEY = "checkout.coupon";
 const GIFT_LABELS_KEY = "checkout.gift";
@@ -274,11 +276,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
         deliveryNoLandmark: t("checkout.review.codGuide.deliveryNoLandmark"),
         pickupFromSeller: t("checkout.review.codGuide.pickupFromSeller"),
         placeOrderCod: t("checkout.review.codGuide.placeOrderCod"),
-        trustLine: createTranslator({
-          locale,
-          messages,
-          namespace: "codTrust",
-        })("line"),
+        trustLine: codTrustLine(locale, messages),
       },
       discount: t.raw("checkout.review.discount") as string,
     },

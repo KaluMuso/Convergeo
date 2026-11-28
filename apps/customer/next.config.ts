@@ -5,7 +5,7 @@ import {
   buildStaticSecurityHeaders,
   CSP_ORIGINS,
   isDevelopmentEnv,
-  PERMISSIONS_POLICY_DEFAULT,
+  PERMISSIONS_POLICY_CUSTOMER,
 } from "@vergeo/config/security-headers";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -98,7 +98,7 @@ function buildReportOnlyCsp(lenco: boolean): string {
 
 const STATIC_SECURITY_HEADERS = buildStaticSecurityHeaders({
   xFrameOptions: "DENY",
-  permissionsPolicy: PERMISSIONS_POLICY_DEFAULT,
+  permissionsPolicy: PERMISSIONS_POLICY_CUSTOMER,
   enforcedCsp: ENFORCED_CSP,
 });
 
