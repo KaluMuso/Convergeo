@@ -7,6 +7,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.listings.variants import snapshot_options
+from app.services.order_item_titles import display_title, resolve_missing_titles
 from app.services.pickup.tokens import derive_pin, verify_pin
 from app.services.refunds.constants import AWAITING_PROVIDER_STATUSES
 from fastapi import APIRouter, Depends
@@ -76,7 +77,8 @@ class OrderItemVariantOption(StrictModel):
 
 class OrderItemSummary(StrictModel):
     id: str
-    title: str
+    #: ``None`` when nothing resolves; the UI renders its translated fallback label.
+    title: str | None = None
     qty: int
     unit_price_ngwee: NgweeInt
     #: Chosen colour/size, from the immutable order-line snapshot.
@@ -253,22 +255,31 @@ def _variant_snapshot_of(row: dict[str, Any]) -> Any:
     return link.get("variant_snapshot") if isinstance(link, dict) else None
 
 
-def _load_order_items(service_client: _ServiceRoleClient, order_id: str) -> list[OrderItemSummary]:
+def _load_order_items_many(
+    service_client: _ServiceRoleClient, order_ids: list[str]
+) -> dict[str, list[OrderItemSummary]]:
+    """Items for many orders: one items query and one title-resolution query in total."""
+    grouped: dict[str, list[OrderItemSummary]] = {order_id: [] for order_id in order_ids}
+    if not order_ids:
+        return grouped
     response = (
         service_client.client.table("order_items")
-        .select("id, qty, unit_price_ngwee, title_snapshot, order_item_products(variant_snapshot)")
-        .eq("order_id", order_id)
+        .select(
+            "id, order_id, qty, unit_price_ngwee, title_snapshot, "
+            "order_item_products(variant_snapshot)"
+        )
+        .in_("order_id", order_ids)
         .execute()
     )
-    items: list[OrderItemSummary] = []
-    for row in _rows(response):
-        title = row.get("title_snapshot")
+    rows = _rows(response)
+    resolved = resolve_missing_titles(service_client.client, rows)
+    for row in rows:
         snapshot = _variant_snapshot_of(row)
         sku = snapshot.get("sku") if isinstance(snapshot, dict) else None
-        items.append(
+        grouped.setdefault(str(row["order_id"]), []).append(
             OrderItemSummary(
                 id=str(row["id"]),
-                title=str(title).strip() if isinstance(title, str) and title.strip() else "Item",
+                title=display_title(row, resolved),
                 qty=int(row["qty"]),
                 unit_price_ngwee=int(row["unit_price_ngwee"]),
                 variant_options=[
@@ -278,7 +289,11 @@ def _load_order_items(service_client: _ServiceRoleClient, order_id: str) -> list
                 variant_sku=str(sku) if isinstance(sku, str) and sku else None,
             )
         )
-    return items
+    return grouped
+
+
+def _load_order_items(service_client: _ServiceRoleClient, order_id: str) -> list[OrderItemSummary]:
+    return _load_order_items_many(service_client, [order_id])[order_id]
 
 
 def _sum_items_ngwee(items: list[OrderItemSummary]) -> int:
@@ -653,13 +668,14 @@ def list_customer_orders(
         group_id = str(row["checkout_group_id"])
         checkout_groups.setdefault(group_id, []).append(row)
 
+    items_by_order = _load_order_items_many(service_client, [str(row["id"]) for row in order_rows])
     groups: list[CheckoutGroupOut] = []
     for group_id, rows in checkout_groups.items():
         summaries: list[OrderSummaryOut] = []
         group_total = 0
         group_created_at = rows[0]["created_at"]
         for row in rows:
-            items = _load_order_items(service_client, str(row["id"]))
+            items = items_by_order.get(str(row["id"]), [])
             paid = _is_paid_order(service_client, row)
             summary = _build_order_summary(
                 order_row=row,
@@ -709,8 +725,9 @@ def get_customer_order(
     vendor_names = _load_vendor_names(service_client, vendor_ids)
 
     related_summaries: list[OrderSummaryOut] = []
+    related_items = _load_order_items_many(service_client, [str(row["id"]) for row in related_rows])
     for row in related_rows:
-        items = _load_order_items(service_client, str(row["id"]))
+        items = related_items.get(str(row["id"]), [])
         paid = _is_paid_order(service_client, row)
         related_summaries.append(
             _build_order_summary(
@@ -730,7 +747,7 @@ def get_customer_order(
 
 
 class GiftReceiptItemOut(StrictModel):
-    title: str
+    title: str | None = None
     qty: int
     variant_options: list[OrderItemVariantOption] = Field(default_factory=list)
 
