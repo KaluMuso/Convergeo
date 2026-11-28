@@ -364,6 +364,7 @@ export function ListingCard({
       {card}
       <Link
         href={href}
+        prefetch={false}
         className="absolute inset-0 z-[1] rounded-lg focus-visible:outline-none focus-visible:shadow-focusRing"
         aria-label={listing.title}
         data-testid="listing-card-link"

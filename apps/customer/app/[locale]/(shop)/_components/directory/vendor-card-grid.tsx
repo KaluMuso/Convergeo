@@ -116,6 +116,7 @@ export function VendorCardGrid({ locale, vendors, labels }: VendorCardGridProps)
           <Link
             key={vendor.id}
             href={`/${locale}/v/${vendor.slug}`}
+            prefetch={false}
             className="min-w-0 no-underline"
           >
             <VendorCard

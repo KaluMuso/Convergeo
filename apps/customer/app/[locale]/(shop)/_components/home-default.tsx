@@ -507,6 +507,7 @@ export function HomeServicesRail({
           <Link
             key={service.id}
             href={`/${locale}/s/${service.slug}`}
+            prefetch={false}
             className="min-w-0 no-underline"
           >
             <ServiceCard
@@ -628,6 +629,7 @@ export function HomeVendorsRail({
             <Link
               key={vendor.id}
               href={`/${locale}/v/${vendor.slug}`}
+              prefetch={false}
               className="min-w-0 no-underline"
             >
               <VendorCard

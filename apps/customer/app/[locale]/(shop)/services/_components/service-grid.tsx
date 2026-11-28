@@ -56,6 +56,7 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
           <li key={item.id}>
             <Link
               href={`/${locale}/s/${item.slug}`}
+              prefetch={false}
               className="group tap flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface transition-[box-shadow,border-color] duration-[250ms] ease-std hover:border-primary/40 hover:shadow-2 focus-visible:outline-none focus-visible:shadow-focusRing"
             >
               {hero ? (

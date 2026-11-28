@@ -76,6 +76,7 @@ export function EventGrid({ items, locale, labels }: EventGridProps) {
           <li key={item.id}>
             <Link
               href={`/${locale}/e/${item.slug}`}
+              prefetch={false}
               className="tap block h-full rounded-lg focus-visible:outline-none focus-visible:shadow-focusRing"
             >
               <EventCard
