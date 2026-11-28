@@ -62,6 +62,7 @@ TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
     "event_schedule_changed": TemplateClass.TRANSACTIONAL,
     # Never-silent lifecycle events (E1/E4) — transactional, never deferred.
     "rfq_quoted": TemplateClass.TRANSACTIONAL,
+    "import_quote_ready": TemplateClass.TRANSACTIONAL,
     "service_quote_accepted": TemplateClass.TRANSACTIONAL,
     "order_cancelled": TemplateClass.TRANSACTIONAL,
     "payment_failed": TemplateClass.TRANSACTIONAL,
@@ -426,7 +427,10 @@ class NotificationDispatcher:
 
         payload = fresh.get("payload")
         payload_dict = dict(payload) if isinstance(payload, dict) else {}
-        recipient_id = payload_dict.get("recipient_id")
+        # Vendor-addressed templates (KYC, listing flags, clips, tickets) name the
+        # vendor owner as `owner_user_id` and carry no `recipient_id`; without this
+        # fallback they got no phone or email and every channel failed permanently.
+        recipient_id = payload_dict.get("recipient_id") or payload_dict.get("owner_user_id")
         recipient = self.fetch_recipient(str(recipient_id)) if recipient_id is not None else {}
         notif_prefs_raw = recipient.get("notif_prefs")
         notif_prefs = notif_prefs_raw if isinstance(notif_prefs_raw, dict) else {}

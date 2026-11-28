@@ -170,8 +170,20 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261124120000",
     # Ask Vergeo service-role checks use auth.role() (rewrite in place, no down).
     "20261126190000",
+    # Ask Vergeo answer log + auditor findings (additive tables, trigger-based admin alert).
+    "20261127090000",
+    # Vendor sourcing hub (additive, documented down).
+    "20261127100000",
+    # Service packages become an open ordered list, cap 10 (additive, documented down).
+    "20261127120000",
     # Admin-controlled catalog taxonomy (additive, documented down).
     "20261127130000",
+    # Event archetype templates: events.archetype + archetype_details (additive, documented down).
+    "20261127150000",
+    # Service archetypes + validated attribute blobs (additive, documented down).
+    "20261128090000",
+    # Seed archetype service verticals into the admin-controlled taxonomy (additive, idempotent).
+    "20261128100000",
 ]
 
 
@@ -215,7 +227,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 200
+    assert len(sql_files) == len(migrations) == 206
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -268,11 +280,17 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     clips_packages = ["20261124090000", "20261124090100"]
     social_contacts = ["20261124120000"]
     ask_auth_role = ["20261126190000"]
-    taxonomy_admin = ["20261127130000"]
+    ask_answer_log = ["20261127090000"]
+    sourcing_hub = ["20261127100000"]
+    packages_open_list = ["20261127120000"]
+    catalog_taxonomy = ["20261127130000"]
+    event_archetypes = ["20261127150000"]
+    service_archetypes = ["20261128090000"]
+    archetype_seed = ["20261128100000"]
     logistics = ["20261122100000", "20261122100100"]
     area_pricing = ["20261122100200", "20261122100300"]
     web_push = ["20261123090000"]
-    assert actual_versions[-61:] == (
+    assert actual_versions[-67:] == (
         repairs
         + post_repair
         + queued_features
@@ -305,7 +323,13 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + clips_packages
         + social_contacts
         + ask_auth_role
-        + taxonomy_admin
+        + ask_answer_log
+        + sourcing_hub
+        + packages_open_list
+        + catalog_taxonomy
+        + event_archetypes
+        + service_archetypes
+        + archetype_seed
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 
