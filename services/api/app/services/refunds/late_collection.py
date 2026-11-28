@@ -39,6 +39,7 @@ from app.services.ledger.templates import LedgerTemplate
 from app.services.orders.audit import sql_literal
 from app.services.orders.state import SYSTEM_ACTOR_ID
 from app.services.payouts.gate import payouts_enabled
+from app.services.refunds.constants import LATE_COLLECTION_SOURCE_PREFIX
 from app.services.refunds.execute import (
     RefundExecutionResult,
     ServiceRoleClient,
@@ -66,7 +67,7 @@ def late_collection_auto_refund_enabled() -> bool:
 
 def late_collection_source_key(payment_id: str) -> str:
     """Deterministic refund identity: one refund per late-collected payment, ever."""
-    return f"late-collection-{payment_id}"
+    return f"{LATE_COLLECTION_SOURCE_PREFIX}{payment_id}"
 
 
 def late_collection_charge_key(payment_id: str) -> str:

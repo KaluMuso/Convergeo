@@ -227,3 +227,71 @@ class TestCumulativeCap:
         assert mine["status"] == "failed"
         post.assert_not_called()
         assert fake.tables["payouts"].rows == []
+
+
+class TestCapFailureMarkingIsNotLoadBearing:
+    def test_stuck_processing_row_over_cap_is_rechecked_on_same_key_retry(self) -> None:
+        """If the 'failed' write was lost, a same-key retry must not skip the cap."""
+        from app.services.refunds.execute import _refund_source_key
+
+        fake = FakeSupabaseClient()
+        _seed_order(fake)
+        service = FakeServiceClient(fake)
+        with _env(fake, _summary(charge=PAID)) as post:
+            _refund(service, "return-1", items=60_000, delivery=0)
+            calls_after_first = post.call_count
+            # The state a lost 'failed' update leaves behind: a whole-order refund
+            # row still 'processing' although 60_000 is already refunded.
+            fake.tables["refunds"].rows.append(
+                {
+                    "id": "stuck-refund",
+                    "order_id": ORDER_ID,
+                    "source_key": _refund_source_key("dispute-1", ORDER_ID),
+                    "lane": 1,
+                    "amount_ngwee": PAID,
+                    "status": "processing",
+                    "breakdown": {"phase": "pre_release", "idempotency_key": "dispute-1"},
+                }
+            )
+            with pytest.raises(AppError) as exc:
+                _refund(service, "dispute-1")
+        assert exc.value.code == "refund_exceeds_paid"
+        # No ledger leg and no payout for the stuck row; it is now marked failed.
+        assert post.call_count == calls_after_first
+        assert len(fake.tables["payouts"].rows) == 1
+        stuck = next(r for r in fake.tables["refunds"].rows if r["id"] == "stuck-refund")
+        assert stuck["status"] == "failed"
+
+    def test_failed_marking_error_does_not_mask_the_cap_error(self) -> None:
+        """Simulate the race: pre-check passes, post-insert check fails, marking is lost."""
+        fake = FakeSupabaseClient()
+        _seed_order(fake)
+        service = FakeServiceClient(fake)
+        real_check = execute_mod._assert_within_paid_cap
+        calls = {"n": 0}
+
+        def _second_check_fails(*args: Any, **kwargs: Any) -> None:
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return real_check(*args, **kwargs)
+            raise AppError("refund_exceeds_paid", "over cap", 409, {})
+
+        with _env(fake, _summary(charge=PAID)):
+            refunds = fake.tables["refunds"]
+            real_update = refunds.update
+
+            def _lost_update(payload: dict[str, Any]) -> Any:
+                if payload.get("status") == "failed":
+                    raise RuntimeError("db write lost")
+                return real_update(payload)
+
+            with (
+                patch.object(execute_mod, "_assert_within_paid_cap", _second_check_fails),
+                patch.object(refunds, "update", side_effect=_lost_update),
+                pytest.raises(AppError) as exc,
+            ):
+                _refund(service, "dispute-1")
+        assert exc.value.code == "refund_exceeds_paid"
+        # The marking was lost, so the row is still 'processing' - the retry test
+        # above proves the next same-key call re-checks the cap.
+        assert [r["status"] for r in refunds.rows] == ["processing"]

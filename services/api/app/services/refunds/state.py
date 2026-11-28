@@ -16,6 +16,7 @@ from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.payments.state import SYSTEM_ACTOR_ID
 from app.services.refunds.constants import (
     AWAITING_PROVIDER_STATUSES,
+    LATE_COLLECTION_SOURCE_PREFIX,
 )
 
 REFUND_AUDIT_ACTION = "refund.transition"
@@ -97,7 +98,7 @@ def _write_audit(
 def _load_refund_row(service_client: ServiceRoleClient, refund_id: str) -> dict[str, Any] | None:
     response = (
         service_client.client.table("refunds")
-        .select("id, order_id, status, payout_ref, breakdown")
+        .select("id, order_id, status, payout_ref, breakdown, source_key")
         .eq("id", refund_id)
         .maybe_single()
         .execute()
@@ -248,6 +249,25 @@ def reverse_refund_ledger(*, refund_id: str, order_id: str | None) -> list[str]:
     return reversal_ids
 
 
+def _reopen_late_collection_exception(
+    service_client: ServiceRoleClient, refund: dict[str, Any]
+) -> None:
+    """A failed late-collection payout puts the cash back in suspense: reopen it.
+
+    The exception is resolved when the refund is queued, before Lenco confirms. If
+    the payout then fails, the money is parked again, so the exception must be open
+    for ops (the sweep then reports it as manual review; it never auto-mints a
+    second refund for the same payment).
+    """
+    source_key = refund.get("source_key")
+    if not isinstance(source_key, str) or not source_key.startswith(LATE_COLLECTION_SOURCE_PREFIX):
+        return
+    payment_id = source_key[len(LATE_COLLECTION_SOURCE_PREFIX) :]
+    service_client.client.table("payment_collection_exceptions").update({"resolved_at": None}).eq(
+        "payment_id", payment_id
+    ).execute()
+
+
 def fail_refund_from_provider_payout(
     service_client: ServiceRoleClient,
     *,
@@ -306,6 +326,7 @@ def fail_refund_from_provider_payout(
     service_client.client.table("refunds").update(
         {"status": RefundStatus.FAILED.value, "breakdown": breakdown}
     ).eq("id", refund_id).execute()
+    _reopen_late_collection_exception(service_client, refund)
     _write_audit(
         service_client,
         refund_id=refund_id,

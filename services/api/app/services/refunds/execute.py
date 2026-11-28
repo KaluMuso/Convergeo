@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass
 from enum import StrEnum
@@ -42,6 +43,9 @@ Lane = Literal[1, 2]
 # Postgres unique_violation SQLSTATE — raised when the source_key partial unique
 # index rejects a concurrent/retried second insert for the same caller key.
 _UNIQUE_VIOLATION = "23505"
+
+
+logger = logging.getLogger(__name__)
 
 
 def _stable_ledger_key_base(idempotency_key: str | None, order_id: str) -> str:
@@ -621,6 +625,25 @@ def _complete_refund_money_path(
     )
 
 
+def _mark_refund_failed_for_cap(
+    service_client: ServiceRoleClient, *, refund_id: str, breakdown: dict[str, Any]
+) -> None:
+    """Best-effort ``failed`` marking for a refund the cap rejected.
+
+    If this write errors the row stays ``processing``; that is safe because a
+    same-key retry resumes through ``_resume_processing_refund``, which re-checks the
+    cap before doing anything. The caller still raises the original cap error.
+    """
+    failed_breakdown = dict(breakdown)
+    failed_breakdown["rejected_reason"] = "refund_exceeds_paid"
+    try:
+        service_client.client.table("refunds").update(
+            {"status": "failed", "breakdown": failed_breakdown}
+        ).eq("id", refund_id).execute()
+    except Exception:
+        logger.exception("could not mark capped refund %s failed", refund_id)
+
+
 def _resume_processing_refund(
     *,
     service_client: ServiceRoleClient,
@@ -675,6 +698,23 @@ def _resume_processing_refund(
     stored_amount = int(existing.get("amount_ngwee") or 0)
     if stored_amount > 0:
         refund_amount = stored_amount
+
+    # A row left in processing may be one the cap already rejected (the failed
+    # marking can itself fail). Re-check before any ledger leg or payout. The row
+    # counts itself, so pass 0 new money, exactly like the post-insert check.
+    # Refunds paid from parked late cash never draw on the order's own payment.
+    if breakdown.get("funds_source") != "suspense":
+        try:
+            _assert_within_paid_cap(
+                service_client,
+                order=order,
+                order_id=order_id,
+                new_refund_ngwee=0,
+                new_promo_return_ngwee=0,
+            )
+        except AppError:
+            _mark_refund_failed_for_cap(service_client, refund_id=refund_id, breakdown=breakdown)
+            raise
 
     return _complete_refund_money_path(
         service_client=service_client,
@@ -1063,11 +1103,7 @@ def execute_refund(
             new_promo_return_ngwee=0,
         )
     except AppError:
-        failed_breakdown = dict(breakdown)
-        failed_breakdown["rejected_reason"] = "refund_exceeds_paid"
-        service_client.client.table("refunds").update(
-            {"status": "failed", "breakdown": failed_breakdown}
-        ).eq("id", refund_id).execute()
+        _mark_refund_failed_for_cap(service_client, refund_id=refund_id, breakdown=breakdown)
         raise
 
     return _complete_refund_money_path(

@@ -368,3 +368,54 @@ class TestLateCollectionEndpoint:
         body = response.json()
         assert body["enabled"] is False
         assert body["scanned"] == 0 and body["refunded"] == 0
+
+
+class TestPayoutFailureReopensException:
+    def test_failed_payout_reopens_resolved_exception(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.refunds import state as refund_state
+
+        payment_id = str(uuid.uuid4())
+        client = _client(str(uuid.uuid4()), payment_id)
+        # Exception was resolved when the refund was queued.
+        _rows(client, "payment_collection_exceptions")[0]["resolved_at"] = "2026-11-28T00:00:00Z"
+        _rows(client, "refunds").append(
+            {
+                "id": "rfd-1",
+                "order_id": "order-1",
+                "status": "awaiting_payout",
+                "payout_ref": "pay-1",
+                "source_key": late_collection_source_key(payment_id),
+                "breakdown": {},
+            }
+        )
+        monkeypatch.setattr(refund_state, "reverse_refund_ledger", lambda **_: [])
+
+        assert refund_state.fail_refund_from_provider_payout(
+            client, payout_id="pay-1", reason="provider_failed", definitive=True
+        )
+        assert _rows(client, "payment_collection_exceptions")[0]["resolved_at"] is None
+        assert _rows(client, "refunds")[0]["status"] == "failed"
+
+    def test_other_refunds_do_not_touch_exceptions(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from app.services.refunds import state as refund_state
+
+        payment_id = str(uuid.uuid4())
+        client = _client(str(uuid.uuid4()), payment_id)
+        _rows(client, "payment_collection_exceptions")[0]["resolved_at"] = "2026-11-28T00:00:00Z"
+        _rows(client, "refunds").append(
+            {
+                "id": "rfd-2",
+                "order_id": "order-2",
+                "status": "awaiting_payout",
+                "payout_ref": "pay-2",
+                "source_key": "return-abc",
+                "breakdown": {},
+            }
+        )
+        monkeypatch.setattr(refund_state, "reverse_refund_ledger", lambda **_: [])
+        refund_state.fail_refund_from_provider_payout(
+            client, payout_id="pay-2", reason="provider_failed", definitive=True
+        )
+        assert _rows(client, "payment_collection_exceptions")[0]["resolved_at"] is not None
