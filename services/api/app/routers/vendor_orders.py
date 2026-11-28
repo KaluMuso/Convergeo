@@ -11,6 +11,7 @@ from app.schemas.base import StrictModel
 from app.services.branches.context import scope_owner_vendor_query
 from app.services.listings.variants import snapshot_options
 from app.services.notifications.dedupe import enqueue_outbox_row
+from app.services.order_item_titles import display_title, resolve_missing_titles
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.orders.events import emit_order_lifecycle
 from app.services.orders.state import (
@@ -70,7 +71,8 @@ class OrderItemVariantOption(StrictModel):
 
 class OrderItemSummary(StrictModel):
     id: str
-    title: str
+    #: ``None`` when nothing resolves; the UI renders its translated fallback label.
+    title: str | None = None
     qty: int
     unit_price_ngwee: int
     #: Chosen colour/size, from the immutable order-line snapshot.
@@ -336,14 +338,15 @@ def _load_order_items(service_client: _ServiceRoleClient, order_id: str) -> list
         .execute()
     )
     items: list[OrderItemSummary] = []
-    for row in _rows(response):
-        title = row.get("title_snapshot")
+    rows = _rows(response)
+    resolved = resolve_missing_titles(service_client.client, rows)
+    for row in rows:
         snapshot = _variant_snapshot_of(row)
         sku = snapshot.get("sku") if isinstance(snapshot, dict) else None
         items.append(
             OrderItemSummary(
                 id=str(row["id"]),
-                title=str(title).strip() if isinstance(title, str) and title.strip() else "Item",
+                title=display_title(row, resolved),
                 qty=int(row["qty"]),
                 unit_price_ngwee=int(row["unit_price_ngwee"]),
                 variant_options=[
