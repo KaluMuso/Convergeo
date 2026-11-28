@@ -2,6 +2,8 @@ name: Performance budgets
 
 on:
   pull_request:
+    # ready_for_review: a draft's CI is skipped (job-level `if:`), so marking it ready must start a full run.
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - master
@@ -21,6 +23,7 @@ jobs:
     # required check "Bundle, image lint & Lighthouse" always exists; when this tier
     # is not needed the job is skipped by `if:` (reports as passing, never pending).
     name: Detect changed tiers (perf)
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     outputs:
       run_perf: ${{ steps.scope.outputs.run_perf }}
@@ -59,7 +62,7 @@ jobs:
   perf:
     name: Bundle, image lint & Lighthouse
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_perf == 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.run_perf == 'true') }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read

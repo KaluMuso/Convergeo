@@ -134,13 +134,13 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   ]);
   const messages = {
     ...baseMessages,
-    legal: legalMessages,
     checkout: checkoutMessages,
   } as AbstractIntlMessages;
+  const legalScoped = { ...baseMessages, legal: legalMessages } as AbstractIntlMessages;
 
   const tLegal = createTranslator({
     locale,
-    messages,
+    messages: legalScoped,
     namespace: "legal",
   }) as unknown as LegalTranslator;
   const tCommon = createTranslator({
