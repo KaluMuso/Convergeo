@@ -117,9 +117,7 @@ def test_dispute_and_return_insert_policies_and_grants_are_gone(db: PgConn) -> N
         ("caps_snapshot", "'{\"x\": 1}'::jsonb"),
     ],
 )
-def test_owner_cannot_insert_vendor_with_locked_column(
-    db: PgConn, column: str, value: str
-) -> None:
+def test_owner_cannot_insert_vendor_with_locked_column(db: PgConn, column: str, value: str) -> None:
     # A user with no storefront yet, so the first-shop branch trigger does not fire.
     result = db.run_as(
         "authenticated",
