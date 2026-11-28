@@ -127,7 +127,7 @@ def _int_or_none(value: Any) -> int | None:
 
 
 @pilot_router.get("", response_model=PilotStateResponse)
-async def get_clip_pilot(
+def get_clip_pilot(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> PilotStateResponse:
     rows = _pilot_rows(service_client)
@@ -168,7 +168,7 @@ async def get_clip_pilot(
 
 
 @pilot_router.post("/vendors", response_model=PilotChangeResponse)
-async def add_clip_pilot_vendor(
+def add_clip_pilot_vendor(
     body: PilotAddRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -227,7 +227,7 @@ async def add_clip_pilot_vendor(
 
 
 @pilot_router.delete("/vendors/{vendor_id}", response_model=PilotChangeResponse)
-async def remove_clip_pilot_vendor(
+def remove_clip_pilot_vendor(
     vendor_id: str,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],

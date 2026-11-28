@@ -337,7 +337,7 @@ class CategoryReorderRequest(BaseModel):
 # Commission rates
 # ---------------------------------------------------------------------------
 @config_router.get("/commissions", response_model=list[CommissionRateOut])
-async def list_commission_rates(
+def list_commission_rates(
     service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[CommissionRateOut]:
     response = (
@@ -348,7 +348,7 @@ async def list_commission_rates(
 
 
 @config_router.patch("/commissions/{category_key}", response_model=CommissionRateOut)
-async def update_commission_rate(
+def update_commission_rate(
     category_key: str,
     body: CommissionRateUpdate,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -393,7 +393,7 @@ async def update_commission_rate(
 # Delivery zones
 # ---------------------------------------------------------------------------
 @config_router.get("/delivery-zones", response_model=list[DeliveryZoneOut])
-async def list_delivery_zones(
+def list_delivery_zones(
     service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[DeliveryZoneOut]:
     response = _table(service_client, "delivery_zones").select("*").order("zone_key").execute()
@@ -402,7 +402,7 @@ async def list_delivery_zones(
 
 
 @config_router.patch("/delivery-zones/{zone_key}", response_model=DeliveryZoneOut)
-async def update_delivery_zone(
+def update_delivery_zone(
     zone_key: str,
     body: DeliveryZoneUpdate,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -456,7 +456,7 @@ async def update_delivery_zone(
 # Platform config
 # ---------------------------------------------------------------------------
 @config_router.get("/platform", response_model=list[PlatformConfigOut])
-async def list_platform_config(
+def list_platform_config(
     service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[PlatformConfigOut]:
     response = (
@@ -480,7 +480,7 @@ async def list_platform_config(
 
 
 @config_router.patch("/platform/{key}", response_model=PlatformConfigOut)
-async def update_platform_config(
+def update_platform_config(
     key: str,
     body: PlatformConfigUpdate,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -530,7 +530,7 @@ async def update_platform_config(
 # Feature flags
 # ---------------------------------------------------------------------------
 @config_router.get("/flags", response_model=list[FeatureFlagOut])
-async def list_feature_flags(
+def list_feature_flags(
     service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[FeatureFlagOut]:
     response = _table(service_client, "feature_flags").select("*").order("flag").execute()
@@ -539,7 +539,7 @@ async def list_feature_flags(
 
 
 @config_router.patch("/flags/{flag}", response_model=FeatureFlagOut)
-async def update_feature_flag(
+def update_feature_flag(
     flag: str,
     body: FeatureFlagUpdate,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -615,7 +615,7 @@ def _descendant_ids(categories: list[dict[str, Any]], root_id: str) -> list[str]
 
 
 @config_router.get("/categories", response_model=list[CategoryOut])
-async def list_categories(
+def list_categories(
     service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[CategoryOut]:
     rows = _load_categories(service_client)
@@ -733,7 +733,7 @@ def _apply_category_parent_change(
 
 
 @config_router.patch("/categories/{category_id}", response_model=CategoryOut)
-async def update_category(
+def update_category(
     category_id: UUID,
     body: CategoryUpdate,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -789,7 +789,7 @@ async def update_category(
 
 
 @config_router.post("/categories/reorder", response_model=list[CategoryOut])
-async def reorder_categories(
+def reorder_categories(
     body: CategoryReorderRequest,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
     service_client: Annotated[Any, Depends(get_supabase_client)],

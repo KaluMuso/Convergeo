@@ -518,7 +518,7 @@ def _handle_flag_action(
 
 
 @flags_router.get("", response_model=list[FlagQueueItem])
-async def list_flags(
+def list_flags(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     status: Annotated[FlagStatus | None, Query()] = "open",
     entity_type: Annotated[EntityType | None, Query()] = None,
@@ -589,7 +589,7 @@ async def list_flags(
 
 
 @flags_router.post("/{flag_id}/dismiss", response_model=FlagActionResponse)
-async def dismiss_flag(
+def dismiss_flag(
     flag_id: UUID,
     body: FlagActionNote,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -627,7 +627,7 @@ async def dismiss_flag(
 
 
 @flags_router.post("/{flag_id}/unpublish", response_model=FlagActionResponse)
-async def unpublish_flagged_listing(
+def unpublish_flagged_listing(
     flag_id: UUID,
     body: FlagActionNote,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -686,7 +686,7 @@ async def unpublish_flagged_listing(
 
 
 @flags_router.post("/{flag_id}/remove", response_model=FlagActionResponse)
-async def remove_flagged_entity(
+def remove_flagged_entity(
     flag_id: UUID,
     body: FlagActionNote,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -775,7 +775,7 @@ async def remove_flagged_entity(
 
 
 @flags_router.post("/{flag_id}/warn-vendor", response_model=FlagActionResponse)
-async def warn_vendor_for_flag(
+def warn_vendor_for_flag(
     flag_id: UUID,
     body: FlagActionNote,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -829,7 +829,7 @@ async def warn_vendor_for_flag(
 
 
 @flags_router.post("/{flag_id}/escalate-suspend", response_model=FlagActionResponse)
-async def escalate_suspend_vendor(
+def escalate_suspend_vendor(
     flag_id: UUID,
     body: FlagActionNote,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],

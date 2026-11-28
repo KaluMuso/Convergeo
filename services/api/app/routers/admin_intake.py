@@ -420,7 +420,7 @@ def _activate_listing(service_client: ServiceRoleClient, listing_id: str) -> dic
 
 # --- Routes -----------------------------------------------------------------
 @intake_router.get("", response_model=list[IntakeQueueItem])
-async def list_intake_queue(
+def list_intake_queue(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     status: Annotated[str | None, Query()] = None,
 ) -> list[IntakeQueueItem]:
@@ -455,7 +455,7 @@ async def list_intake_queue(
 
 
 @intake_router.get("/{session_id}", response_model=IntakeDetail)
-async def get_intake_detail(
+def get_intake_detail(
     session_id: str,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> IntakeDetail:
@@ -502,7 +502,7 @@ async def get_intake_detail(
 
 
 @intake_router.post("/{session_id}/request-changes", response_model=IntakeActionResponse)
-async def request_changes(
+def request_changes(
     session_id: str,
     body: ReasonBody,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -551,7 +551,7 @@ async def request_changes(
 
 
 @intake_router.post("/{session_id}/reject", response_model=IntakeActionResponse)
-async def reject_intake(
+def reject_intake(
     session_id: str,
     body: ReasonBody,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -616,7 +616,7 @@ async def reject_intake(
 
 
 @intake_router.post("/{session_id}/attach-canonical", response_model=IntakeActionResponse)
-async def attach_canonical(
+def attach_canonical(
     session_id: str,
     body: AttachCanonicalBody,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -692,7 +692,7 @@ async def attach_canonical(
 
 
 @intake_router.post("/{session_id}/approve", response_model=IntakeActionResponse)
-async def approve_intake(
+def approve_intake(
     session_id: str,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],

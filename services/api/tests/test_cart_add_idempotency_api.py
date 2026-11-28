@@ -137,7 +137,7 @@ async def test_same_key_race_at_stock_cap_replays_without_new_event(
         }
     )
 
-    response = await cart.add_cart_item(
+    response = cart.add_cart_item(
         body,
         cart.CartOwner("cart", "user", None, False),
         MagicMock(),
@@ -270,7 +270,7 @@ async def test_malformed_header_is_rejected_before_any_write(
         }
     )
     with pytest.raises(AppError) as raised:
-        await cart.add_cart_item(
+        cart.add_cart_item(
             cart.CartItemInput(listing_id="listing", qty=1),
             cart.CartOwner("cart", "user", None, False),
             MagicMock(),
@@ -406,7 +406,7 @@ async def test_only_applied_keyed_add_emits_analytics(
             "headers": [(b"idempotency-key", b"analytics-key")],
         }
     )
-    response = await cart.add_cart_item(
+    response = cart.add_cart_item(
         cart.CartItemInput(listing_id="listing", qty=2, clip_id="claimed-clip"),
         cart.CartOwner("cart", "user", None, False),
         MagicMock(),

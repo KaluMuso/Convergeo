@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
@@ -229,13 +228,11 @@ def test_ambiguous_concurrent_merge_preserves_account_and_guest_lines(
 
     def run_request(request_name: str) -> None:
         threading.current_thread().name = request_name
-        asyncio.run(
-            cart.merge_cart_on_login(
-                Response(),
-                cast(Any, SimpleNamespace(id=USER_ID, token=f"token-{request_name}")),
-                cast(Any, SimpleNamespace()),
-                cast(Any, SimpleNamespace()),
-            )
+        cart.merge_cart_on_login(
+            Response(),
+            cast(Any, SimpleNamespace(id=USER_ID, token=f"token-{request_name}")),
+            cast(Any, SimpleNamespace()),
+            cast(Any, SimpleNamespace()),
         )
 
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -300,13 +297,11 @@ def _patch_endpoint(
 def _run_endpoint() -> None:
     from app.routers import cart
 
-    asyncio.run(
-        cart.merge_cart_on_login(
-            Response(),
-            cast(Any, SimpleNamespace(id=USER_ID, token="token")),
-            cast(Any, SimpleNamespace()),
-            cast(Any, SimpleNamespace()),
-        )
+    cart.merge_cart_on_login(
+        Response(),
+        cast(Any, SimpleNamespace(id=USER_ID, token="token")),
+        cast(Any, SimpleNamespace()),
+        cast(Any, SimpleNamespace()),
     )
 
 

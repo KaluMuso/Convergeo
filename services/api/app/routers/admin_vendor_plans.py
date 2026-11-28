@@ -362,7 +362,7 @@ def _vendor_counts(client: Any) -> dict[str, int]:
 # Plan catalogue CRUD
 # ---------------------------------------------------------------------------
 @plans_router.get("", response_model=list[PlanOut])
-async def list_vendor_plans(
+def list_vendor_plans(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[PlanOut]:
     client: Any = service_client.client
@@ -374,7 +374,7 @@ async def list_vendor_plans(
 
 
 @plans_router.post("", response_model=PlanOut, status_code=201)
-async def create_vendor_plan(
+def create_vendor_plan(
     body: PlanCreate,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -403,7 +403,7 @@ async def create_vendor_plan(
 
 
 @plans_router.patch("/{plan_key}", response_model=PlanOut)
-async def update_vendor_plan(
+def update_vendor_plan(
     plan_key: str,
     body: PlanUpdate,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -447,7 +447,7 @@ async def update_vendor_plan(
 
 
 @plans_router.delete("/{plan_key}", status_code=204)
-async def delete_vendor_plan(
+def delete_vendor_plan(
     plan_key: str,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -501,7 +501,7 @@ def _vendor_detail(service_client: ServiceRoleClient, vendor_id: str) -> VendorP
 
 
 @vendor_plan_router.get("", response_model=VendorPlanDetail)
-async def get_vendor_plan_detail(
+def get_vendor_plan_detail(
     vendor_id: UUID,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> VendorPlanDetail:
@@ -511,7 +511,7 @@ async def get_vendor_plan_detail(
 
 
 @vendor_plan_router.put("", response_model=VendorPlanDetail)
-async def assign_vendor_plan(
+def assign_vendor_plan(
     vendor_id: UUID,
     body: AssignPlanRequest,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -550,7 +550,7 @@ async def assign_vendor_plan(
 
 
 @vendor_plan_router.put("/override", response_model=VendorPlanDetail)
-async def set_vendor_plan_override(
+def set_vendor_plan_override(
     vendor_id: UUID,
     body: OverrideRequest,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -584,7 +584,7 @@ async def set_vendor_plan_override(
 
 
 @vendor_plan_router.delete("/override", response_model=VendorPlanDetail)
-async def clear_vendor_plan_override(
+def clear_vendor_plan_override(
     vendor_id: UUID,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -681,7 +681,7 @@ def _require_product(client: Any, product_id: str) -> None:
 
 
 @product_images_router.get("", response_model=ProductImagesPage)
-async def list_product_images(
+def list_product_images(
     product_id: UUID,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ProductImagesPage:
@@ -694,7 +694,7 @@ async def list_product_images(
 
 
 @product_images_router.post("", response_model=ProductImageOut, status_code=201)
-async def add_product_image(
+def add_product_image(
     product_id: UUID,
     body: ProductImageCreate,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -761,7 +761,7 @@ async def add_product_image(
 
 
 @product_images_router.delete("/{image_id}", status_code=204)
-async def remove_product_image(
+def remove_product_image(
     product_id: UUID,
     image_id: UUID,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],

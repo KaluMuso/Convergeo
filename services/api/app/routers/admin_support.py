@@ -430,7 +430,7 @@ def _masked(card: ContextCardOut) -> ContextCardOut:
 
 
 @support_router.get("/lookup", response_model=LookupResponse)
-async def support_lookup(
+def support_lookup(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     q: Annotated[str, Query(min_length=1, max_length=_MAX_QUERY_LEN)],
@@ -444,7 +444,7 @@ async def support_lookup(
 
 
 @support_router.post("/send", response_model=SendResponse)
-async def support_send(
+def support_send(
     body: SendRequest,
     request: Request,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -635,7 +635,7 @@ def _outbox_log_entries(
 
 
 @support_router.get("/log", response_model=list[InteractionLogEntry])
-async def support_log(
+def support_log(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     customer_id: Annotated[UUID, Query()],
 ) -> list[InteractionLogEntry]:

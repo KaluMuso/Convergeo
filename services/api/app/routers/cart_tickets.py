@@ -73,7 +73,7 @@ def _cart(current_user: CurrentUser, settings: Settings, cart_id: str) -> CartRe
 
 
 @router.post("/tickets", response_model=CartResponse)
-async def put_cart_ticket(
+def put_cart_ticket(
     body: CartTicketInput,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -94,7 +94,7 @@ async def put_cart_ticket(
 
 
 @router.delete("/tickets/{line_id}", response_model=CartResponse)
-async def delete_cart_ticket(
+def delete_cart_ticket(
     line_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],

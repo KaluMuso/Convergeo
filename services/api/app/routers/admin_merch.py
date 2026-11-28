@@ -382,7 +382,7 @@ def _validate_variant_key(variant_key: str) -> None:
 
 
 @merch_admin_router.get("/hero-variants", response_model=list[HeroVariantOut])
-async def list_hero_variants() -> list[HeroVariantOut]:
+def list_hero_variants() -> list[HeroVariantOut]:
     return [
         HeroVariantOut(variant_key="editorial-light", label="Editorial light"),
         HeroVariantOut(variant_key="gradient-dark", label="Gradient dark"),
@@ -392,7 +392,7 @@ async def list_hero_variants() -> list[HeroVariantOut]:
 
 
 @merch_admin_router.get("/slots", response_model=list[MerchSlotOut])
-async def list_merch_slots(
+def list_merch_slots(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[MerchSlotOut]:
     rows = _load_all_slots(service_client)
@@ -400,7 +400,7 @@ async def list_merch_slots(
 
 
 @merch_admin_router.post("/slots", response_model=MerchSlotOut, status_code=201)
-async def create_merch_slot(
+def create_merch_slot(
     body: MerchSlotCreate,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -439,7 +439,7 @@ async def create_merch_slot(
 
 
 @merch_admin_router.patch("/slots/{slot_id}", response_model=MerchSlotOut)
-async def update_merch_slot(
+def update_merch_slot(
     slot_id: UUID,
     body: MerchSlotUpdate,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -499,7 +499,7 @@ async def update_merch_slot(
 
 
 @merch_admin_router.post("/slots/{slot_id}/draft", response_model=MerchSlotOut)
-async def save_merch_draft(
+def save_merch_draft(
     slot_id: UUID,
     body: MerchDraftSave,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -553,7 +553,7 @@ async def save_merch_draft(
 
 
 @merch_admin_router.post("/slots/{slot_id}/publish", response_model=MerchSlotOut)
-async def publish_merch_draft(
+def publish_merch_draft(
     slot_id: UUID,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -605,7 +605,7 @@ async def publish_merch_draft(
 
 
 @merch_admin_router.delete("/slots/{slot_id}", status_code=204)
-async def delete_merch_slot(
+def delete_merch_slot(
     slot_id: UUID,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -623,7 +623,7 @@ async def delete_merch_slot(
 
 
 @merch_admin_router.get("/preview-url")
-async def get_preview_url() -> dict[str, str]:
+def get_preview_url() -> dict[str, str]:
     token = _preview_token()
     return {
         "token": token,
@@ -634,7 +634,7 @@ async def get_preview_url() -> dict[str, str]:
 
 
 @router.get("/slots", response_model=list[ResolvedMerchSlotOut])
-async def get_public_merch_slots(
+def get_public_merch_slots(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     merch_preview: str | None = Query(default=None),
 ) -> list[ResolvedMerchSlotOut]:

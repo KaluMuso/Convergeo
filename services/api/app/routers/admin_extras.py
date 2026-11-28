@@ -162,7 +162,7 @@ def _load_extra(client: Any, key: str) -> dict[str, Any]:
 
 
 @extras_router.get("", response_model=list[AdminExtraOut])
-async def list_extras_admin(
+def list_extras_admin(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[AdminExtraOut]:
     rows = _rows(
@@ -175,7 +175,7 @@ async def list_extras_admin(
 
 
 @extras_router.post("", response_model=AdminExtraOut, status_code=201)
-async def create_extra(
+def create_extra(
     body: ExtraCreate,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
@@ -205,7 +205,7 @@ async def create_extra(
 
 
 @extras_router.patch("/{extra_key}", response_model=AdminExtraOut)
-async def update_extra(
+def update_extra(
     extra_key: Annotated[str, Path(pattern=r"^[a-z][a-z0-9_]{1,47}$")],
     body: ExtraUpdate,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -312,7 +312,7 @@ def _enrich(client: Any, rows: list[dict[str, Any]]) -> list[AdminRequestOut]:
 
 
 @extras_router.get("/requests", response_model=list[AdminRequestOut])
-async def list_extra_requests(
+def list_extra_requests(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     status: Annotated[RequestStatus | None, Query()] = None,
 ) -> list[AdminRequestOut]:
@@ -325,7 +325,7 @@ async def list_extra_requests(
 
 
 @extras_router.post("/requests/{request_id}/transition", response_model=AdminRequestOut)
-async def transition_extra_request(
+def transition_extra_request(
     request_id: UUID,
     body: TransitionRequest,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -427,7 +427,7 @@ def _trial_out(row: dict[str, Any]) -> TrialOut:
 
 
 @trials_router.get("", response_model=list[TrialOut])
-async def list_trials(
+def list_trials(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     q: Annotated[str | None, Query(max_length=80)] = None,
     active_only: Annotated[bool, Query()] = False,
@@ -445,7 +445,7 @@ async def list_trials(
 
 
 @trials_router.post("/{business_id}", response_model=TrialOut)
-async def change_trial(
+def change_trial(
     business_id: UUID,
     body: TrialChange,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],

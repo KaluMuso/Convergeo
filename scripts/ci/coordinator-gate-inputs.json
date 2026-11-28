@@ -652,7 +652,7 @@
     "services/api/tests/rls/test_privileged_function_grants.py": "edbe0a48370bd2c0d262cbe923ea34f4f842bd28ec4a2327a529f34e09d7643b",
     "services/api/tests/rls/test_review_reply_guard.py": "ce37dc42cb7b037a79cdf39afe6738c36ae3ed8f5b906d0a36104a5bb5503cad",
     "services/api/tests/test_cart.py": "5bdab414ca935c672565027e99dfc150b9389c657cef9246ee276438ebd4c66f",
-    "services/api/tests/test_cart_merge_price_consent.py": "d3fbabcbc9f45bdfea33972f54b8b80f823021359830d38e72ec60bab1014866",
+    "services/api/tests/test_cart_merge_price_consent.py": "7659159287cd731f4ab64fdfafd06b121d89398ef96966aa00b24cbbe9cec7ca",
     "services/api/tests/test_checkout.py": "b5b3b6eda27e40ddb3f862169963326fc367a9923966f27796054cc7f776e1de",
     "services/api/tests/test_csv_import.py": "ebeaa13b3102ede13a001b78941d7d8b4afc1cd1946c51d78a1ca569b1d80ae3",
     "services/api/tests/test_db_adapter.py": "33a45e139093aaafaf2f81668a4c47e14cf17460ea659d8c89ba45fbb04bad75",

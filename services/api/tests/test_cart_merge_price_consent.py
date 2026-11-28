@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from types import SimpleNamespace
 from typing import Any, cast
 
@@ -182,7 +181,7 @@ def test_route_retries_stale_authority_without_broadening_price_consent(
     settings = SimpleNamespace(supabase_service_role_key="local-only-signing-key-32-bytes-long")
 
     def run(body: CartMergeResolutionInput | None = None) -> None:
-        asyncio.run(cart.merge_cart_on_login(
+        (cart.merge_cart_on_login(
             Response(), cast(CurrentUser, SimpleNamespace(id=USER, token="account-token")),
             cast(Settings, settings), cast(Request, SimpleNamespace()), body,
         ))

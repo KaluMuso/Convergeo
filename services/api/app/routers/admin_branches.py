@@ -204,7 +204,7 @@ def _vendor_names(client: Any, ids: set[str]) -> dict[str, str]:
 # Queue + detail
 # ---------------------------------------------------------------------------
 @branches_router.get("", response_model=list[QueueItem])
-async def list_branch_queue(
+def list_branch_queue(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     status: Annotated[QueueStatus, Query()] = "pending_review",
 ) -> list[QueueItem]:
@@ -267,7 +267,7 @@ async def list_branch_queue(
 
 
 @branches_router.get("/flags", response_model=list[FlagOut])
-async def list_duplicate_flags(
+def list_duplicate_flags(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     status: Annotated[FlagStatus, Query()] = "open",
 ) -> list[FlagOut]:
@@ -299,7 +299,7 @@ def _signed_download(client: Any, path: str) -> str | None:
 
 
 @branches_router.get("/{branch_id}", response_model=BranchDetail)
-async def get_branch_detail(
+def get_branch_detail(
     branch_id: UUID,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> BranchDetail:
@@ -498,7 +498,7 @@ def _decide(
 
 
 @branches_router.post("/{branch_id}/approve", response_model=DecisionOut)
-async def approve_branch(
+def approve_branch(
     branch_id: UUID,
     body: DecisionRequest,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -510,7 +510,7 @@ async def approve_branch(
 
 
 @branches_router.post("/{branch_id}/request-info", response_model=DecisionOut)
-async def request_branch_info(
+def request_branch_info(
     branch_id: UUID,
     body: RequiredNoteRequest,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -521,7 +521,7 @@ async def request_branch_info(
 
 
 @branches_router.post("/{branch_id}/reject", response_model=DecisionOut)
-async def reject_branch(
+def reject_branch(
     branch_id: UUID,
     body: RequiredNoteRequest,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -537,7 +537,7 @@ class FlagResolveRequest(StrictModel):
 
 
 @branches_router.post("/flags/{flag_id}/resolve", response_model=FlagOut)
-async def resolve_duplicate_flag(
+def resolve_duplicate_flag(
     flag_id: UUID,
     body: FlagResolveRequest,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -632,7 +632,7 @@ class PacraVerifyRequest(StrictModel):
 
 
 @branches_router.post("/businesses/{business_id}/pacra", response_model=dict[str, Any])
-async def verify_business_pacra(
+def verify_business_pacra(
     business_id: UUID,
     body: PacraVerifyRequest,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],

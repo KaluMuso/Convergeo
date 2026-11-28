@@ -300,7 +300,7 @@ def _preview_urls(clip: dict[str, Any]) -> tuple[dict[str, str], int]:
 
 # --- Review queue -----------------------------------------------------------
 @clips_router.get("", response_model=ClipQueueResponse)
-async def list_review_queue(
+def list_review_queue(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> ClipQueueResponse:
@@ -348,7 +348,7 @@ async def list_review_queue(
 
 
 @clips_router.get("/reports", response_model=ReportQueueResponse)
-async def list_report_queue(
+def list_report_queue(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> ReportQueueResponse:
@@ -389,7 +389,7 @@ async def list_report_queue(
 
 
 @clips_router.get("/{clip_id}", response_model=ClipDetailResponse)
-async def get_clip_for_review(
+def get_clip_for_review(
     clip_id: str,
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ClipDetailResponse:
@@ -455,7 +455,7 @@ async def get_clip_for_review(
 
 # --- Actions ----------------------------------------------------------------
 @clips_router.post("/{clip_id}/approve", response_model=ClipActionResponse)
-async def approve_clip(
+def approve_clip(
     clip_id: str,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -500,7 +500,7 @@ async def approve_clip(
 
 
 @clips_router.post("/{clip_id}/reject", response_model=ClipActionResponse)
-async def reject_clip(
+def reject_clip(
     clip_id: str,
     body: ReasonRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -611,7 +611,7 @@ def _takedown(
 
 
 @clips_router.post("/{clip_id}/takedown", response_model=ClipActionResponse)
-async def takedown_clip(
+def takedown_clip(
     clip_id: str,
     body: ReasonRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -652,7 +652,7 @@ def _load_report(service_client: ServiceRoleClient, report_id: str) -> dict[str,
 
 
 @clips_router.post("/reports/{report_id}/dismiss", response_model=ReportActionResponse)
-async def dismiss_report(
+def dismiss_report(
     report_id: str,
     body: NoteRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
@@ -681,7 +681,7 @@ async def dismiss_report(
 
 
 @clips_router.post("/reports/{report_id}/uphold", response_model=ReportActionResponse)
-async def uphold_report(
+def uphold_report(
     report_id: str,
     body: NoteRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("admin"))],

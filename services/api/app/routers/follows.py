@@ -141,7 +141,7 @@ def _rate_limit_follow(service_client: ServiceRoleClient, user_id: str) -> None:
 
 # --- Endpoints ------------------------------------------------------------------
 @router.put("/vendors/{vendor_id}/follow", status_code=204)
-async def follow_vendor(
+def follow_vendor(
     vendor_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -166,7 +166,7 @@ async def follow_vendor(
 
 
 @router.delete("/vendors/{vendor_id}/follow", status_code=204)
-async def unfollow_vendor(
+def unfollow_vendor(
     vendor_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -186,7 +186,7 @@ async def unfollow_vendor(
 
 
 @router.get("/me/follows", response_model=FollowListResponse)
-async def list_my_follows(
+def list_my_follows(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
@@ -238,7 +238,7 @@ async def list_my_follows(
 
 
 @router.get("/vendor/followers/count", response_model=FollowerCountResponse)
-async def my_follower_count(
+def my_follower_count(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> FollowerCountResponse:

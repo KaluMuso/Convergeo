@@ -477,7 +477,7 @@ def _cached_dashboard_without_finance(service_client: ServiceRoleClient) -> Dash
 
 
 @dashboard_router.get("", response_model=DashboardOut)
-async def get_admin_dashboard(
+def get_admin_dashboard(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> DashboardOut:
@@ -501,7 +501,7 @@ def _invalidate_dashboard_cache() -> None:
 # Defined directly on the admin router (prefix /admin, route_class=AdminAuditedRoute,
 # require_role("admin")) so it audits + gates like /admin/echo and enumerates cleanly.
 @admin_router.post("/ai-spend/reset-kill-switch", response_model=KillSwitchResetOut)
-async def reset_ai_kill_switch(
+def reset_ai_kill_switch(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
 ) -> KillSwitchResetOut:
