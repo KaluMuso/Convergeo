@@ -1,10 +1,11 @@
 "use client";
 
-import type { Session, User } from "@supabase/supabase-js";
 import { isE2EMockSessionAllowed } from "@vergeo/config/api-base-url";
 import { useEffect, useState } from "react";
 
 import { getBrowserClient } from "./browser-client-lazy";
+
+import type { Session, User } from "@supabase/supabase-js";
 
 export type UseSessionResult = {
   session: Session | null;

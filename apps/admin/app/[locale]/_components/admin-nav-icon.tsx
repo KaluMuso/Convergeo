@@ -67,6 +67,7 @@ const NAV_ICON_MAP: Record<AdminNavItemKey, NavIconEntry> = {
   importRequests: { hue: "teal", Icon: LcTruck },
   madeInZambia: { hue: "green", Icon: LcShieldCheck },
   trials: { hue: "pink", Icon: LcGift },
+  askAudit: { hue: "orange", Icon: LcAlertTriangle },
 };
 
 type AdminNavIconProps = {

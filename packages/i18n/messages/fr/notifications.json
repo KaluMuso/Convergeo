@@ -251,9 +251,10 @@
       "import_quote_ready": "Votre estimation d'importation est prête. Ouvrez Sourcing pour la voir."
     },
     "admin": {
-      "kyc_submitted": "Nouvelle demande KYC en attente d'examen.",
+      "ask_answer_flagged": "Ask Vergeo a donné une réponse suspecte. Ouvrez-la pour vérifier.",
       "dispute_opened": "Nouveau litige ouvert sur la commande {ref}.",
-      "extras_requested": "Un vendeur a demandé une option : {name}."
+      "extras_requested": "Un vendeur a demandé une option : {name}.",
+      "kyc_submitted": "Nouvelle demande KYC en attente d'examen."
     }
   }
 }

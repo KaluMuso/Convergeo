@@ -11,7 +11,7 @@ import { OrderDetailView } from "../app/[locale]/orders/_components/OrderDetailV
 import middleware from "../middleware";
 
 import { resolveAdminNavCapabilities } from "./admin-nav-capabilities";
-import { loadAdminPermissions, type AdminPermissions } from "./roles-api";
+import { ADMIN_GRANTS_REUSE_MS, loadAdminPermissions, type AdminPermissions } from "./roles-api";
 
 const fixture = vi.hoisted(() => ({
   pathname: "/en/orders",
@@ -47,7 +47,7 @@ vi.mock("../app/[locale]/_components/admin-notification-bell", () => ({
 vi.mock("../app/[locale]/_components/sign-out-button", () => ({
   SignOutButton: () => null,
 }));
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: () => fixture.token }));
+vi.mock("./access-token", () => ({ getBrowserAccessToken: () => fixture.token }));
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: async () => ({
     auth: {
@@ -137,7 +137,9 @@ describe("admin navigation from current API permissions", () => {
     expect(keys).toContain("config");
     expect(keys).toContain("disputes");
     expect(keys).toContain("coupons");
-    expect(keys).toHaveLength(28);
+    expect(keys).toContain("askAudit");
+    expect(keys).toContain("importRequests");
+    expect(keys).toHaveLength(30);
     expect(keys).not.toContain("roles");
     expect(visible([], true, true)).toContain("roles");
   });
@@ -390,7 +392,8 @@ describe("mounted current-permission shell", () => {
     const slower = deferred<Response>();
     nextReply = slower.promise;
     await refocus();
-    expect(container.querySelector("[data-protected-route]")).toBeNull();
+    // Refocus rechecks quietly: the page stays while the answer is pending.
+    expect(container.querySelector("[data-protected-route]")).not.toBeNull();
     current = grants([]);
     await refocus();
     await act(async () => {
@@ -591,6 +594,165 @@ describe("platform shell admission preserves existing auth routes", () => {
       expect(calls).toEqual([]);
     },
   );
+});
+
+describe("route changes reuse confirmed grants while rechecking", () => {
+  const permissionCalls = () => calls.filter((c) => c.path === "/admin/me/permissions");
+
+  it("paints the next permitted route at once and still rechecks the API", async () => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderRoute("/en/orders");
+    expect(permissionCalls()).toHaveLength(1);
+    const pending = deferred<Response>();
+    nextReply = pending.promise;
+    await renderRoute("/en/moderation");
+    // No "checking permissions" gap: the page mounts (and can start its own fetch) now.
+    expect(container.querySelector('[data-protected-route="/en/moderation"]')).not.toBeNull();
+    expect(container.querySelector('[role="status"]')).toBeNull();
+    expect(permissionCalls()).toHaveLength(2);
+    await act(async () => pending.resolve(reply(current)));
+    expect(container.querySelector('[data-protected-route="/en/moderation"]')).not.toBeNull();
+  });
+
+  it("still denies a route the reused grants do not cover", async () => {
+    await renderRoute("/en/orders");
+    const pending = deferred<Response>();
+    nextReply = pending.promise;
+    await renderRoute("/en/config");
+    expect(container.querySelector("[data-protected-route]")).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
+    await act(async () => pending.resolve(reply(current)));
+  });
+
+  it("removes the page when the background recheck reports a revoked grant", async () => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderRoute("/en/orders");
+    current = grants(["finance.read"]);
+    await renderRoute("/en/moderation");
+    expect(container.querySelector("[data-protected-route]")).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
+  });
+
+  it("fails closed when the background recheck is definitively refused", async () => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderRoute("/en/orders");
+    nextReply = Promise.resolve(
+      reply({ error: { code: "forbidden", message: "Denied", request_id: "local-only" } }, 403),
+    );
+    await renderRoute("/en/moderation");
+    expect(container.querySelector("[data-protected-route]")).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionError");
+  });
+
+  it("keeps the page through a transport blip, since the API stays authoritative", async () => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderRoute("/en/orders");
+    const pending = deferred<Response>();
+    nextReply = pending.promise;
+    await renderRoute("/en/moderation");
+    await act(async () => pending.reject(new Error("Local transport failure")));
+    expect(container.querySelector('[data-protected-route="/en/moderation"]')).not.toBeNull();
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it("waits for fresh grants once the confirmation is older than the reuse window", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      current = grants(["finance.read", "products.manage"]);
+      await renderRoute("/en/orders");
+      vi.setSystemTime(Date.now() + ADMIN_GRANTS_REUSE_MS + 1_000);
+      const pending = deferred<Response>();
+      nextReply = pending.promise;
+      await renderRoute("/en/moderation");
+      expect(container.querySelector("[data-protected-route]")).toBeNull();
+      expect(container.querySelector('[role="status"]')?.textContent).toBe(
+        "shell.permissionChecking",
+      );
+      await act(async () => pending.resolve(reply(current)));
+      expect(container.querySelector('[data-protected-route="/en/moderation"]')).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("never reuses grants across sign-out or an account change", async () => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderRoute("/en/orders");
+    await renderRoute("/en/login");
+    const pending = deferred<Response>();
+    nextReply = pending.promise;
+    await renderRoute("/en/moderation");
+    expect(container.querySelector("[data-protected-route]")).toBeNull();
+    expect(container.querySelector('[role="status"]')?.textContent).toBe(
+      "shell.permissionChecking",
+    );
+    await act(async () => pending.resolve(reply(current)));
+  });
+});
+
+describe("refocus rechecks grants quietly", () => {
+  const typed = () => container.querySelector<HTMLInputElement>("input[data-draft]");
+
+  async function renderWithForm(path: string) {
+    fixture.pathname = path;
+    root ??= createRoot(container);
+    await act(async () => {
+      root?.render(
+        React.createElement(AdminShell, {
+          locale: "en",
+          children: React.createElement(
+            "div",
+            { "data-protected-route": path },
+            React.createElement("input", { "data-draft": "", defaultValue: "" }),
+          ),
+        }),
+      );
+    });
+    const input = typed()!;
+    input.value = "half-written reject reason";
+  }
+
+  it("keeps the page and its form state when the grants are unchanged", async () => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderWithForm("/en/moderation");
+    const pending = deferred<Response>();
+    nextReply = pending.promise;
+    await refocus();
+    expect(typed()?.value).toBe("half-written reject reason");
+    await act(async () => pending.resolve(reply(current)));
+    expect(typed()?.value).toBe("half-written reject reason");
+  });
+
+  it("removes the page when the recheck returns fewer grants", async () => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderWithForm("/en/moderation");
+    current = grants(["finance.read"]);
+    await refocus();
+    expect(typed()).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
+  });
+
+  it.each([401, 403])("removes the page on a %s answer", async (status) => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderWithForm("/en/moderation");
+    nextReply = Promise.resolve(
+      reply({ error: { code: "forbidden", message: "Denied", request_id: "local-only" } }, status),
+    );
+    await refocus();
+    expect(typed()).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionError");
+  });
+
+  it("keeps the page through a network error", async () => {
+    current = grants(["finance.read", "products.manage"]);
+    await renderWithForm("/en/moderation");
+    const pending = deferred<Response>();
+    nextReply = pending.promise;
+    await refocus();
+    await act(async () => pending.reject(new Error("Local transport failure")));
+    expect(typed()?.value).toBe("half-written reject reason");
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
 });
 
 describe("logistics.manage reaches the dispatch board and order detail only", () => {

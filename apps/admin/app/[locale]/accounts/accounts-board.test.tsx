@@ -14,7 +14,7 @@ vi.mock("../../../lib/roles-api", () => ({
   rolesApi: { request: mocks.request },
   useAdminPermissions: () => mocks.grants,
 }));
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: async () => "t" }));
+vi.mock("../../../lib/access-token", () => ({ getBrowserAccessToken: async () => "t" }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: ReturnType<typeof createRoot>;
 let host: HTMLDivElement;

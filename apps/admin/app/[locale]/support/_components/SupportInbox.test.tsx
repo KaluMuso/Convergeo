@@ -11,7 +11,7 @@ vi.mock("./api", () => ({ supportApi: { request: mocks.request } }));
 vi.mock("./ContextCard", () => ({ ContextCardView: () => null }));
 vi.mock("./InteractionLog", () => ({ InteractionLog: () => null }));
 vi.mock("./ReplyComposer", () => ({ ReplyComposer: () => null }));
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: async () => "t" }));
+vi.mock("../../../../lib/access-token", () => ({ getBrowserAccessToken: async () => "t" }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 let root: ReturnType<typeof createRoot>;

@@ -54,5 +54,7 @@ export function resolveAdminNavCapabilities(
     importRequests: has("vendors.manage"),
     madeInZambia: has("vendors.manage"),
     trials: unrestricted,
+    // Ask Vergeo answer log + auditor: admin / superadmin only (API: unrestricted route).
+    askAudit: unrestricted,
   };
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { getBrowserAccessToken } from "@vergeo/auth";
 import { createApiClient } from "@vergeo/config";
 
+import { getBrowserAccessToken } from "../../../../lib/access-token";
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { parseKwachaToNgwee } from "../../home-feed/_components/feed-admin-api";
 
@@ -95,21 +95,14 @@ export type ExtraDraft = {
 };
 
 /** Validated PATCH payload (integer ngwee), or null when the price shape is wrong. */
-export function extraPayload(
-  draft: ExtraDraft,
-): Record<string, unknown> | null {
+export function extraPayload(draft: ExtraDraft): Record<string, unknown> | null {
   const price = draft.price.trim() ? parseKwachaToNgwee(draft.price) : null;
   const max = draft.priceMax.trim() ? parseKwachaToNgwee(draft.priceMax) : null;
   if (draft.price.trim() && price === null) return null;
   if (draft.priceMax.trim() && max === null) return null;
   if (!draft.name.trim()) return null;
-  if (draft.pricing === "fixed" && (price === null || max !== null))
-    return null;
-  if (
-    draft.pricing === "range" &&
-    (price === null || max === null || max <= price)
-  )
-    return null;
+  if (draft.pricing === "fixed" && (price === null || max !== null)) return null;
+  if (draft.pricing === "range" && (price === null || max === null || max <= price)) return null;
   if (draft.pricing === "pay_as_you_go" && max !== null) return null;
   return {
     name: draft.name.trim(),

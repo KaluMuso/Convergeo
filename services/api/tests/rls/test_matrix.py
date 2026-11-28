@@ -267,6 +267,24 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_only(),
         Persona.ADMIN: select_only(),
     },
+    # Ask Vergeo answer log (20261127090000): own-row (or admin) SELECT; no client writes.
+    "ask_answers": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
+    # Auditor findings: admin-only SELECT policy; no client writes.
+    "ask_answer_findings": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     # Ask Vergeo premium flag: own-row (or admin) SELECT; no client write grants.
     "ask_user_tiers": {
         Persona.ANON: deny_all(),

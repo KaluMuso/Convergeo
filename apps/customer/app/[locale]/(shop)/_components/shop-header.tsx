@@ -6,11 +6,15 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { BrandLogo } from "./brand-logo";
 import { CartNavTrigger, getCartItemCount, setStoreState, useCartStore } from "./cart/cart-store";
-import { CategoryMegaMenu } from "./category-mega-menu";
 import { DesktopHeaderSearch } from "./desktop-header-search";
 import { HeaderThemeToggle } from "./header-theme-toggle";
+import { MegaMenuLauncher } from "./mega-menu/mega-menu-launcher";
+import { openMobileMenu } from "./mega-menu/menu-events";
+import { IconMenu } from "./mega-menu/menu-icons";
+import { MobileMenuButton, MobileMenuHost } from "./mega-menu/mobile-menu-host";
 import { MerchPreviewLink, useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
 
+import type { MegaMenuLabels } from "./mega-menu/labels";
 import type { SearchInputLabels } from "./search/search-input";
 
 export type ShopHeaderLabels = {
@@ -38,6 +42,8 @@ export type ShopHeaderLabels = {
   cartWithCount: string;
   openCart: string;
   searchInput: SearchInputLabels;
+  /** Mega menu (desktop panel) + drill-down drawer (phones/tablets) copy. */
+  megaMenu?: MegaMenuLabels;
   /** Appearance quick toggle (common.theme.*). */
   theme?: { label: string; light: string; dark: string; system: string };
 };
@@ -164,23 +170,19 @@ export function ShopHeader({
     </MerchPreviewLink>
   );
 
-  const categories = (
-    <CategoryMegaMenu
-      locale={locale}
-      closeOnScroll
-      labels={{
-        trigger: labels.allCategories,
-        panelAria: labels.categoriesPanelAria,
-        loading: labels.categoriesLoading,
-        empty: labels.categoriesEmpty,
-        viewAll: labels.viewAllCategories,
-        featuredTitle: labels.featuredTitle,
-        featuredPromo: labels.featuredPromo,
-        featuredPromoCta: labels.featuredPromoCta,
-        fallbackRootLabels: labels.fallbackCategoryRoots,
-      }}
-    />
-  );
+  const categories = labels.megaMenu ? (
+    <MegaMenuLauncher locale={locale} labels={labels.megaMenu} />
+  ) : null;
+
+  const menuButton = labels.megaMenu ? (
+    <MobileMenuButton
+      label={labels.megaMenu.menuOpen}
+      onOpen={openMobileMenu}
+      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing"
+    >
+      <IconMenu />
+    </MobileMenuButton>
+  ) : null;
 
   const accountLink = (withLabel: boolean) => (
     <Link
@@ -223,7 +225,10 @@ export function ShopHeader({
         className="flex flex-col gap-1 px-3 pb-2 pt-1 md:hidden"
       >
         <div className="flex items-center justify-between gap-2">
-          {logo}
+          <div className="flex min-w-0 items-center gap-1">
+            {menuButton}
+            {logo}
+          </div>
           {/* Simple-UX: every phone action keeps its icon and gets a short
               word under it, so nothing is a bare icon and nothing is removed.
               The theme switch sits on the search row so the signed-in row
@@ -258,7 +263,10 @@ export function ShopHeader({
         aria-label={labels.desktopAriaLabel}
         className="hidden flex-wrap items-center gap-x-2 px-4 md:flex lg:h-14 lg:flex-nowrap lg:gap-x-3 lg:px-6 xl:px-8"
       >
-        <div className="order-1 flex h-14 items-center">{logo}</div>
+        <div className="order-1 flex h-14 items-center gap-1">
+          <span className="lg:hidden">{menuButton}</span>
+          {logo}
+        </div>
         <div className="order-2 mx-1 min-w-0 flex-1 lg:order-3 lg:mx-2 lg:max-w-3xl xl:max-w-4xl">
           <DesktopHeaderSearch
             locale={locale}
@@ -273,7 +281,7 @@ export function ShopHeader({
           {cartTrigger(true)}
         </div>
         <div className="order-4 flex basis-full items-center gap-1 overflow-x-auto pb-2 [scrollbar-width:none] lg:contents">
-          <div className="shrink-0 lg:order-2">{categories}</div>
+          <div className="hidden shrink-0 lg:order-2 lg:block">{categories}</div>
           <ul className="m-0 flex list-none items-center gap-1 p-0 lg:order-4 lg:gap-0.5">
             {navLinks.map((link) => (
               <li key={link.key} className="shrink-0">
@@ -285,6 +293,7 @@ export function ShopHeader({
           </ul>
         </div>
       </nav>
+      {labels.megaMenu ? <MobileMenuHost locale={locale} labels={labels.megaMenu} /> : null}
     </header>
   );
 }

@@ -491,3 +491,18 @@ describe("middleware matrix", () => {
     ).toBe(false);
   });
 });
+
+describe("updateSession verify: local", () => {
+  it("never calls the auth server and writes no cookies or cache headers", async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon";
+    getUser.mockClear();
+    getClaims.mockClear();
+    const result = await updateSession(new NextRequest("http://localhost/en"), { verify: "local" });
+    expect(getUser).not.toHaveBeenCalled();
+    expect(getClaims).not.toHaveBeenCalled();
+    expect(result.user).toBeNull();
+    expect(result.roles).toEqual([]);
+    expect(result.response.headers.get("Cache-Control")).toBeNull();
+  });
+});

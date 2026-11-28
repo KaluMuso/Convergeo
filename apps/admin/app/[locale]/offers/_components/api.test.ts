@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: vi.fn(async () => "t") }));
+vi.mock("../../../../lib/access-token", () => ({ getBrowserAccessToken: vi.fn(async () => "t") }));
 
 import { buildOffersQuery, DEFAULT_FILTERS } from "./api";
 

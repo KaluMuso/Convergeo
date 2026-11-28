@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@vergeo/auth";
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -23,7 +23,7 @@ export function SignOutButton({ locale, label, className }: SignOutButtonProps) 
   const handleSignOut = async () => {
     setPending(true);
     try {
-      await createBrowserClient().auth.signOut();
+      await (await getBrowserClient()).auth.signOut();
     } finally {
       router.replace(`/${locale}/login`);
       router.refresh();

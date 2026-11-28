@@ -251,9 +251,10 @@
       "import_quote_ready": "您的进口估算已准备好。打开“采购”查看。"
     },
     "admin": {
-      "kyc_submitted": "有新的 KYC 申请待审核。",
+      "ask_answer_flagged": "Ask Vergeo 给出了可疑的回答，请打开查看。",
       "dispute_opened": "订单 {ref} 有新的争议。",
-      "extras_requested": "有卖家申请了增值服务：{name}。"
+      "extras_requested": "有卖家申请了增值服务：{name}。",
+      "kyc_submitted": "有新的 KYC 申请待审核。"
     }
   }
 }

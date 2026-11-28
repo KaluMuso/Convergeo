@@ -23,7 +23,7 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 200
+MIGRATION_COUNT = 201
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
 # Reviewed variants (#762), money-path reconciliation (#759 into #718) and the
 # 2026-11 queued features (#764-#768) replay after repairs, in filename order.
@@ -118,6 +118,8 @@ POST_REPAIR_ORDER = [
     "20261124120000",
     # Ask Vergeo service-role checks use auth.role() (rewrite in place, no down).
     "20261126190000",
+    # Ask Vergeo answer log + auditor findings (additive tables, trigger-based admin alert).
+    "20261127090000",
     # Vendor sourcing hub: supplier types, made-in-Zambia flag, import requests (additive, documented down).
     "20261127100000",
 ]
