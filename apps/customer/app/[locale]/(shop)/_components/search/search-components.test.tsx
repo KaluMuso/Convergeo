@@ -24,7 +24,11 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-import { addRecentSearch, readRecentSearches, RecentSearches } from "./recent-searches";
+import {
+  addRecentSearch,
+  readRecentSearches,
+  RecentSearches,
+} from "./recent-searches";
 import { ResultsTabs } from "./results-tabs";
 import { SearchInput } from "./search-input";
 import { ZeroResults } from "./zero-results";
@@ -168,8 +172,12 @@ describe("SearchInput autocomplete", () => {
     const input = screen.getByRole("combobox");
     await user.click(input);
 
-    expect(screen.getByRole("listbox", { name: "Recent searches" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "chitenge" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("listbox", { name: "Recent searches" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "chitenge" }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -195,8 +203,12 @@ describe("ResultsTabs tab counts", () => {
     );
 
     expect(screen.getByTestId("search-tab-all")).toHaveTextContent("All (5)");
-    expect(screen.getByTestId("search-tab-products")).toHaveTextContent("Products (2)");
-    expect(screen.getByTestId("search-tab-events")).toHaveTextContent("Events (0)");
+    expect(screen.getByTestId("search-tab-products")).toHaveTextContent(
+      "Products (2)",
+    );
+    expect(screen.getByTestId("search-tab-events")).toHaveTextContent(
+      "Events (0)",
+    );
     expect(screen.getByTestId("search-results-list")).toBeInTheDocument();
     expect(screen.getByTestId("search-product-grid")).toHaveClass(
       "gap-2",
@@ -209,7 +221,9 @@ describe("ResultsTabs tab counts", () => {
       "href",
       "/en/p/itel-a70",
     );
-    expect(screen.getByRole("heading", { name: "Itel A70 Smartphone" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Itel A70 Smartphone" }),
+    ).toBeInTheDocument();
     // Wholesale supplies are a B2B-gated surface (own /supplies page), not a
     // global-search tab — it must not render here.
     expect(screen.queryByTestId("search-tab-supplies")).not.toBeInTheDocument();
@@ -351,7 +365,9 @@ describe("ZeroResults", () => {
       />,
     );
 
-    expect(screen.getByTestId("search-zero-results-body")).toHaveTextContent("Check the spelling");
+    expect(screen.getByTestId("search-zero-results-body")).toHaveTextContent(
+      "Check the spelling",
+    );
     expect(screen.getByTestId("search-zero-results-reset")).toHaveAttribute(
       "href",
       "/en/search?q=shirt",
@@ -376,8 +392,12 @@ describe("ZeroResults", () => {
       />,
     );
 
-    expect(screen.queryByTestId("search-zero-results-reset")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("search-zero-results-body")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("search-zero-results-reset"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("search-zero-results-body"),
+    ).not.toBeInTheDocument();
   });
 
   it("hides the category block when the categories API gave nothing", () => {
@@ -421,7 +441,10 @@ describe("Recent searches localStorage", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: "itel" })).toHaveAttribute("href", "/en/search?q=itel");
+    expect(screen.getByRole("link", { name: "itel" })).toHaveAttribute(
+      "href",
+      "/en/search?q=itel",
+    );
     expect(screen.getByRole("link", { name: "chitenge" })).toBeInTheDocument();
   });
 });

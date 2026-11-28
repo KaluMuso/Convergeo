@@ -121,9 +121,13 @@ export function riderCashDueNgwee(
 
 /** Door-payment actions ops can take for the rider (COD parcel, rider picked up). */
 export function doorPaymentActions(
-  dispatch: Pick<Dispatch, "status" | "cod_amount_ngwee" | "door_payment_state">,
+  dispatch: Pick<
+    Dispatch,
+    "status" | "cod_amount_ngwee" | "door_payment_state"
+  >,
 ): Array<"arrived" | "request" | "poll" | "cash"> {
-  if (dispatch.status !== "picked_up" || dispatch.cod_amount_ngwee <= 0) return [];
+  if (dispatch.status !== "picked_up" || dispatch.cod_amount_ngwee <= 0)
+    return [];
   const state = dispatch.door_payment_state ?? null;
   if (state === "paid" || state === "cash" || state === "exception") return [];
   if (state === "pending") return ["poll"];
@@ -154,18 +158,26 @@ export function groupDispatches(dispatches: readonly Dispatch[]): {
   const active: Dispatch[] = [];
   const closed: Dispatch[] = [];
   for (const dispatch of dispatches) {
-    (ACTIVE_DISPATCH_STATUSES.includes(dispatch.status) ? active : closed).push(dispatch);
+    (ACTIVE_DISPATCH_STATUSES.includes(dispatch.status) ? active : closed).push(
+      dispatch,
+    );
   }
-  const rank = (status: DispatchStatus) => ACTIVE_DISPATCH_STATUSES.indexOf(status);
+  const rank = (status: DispatchStatus) =>
+    ACTIVE_DISPATCH_STATUSES.indexOf(status);
   active.sort(
-    (a, b) => rank(a.status) - rank(b.status) || a.requested_at.localeCompare(b.requested_at),
+    (a, b) =>
+      rank(a.status) - rank(b.status) ||
+      a.requested_at.localeCompare(b.requested_at),
   );
   closed.sort((a, b) => b.requested_at.localeCompare(a.requested_at));
   return { active, closed };
 }
 
 /** Couriers ops may assign to an order: active, manual, and serving its zone. */
-export function couriersForOrder(couriers: readonly Courier[], zoneKey: string | null): Courier[] {
+export function couriersForOrder(
+  couriers: readonly Courier[],
+  zoneKey: string | null,
+): Courier[] {
   return couriers.filter((courier) => {
     if (!courier.active || courier.integration_kind !== "manual") return false;
     if (courier.zones.length === 0) return true;
@@ -174,9 +186,14 @@ export function couriersForOrder(couriers: readonly Courier[], zoneKey: string |
   });
 }
 
-export function zonePriceNgwee(courier: Courier, zoneKey: string | null): number | null {
+export function zonePriceNgwee(
+  courier: Courier,
+  zoneKey: string | null,
+): number | null {
   if (!zoneKey) return null;
-  return courier.zones.find((zone) => zone.zone_key === zoneKey)?.price_ngwee ?? null;
+  return (
+    courier.zones.find((zone) => zone.zone_key === zoneKey)?.price_ngwee ?? null
+  );
 }
 
 export type DispatchAction =
@@ -211,7 +228,8 @@ const TARGET_TO_ACTION: Partial<Record<DispatchStatus, DispatchAction>> = {
 
 /** Buttons for one dispatch, derived from the API's `allowed_next`. */
 export function actionsFor(
-  dispatch: Pick<Dispatch, "status" | "allowed_next"> & Partial<Pick<Dispatch, "direction">>,
+  dispatch: Pick<Dispatch, "status" | "allowed_next"> &
+    Partial<Pick<Dispatch, "direction">>,
 ): DispatchAction[] {
   const actions: DispatchAction[] = [];
   const isReturn = dispatch.direction === "return";
@@ -225,10 +243,15 @@ export function actionsFor(
     const action = TARGET_TO_ACTION[target];
     if (action) actions.push(action);
   }
-  if (isReturn && (dispatch.status === "accepted" || dispatch.status === "picked_up")) {
+  if (
+    isReturn &&
+    (dispatch.status === "accepted" || dispatch.status === "picked_up")
+  ) {
     actions.push("returned");
   }
-  if (["picked_up", "delivered", "failed", "cancelled"].includes(dispatch.status)) {
+  if (
+    ["picked_up", "delivered", "failed", "cancelled"].includes(dispatch.status)
+  ) {
     actions.push("recordCost");
   }
   return actions;
@@ -238,7 +261,10 @@ export function actionsFor(
 export function groupReadyOrders(
   orders: readonly ReadyOrder[],
 ): { key: string; landmark: string | null; orders: ReadyOrder[] }[] {
-  const groups = new Map<string, { key: string; landmark: string | null; orders: ReadyOrder[] }>();
+  const groups = new Map<
+    string,
+    { key: string; landmark: string | null; orders: ReadyOrder[] }
+  >();
   for (const order of orders) {
     const key = order.group_key ?? order.order_id;
     const group = groups.get(key) ?? {
@@ -292,7 +318,10 @@ export function isPodPublicIdWellFormed(value: string): boolean {
 }
 
 /** `wa.me` deep link for the manual "paste into WhatsApp" fallback. */
-export function whatsAppShareUrl(phoneE164: string | null, text: string): string | null {
+export function whatsAppShareUrl(
+  phoneE164: string | null,
+  text: string,
+): string | null {
   const encoded = encodeURIComponent(text);
   if (!phoneE164) return `https://wa.me/?text=${encoded}`;
   const digits = phoneE164.replace(/[^0-9]/g, "");
@@ -301,7 +330,10 @@ export function whatsAppShareUrl(phoneE164: string | null, text: string): string
 }
 
 /** Minutes a `requested` dispatch has waited — drives the 45-minute stale badge. */
-export function minutesWaiting(requestedAt: string, now: Date = new Date()): number {
+export function minutesWaiting(
+  requestedAt: string,
+  now: Date = new Date(),
+): number {
   const started = Date.parse(requestedAt);
   if (Number.isNaN(started)) return 0;
   return Math.max(0, Math.floor((now.getTime() - started) / 60_000));
@@ -309,14 +341,18 @@ export function minutesWaiting(requestedAt: string, now: Date = new Date()): num
 
 export const STALE_REQUESTED_MINUTES = 45;
 
-export function isStale(dispatch: Pick<Dispatch, "status" | "requested_at">, now?: Date): boolean {
+export function isStale(
+  dispatch: Pick<Dispatch, "status" | "requested_at">,
+  now?: Date,
+): boolean {
   return (
     dispatch.status === "requested" &&
     minutesWaiting(dispatch.requested_at, now) >= STALE_REQUESTED_MINUTES
   );
 }
 
-export type HandoverErrorKind = "invalid" | "locked" | "rateLimited" | "generic";
+export type HandoverErrorKind =
+  "invalid" | "locked" | "rateLimited" | "generic";
 
 export function classifyHandoverError(error: {
   code?: string;
@@ -329,8 +365,11 @@ export function classifyHandoverError(error: {
 } {
   const details = error.details ?? {};
   const remaining =
-    typeof details.attempts_remaining === "number" ? details.attempts_remaining : null;
-  const retryAfter = typeof details.retry_after === "number" ? details.retry_after : null;
+    typeof details.attempts_remaining === "number"
+      ? details.attempts_remaining
+      : null;
+  const retryAfter =
+    typeof details.retry_after === "number" ? details.retry_after : null;
   if (error.code === "dispatch_handover_invalid") {
     return { kind: "invalid", attemptsRemaining: remaining, retryAfter: null };
   }
@@ -381,23 +420,29 @@ export type CourierPayload = {
   zones: CourierZone[];
 };
 
-export type CourierFormError = "name" | "contact" | "whatsapp" | "email" | "price";
+export type CourierFormError =
+  "name" | "contact" | "whatsapp" | "email" | "price";
 
 export function buildCourierPayload(
   form: CourierFormState,
-): { ok: true; payload: CourierPayload } | { ok: false; error: CourierFormError } {
+):
+  | { ok: true; payload: CourierPayload }
+  | { ok: false; error: CourierFormError } {
   const name = form.name.trim();
   if (!name || name.length > 120) return { ok: false, error: "name" };
   const whatsapp = form.whatsapp.trim();
   const email = form.email.trim();
   if (!whatsapp && !email) return { ok: false, error: "contact" };
-  if (whatsapp && !/^\+[1-9][0-9]{7,14}$/.test(whatsapp)) return { ok: false, error: "whatsapp" };
-  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, error: "email" };
+  if (whatsapp && !/^\+[1-9][0-9]{7,14}$/.test(whatsapp))
+    return { ok: false, error: "whatsapp" };
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+    return { ok: false, error: "email" };
   const zones: CourierZone[] = [];
   for (const [zoneKey, zone] of Object.entries(form.zones)) {
     if (!zone.enabled) continue;
     const price = kwachaTextToNgwee(zone.priceKwacha);
-    if (price !== null && Number.isNaN(price)) return { ok: false, error: "price" };
+    if (price !== null && Number.isNaN(price))
+      return { ok: false, error: "price" };
     zones.push({ zone_key: zoneKey, price_ngwee: price });
   }
   zones.sort((a, b) => a.zone_key.localeCompare(b.zone_key));

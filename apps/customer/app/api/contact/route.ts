@@ -54,7 +54,8 @@ export async function POST(request: NextRequest): Promise<Response> {
   const inbox = process.env.CONTACT_INBOX;
   const production = process.env.NODE_ENV === "production";
   const from =
-    process.env.CONTACT_FROM?.trim() || (production ? undefined : "Vergeo5 <noreply@vergeo5.com>");
+    process.env.CONTACT_FROM?.trim() ||
+    (production ? undefined : "Vergeo5 <noreply@vergeo5.com>");
 
   if (!apiKey || !inbox || !from) {
     if (production) {

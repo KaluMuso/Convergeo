@@ -28,8 +28,14 @@ type ImageProps = {
   searchParams: Promise<{ name?: string; price?: string }>;
 };
 
-export default async function OpenGraphImage({ params, searchParams }: ImageProps) {
-  const [{ locale }, { name, price }] = await Promise.all([params, searchParams]);
+export default async function OpenGraphImage({
+  params,
+  searchParams,
+}: ImageProps) {
+  const [{ locale }, { name, price }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const displayName = name?.trim() || "Vergeo5";
   const displayPrice = price?.trim() || null;
 
@@ -100,7 +106,9 @@ export default async function OpenGraphImage({ params, searchParams }: ImageProp
         ) : null}
       </div>
 
-      <div style={{ fontSize: 24, color: COLORS.text2 }}>{resolveOgTagline(locale)}</div>
+      <div style={{ fontSize: 24, color: COLORS.text2 }}>
+        {resolveOgTagline(locale)}
+      </div>
     </div>,
     {
       ...size,
