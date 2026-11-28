@@ -37,7 +37,7 @@ class EventCategoryOption(StrictModel):
 
 
 @router.get("/categories/events", response_model=list[EventCategoryOption])
-async def get_event_categories(
+def get_event_categories(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[EventCategoryOption]:
     response = (

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { formatSpecValue } from "../../../../lib/spec-value";
 import { VendorErrorState } from "../../_components/async-state";
 import { CanonicalSearch } from "../../listings/new/_components/canonical-search";
 import { createListingClient } from "../../listings/new/_lib/listing-client";
@@ -352,7 +353,7 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
               <p className="text-sm">
                 {canonical.brand} · {canonical.category_name}
               </p>
-              <p className="break-all text-xs">{JSON.stringify(canonical.spec)}</p>
+              <p className="break-all text-xs">{formatSpecValue(canonical.spec)}</p>
             </div>
           ) : null}
           {hasUnsavedChanges ? (

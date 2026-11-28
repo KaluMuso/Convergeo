@@ -935,7 +935,7 @@ async def unpause_vendor_listing(
 
 
 @router.delete("/{listing_id}", response_model=ListingDeleteResponse)
-async def delete_vendor_listing(
+def delete_vendor_listing(
     listing_id: str,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],

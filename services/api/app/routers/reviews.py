@@ -474,7 +474,7 @@ async def list_order_review_items(
 
 
 @router.get("/vendor", response_model=list[ReviewResponse])
-async def list_vendor_reviews(
+def list_vendor_reviews(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[ReviewResponse]:
@@ -641,7 +641,7 @@ async def submit_review(
 
 
 @router.post("/{review_id}/reply", response_model=ReviewResponse)
-async def submit_vendor_reply(
+def submit_vendor_reply(
     review_id: str,
     body: VendorReplyRequest,
     request: Request,

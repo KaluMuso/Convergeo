@@ -186,7 +186,7 @@ def list_extras(
 
 
 @router.post("/requests", response_model=ExtraRequestOut, status_code=201)
-async def request_extra(
+def request_extra(
     body: ExtraRequestCreate,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],

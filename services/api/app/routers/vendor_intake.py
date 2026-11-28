@@ -412,7 +412,7 @@ def _rate_limit(service_client: ServiceRoleClient, *, scope: str, key: str, limi
 
 # --- Routes -----------------------------------------------------------------
 @router.get("/sessions", response_model=list[IntakeSessionSummary])
-async def list_intake_sessions(
+def list_intake_sessions(
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[IntakeSessionSummary]:
@@ -506,7 +506,7 @@ async def redeem_review_link(
 
 
 @router.patch("/sessions/{session_id}/draft", response_model=IntakeSessionDetail)
-async def patch_intake_draft(
+def patch_intake_draft(
     session_id: str,
     body: DraftPatchRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
@@ -583,7 +583,7 @@ async def patch_intake_draft(
 
 
 @router.post("/sessions/{session_id}/submit", response_model=SubmitResponse)
-async def submit_intake_session(
+def submit_intake_session(
     session_id: str,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],

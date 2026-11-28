@@ -176,7 +176,7 @@ async def get_listing_variants(
 
 
 @router.put("/{listing_id}/variants", response_model=VariantsResponse)
-async def replace_listing_variants(
+def replace_listing_variants(
     listing_id: str,
     body: VariantsReplaceRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
