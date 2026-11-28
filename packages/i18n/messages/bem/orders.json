@@ -13,7 +13,8 @@
     "relatedTitle": "Abashitisha bambi mu checkout iyi",
     "variantOption": "{group}: {value}",
     "variantSeparator": " · ",
-    "discount": "Ukucefyako kwa kuponi"
+    "discount": "Ukucefyako kwa kuponi",
+    "untitledItem": "Icintu citapewa ishina"
   },
   "empty": {
     "body": "Ilyo mwashita ukufuma ku basellers ba Convergeo, ama-order no tracking fyaisa apa.",

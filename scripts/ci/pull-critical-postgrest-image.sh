@@ -16,6 +16,25 @@ fi
 summary="$log_dir/postgrest-pull.log"
 : > "$summary"
 
+# public.ecr.aws serves anonymous pulls under a shared data cap ("toomanyrequests: Data limit
+# exceeded"). When CI_POSTGREST_MIRROR=1, for the one pinned PostgREST image, prefer the ghcr.io/supabase mirror, accept it
+# only when its digest equals the reviewed one, and tag it with the requested name. Any mirror
+# failure or digest mismatch falls through to the original pull below; nothing is loosened.
+ecr_postgrest='public.ecr.aws/supabase/postgrest:v14.14'
+mirror_postgrest='ghcr.io/supabase/postgrest:v14.14'
+mirror_digest='sha256:d2009b5c9deffc210c8a5592698472fede14fd9f6ca89823c8474ca54d58c012'
+if [[ "${CI_POSTGREST_MIRROR:-}" == 1 && "$image" == "$ecr_postgrest" ]]; then
+  if timeout --kill-after=5s 90s docker pull "$mirror_postgrest" > "$log_dir/postgrest-mirror-pull.log" 2>&1 \
+      && docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$mirror_postgrest" \
+        | grep -Fq "@${mirror_digest}" \
+      && docker tag "$mirror_postgrest" "$image"; then
+    printf 'mirror=%s digest=%s result=success\n' "$mirror_postgrest" "$mirror_digest" >> "$summary"
+    exit 0
+  fi
+  printf 'mirror=%s result=unavailable-or-digest-mismatch; falling back to %s\n' \
+    "$mirror_postgrest" "$image" >> "$summary"
+fi
+
 # At most three 60-second pulls, two short backoffs, and timeout cleanup.
 max_attempts=3
 for attempt in 1 2 3; do

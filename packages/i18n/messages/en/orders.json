@@ -34,7 +34,8 @@
     "openDispute": "Report a problem",
     "variantOption": "{group}: {value}",
     "variantSeparator": " · ",
-    "discount": "Coupon discount"
+    "discount": "Coupon discount",
+    "untitledItem": "Unnamed item"
   },
   "status": {
     "placed": "Placed",

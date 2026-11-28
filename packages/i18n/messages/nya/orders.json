@@ -13,7 +13,8 @@
     "relatedTitle": "Ogulitsa ena mu checkout iyi",
     "variantOption": "{group}: {value}",
     "variantSeparator": " · ",
-    "discount": "Kuchotsera kwa kuponi"
+    "discount": "Kuchotsera kwa kuponi",
+    "untitledItem": "Chinthu chopanda dzina"
   },
   "empty": {
     "body": "Mukagula kuchokera kwa ogulitsa a Convergeo, ma-order ndi tracking zidzaonekera apa.",

@@ -10,6 +10,16 @@ export type AskCitation = {
   slug?: string | null;
   in_stock?: boolean | null;
   distance_km?: number | null;
+  /** Integer ngwee behind `price_display` (as shown). */
+  price_min_ngwee?: number | null;
+  price_max_ngwee?: number | null;
+  /** Locale-less customer path of the cited item (`/p/slug`, `/e/slug`, …). */
+  href?: string | null;
+  /** Seller behind the cited item; drives the "Sold by" link. */
+  vendor_id?: string | null;
+  vendor_name?: string | null;
+  vendor_slug?: string | null;
+  vendor_href?: string | null;
 };
 
 /** Mirror of `FaqRef` (services/api/app/services/ask/faq.py) — i18n keys only. */
@@ -72,15 +82,10 @@ const AI_PREFIX = "ai.";
 
 /** Strip the `ai.` namespace prefix so the key is usable under `useTranslations("ai")`. */
 export function relativeAiKey(fullKey: string): string {
-  return fullKey.startsWith(AI_PREFIX)
-    ? fullKey.slice(AI_PREFIX.length)
-    : fullKey;
+  return fullKey.startsWith(AI_PREFIX) ? fullKey.slice(AI_PREFIX.length) : fullKey;
 }
 
-function stringField(
-  details: Record<string, unknown>,
-  key: string,
-): string | null {
+function stringField(details: Record<string, unknown>, key: string): string | null {
   const value = details[key];
   return typeof value === "string" && value.length > 0 ? value : null;
 }
@@ -99,9 +104,7 @@ export function extractErrorState(error: unknown): AskErrorState {
     const messageKey =
       stringField(details, "message_key") ??
       stringField(details, "i18n_key") ??
-      (error.message.startsWith(AI_PREFIX)
-        ? error.message
-        : "ai.answer.unavailable");
+      (error.message.startsWith(AI_PREFIX) ? error.message : "ai.answer.unavailable");
     return {
       messageKey,
       signupPromptKey: stringField(details, "signup_prompt_key"),

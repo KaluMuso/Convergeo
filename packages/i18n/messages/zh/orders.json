@@ -34,7 +34,8 @@
     "openDispute": "报告问题",
     "variantOption": "{group}：{value}",
     "variantSeparator": " · ",
-    "discount": "优惠券折扣"
+    "discount": "优惠券折扣",
+    "untitledItem": "未命名商品"
   },
   "status": {
     "placed": "已下单",
