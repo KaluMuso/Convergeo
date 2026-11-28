@@ -96,6 +96,25 @@ def register_device(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     vendor_id = str(vendor["id"])
     now = datetime.now(UTC).isoformat()
+    existing = _rows(
+        service_client.client.table("device_tokens")
+        .select("id, user_id, revoked_at")
+        .eq("token", body.token)
+        .execute()
+    )
+    if (
+        existing
+        and existing[0].get("revoked_at") is None
+        and str(existing[0]["user_id"]) != str(current_user.id)
+    ):
+        # An active token belongs to whoever registered it. Taking it over would send
+        # that person's order alerts to this account, so it must be revoked by its owner first.
+        raise AppError(
+            code="conflict",
+            message="This device is registered to another account",
+            http_status=409,
+            details={"message_key": "vendor.devices.owned_by_other"},
+        )
     rows = _rows(
         service_client.client.table("device_tokens")
         .upsert(

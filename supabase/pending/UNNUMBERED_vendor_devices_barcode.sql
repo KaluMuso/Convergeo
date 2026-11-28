@@ -10,7 +10,8 @@
 --
 -- Security model
 --   * RLS ENABLE + FORCE on device_tokens. An authenticated user may SELECT only
---     their own rows (user_id = auth.uid()). No client INSERT / UPDATE / DELETE grant:
+--     their own rows (user_id = auth.uid()), and only the non-secret columns (the
+--     token column is excluded from the grant). No client INSERT / UPDATE / DELETE grant:
 --     every write is made by the API with the service role (POST/DELETE /vendor/devices).
 --   * Sending pushes is a service-role action; the token column is never exposed
 --     through a public view.
@@ -45,7 +46,9 @@ alter table public.device_tokens enable row level security;
 alter table public.device_tokens force row level security;
 
 revoke all on public.device_tokens from public, anon, authenticated;
-grant select on public.device_tokens to authenticated;
+-- Column-level grant: the push token itself is never readable by a client JWT.
+grant select (id, user_id, vendor_id, platform, app_version, last_seen_at, revoked_at, created_at)
+  on public.device_tokens to authenticated;
 grant select, insert, update, delete on public.device_tokens to service_role;
 
 create policy device_tokens_owner_select on public.device_tokens

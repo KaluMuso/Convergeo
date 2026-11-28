@@ -275,7 +275,7 @@ def test_revoke_bad_id_is_404(vendor_a: TestClient) -> None:
 
 # ---- barcode ----
 def test_lookup_finds_own_listing(vendor_a: TestClient) -> None:
-    r = vendor_a.get("/vendor/listings/by-barcode/6001234567890", headers=H)
+    r = vendor_a.get("/vendor/listings/lookup/barcode/6001234567890", headers=H)
     assert r.status_code == 200
     body = r.json()
     assert (
@@ -286,16 +286,22 @@ def test_lookup_finds_own_listing(vendor_a: TestClient) -> None:
 
 
 def test_lookup_never_leaks_other_vendors_barcode(vendor_a: TestClient) -> None:
-    assert vendor_a.get("/vendor/listings/by-barcode/6009999999999", headers=H).status_code == 404
+    assert (
+        vendor_a.get("/vendor/listings/lookup/barcode/6009999999999", headers=H).status_code == 404
+    )
 
 
 def test_lookup_unknown_and_malformed_are_404(vendor_a: TestClient) -> None:
-    assert vendor_a.get("/vendor/listings/by-barcode/0000000000000", headers=H).status_code == 404
-    assert vendor_a.get("/vendor/listings/by-barcode/a%20b", headers=H).status_code == 404
+    assert (
+        vendor_a.get("/vendor/listings/lookup/barcode/0000000000000", headers=H).status_code == 404
+    )
+    assert vendor_a.get("/vendor/listings/lookup/barcode/a%20b", headers=H).status_code == 404
 
 
 def test_lookup_requires_vendor(customer: TestClient) -> None:
-    assert customer.get("/vendor/listings/by-barcode/6001234567890", headers=H).status_code == 403
+    assert (
+        customer.get("/vendor/listings/lookup/barcode/6001234567890", headers=H).status_code == 403
+    )
 
 
 def test_set_barcode_on_own_listing(vendor_a: TestClient, fake: FakeClient) -> None:
@@ -361,3 +367,95 @@ def test_set_barcode_requires_vendor(customer: TestClient) -> None:
         ).status_code
         == 403
     )
+
+
+def test_cannot_take_over_active_token_of_another_user(
+    monkeypatch: pytest.MonkeyPatch, fake: FakeClient
+) -> None:
+    fake.tables["device_tokens"].rows.append(
+        {
+            "id": "d0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0",
+            "user_id": USER_B,
+            "vendor_id": VENDOR_B,
+            "token": TOKEN,
+            "revoked_at": None,
+        }
+    )
+    gen = _client(monkeypatch, fake, USER_A, frozenset({"vendor"}))
+    c = next(gen)
+    r = c.post("/vendor/devices", headers=H, json={"token": TOKEN, "platform": "android"})
+    assert r.status_code == 409
+    row = fake.tables["device_tokens"].rows[0]
+    assert row["user_id"] == USER_B and row["vendor_id"] == VENDOR_B and row["revoked_at"] is None
+
+
+def test_can_take_over_a_revoked_token(monkeypatch: pytest.MonkeyPatch, fake: FakeClient) -> None:
+    fake.tables["device_tokens"].rows.append(
+        {
+            "id": "d0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0",
+            "user_id": USER_B,
+            "vendor_id": VENDOR_B,
+            "token": TOKEN,
+            "revoked_at": "2026-11-28T00:00:00+00:00",
+        }
+    )
+    c = next(_client(monkeypatch, fake, USER_A, frozenset({"vendor"})))
+    assert (
+        c.post(
+            "/vendor/devices", headers=H, json={"token": TOKEN, "platform": "android"}
+        ).status_code
+        == 200
+    )
+    row = fake.tables["device_tokens"].rows[0]
+    assert row["user_id"] == USER_A and row["revoked_at"] is None
+
+
+def test_barcode_unique_violation_race_is_409_not_500(
+    monkeypatch: pytest.MonkeyPatch, fake: FakeClient
+) -> None:
+    class Dup(Exception):
+        code = "23505"
+
+    orig = Q.execute
+
+    def boom(self: Q) -> MagicMock:
+        if self.op == "update" and self.t is fake.tables["vendor_listings"]:
+            raise Dup(
+                "duplicate key value violates unique constraint vendor_listings_vendor_barcode_key"
+            )
+        return orig(self)
+
+    monkeypatch.setattr(Q, "execute", boom)
+    c = next(_client(monkeypatch, fake, USER_A, frozenset({"vendor"})))
+    r = c.put(
+        f"/vendor/listings/{LISTING_A2}/barcode", headers=H, json={"barcode": "5012345678900"}
+    )
+    assert r.status_code == 409
+    assert r.json()["error"]["code"] == "conflict"
+
+
+def test_barcode_lookup_named_stock_does_not_hit_the_stock_route(vendor_a: TestClient) -> None:
+    # /{listing_id}/stock must keep meaning "stock of listing"; a barcode "stock" is just not found.
+    assert vendor_a.get("/vendor/listings/lookup/barcode/stock", headers=H).status_code == 404
+    assert vendor_a.get("/vendor/listings/by-barcode/stock", headers=H).status_code != 200
+
+
+def test_migration_never_grants_the_token_column_to_clients() -> None:
+    import pathlib
+    import re
+
+    sql = (
+        pathlib.Path(__file__)
+        .resolve()
+        .parents[3]
+        .joinpath("supabase/pending/UNNUMBERED_vendor_devices_barcode.sql")
+        .read_text()
+    )
+    assert not re.search(
+        r"grant\s+select\s+on\s+public\.device_tokens\s+to\s+authenticated", sql, re.I
+    )
+    m = re.search(
+        r"grant\s+select\s*\(([^)]*)\)\s+on\s+public\.device_tokens\s+to\s+authenticated", sql, re.I
+    )
+    assert m is not None
+    assert "token" not in {c.strip() for c in m.group(1).split(",")}

@@ -3440,6 +3440,13 @@ EXPECTATIONS: TableExpectations = {
             "phone_discovery",
         )
     },
+    # Vendor mobile push devices (pending vendor_devices_barcode): owner-only SELECT on
+    # non-secret columns (the token column is not granted); every write is the API's
+    # service role. Anon has no grant.
+    "device_tokens": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
     # Free events / services (#813): SELECT-only grants with owner, organiser /
     # provider and admin read policies; writes go through the API (service role).
     "event_rsvps": {

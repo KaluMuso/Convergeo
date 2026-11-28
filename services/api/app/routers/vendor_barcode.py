@@ -62,6 +62,19 @@ class SetBarcodeRequest(StrictModel):
         return value
 
 
+def _barcode_taken() -> AppError:
+    return AppError(
+        code="conflict",
+        message="Another product already uses this barcode",
+        http_status=409,
+        details={"message_key": "vendor.listings.barcode.taken"},
+    )
+
+
+def _is_unique_violation(exc: Exception) -> bool:
+    return str(getattr(exc, "code", "")) == "23505" or "23505" in str(exc)
+
+
 def _first(response: Any) -> dict[str, Any] | None:
     data = getattr(response, "data", None)
     if isinstance(data, dict):
@@ -86,7 +99,9 @@ def _serialize(row: dict[str, Any]) -> BarcodeListing:
     )
 
 
-@router.get("/by-barcode/{barcode}", response_model=BarcodeListing)
+# Three segments on purpose: a two-segment ``/by-barcode/{x}`` would collide with the
+# existing ``/{listing_id}/stock`` route when the barcode text is "stock".
+@router.get("/lookup/barcode/{barcode}", response_model=BarcodeListing)
 def lookup_by_barcode(
     barcode: str,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
@@ -141,17 +156,18 @@ def set_listing_barcode(
             .execute()
         )
         if clash is not None and str(clash["id"]) != listing_id:
-            raise AppError(
-                code="conflict",
-                message="Another product already uses this barcode",
-                http_status=409,
-                details={"message_key": "vendor.listings.barcode.taken"},
-            )
-    updated = _first(
-        service_client.client.table("vendor_listings")
-        .update({"barcode": body.barcode})
-        .eq("id", listing_id)
-        .eq("vendor_id", vendor_id)
-        .execute()
-    )
+            raise _barcode_taken()
+    try:
+        updated = _first(
+            service_client.client.table("vendor_listings")
+            .update({"barcode": body.barcode})
+            .eq("id", listing_id)
+            .eq("vendor_id", vendor_id)
+            .execute()
+        )
+    except Exception as exc:
+        # Two requests can pass the check above together; the unique index decides.
+        if _is_unique_violation(exc):
+            raise _barcode_taken() from exc
+        raise
     return _serialize({**listing, **(updated or {}), "barcode": body.barcode})
