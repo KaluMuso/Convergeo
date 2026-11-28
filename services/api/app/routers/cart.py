@@ -393,6 +393,31 @@ async def _resolve_cart_owner(
     )
 
 
+#: ``cart_id`` returned for a visitor who has no guest cart yet. The client only
+#: requires a non-empty string; the first add mints the real cart and cookie.
+UNMINTED_GUEST_CART_ID = "guest-unminted"
+
+
+async def _resolve_cart_owner_for_read(
+    request: Request,
+    response: Response,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> CartOwner:
+    """Resolve the owner for a read without minting a guest cart.
+
+    A cookieless visitor's page-load cart read used to mint a cart row and a
+    Set-Cookie. A first add racing that read minted a second cart, and the cookie
+    could end up pointing at the empty one, so the add vanished. Reads now leave
+    cookieless visitors alone; only a mutation mints.
+    """
+    if (
+        not request.headers.get("Authorization", "").startswith("Bearer ")
+        and _resolve_guest_token(request, settings) is None
+    ):
+        return CartOwner(cart_id=None, user_id=None, guest_token=None, is_guest=True)
+    return await _resolve_cart_owner(request, response, settings)
+
+
 def _db_client_for_owner(
     owner: CartOwner,
     *,
@@ -767,10 +792,18 @@ def _enforce_listing_cart_rules(
 
 @router.get("", response_model=CartResponse)
 async def get_cart(
-    owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
+    owner: Annotated[CartOwner, Depends(_resolve_cart_owner_for_read)],
     settings: Annotated[Settings, Depends(get_settings)],
     request: Request,
 ) -> CartResponse:
+    if owner.cart_id is None:
+        return _build_cart_response(
+            cart_id=UNMINTED_GUEST_CART_ID,
+            items=[],
+            listings_by_id={},
+            conflicts=None,
+            customer_id=None,
+        )
     client = _db_client_for_owner(
         owner,
         settings=settings,
