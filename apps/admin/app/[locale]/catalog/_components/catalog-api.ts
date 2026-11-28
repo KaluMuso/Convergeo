@@ -36,6 +36,7 @@ export type CatalogEntity = {
   visible: boolean;
   href: string;
   hold: CatalogHold | null;
+  review_flags?: string[];
 };
 
 /** Which permission the API requires to read / mutate each tab (mirrors app.core.auth). */
@@ -91,10 +92,20 @@ export function isValidReason(reason: string): boolean {
   return reason.trim().length >= 3;
 }
 
-export function catalogPath(tab: CatalogTab, query: string, heldOnly: boolean): string {
+export const LISTING_REVIEW_FLAG_BELOW_TYPICAL_PRICE = "price_below_category_floor";
+
+export function catalogPath(
+  tab: CatalogTab,
+  query: string,
+  heldOnly: boolean,
+  belowTypicalPriceOnly: boolean,
+): string {
   const params = new URLSearchParams();
   if (query.trim()) params.set("q", query.trim());
   if (heldOnly) params.set("held_only", "true");
+  if (tab === "listings" && belowTypicalPriceOnly) {
+    params.set("below_price_floor_only", "true");
+  }
   const suffix = params.toString();
   return `/admin/catalog/${tab}${suffix ? `?${suffix}` : ""}`;
 }

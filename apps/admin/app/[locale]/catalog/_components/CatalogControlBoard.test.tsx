@@ -30,6 +30,7 @@ const listing = {
   visible: true,
   href: "/l/11111111-1111-4111-8111-111111111111",
   hold: null,
+  review_flags: [] as string[],
 };
 
 let container: HTMLDivElement;
@@ -107,6 +108,17 @@ describe("CatalogControlBoard", () => {
     await act(async () => button("admin.catalog.tabs.services").click());
     expect(container.textContent).toContain("Phone");
     expect(container.textContent).not.toContain("admin.catalog.actions.hide");
+  });
+
+  it("shows a below-typical-price badge and listings-only filter control", async () => {
+    api.request.mockResolvedValue([{ ...listing, review_flags: ["price_below_category_floor"] }]);
+    await render({
+      permissions: ["products.manage"],
+      unrestricted: false,
+      can_manage_roles: false,
+    });
+    expect(container.textContent).toContain("admin.catalog.belowTypicalPriceBadge");
+    expect(container.textContent).toContain("admin.catalog.belowTypicalPriceOnly");
   });
 
   it("explains a hold and offers restore", async () => {

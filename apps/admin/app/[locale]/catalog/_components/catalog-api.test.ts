@@ -73,9 +73,12 @@ describe("tab permissions mirror the API inventory", () => {
   });
 
   it("builds list paths", () => {
-    expect(catalogPath("events", "  gig ", true)).toBe(
+    expect(catalogPath("events", "  gig ", true, false)).toBe(
       "/admin/catalog/events?q=gig&held_only=true",
     );
-    expect(catalogPath("vendors", "", false)).toBe("/admin/catalog/vendors");
+    expect(catalogPath("vendors", "", false, false)).toBe("/admin/catalog/vendors");
+    expect(catalogPath("listings", "phone", false, true)).toBe(
+      "/admin/catalog/listings?q=phone&below_price_floor_only=true",
+    );
   });
 });

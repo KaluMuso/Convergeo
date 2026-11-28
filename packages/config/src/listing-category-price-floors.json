@@ -1,0 +1,24 @@
+{
+  "categoryPathPrefixes": [
+    {
+      "pathPrefix": "electronics/mobile-phones",
+      "floorNgwee": 30000,
+      "label": "phones"
+    },
+    {
+      "pathPrefix": "electronics/laptops-computers",
+      "floorNgwee": 100000,
+      "label": "laptops"
+    },
+    {
+      "pathPrefix": "electronics/cameras",
+      "floorNgwee": 20000,
+      "label": "cameras"
+    },
+    {
+      "pathPrefix": "electronics/tvs-audio",
+      "floorNgwee": 10000,
+      "label": "tv_audio"
+    }
+  ]
+}

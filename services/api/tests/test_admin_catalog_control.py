@@ -90,6 +90,12 @@ def catalog(fake: FakeClient) -> FakeClient:
             "vendor_id": VENDOR,
             "title_override": "Phone",
             "description": "Old",
+            "price_ngwee": 5_000,
+            "products": {
+                "name": "Mobile Phones Standard",
+                "categories": {"path": "electronics/mobile-phones"},
+            },
+            "vendors": {"display_name": "Shop"},
         }
     ]
     fake.table("services").rows = [
@@ -128,6 +134,23 @@ def test_catalog_routes_refuse_anon_and_customer(
     assert http.request(method, path, json={}).status_code == 401
     headers = _login(monkeypatch, CUSTOMER_ID, frozenset({"customer"}))
     assert http.request(method, path, json={}, headers=headers).status_code == 403
+
+
+def test_list_catalog_listings_includes_nonblocking_price_review_flags(
+    http: TestClient, catalog: FakeClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    headers = _login(monkeypatch, ADMIN_ID, frozenset({"admin"}))
+    response = http.get("/admin/catalog/listings", headers=headers)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body[0]["review_flags"] == ["price_below_category_floor"]
+    # Flags are advisory only — hide/approve-style actions still succeed.
+    moderate = http.post(
+        f"/admin/catalog/listings/{LISTING}/moderate",
+        headers=headers,
+        json={"action": "hide", "reason": "Spot check despite low price"},
+    )
+    assert moderate.status_code == 200, moderate.text
 
 
 def test_list_catalog_services_without_slug_column(
