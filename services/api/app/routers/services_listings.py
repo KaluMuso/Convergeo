@@ -145,7 +145,7 @@ class ServiceDetailResponse(StrictModel):
     portfolio_images: list[str] = Field(default_factory=list)
     includes: list[str] = Field(default_factory=list)
     provider: ProviderSummary
-    #: Active Basic/Standard/Premium packages, tier-ordered (docs/plan/service-packages.md).
+    #: Active packages (open list, up to 10), vendor-ordered (docs/plan/service-packages.md).
     packages: list[PublicPackageOut] = Field(default_factory=list)
 
 
