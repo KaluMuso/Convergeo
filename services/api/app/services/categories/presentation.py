@@ -38,7 +38,13 @@ PUBLIC_ID_RE = re.compile(r"^[A-Za-z0-9_./-]{1,255}$")
 _MISSING_TABLE_MARKERS = ("PGRST205", "42P01")
 
 
-def validate_public_id(value: str | None, *, field: str) -> str | None:
+#: Admin uploads are signed into these folders only (routers/admin_category_presentation.py),
+#: so a saved id outside them did not come from the category upload flow.
+ICON_PREFIX = "categories/icons/"
+BANNER_PREFIX = "categories/banners/"
+
+
+def validate_public_id(value: str | None, *, field: str, prefix: str) -> str | None:
     if value is None:
         return None
     cleaned = value.strip().lstrip("/")
@@ -46,6 +52,8 @@ def validate_public_id(value: str | None, *, field: str) -> str | None:
         return None
     if not PUBLIC_ID_RE.fullmatch(cleaned) or ".." in cleaned:
         raise ValueError(f"{field} is not a valid Cloudinary public id")
+    if not cleaned.startswith(prefix) or len(cleaned) == len(prefix):
+        raise ValueError(f"{field} must be uploaded through the category image upload")
     return cleaned
 
 
@@ -81,12 +89,12 @@ class CategoryPresentationUpsert(BaseModel):
     @field_validator("icon_public_id")
     @classmethod
     def _icon(cls, value: str | None) -> str | None:
-        return validate_public_id(value, field="icon_public_id")
+        return validate_public_id(value, field="icon_public_id", prefix=ICON_PREFIX)
 
     @field_validator("banner_public_id")
     @classmethod
     def _banner(cls, value: str | None) -> str | None:
-        return validate_public_id(value, field="banner_public_id")
+        return validate_public_id(value, field="banner_public_id", prefix=BANNER_PREFIX)
 
     @field_validator("banner_title_i18n")
     @classmethod
@@ -160,8 +168,21 @@ def row_to_presentation(row: dict[str, Any], slug: str) -> CategoryPresentationO
     )
 
 
+def is_publicly_visible(category: dict[str, Any]) -> bool:
+    """Same visibility as the customer tree: not prohibited, and once the taxonomy
+    columns exist (status / show_in_customer), only published, customer-visible rows.
+    Columns that are absent (before that migration) do not hide anything."""
+    if category.get("prohibited"):
+        return False
+    if "status" in category and category.get("status") != "published":
+        return False
+    if "show_in_customer" in category and category.get("show_in_customer") is False:
+        return False
+    return True
+
+
 def load_presentations(client: Any, *, public_only: bool) -> list[CategoryPresentationOut]:
-    """Join presentations to category slugs; public reads skip prohibited categories."""
+    """Join presentations to category slugs; public reads skip hidden categories."""
     try:
         rows = _rows(client.table(TABLE).select(PRESENTATION_COLUMNS).execute())
     except Exception as exc:
@@ -171,11 +192,12 @@ def load_presentations(client: Any, *, public_only: bool) -> list[CategoryPresen
         raise
     if not rows:
         return []
-    category_query = client.table("categories").select("id, slug, prohibited")
-    categories = _rows(category_query.execute())
+    ids = sorted({str(row.get("category_id")) for row in rows if row.get("category_id")})
+    # "*" so the visibility check works before and after the taxonomy columns land.
+    categories = _rows(client.table("categories").select("*").in_("id", ids).execute())
     slugs: dict[str, str] = {}
     for category in categories:
-        if public_only and category.get("prohibited"):
+        if public_only and not is_publicly_visible(category):
             continue
         slug = category.get("slug")
         if category.get("id") and isinstance(slug, str):

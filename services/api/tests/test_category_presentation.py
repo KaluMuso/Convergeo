@@ -44,12 +44,17 @@ class FakeQuery:
         self._upsert: dict[str, Any] | None = None
         self._insert: dict[str, Any] | None = None
         self._delete = False
+        self._in: tuple[str, list[str]] | None = None
 
     def select(self, _columns: str) -> FakeQuery:
         return self
 
     def eq(self, key: str, value: Any) -> FakeQuery:
         self._filters.append((key, value))
+        return self
+
+    def in_(self, key: str, values: list[Any]) -> FakeQuery:
+        self._in = (key, [str(v) for v in values])
         return self
 
     def limit(self, _count: int) -> FakeQuery:
@@ -76,6 +81,8 @@ class FakeQuery:
         return []
 
     def _matches(self, row: dict[str, Any]) -> bool:
+        if self._in is not None and str(row.get(self._in[0])) not in self._in[1]:
+            return False
         return all(str(row.get(key)) == str(value) for key, value in self._filters)
 
     def execute(self) -> MagicMock:
@@ -404,3 +411,43 @@ def test_public_read_degrades_when_table_missing(store: FakeStore) -> None:
     store.missing_table = True
     service_client = FakeServiceClient(store)
     assert list_public_presentations(service_client.client, store=InMemoryTtlCacheStore()) == []
+
+
+@pytest.mark.parametrize(
+    ("field", "public_id"),
+    [
+        ("icon_public_id", "demo/categories/rice"),
+        ("icon_public_id", "categories/banners/rice"),
+        ("icon_public_id", "categories/icons/"),
+        ("banner_public_id", "listings/v1/photo"),
+    ],
+)
+def test_public_id_outside_category_folder_rejected(field: str, public_id: str) -> None:
+    with pytest.raises(ValidationError, match="category image upload"):
+        CategoryPresentationUpsert(**{field: public_id})
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"status": "draft"},
+        {"status": "blocked"},
+        {"status": "published", "show_in_customer": False},
+    ],
+)
+def test_public_read_hides_unpublished_taxonomy_rows(
+    client: TestClient, store: FakeStore, extra: dict[str, Any]
+) -> None:
+    store.categories[0].update(extra)
+    store.presentations = [{"category_id": GROCERIES_ID, "icon_public_id": "categories/icons/y"}]
+    assert client.get("/categories/presentation").json() == []
+
+
+def test_public_read_shows_published_customer_visible_rows(
+    client: TestClient, store: FakeStore
+) -> None:
+    store.categories[0].update({"status": "published", "show_in_customer": True})
+    store.presentations = [{"category_id": GROCERIES_ID, "icon_public_id": "categories/icons/y"}]
+    assert [row["slug"] for row in client.get("/categories/presentation").json()] == [
+        "groceries-staples"
+    ]
