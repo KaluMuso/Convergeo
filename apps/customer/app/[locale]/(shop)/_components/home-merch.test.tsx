@@ -32,10 +32,7 @@ const t = createTranslator({
   locale: "en",
   messages: { catalog: catalogMessages },
   namespace: "catalog",
-}) as unknown as (
-  key: string,
-  values?: Record<string, string | number>,
-) => string;
+}) as unknown as (key: string, values?: Record<string, string | number>) => string;
 
 function makeSlot(overrides: Partial<MerchSlotRow> = {}): MerchSlotRow {
   return {
@@ -97,9 +94,7 @@ describe("merch slot scheduling", () => {
     ];
 
     const keys = getRenderableSectionKeys(slots, []);
-    expect(keys.indexOf("events_row")).toBeLessThan(
-      keys.indexOf("featured_collections"),
-    );
+    expect(keys.indexOf("events_row")).toBeLessThan(keys.indexOf("featured_collections"));
   });
 });
 

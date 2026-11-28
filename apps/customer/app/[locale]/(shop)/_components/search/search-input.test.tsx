@@ -1,13 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-} from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -33,9 +27,7 @@ const labels = {
 function response(title: string): SuggestResponse {
   return {
     query: title,
-    suggestions: [
-      { title, entity_kind: "product", entity_id: title, slug: title },
-    ],
+    suggestions: [{ title, entity_kind: "product", entity_id: title, slug: title }],
   };
 }
 
@@ -90,9 +82,7 @@ describe("SearchInput request lifecycle", () => {
 
   it("resumes a blurred in-flight query on refocus and ignores its old response", async () => {
     const old = deferred();
-    request
-      .mockReturnValueOnce(old.promise)
-      .mockResolvedValueOnce(response("current"));
+    request.mockReturnValueOnce(old.promise).mockResolvedValueOnce(response("current"));
     render(<SearchInput locale="en" labels={labels} />);
     const input = screen.getByRole("combobox");
     fireEvent.focus(input);
@@ -107,9 +97,7 @@ describe("SearchInput request lifecycle", () => {
     await act(async () => {
       old.resolve(response("stale"));
     });
-    expect(
-      screen.queryByRole("option", { name: /stale/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /stale/ })).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: /current/ })).toBeInTheDocument();
   });
 
@@ -149,9 +137,7 @@ describe("SearchInput request lifecycle", () => {
   it("preserves recent searches on autofocus", () => {
     addRecentSearch("chitenge");
     render(<SearchInput locale="en" labels={labels} autoFocus />);
-    expect(
-      screen.getByRole("option", { name: "chitenge" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "chitenge" })).toBeInTheDocument();
   });
 
   it("cancels a queued suggestion when cleared before debounce", async () => {
@@ -179,13 +165,9 @@ describe("SearchInput request lifecycle", () => {
         pending.resolve(response("phone"));
       });
       expect(screen.getByRole("combobox")).toHaveValue("");
-      expect(
-        screen.queryByRole("option", { name: /phone/ }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("option", { name: /phone/ })).not.toBeInTheDocument();
       if (recents) {
-        expect(
-          screen.getByRole("listbox", { name: labels.recentTitle }),
-        ).toBeInTheDocument();
+        expect(screen.getByRole("listbox", { name: labels.recentTitle })).toBeInTheDocument();
         fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter" });
         expect(push).toHaveBeenCalledWith("/en/search?q=chitenge");
       } else {
@@ -228,9 +210,7 @@ describe("SearchInput request lifecycle", () => {
         else a.reject(new Error("offline"));
       });
       expect(screen.getByRole("option", { name: /B/ })).toBeInTheDocument();
-      expect(
-        screen.queryByRole("option", { name: /A/ }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("option", { name: /A/ })).not.toBeInTheDocument();
     },
   );
 
@@ -301,9 +281,7 @@ describe("SearchInput request lifecycle", () => {
     const view = render(<SearchInput locale="en" labels={labels} />);
     change("phone");
     await debounce();
-    view.rerender(
-      <SearchInput locale="en" labels={labels} initialQuery="shoes" />,
-    );
+    view.rerender(<SearchInput locale="en" labels={labels} initialQuery="shoes" />);
     await act(async () => {
       pending.resolve(response("phone"));
     });
@@ -311,32 +289,26 @@ describe("SearchInput request lifecycle", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
-  it.each(["Escape", "blur"])(
-    "keeps pending results dismissed after %s",
-    async (dismiss) => {
-      const pending = deferred();
-      request.mockReturnValue(pending.promise);
-      render(<SearchInput locale="en" labels={labels} />);
-      change("phone");
+  it.each(["Escape", "blur"])("keeps pending results dismissed after %s", async (dismiss) => {
+    const pending = deferred();
+    request.mockReturnValue(pending.promise);
+    render(<SearchInput locale="en" labels={labels} />);
+    change("phone");
+    await debounce();
+    if (dismiss === "blur") {
+      fireEvent.blur(screen.getByRole("combobox"));
       await debounce();
-      if (dismiss === "blur") {
-        fireEvent.blur(screen.getByRole("combobox"));
-        await debounce();
-      } else fireEvent.keyDown(screen.getByRole("combobox"), { key: "Escape" });
-      await act(async () => {
-        pending.resolve(response("phone"));
-      });
-      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-    },
-  );
+    } else fireEvent.keyDown(screen.getByRole("combobox"), { key: "Escape" });
+    await act(async () => {
+      pending.resolve(response("phone"));
+    });
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
 
   it("preserves keyboard wrapping, product links and recents under StrictMode", async () => {
     request.mockResolvedValue({
       query: "phone",
-      suggestions: [
-        ...response("first").suggestions,
-        ...response("second").suggestions,
-      ],
+      suggestions: [...response("first").suggestions, ...response("second").suggestions],
     });
     render(
       <StrictMode>
@@ -346,20 +318,11 @@ describe("SearchInput request lifecycle", () => {
     change("phone");
     await debounce();
     const input = screen.getByRole("combobox");
-    expect(screen.getByRole("option", { name: /first/ })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(screen.getByRole("option", { name: /first/ })).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(input, { key: "ArrowUp" });
-    expect(screen.getByRole("option", { name: /second/ })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(screen.getByRole("option", { name: /second/ })).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(input, { key: "ArrowDown" });
-    expect(screen.getByRole("option", { name: /first/ })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(screen.getByRole("option", { name: /first/ })).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(input, { key: "Enter" });
     expect(push).toHaveBeenCalledWith("/en/p/first");
     expect(readRecentSearches()).toEqual(["first"]);
@@ -370,17 +333,14 @@ describe("SearchInput request lifecycle", () => {
     "keeps the dropdown closed while loading and after %s, then recovers",
     async (outcome) => {
       const pending = deferred();
-      request
-        .mockReturnValueOnce(pending.promise)
-        .mockResolvedValueOnce(response("shoes"));
+      request.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(response("shoes"));
       render(<SearchInput locale="en" labels={labels} />);
       change("phone");
       await debounce();
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
       expect(screen.queryByText(labels.noSuggestions)).not.toBeInTheDocument();
       await act(async () => {
-        if (outcome === "empty")
-          pending.resolve({ query: "phone", suggestions: [] });
+        if (outcome === "empty") pending.resolve({ query: "phone", suggestions: [] });
         else pending.reject(new Error("offline"));
       });
       expect(screen.getByRole("combobox")).toHaveValue("phone");

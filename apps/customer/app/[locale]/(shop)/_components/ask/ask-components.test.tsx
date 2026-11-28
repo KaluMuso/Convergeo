@@ -390,9 +390,7 @@ describe("AskThread", () => {
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
     await waitFor(() => expect(screen.getByTestId("ask-refusal")).toBeInTheDocument());
-    expect(screen.getByTestId("ask-refusal")).toHaveTextContent(
-      "I couldn't find that on Vergeo5.",
-    );
+    expect(screen.getByTestId("ask-refusal")).toHaveTextContent("I couldn't find that on Vergeo5.");
     expect(screen.queryByTestId("ask-citation-card")).not.toBeInTheDocument();
   });
 
