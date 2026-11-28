@@ -3952,6 +3952,8 @@ export type Database = {
         Row: {
           access_code_hash: string | null
           age_restriction: number | null
+          archetype: string | null
+          archetype_details: Json
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -3976,6 +3978,7 @@ export type Database = {
           recurrence_until: string | null
           refund_policy_key: string | null
           slug: string
+          sponsor_review_pending: boolean
           status: string
           terms: string | null
           title: string
@@ -3986,6 +3989,8 @@ export type Database = {
         Insert: {
           access_code_hash?: string | null
           age_restriction?: number | null
+          archetype?: string | null
+          archetype_details?: Json
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -4010,6 +4015,7 @@ export type Database = {
           recurrence_until?: string | null
           refund_policy_key?: string | null
           slug: string
+          sponsor_review_pending?: boolean
           status?: string
           terms?: string | null
           title: string
@@ -4020,6 +4026,8 @@ export type Database = {
         Update: {
           access_code_hash?: string | null
           age_restriction?: number | null
+          archetype?: string | null
+          archetype_details?: Json
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -4044,6 +4052,7 @@ export type Database = {
           recurrence_until?: string | null
           refund_policy_key?: string | null
           slug?: string
+          sponsor_review_pending?: boolean
           status?: string
           terms?: string | null
           title?: string
