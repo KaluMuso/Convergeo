@@ -413,7 +413,7 @@ export function HomeProductRail({
         id === "home-rail-new" ? "motion-rise" : "motion-fade",
       ].join(" ")}
     >
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="v-fab-clear flex items-baseline justify-between gap-3">
         <h2 id={id} className="font-display text-h3 font-bold text-display-ink">
           {title}
         </h2>
@@ -494,7 +494,7 @@ export function HomeServicesRail({
 
   return (
     <section aria-labelledby={id} className="home-rail flex flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="v-fab-clear flex items-baseline justify-between gap-3">
         <h2 id={id} className="font-display text-h3 font-bold text-display-ink">
           {title}
         </h2>
@@ -590,7 +590,7 @@ export function HomeVendorsRail({
 
   return (
     <section aria-labelledby={id} className="home-rail flex flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="v-fab-clear flex items-baseline justify-between gap-3">
         <h2 id={id} className="font-display text-h3 font-bold text-display-ink">
           {title}
         </h2>

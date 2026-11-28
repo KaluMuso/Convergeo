@@ -177,12 +177,14 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
     (order as OrderDetail & { dispatch_events?: DispatchOrderEvent[] }).dispatch_events ?? [];
   const dispatchDetails = extractDispatchFromEvents(dispatchEvents);
 
-  const colMain = "min-w-0 lg:col-start-1";
-  const colAside = "min-w-0 lg:col-start-2";
+  const colMainWrap =
+    "contents lg:col-start-1 lg:row-start-2 lg:flex lg:min-w-0 lg:flex-col lg:gap-6";
+  const colAsideWrap =
+    "contents lg:col-start-2 lg:row-start-2 lg:flex lg:min-w-0 lg:flex-col lg:gap-6";
 
   const content = (
-    <section className="space-y-4 sm:space-y-6 lg:grid lg:grid-cols-[2fr_1fr] lg:items-start lg:gap-6 lg:space-y-0">
-      <header className={`space-y-2 lg:col-span-2 ${colMain}`}>
+    <section className="flex flex-col gap-4 sm:gap-6 lg:grid lg:grid-cols-[2fr_1fr] lg:items-start lg:gap-6">
+      <header className="space-y-2 lg:col-span-2 min-w-0">
         <Link
           href={`/${locale}/account/orders`}
           className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
@@ -202,326 +204,331 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
         </p>
       </header>
 
-      {isCod ? (
-        <div className={colMain}>
-          <CodTrustLine text={codTrustLine(locale, messages)} testId="order-cod-trust" />
+      {/* Main and side columns stack independently on desktop so a tall timeline
+          no longer pushes the side cards down. Below lg the wrappers use
+          display:contents and order-* keeps the original phone reading order. */}
+      <div className={colMainWrap}>
+        {isCod ? (
+          <div className="min-w-0 order-1">
+            <CodTrustLine text={codTrustLine(locale, messages)} testId="order-cod-trust" />
+          </div>
+        ) : null}
+
+        <div className="min-w-0 order-2">
+          <OrderTimeline
+            timeline={order.timeline}
+            labels={timelineLabels}
+            paymentMode={order.payment_mode}
+          />
         </div>
-      ) : null}
 
-      <div className={colMain}>
-        <OrderTimeline
-          timeline={order.timeline}
-          labels={timelineLabels}
-          paymentMode={order.payment_mode}
-        />
-      </div>
+        {courierDelivery ? (
+          <div className="min-w-0 order-4">
+            <CourierDeliveryBlock
+              delivery={courierDelivery}
+              labels={{
+                title: t("courier.title"),
+                courier: t("courier.courier"),
+                reference: t("courier.reference"),
+                statuses: {
+                  requested: t("courier.statuses.requested"),
+                  accepted: t("courier.statuses.accepted"),
+                  picked_up: t("courier.statuses.picked_up"),
+                  delivered: t("courier.statuses.delivered"),
+                  failed: t("courier.statuses.failed"),
+                  cancelled: t("courier.statuses.cancelled"),
+                },
+                codDue: (amount) =>
+                  doorPayment
+                    ? t("doorPay.amountDue", { amount })
+                    : t("courier.codDue", { amount }),
+                handoverTitle: t("courier.handoverTitle"),
+                handoverBody: t("courier.handoverBody"),
+                handoverAria: (code) => t("courier.handoverAria", { code }),
+                failedBody: t("courier.failedBody"),
+              }}
+            />
+          </div>
+        ) : null}
 
-      <section
-        aria-labelledby="order-help-heading"
-        className={`space-y-2 rounded border border-border bg-bg-2 p-4 lg:p-5 ${colAside}`}
-        data-testid="order-help"
-      >
-        <h3 id="order-help-heading" className="text-sm font-semibold text-display-ink">
-          {t("help.title")}
-        </h3>
-        <p className="text-sm text-text-2">
-          {beforeDispatch ? t("help.beforeDispatch") : t("help.afterDispatch")}
-        </p>
-        <Link
-          href={`/${locale}/contact`}
-          className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
-        >
-          {t("help.contactCta")}
-        </Link>
-      </section>
+        {doorPayment ? (
+          <div className="min-w-0 order-5">
+            <DoorPaymentBlock
+              orderId={order.id}
+              accessToken={accessToken}
+              initial={doorPayment}
+              labels={{
+                title: t("doorPay.title"),
+                intro: (amount) => t("doorPay.intro", { amount }),
+                waitingRider: t("doorPay.waitingRider"),
+                payNow: t("doorPay.payNow"),
+                sending: t("doorPay.sending"),
+                otherNumber: t("doorPay.otherNumber"),
+                phoneLabel: t("doorPay.phoneLabel"),
+                phoneHelp: t("doorPay.phoneHelp"),
+                pending: t("doorPay.pending"),
+                checkStatus: t("doorPay.checkStatus"),
+                checking: t("doorPay.checking"),
+                failed: t("doorPay.failed"),
+                attemptsLeft: (count) => t("doorPay.attemptsLeft", { count }),
+                noAttemptsLeft: t("doorPay.noAttemptsLeft"),
+                paid: t("doorPay.paid"),
+                cash: (amount) => t("doorPay.cash", { amount }),
+                errors: {
+                  invalidPhone: t("doorPay.errors.invalidPhone"),
+                  operatorUnsupported: t("doorPay.errors.operatorUnsupported"),
+                  inFlight: t("doorPay.errors.inFlight"),
+                  generic: t("doorPay.errors.generic"),
+                },
+              }}
+            />
+          </div>
+        ) : null}
 
-      {courierDelivery ? (
-        <div className={colMain}>
-          <CourierDeliveryBlock
-            delivery={courierDelivery}
+        {courierDelivery ? null : (
+          <div className="min-w-0 order-6">
+            <DispatchTimeline
+              fulfilment={order.fulfilment}
+              status={order.status}
+              courier={dispatchDetails.courier}
+              trackingNote={dispatchDetails.trackingNote}
+              statusUpdates={buildDispatchStatusUpdates(
+                order.timeline,
+                {
+                  processing: t("timeline.processing"),
+                  shipped: t("timeline.shipped"),
+                  delivered: t("timeline.delivered"),
+                },
+                dispatchEvents,
+              )}
+              labels={{
+                title: t("dispatch.title"),
+                courier: t("dispatch.courier"),
+                tracking: t("dispatch.tracking"),
+                empty: t("dispatch.empty"),
+                statusUpdates: t("dispatch.statusUpdates"),
+              }}
+            />
+          </div>
+        )}
+
+        {order.pickup ? (
+          <div className="min-w-0 order-7">
+            <PickupCredentialsBlock
+              pickup={order.pickup}
+              labels={{
+                title: t("pickup.title"),
+                qrLabel: t("pickup.qrLabel"),
+                pinLabel: t("pickup.pinLabel"),
+                stubBody: t("pickup.stubBody"),
+                pinAria: String(t.raw("pickup.pinAria")),
+                sentToRecipient: t("gift.pinSentToRecipient"),
+              }}
+            />
+          </div>
+        ) : null}
+
+        {order.is_gift ? (
+          <section className="space-y-2 rounded border border-border bg-surface p-4 lg:p-5 min-w-0 order-9">
+            <h3 className="font-display text-h3 text-display-ink">{t("gift.title")}</h3>
+            <p className="text-sm text-text-2">{t("gift.body")}</p>
+            <Link
+              href={`/${locale}/account/orders/${order.id}/gift-receipt`}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline"
+            >
+              {t("gift.receiptLink")}
+            </Link>
+          </section>
+        ) : null}
+
+        <div className="min-w-0 order-10">
+          <InvoiceLinkBlock
+            invoice={order.invoice}
             labels={{
-              title: t("courier.title"),
-              courier: t("courier.courier"),
-              reference: t("courier.reference"),
-              statuses: {
-                requested: t("courier.statuses.requested"),
-                accepted: t("courier.statuses.accepted"),
-                picked_up: t("courier.statuses.picked_up"),
-                delivered: t("courier.statuses.delivered"),
-                failed: t("courier.statuses.failed"),
-                cancelled: t("courier.statuses.cancelled"),
-              },
-              codDue: (amount) =>
-                doorPayment ? t("doorPay.amountDue", { amount }) : t("courier.codDue", { amount }),
-              handoverTitle: t("courier.handoverTitle"),
-              handoverBody: t("courier.handoverBody"),
-              handoverAria: (code) => t("courier.handoverAria", { code }),
-              failedBody: t("courier.failedBody"),
+              title: t("invoice.title"),
+              download: t("invoice.download"),
+              stubHelp: t("invoice.stubHelp"),
+              unavailable: t("invoice.unavailable"),
             }}
           />
         </div>
-      ) : null}
 
-      {doorPayment ? (
-        <div className={colMain}>
-          <DoorPaymentBlock
+        <div className="min-w-0 order-12">
+          <ConfirmReceivedBlock
             orderId={order.id}
             accessToken={accessToken}
-            initial={doorPayment}
-            labels={{
-              title: t("doorPay.title"),
-              intro: (amount) => t("doorPay.intro", { amount }),
-              waitingRider: t("doorPay.waitingRider"),
-              payNow: t("doorPay.payNow"),
-              sending: t("doorPay.sending"),
-              otherNumber: t("doorPay.otherNumber"),
-              phoneLabel: t("doorPay.phoneLabel"),
-              phoneHelp: t("doorPay.phoneHelp"),
-              pending: t("doorPay.pending"),
-              checkStatus: t("doorPay.checkStatus"),
-              checking: t("doorPay.checking"),
-              failed: t("doorPay.failed"),
-              attemptsLeft: (count) => t("doorPay.attemptsLeft", { count }),
-              noAttemptsLeft: t("doorPay.noAttemptsLeft"),
-              paid: t("doorPay.paid"),
-              cash: (amount) => t("doorPay.cash", { amount }),
-              errors: {
-                invalidPhone: t("doorPay.errors.invalidPhone"),
-                operatorUnsupported: t("doorPay.errors.operatorUnsupported"),
-                inFlight: t("doorPay.errors.inFlight"),
-                generic: t("doorPay.errors.generic"),
-              },
-            }}
-          />
-        </div>
-      ) : null}
-
-      {courierDelivery ? null : (
-        <div className={colMain}>
-          <DispatchTimeline
-            fulfilment={order.fulfilment}
             status={order.status}
-            courier={dispatchDetails.courier}
-            trackingNote={dispatchDetails.trackingNote}
-            statusUpdates={buildDispatchStatusUpdates(
-              order.timeline,
-              {
-                processing: t("timeline.processing"),
-                shipped: t("timeline.shipped"),
-                delivered: t("timeline.delivered"),
-              },
-              dispatchEvents,
-            )}
             labels={{
-              title: t("dispatch.title"),
-              courier: t("dispatch.courier"),
-              tracking: t("dispatch.tracking"),
-              empty: t("dispatch.empty"),
-              statusUpdates: t("dispatch.statusUpdates"),
+              title: t("confirm.title"),
+              // COD never touches escrow: no "held/released" wording on cash orders.
+              body: isCod ? t("confirm.bodyCod") : t("confirm.body"),
+              trust: isCod ? codTrustLine(locale, messages) : t("confirm.trust"),
+              button: t("confirm.button"),
+              confirming: t("confirm.confirming"),
+              done: t("confirm.done"),
+              doneBody: isCod ? t("confirm.doneBodyCod") : t("confirm.doneBody"),
+              error: t("confirm.error"),
             }}
           />
         </div>
-      )}
 
-      {order.pickup ? (
-        <div className={colMain}>
-          <PickupCredentialsBlock
-            pickup={order.pickup}
+        <div className="min-w-0 order-13">
+          <ReportProblemBlock
+            orderId={order.id}
+            accessToken={accessToken}
+            status={order.status}
             labels={{
-              title: t("pickup.title"),
-              qrLabel: t("pickup.qrLabel"),
-              pinLabel: t("pickup.pinLabel"),
-              stubBody: t("pickup.stubBody"),
-              pinAria: String(t.raw("pickup.pinAria")),
-              sentToRecipient: t("gift.pinSentToRecipient"),
+              title: t("report.title"),
+              body: t("report.body"),
+              categoryLabel: t("report.categoryLabel"),
+              categoryFaulty: t("report.categoryFaulty"),
+              categoryWrong: t("report.categoryWrong"),
+              categoryNotDelivered: t("report.categoryNotDelivered"),
+              categoryOther: t("report.categoryOther"),
+              descriptionLabel: t("report.descriptionLabel"),
+              descriptionPlaceholder: t("report.descriptionPlaceholder"),
+              evidenceLabel: t("report.evidenceLabel"),
+              evidenceHelp: t("report.evidenceHelp"),
+              addEvidence: t("report.addEvidence"),
+              uploading: t("report.uploading"),
+              submit: t("report.submit"),
+              submitting: t("report.submitting"),
+              successLane1: t("report.successLane1"),
+              successDispute: t("report.successDispute"),
+              successSupport: t("report.successSupport"),
+              successGuidance: t("report.successGuidance"),
+              error: t("report.error"),
+              requiredDescription: t("report.requiredDescription"),
             }}
           />
         </div>
-      ) : null}
 
-      <section
-        className={`space-y-2 rounded border border-border bg-surface p-4 lg:p-5 ${colAside}`}
-      >
-        <h3 className="font-display text-h3 text-display-ink">{t("detail.title")}</h3>
-        <ul className="divide-y divide-border">
-          {order.items.map((item: OrderItem) => (
-            <li key={item.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-              <span className="text-display-ink">
-                {t("detail.lineQty", {
-                  title: item.title ?? t("detail.untitledItem"),
-                  qty: item.qty,
-                })}
-                {item.variant_options && item.variant_options.length > 0 ? (
-                  <span
-                    className="block text-xs text-text-2"
-                    data-testid={`order-line-variant-${item.id}`}
-                  >
-                    {item.variant_options
-                      .map((option) =>
-                        t("detail.variantOption", {
-                          group: option.group,
-                          value: option.value,
-                        }),
-                      )
-                      .join(t("detail.variantSeparator"))}
-                  </span>
-                ) : null}
-              </span>
-              <span className="shrink-0 font-mono text-display-ink">
-                {formatK(item.qty * item.unit_price_ngwee)}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <dl className="space-y-1 border-t border-border pt-3 text-sm">
-          <div className="flex justify-between gap-3">
-            <dt className="text-text-2">{t("detail.subtotal")}</dt>
-            <dd className="font-mono text-display-ink">{formatK(order.subtotal_ngwee)}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-text-2">{t("detail.deliveryFee")}</dt>
-            <dd className="font-mono text-display-ink">{formatK(order.delivery_fee_ngwee)}</dd>
-          </div>
-          {order.discount_ngwee && order.discount_ngwee > 0 ? (
-            <div className="flex justify-between gap-3 text-success">
-              <dt>{t("detail.discount")}</dt>
-              <dd className="font-mono">−{formatK(order.discount_ngwee)}</dd>
-            </div>
-          ) : null}
-          <div className="flex justify-between gap-3 font-medium">
-            <dt className="text-display-ink">{t("detail.total")}</dt>
-            <dd className="font-mono text-display-ink">{formatK(order.total_ngwee)}</dd>
-          </div>
-        </dl>
-      </section>
+        <div className="min-w-0 order-14">
+          <ReviewPromptBlock
+            orderId={order.id}
+            accessToken={accessToken}
+            status={order.status}
+            labels={{
+              title: t("reviewPrompt.title"),
+              body: t("reviewPrompt.body"),
+              itemLabel: t("reviewPrompt.itemLabel"),
+              ratingLabel: t("reviewPrompt.ratingLabel"),
+              starsAria: String(t.raw("reviewPrompt.starsAria")),
+              bodyLabel: t("reviewPrompt.bodyLabel"),
+              bodyPlaceholder: t("reviewPrompt.bodyPlaceholder"),
+              submit: t("reviewPrompt.submit"),
+              submitting: t("reviewPrompt.submitting"),
+              success: t("reviewPrompt.success"),
+              error: t("reviewPrompt.error"),
+              editNotice: t("reviewPrompt.editNotice"),
+              loading: t("reviewPrompt.loading"),
+              starFilled: t("reviewPrompt.starFilled"),
+              starEmpty: t("reviewPrompt.starEmpty"),
+            }}
+          />
+        </div>
 
-      {order.is_gift ? (
+        <div className="min-w-0 order-15">
+          <OrderPostDeliveryActions
+            locale={locale}
+            orderId={order.id}
+            status={order.status}
+            labels={{
+              actionsTitle: t("detail.actionsTitle"),
+              requestReturn: t("detail.requestReturn"),
+              openDispute: t("detail.openDispute"),
+            }}
+          />
+        </div>
+      </div>
+
+      <div className={colAsideWrap}>
         <section
-          className={`space-y-2 rounded border border-border bg-surface p-4 lg:p-5 ${colMain}`}
+          aria-labelledby="order-help-heading"
+          className="space-y-2 rounded border border-border bg-bg-2 p-4 lg:p-5 min-w-0 order-3"
+          data-testid="order-help"
         >
-          <h3 className="font-display text-h3 text-display-ink">{t("gift.title")}</h3>
-          <p className="text-sm text-text-2">{t("gift.body")}</p>
+          <h3 id="order-help-heading" className="text-sm font-semibold text-display-ink">
+            {t("help.title")}
+          </h3>
+          <p className="text-sm text-text-2">
+            {beforeDispatch ? t("help.beforeDispatch") : t("help.afterDispatch")}
+          </p>
           <Link
-            href={`/${locale}/account/orders/${order.id}/gift-receipt`}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline"
+            href={`/${locale}/contact`}
+            className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
           >
-            {t("gift.receiptLink")}
+            {t("help.contactCta")}
           </Link>
         </section>
-      ) : null}
 
-      <div className={colMain}>
-        <InvoiceLinkBlock
-          invoice={order.invoice}
-          labels={{
-            title: t("invoice.title"),
-            download: t("invoice.download"),
-            stubHelp: t("invoice.stubHelp"),
-            unavailable: t("invoice.unavailable"),
-          }}
-        />
-      </div>
+        <section className="space-y-2 rounded border border-border bg-surface p-4 lg:p-5 min-w-0 order-8">
+          <h3 className="font-display text-h3 text-display-ink">{t("detail.title")}</h3>
+          <ul className="divide-y divide-border">
+            {order.items.map((item: OrderItem) => (
+              <li key={item.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                <span className="text-display-ink">
+                  {t("detail.lineQty", {
+                    title: item.title ?? t("detail.untitledItem"),
+                    qty: item.qty,
+                  })}
+                  {item.variant_options && item.variant_options.length > 0 ? (
+                    <span
+                      className="block text-xs text-text-2"
+                      data-testid={`order-line-variant-${item.id}`}
+                    >
+                      {item.variant_options
+                        .map((option) =>
+                          t("detail.variantOption", {
+                            group: option.group,
+                            value: option.value,
+                          }),
+                        )
+                        .join(t("detail.variantSeparator"))}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="shrink-0 font-mono text-display-ink">
+                  {formatK(item.qty * item.unit_price_ngwee)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <dl className="space-y-1 border-t border-border pt-3 text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="text-text-2">{t("detail.subtotal")}</dt>
+              <dd className="font-mono text-display-ink">{formatK(order.subtotal_ngwee)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-text-2">{t("detail.deliveryFee")}</dt>
+              <dd className="font-mono text-display-ink">{formatK(order.delivery_fee_ngwee)}</dd>
+            </div>
+            {order.discount_ngwee && order.discount_ngwee > 0 ? (
+              <div className="flex justify-between gap-3 text-success">
+                <dt>{t("detail.discount")}</dt>
+                <dd className="font-mono">−{formatK(order.discount_ngwee)}</dd>
+              </div>
+            ) : null}
+            <div className="flex justify-between gap-3 font-medium">
+              <dt className="text-display-ink">{t("detail.total")}</dt>
+              <dd className="font-mono text-display-ink">{formatK(order.total_ngwee)}</dd>
+            </div>
+          </dl>
+        </section>
 
-      <div className={colAside}>
-        <BuyAgain
-          orderId={order.id}
-          accessToken={accessToken}
-          locale={locale}
-          status={order.status}
-          labels={buildBuyAgainLabels(t)}
-        />
-      </div>
-
-      <div className={colMain}>
-        <ConfirmReceivedBlock
-          orderId={order.id}
-          accessToken={accessToken}
-          status={order.status}
-          labels={{
-            title: t("confirm.title"),
-            // COD never touches escrow: no "held/released" wording on cash orders.
-            body: isCod ? t("confirm.bodyCod") : t("confirm.body"),
-            trust: isCod ? codTrustLine(locale, messages) : t("confirm.trust"),
-            button: t("confirm.button"),
-            confirming: t("confirm.confirming"),
-            done: t("confirm.done"),
-            doneBody: isCod ? t("confirm.doneBodyCod") : t("confirm.doneBody"),
-            error: t("confirm.error"),
-          }}
-        />
-      </div>
-
-      <div className={colMain}>
-        <ReportProblemBlock
-          orderId={order.id}
-          accessToken={accessToken}
-          status={order.status}
-          labels={{
-            title: t("report.title"),
-            body: t("report.body"),
-            categoryLabel: t("report.categoryLabel"),
-            categoryFaulty: t("report.categoryFaulty"),
-            categoryWrong: t("report.categoryWrong"),
-            categoryNotDelivered: t("report.categoryNotDelivered"),
-            categoryOther: t("report.categoryOther"),
-            descriptionLabel: t("report.descriptionLabel"),
-            descriptionPlaceholder: t("report.descriptionPlaceholder"),
-            evidenceLabel: t("report.evidenceLabel"),
-            evidenceHelp: t("report.evidenceHelp"),
-            addEvidence: t("report.addEvidence"),
-            uploading: t("report.uploading"),
-            submit: t("report.submit"),
-            submitting: t("report.submitting"),
-            successLane1: t("report.successLane1"),
-            successDispute: t("report.successDispute"),
-            successSupport: t("report.successSupport"),
-            successGuidance: t("report.successGuidance"),
-            error: t("report.error"),
-            requiredDescription: t("report.requiredDescription"),
-          }}
-        />
-      </div>
-
-      <div className={colMain}>
-        <ReviewPromptBlock
-          orderId={order.id}
-          accessToken={accessToken}
-          status={order.status}
-          labels={{
-            title: t("reviewPrompt.title"),
-            body: t("reviewPrompt.body"),
-            itemLabel: t("reviewPrompt.itemLabel"),
-            ratingLabel: t("reviewPrompt.ratingLabel"),
-            starsAria: String(t.raw("reviewPrompt.starsAria")),
-            bodyLabel: t("reviewPrompt.bodyLabel"),
-            bodyPlaceholder: t("reviewPrompt.bodyPlaceholder"),
-            submit: t("reviewPrompt.submit"),
-            submitting: t("reviewPrompt.submitting"),
-            success: t("reviewPrompt.success"),
-            error: t("reviewPrompt.error"),
-            editNotice: t("reviewPrompt.editNotice"),
-            loading: t("reviewPrompt.loading"),
-            starFilled: t("reviewPrompt.starFilled"),
-            starEmpty: t("reviewPrompt.starEmpty"),
-          }}
-        />
-      </div>
-
-      <div className={colMain}>
-        <OrderPostDeliveryActions
-          locale={locale}
-          orderId={order.id}
-          status={order.status}
-          labels={{
-            actionsTitle: t("detail.actionsTitle"),
-            requestReturn: t("detail.requestReturn"),
-            openDispute: t("detail.openDispute"),
-          }}
-        />
+        <div className="min-w-0 order-11">
+          <BuyAgain
+            orderId={order.id}
+            accessToken={accessToken}
+            locale={locale}
+            status={order.status}
+            labels={buildBuyAgainLabels(t)}
+          />
+        </div>
       </div>
 
       {otherOrders.length > 0 ? (
-        <section className={`space-y-3 lg:col-span-2 ${colMain}`}>
+        <section className="space-y-3 lg:col-span-2 min-w-0 order-20 lg:row-start-3">
           <h3 className="font-display text-h3 text-display-ink">{t("detail.relatedTitle")}</h3>
           <ul className="space-y-2">
             {otherOrders.map((related: OrderSummary) => (

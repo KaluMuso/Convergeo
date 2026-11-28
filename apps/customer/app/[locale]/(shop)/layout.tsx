@@ -3,30 +3,18 @@ import { IconAccount, IconAsk, IconHome, IconOrders, IconSearch } from "@vergeo/
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { NotificationBellIsland } from "../_components/notification-bell-island";
 import { TopUtilityBarSlot } from "../_components/top-utility-bar-slot";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
 import { LazyCartHostSlot } from "./_components/cart/lazy-cart-host-slot";
 import InstallPrompt from "./_components/install-prompt";
-import { buildMegaMenuLabels } from "./_components/mega-menu/labels";
-import { MEGA_MENU_FALLBACK_ROOT_SLUGS } from "./_components/mega-menu-fallback-slugs";
-import { MobileHeaderSearch } from "./_components/mobile-header-search";
 import { ServiceInfoBar } from "./_components/service-info-bar";
-import { ShopHeader } from "./_components/shop-header";
+import { ShopHeaderSlot } from "./_components/shop-header-slot";
 
 type ShopLayoutProps = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 };
-
-function fallbackCategoryRootLabels(t: (key: string) => string): Record<string, string> {
-  const labels: Record<string, string> = {};
-  for (const slug of MEGA_MENU_FALLBACK_ROOT_SLUGS) {
-    labels[slug] = t(`shop.fallbackCategoryRoots.${slug}`);
-  }
-  return labels;
-}
 
 export default async function ShopLayout({ children, params }: ShopLayoutProps) {
   const { locale } = await params;
@@ -48,13 +36,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
   } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "nav" });
   const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
-  const tCommon = createTranslator({ locale, messages, namespace: "common" });
-  const tSearch = createTranslator({ locale, messages, namespace: "search" });
-  const tCheckout = createTranslator({
-    locale,
-    messages,
-    namespace: "checkout",
-  });
   const bottomItems = [
     {
       key: "home",
@@ -91,67 +72,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
       <TopUtilityBarSlot locale={locale} />
-      <ShopHeader
-        locale={locale}
-        notificationSlot={<NotificationBellIsland locale={locale} />}
-        mobileSearchSlot={
-          <MobileHeaderSearch
-            locale={locale}
-            triggerLabel={t("shop.searchPlaceholder")}
-            sheetTitle={tSearch("title")}
-            askLabel={t("shop.askVergeo")}
-            labels={{
-              placeholder: t("shop.searchPlaceholder"),
-              submit: t("shop.searchSubmit"),
-              ariaLabel: tSearch("input.ariaLabel"),
-              suggestionsLabel: tSearch("input.suggestionsLabel"),
-              noSuggestions: tSearch("input.noSuggestions"),
-              recentTitle: tSearch("recent.title"),
-            }}
-          />
-        }
-        labels={{
-          appName: tCommon("app.name"),
-          skipToContent: t("skipToContent"),
-          navAriaLabel: t("shop.ariaLabel"),
-          desktopAriaLabel: t("shop.desktopAriaLabel"),
-          searchPlaceholder: t("shop.searchPlaceholder"),
-          searchSubmit: t("shop.searchSubmit"),
-          allCategories: t("shop.allCategories"),
-          categoriesPanelAria: t("shop.categoriesPanelAria"),
-          categoriesLoading: t("shop.categoriesLoading"),
-          categoriesEmpty: t("shop.categoriesEmpty"),
-          viewAllCategories: t("shop.viewAllCategories"),
-          featuredTitle: t("shop.featuredTitle"),
-          featuredPromo: t("shop.featuredPromo"),
-          featuredPromoCta: t("shop.featuredPromoCta"),
-          fallbackCategoryRoots: fallbackCategoryRootLabels(t),
-          megaMenu: buildMegaMenuLabels(t),
-          directory: t("shop.directory"),
-          services: t("shop.services"),
-          events: t("shop.events"),
-          askVergeo: t("shop.askVergeo"),
-          account: t("shop.account"),
-          cart: t("shop.cart"),
-          // Interpolated with the live cart count in the header client component.
-          cartWithCount: String(t.raw("shop.cartWithCount")),
-          openCart: tCheckout("cart.openCart"),
-          theme: {
-            label: tCommon("theme.label"),
-            light: tCommon("theme.light"),
-            dark: tCommon("theme.dark"),
-            system: tCommon("theme.system"),
-          },
-          searchInput: {
-            placeholder: t("shop.searchPlaceholder"),
-            submit: t("shop.searchSubmit"),
-            ariaLabel: tSearch("input.ariaLabel"),
-            suggestionsLabel: tSearch("input.suggestionsLabel"),
-            noSuggestions: tSearch("input.noSuggestions"),
-            recentTitle: tSearch("recent.title"),
-          },
-        }}
-      />
+      <ShopHeaderSlot locale={locale} />
       <ServiceInfoBar
         labels={{
           ariaLabel: tCatalog("home.serviceBar.ariaLabel"),

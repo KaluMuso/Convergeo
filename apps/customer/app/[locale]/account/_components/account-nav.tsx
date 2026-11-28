@@ -122,21 +122,21 @@ export function AccountNav({ locale, labels, showPeople = false }: AccountNavPro
         {scrollFade.left ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-8 bg-gradient-to-r from-bg via-bg/80 to-transparent max-lg:block lg:hidden"
+            className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-8 bg-gradient-to-r from-bg via-bg/80 to-transparent"
             data-testid="account-nav-fade-left"
           />
         ) : null}
         {scrollFade.right ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-8 bg-gradient-to-l from-bg via-bg/80 to-transparent max-lg:block lg:hidden"
+            className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-8 bg-gradient-to-l from-bg via-bg/80 to-transparent"
             data-testid="account-nav-fade-right"
           />
         ) : null}
         <div
           ref={scrollerRef}
           data-testid="account-nav-rail"
-          className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-lg:flex-nowrap lg:flex-wrap lg:overflow-x-visible"
+          className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex-nowrap lg:gap-1.5"
         >
           {NAV_ITEMS.map((item) => {
             if (item.key === "people" && (!showPeople || !labels.people)) {
@@ -151,7 +151,7 @@ export function AccountNav({ locale, labels, showPeople = false }: AccountNavPro
                 href={href}
                 aria-current={isActive ? "page" : undefined}
                 className={[
-                  "inline-flex min-h-11 shrink-0 items-center rounded px-4 text-sm font-medium",
+                  "inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded px-4 text-sm font-medium lg:px-2.5",
                   "transition-colors duration-fast ease-std motion-reduce:transition-none",
                   isActive
                     ? "bg-primary text-surface"
