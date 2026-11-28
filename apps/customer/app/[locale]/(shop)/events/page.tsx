@@ -280,6 +280,8 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   const pagedItems = sliceBrowsePage(allItems, page);
   const featuredEvent = page === 1 ? pagedItems[0] : null;
   const remainingEvents = page === 1 ? pagedItems.slice(1) : pagedItems;
+  const isCatalogEmpty = allItems.length === 0;
+
   const pagerParams = {
     date_window: dateWindow !== "tonight" ? dateWindow : undefined,
     category: category ?? undefined,
@@ -397,7 +399,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
               priority
               className="h-full rounded-none"
             />
-          ) : (
+          ) : isCatalogEmpty ? null : (
             <div
               className="min-h-64 bg-gradient-to-br from-primary/30 via-panel-2 to-panel"
               aria-hidden="true"
@@ -431,8 +433,8 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
           </Suspense>
         </div>
 
-        {allItems.length === 0 ? (
-          <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
+        {isCatalogEmpty ? (
+          <EmptyState title={t("browse.emptyStateTitle")} body={t("browse.emptyStateBody")} />
         ) : remainingEvents.length > 0 ? (
           <>
             <EventGrid
