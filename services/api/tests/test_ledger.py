@@ -104,6 +104,8 @@ def _build_template_args(
             return {"collected_ngwee": gross, "vendor_id": VENDOR_A}
         case LedgerTemplate.DOOR_PAYMENT_EXCEPTION:
             return {"received_ngwee": gross}
+        case LedgerTemplate.LATE_COLLECTION_REFUND:
+            return {"refund_ngwee": gross}
         case LedgerTemplate.EVENT_ADVANCE_RECOVERY:
             return {
                 "advance_ngwee": gross,

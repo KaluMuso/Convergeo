@@ -40,6 +40,7 @@ class LedgerTemplate(StrEnum):
     DELIVERY_FEE_PLATFORM_SUBSIDY = "delivery_fee_platform_subsidy"
     DOOR_PAYMENT_COLLECTED = "door_payment_collected"
     DOOR_PAYMENT_EXCEPTION = "door_payment_exception"
+    LATE_COLLECTION_REFUND = "late_collection_refund"
     EVENT_ADVANCE_RECOVERY = "event_advance_recovery"
     ORGANISER_RECEIVABLE_OFFSET = "organiser_receivable_offset"
     ORGANISER_RECEIVABLE_REPAID = "organiser_receivable_repaid"
@@ -465,6 +466,27 @@ def door_payment_exception(*, received_ngwee: int) -> TemplateResult:
     )
     _assert_balanced(legs)
     return TemplateResult(kind=LedgerTemplate.DOOR_PAYMENT_EXCEPTION, legs=legs)
+
+
+def late_collection_refund(*, refund_ngwee: int) -> TemplateResult:
+    """Refund of a late collection that was parked in ``door_payment_suspense``.
+
+    The cash was booked by ``door_payment_exception`` (platform_cash in, suspense
+    out). Paying it back to the payer clears suspense; escrow and the vendor are never
+    touched, so a live order can never have this money released to its vendor.
+
+    Debit door_payment_suspense (+refund).
+    Credit platform_cash (−refund).
+    """
+    refund = parse_ngwee(refund_ngwee)
+    legs = (
+        PostingLeg(AccountRef("door_payment_suspense"), refund),
+        PostingLeg(AccountRef("platform_cash"), -refund),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.LATE_COLLECTION_REFUND, legs=legs)
+
+
 def event_advance_recovery(
     *, advance_ngwee: int, platform_restore_ngwee: int, vendor_id: str
 ) -> TemplateResult:
@@ -522,6 +544,8 @@ def organiser_receivable_repaid(*, amount_ngwee: int, vendor_id: str) -> Templat
     )
     _assert_balanced(legs)
     return TemplateResult(kind=LedgerTemplate.ORGANISER_RECEIVABLE_REPAID, legs=legs)
+
+
 def coupon_funding(*, discount_ngwee: int) -> TemplateResult:
     """Platform-funded coupon: top escrow up to the full price at collection.
 
@@ -566,10 +590,9 @@ TEMPLATE_REGISTRY: dict[LedgerTemplate, TemplateFn] = {
     LedgerTemplate.COD_COLLECTED_BY_VENDOR: cod_collected_by_vendor,
     LedgerTemplate.DELIVERY_FEE_VENDOR_CHARGE: delivery_fee_vendor_charge,
     LedgerTemplate.DELIVERY_FEE_PLATFORM_SUBSIDY: delivery_fee_platform_subsidy,
-
-
     LedgerTemplate.DOOR_PAYMENT_COLLECTED: door_payment_collected,
     LedgerTemplate.DOOR_PAYMENT_EXCEPTION: door_payment_exception,
+    LedgerTemplate.LATE_COLLECTION_REFUND: late_collection_refund,
     LedgerTemplate.EVENT_ADVANCE_RECOVERY: event_advance_recovery,
     LedgerTemplate.ORGANISER_RECEIVABLE_OFFSET: organiser_receivable_offset,
     LedgerTemplate.ORGANISER_RECEIVABLE_REPAID: organiser_receivable_repaid,

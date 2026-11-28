@@ -192,7 +192,7 @@ def financial_identities() -> dict[str, list[str]]:
     """Bind this NEW proposal's concrete inventory, without an approval claim."""
     manifest = json.loads((ROOT / "scripts/ci/coordinator-gate-inputs.json").read_text())
     identities: dict[str, list[str]] = manifest["financial"]
-    for group, count in (("f1", 6), ("f2", 43), ("related", 828)):
+    for group, count in (("f1", 6), ("f2", 43), ("related", 842)):
         if len(identities[group]) != count or len(set(identities[group])) != count:
             raise RuntimeError("Financial concrete identity binding differs: " + group)
     require_collection(F1_NODES, identities["f1"], 0)
@@ -466,12 +466,14 @@ class Runner:
         related, _ = report.related_report(Path(self.env.pop("F2_COLLECTION_OUTPUT")), merged,
                                           int(any(exits)), collection_rc)
         # Reviewer bound 764 identities (760 + four #759 C1 guards); logistics phase 1
-        # (#788) adds the ready_for_collection / return transitions: 828.
+        # (#788) adds the ready_for_collection / return transitions: 828; the refund
+        # guards (#1019) add 14 cancel-blocked-while-payment-in-flight cases: 842
+        # (the 14 extra identities are pending independent review).
         # Do not silently accept a reduced collection.
-        if related.get("expected") != 828:
+        if related.get("expected") != 842:
             related["accepted"] = False
             related["inventory_error"] = (
-                "Expected the independently reviewed 828 related identities"
+                "Expected the 842 related identities (828 reviewed + 14 pending review)"
             )
         results["related"] = related
         self.write_result()

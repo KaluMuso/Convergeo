@@ -23,7 +23,8 @@
   },
   "errors": {
     "loadFailed": "Sitinathe kutenga ma-order anu. Yesaninso.",
-    "notFound": "Order sichipezeka"
+    "notFound": "Order sichipezeka",
+    "paymentInFlight": "Kulipira kukuchitika pa oda iyi. Dikirani mphindi zingapo, kenako yesaninso kuletsa."
   },
   "escrow": {
     "cod": "Lipirani mu cash mukalandira order yanu.",
