@@ -1,11 +1,11 @@
 "use client";
 
-import { getBrowserAccessToken } from "@vergeo/auth";
 import { createApiClient } from "@vergeo/config";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef, useState } from "react";
 
+import { getBrowserAccessToken } from "../../../../lib/access-token";
 import { downscaleImageFile, uploadSignedImage } from "../../../../lib/admin-image-upload";
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { adminPrimaryButtonSmClass } from "../../_components/admin-primary-button";

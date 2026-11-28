@@ -33,6 +33,7 @@ TOKEN_A = "vendor-a-token"
 class FakeQuery:
     def __init__(self, parent: FakeTable, filters: list[tuple[str, str, Any]]) -> None:
         self._parent = parent
+        self._range: list[tuple[str, str, Any]] = []
         self._filters = filters
         self._maybe_single = False
         self._pending_op: str | None = None
@@ -51,6 +52,15 @@ class FakeQuery:
 
     def in_(self, column: str, values: list[Any]) -> FakeQuery:
         self._in_filter = (column, list(values))
+        self._parent.in_calls.append(len(values))
+        return self
+
+    def gte(self, column: str, value: Any) -> FakeQuery:
+        self._range.append(("gte", column, value))
+        return self
+
+    def lt(self, column: str, value: Any) -> FakeQuery:
+        self._range.append(("lt", column, value))
         return self
 
     def order(self, column: str, *, desc: bool = False) -> FakeQuery:
@@ -94,6 +104,12 @@ class FakeQuery:
         for op, column, value in self._filters:
             if op == "eq":
                 rows = [row for row in rows if row.get(column) == value]
+        for op, column, value in self._range:
+            bound = datetime.fromisoformat(str(value))
+            if op == "gte":
+                rows = [r for r in rows if datetime.fromisoformat(str(r[column])) >= bound]
+            else:
+                rows = [r for r in rows if datetime.fromisoformat(str(r[column])) < bound]
         if self._in_filter is not None:
             column, values = self._in_filter
             allowed = {str(value) for value in values}
@@ -104,6 +120,8 @@ class FakeQuery:
 class FakeTable:
     def __init__(self) -> None:
         self.rows: list[dict[str, Any]] = []
+        # Size of every in_() list this table was queried with.
+        self.in_calls: list[int] = []
 
     def select(self, columns: str, *, count: str | None = None) -> FakeQuery:
         return FakeQuery(self, []).select(columns, count=count)
@@ -401,9 +419,7 @@ def test_dashboard_takings_and_needs_action(queue_client: TestClient) -> None:
 def test_dashboard_returns_persisted_archetype(
     queue_client_electronics: TestClient,
 ) -> None:
-    response = queue_client_electronics.get(
-        "/vendor/orders/dashboard", headers=_auth_headers()
-    )
+    response = queue_client_electronics.get("/vendor/orders/dashboard", headers=_auth_headers())
     assert response.status_code == 200
     assert response.json()["archetype"] == "electronics"
     assert response.json()["business_archetype"] == "registered_retailer"
@@ -420,3 +436,128 @@ def test_queue_filter_status(queue_client: TestClient) -> None:
     assert len(body) == 1
     assert body[0]["id"] == ORDER_CONFIRMED_ID
     assert body[0]["available_actions"] == ["reject", "pack"]
+
+
+def _fake_of(app: Any) -> FakeSupabaseClient:
+    wrapper = app.dependency_overrides[get_supabase_client]()
+    fake = wrapper.client
+    assert isinstance(fake, FakeSupabaseClient)
+    return fake
+
+
+def test_dashboard_only_loads_items_for_cards_shown_and_orders_confirmed_today(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = _build_queue_app(monkeypatch)
+    fake = _fake_of(app)
+    # 30 more placed orders: only 10 cards are shown, so items are not read for the rest.
+    for index in range(30):
+        order_id = f"00000000-0000-0000-0000-{index:012d}"
+        fake.tables["orders"].rows.append(
+            {
+                "id": order_id,
+                "vendor_id": VENDOR_A_ID,
+                "status": "placed",
+                "fulfilment": "pickup",
+                "delivery_fee_ngwee": 0,
+                "created_at": f"2026-07-08T10:{index:02d}:00+00:00",
+                "cod": True,
+                "checkout_group_id": None,
+            }
+        )
+    with TestClient(app) as client:
+        response = client.get("/vendor/orders/dashboard", headers=_auth_headers())
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["needs_action"]) == 10
+    assert body["queue_counts"]["all"] == 33
+    assert body["queue_counts"]["needs_action"] == 33
+    # 10 cards shown + the 1 order confirmed today, deduplicated: never all 33 orders.
+    assert max(fake.tables["order_items"].in_calls) <= 11
+    assert body["takings_ngwee"] == 12_000
+
+
+def test_dashboard_confirm_events_are_limited_to_today(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = _build_queue_app(monkeypatch)
+    fake = _fake_of(app)
+    # An older confirmation of the same order must not be read or counted twice.
+    fake.tables["order_events"].rows.append(
+        {
+            "order_id": ORDER_PLACED_ID,
+            "to_status": "confirmed",
+            "created_at": "2026-01-01T10:00:00+00:00",
+        }
+    )
+    with TestClient(app) as client:
+        response = client.get("/vendor/orders/dashboard", headers=_auth_headers())
+    assert response.status_code == 200
+    assert response.json()["takings_ngwee"] == 12_000
+
+
+def test_dashboard_skips_payment_lookup_for_orders_it_cannot_change(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = _build_queue_app(monkeypatch)
+    fake = _fake_of(app)
+    for index in range(150):
+        fake.tables["orders"].rows.append(
+            {
+                "id": f"11111111-0000-0000-0000-{index:012d}",
+                "vendor_id": VENDOR_A_ID,
+                "status": "completed",
+                "fulfilment": "pickup",
+                "delivery_fee_ngwee": 0,
+                "created_at": "2026-05-01T10:00:00+00:00",
+                "cod": False,
+                "checkout_group_id": f"22222222-0000-0000-0000-{index:012d}",
+            }
+        )
+    with TestClient(app) as client:
+        response = client.get("/vendor/orders/dashboard", headers=_auth_headers())
+    assert response.status_code == 200
+    # Only the three live prepaid orders need a payments lookup, not the 150 completed ones.
+    assert fake.tables["payments"].in_calls == [3]
+    # Completed orders are still counted.
+    assert response.json()["queue_counts"]["all"] == 153
+
+
+def test_queue_chunks_large_in_lists_and_keeps_every_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = _build_queue_app(monkeypatch)
+    fake = _fake_of(app)
+    for index in range(250):
+        order_id = f"33333333-0000-0000-0000-{index:012d}"
+        fake.tables["orders"].rows.append(
+            {
+                "id": order_id,
+                "vendor_id": VENDOR_A_ID,
+                "status": "delivered",
+                "fulfilment": "pickup",
+                "delivery_fee_ngwee": 0,
+                "created_at": "2026-04-01T10:00:00+00:00",
+                "cod": True,
+                "checkout_group_id": None,
+            }
+        )
+        fake.tables["order_items"].rows.append(
+            {
+                "order_id": order_id,
+                "qty": 1,
+                "unit_price_ngwee": 100,
+                "title_snapshot": f"Item {index}",
+            }
+        )
+    with TestClient(app) as client:
+        response = client.get(
+            "/vendor/orders/queue", params={"status": "all"}, headers=_auth_headers()
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 253
+    assert all(item["item_count"] == 1 for item in body)
+    # 253 ids -> 3 chunks, none over 100 ids (URL length stays bounded).
+    assert sorted(fake.tables["order_items"].in_calls) == [53, 100, 100]
+    assert max(fake.tables["order_items"].in_calls) <= 100

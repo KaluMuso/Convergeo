@@ -17,6 +17,8 @@ const GalleryThumbnails = dynamic(
   { ssr: false },
 );
 
+import { computeZoomLayout, type ZoomLayout } from "./zoom-math";
+
 import type { LightboxLabels } from "./lightbox";
 
 const Lightbox = dynamic(() => import("./lightbox").then((mod) => mod.Lightbox), { ssr: false });
@@ -89,6 +91,7 @@ export function PdpInteractiveGallery({
   const [zoomActive, setZoomActive] = useState(false);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const [zoomReady, setZoomReady] = useState(false);
+  const [zoomLayout, setZoomLayout] = useState<ZoomLayout | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
   const coarse = useMemo(() => isCoarsePointer(), []);
 
@@ -125,9 +128,35 @@ export function PdpInteractiveGallery({
     setTargetIndex(lastIndex);
   }, []);
 
+  /**
+   * The pane overlays the details column, so it only exists when that column sits to
+   * the right of the stage. In a single-column layout this returns null and the lens
+   * is disabled (tap still opens the lightbox).
+   */
+  const measureZoomLayout = useCallback((stage: HTMLElement): ZoomLayout | null => {
+    const root = stage.closest("[data-pdp-zoom-root]");
+    const target = root?.querySelector("[data-pdp-zoom-target]");
+    if (!target) {
+      return null;
+    }
+    const s = stage.getBoundingClientRect();
+    const t = target.getBoundingClientRect();
+    return computeZoomLayout(
+      { left: s.left, top: s.top, width: s.width, height: s.height },
+      { left: t.left, top: t.top, width: t.width, height: t.height },
+      { width: window.innerWidth, height: window.innerHeight },
+    );
+  }, []);
+
   const onPointerMove = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       if (coarse || !zoomActive) {
+        return;
+      }
+      const layout = measureZoomLayout(event.currentTarget);
+      setZoomLayout(layout);
+      if (!layout) {
+        setPointer(null);
         return;
       }
       const rect = event.currentTarget.getBoundingClientRect();
@@ -136,13 +165,31 @@ export function PdpInteractiveGallery({
         y: event.clientY - rect.top,
       });
     },
-    [coarse, zoomActive],
+    [coarse, measureZoomLayout, zoomActive],
   );
 
   const onPointerLeave = useCallback(() => {
     setPointer(null);
     setZoomActive(false);
+    setZoomLayout(null);
   }, []);
+
+  useEffect(() => {
+    if (!zoomActive) {
+      return;
+    }
+    // The pane is fixed-position: drop it if the page scrolls/resizes under a still pointer.
+    const dismiss = () => {
+      setPointer(null);
+      setZoomLayout(null);
+    };
+    window.addEventListener("scroll", dismiss, { passive: true });
+    window.addEventListener("resize", dismiss);
+    return () => {
+      window.removeEventListener("scroll", dismiss);
+      window.removeEventListener("resize", dismiss);
+    };
+  }, [zoomActive]);
 
   const onPointerEnter = useCallback(() => {
     if (coarse) {
@@ -228,6 +275,7 @@ export function PdpInteractiveGallery({
               cloudName={cloudName}
               pointer={pointer}
               box={boxSize}
+              layout={zoomLayout}
             />
           ) : null}
 

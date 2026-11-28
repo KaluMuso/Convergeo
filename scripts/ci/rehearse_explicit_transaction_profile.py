@@ -137,6 +137,8 @@ REVIEWED_SUFFIX = (
     "20261124120000_social_contacts.sql",
     # Ask Vergeo service-role checks use auth.role() (rewrite in place, no down).
     "20261126190000_ask_service_role_auth_role.sql",
+    # Ask Vergeo answer log + auditor findings (additive tables, trigger-based admin alert).
+    "20261127090000_ask_answer_log_audit.sql",
     # Vendor sourcing hub: supplier types, made-in-Zambia flag, import requests (additive, documented down).
     "20261127100000_vendor_sourcing_hub.sql",
 )
@@ -145,6 +147,14 @@ NETWORK = "supabase_network_vergeo5-typegen"
 NETWORK_BIND_OPTION = "com.docker.network.bridge.host_binding_ipv4"
 NETWORK_OWNER_LABEL = "org.convergeo.typegen.disposable"
 IMAGE = "public.ecr.aws/supabase/postgres:17.6.1.143"
+# Supabase CLI v2.109.1 falls back to this official mirror when ECR is slow or
+# unreachable; same tag, same bytes, different registry name.
+IMAGE_MIRROR = "ghcr.io/supabase/postgres:17.6.1.143"
+ACCEPTED_IMAGES = (IMAGE, IMAGE_MIRROR)
+# Both registries serve this exact manifest-list digest for the pinned tag
+# (verified 2026-11-27). The mirror name is accepted only when the pulled image
+# resolves to it, so a name/tag match alone is never enough.
+IMAGE_DIGEST = "sha256:80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453"
 URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 LOCK = Path("/tmp/convergeo-typegen-explicit-window.lock")
 OWNERSHIP_MARKER = ".owned-typegen-stack"
@@ -527,6 +537,31 @@ def assert_native_reference_rows(
         )
 
 
+def require_pinned_digest(details: dict) -> None:
+    """The ECR name is the pin; the ghcr mirror must resolve to the same digest."""
+    image = details.get("Config", {}).get("Image")
+    if image == IMAGE:
+        return
+    digests = json.loads(
+        checked(
+            [
+                "docker",
+                "image",
+                "inspect",
+                details["Image"],
+                "--format",
+                "{{json .RepoDigests}}",
+            ]
+        )
+    )
+    if image != IMAGE_MIRROR or not any(
+        str(item).endswith("@" + IMAGE_DIGEST) for item in digests or []
+    ):
+        raise RehearsalError(
+            "mirror image digest is not the pinned digest", code="IMAGE_MISMATCH"
+        )
+
+
 def target_container() -> str:
     matches = (
         checked(
@@ -544,8 +579,12 @@ def target_container() -> str:
         checked(["docker", "inspect", container, "--format", "{{json .}}"])
     )
     ports = details["NetworkSettings"]["Ports"].get("5432/tcp")
-    if details["Config"]["Image"] != IMAGE:
-        raise RehearsalError("typegen image changed", code="IMAGE_MISMATCH")
+    if details["Config"]["Image"] not in ACCEPTED_IMAGES:
+        raise RehearsalError(
+            f"typegen image changed: {details['Config']['Image']}",
+            code="IMAGE_MISMATCH",
+        )
+    require_pinned_digest(details)
     if (
         details["Name"] != f"/{CONTAINER}"
         or not details["State"]["Running"]
@@ -651,8 +690,12 @@ def started_container_on_network(network_id: str) -> str:
         checked(["docker", "inspect", matches[0], "--format", "{{json .}}"])
     )
     network = details.get("NetworkSettings", {}).get("Networks", {}).get(NETWORK, {})
-    if details.get("Config", {}).get("Image") != IMAGE:
-        raise RehearsalError("new disposable image changed", code="IMAGE_MISMATCH")
+    if details.get("Config", {}).get("Image") not in ACCEPTED_IMAGES:
+        raise RehearsalError(
+            f"new disposable image changed: {details.get('Config', {}).get('Image')}",
+            code="IMAGE_MISMATCH",
+        )
+    require_pinned_digest(details)
     if (
         not details.get("Id", "").startswith(matches[0])
         or details.get("Name") != f"/{CONTAINER}"
@@ -692,7 +735,7 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 200 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 201 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
             "disposable copy does not match 200 source migrations",
             code="SOURCE_MISMATCH",
@@ -780,7 +823,7 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                     print("failure_cleanup|restored_198|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 200 migrations",
+                        "error: disposable failure cleanup could not restore 201 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -1150,7 +1193,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 200 migrations"
+                    "normal full replay did not restore 201 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")

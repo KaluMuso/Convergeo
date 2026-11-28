@@ -1,5 +1,6 @@
 "use client";
 
+import { glassClass } from "@vergeo/ui/src/glass";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
@@ -91,7 +92,9 @@ export function AdminAccountMenu({ locale, identity, roleKind }: AdminAccountMen
         </span>
       </button>
       {open ? (
-        <div className="absolute right-0 top-full z-50 mt-1 w-64 space-y-2 rounded-md border border-border bg-surface p-3 text-text shadow-lg">
+        <div
+          className={`${glassClass("overlay")} absolute right-0 top-full z-50 mt-1 w-64 space-y-2 rounded-md p-3 text-text`}
+        >
           <div className="space-y-0.5">
             <p className="truncate text-sm font-semibold">{triggerLabel}</p>
             {identity.email ? (

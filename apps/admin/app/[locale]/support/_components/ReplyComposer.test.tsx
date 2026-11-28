@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   apiForToken: vi.fn(),
 }));
 
-vi.mock("@vergeo/auth", () => ({
+vi.mock("../../../../lib/access-token", () => ({
   getBrowserAccessToken: vi.fn(async () => mocks.actor),
 }));
 vi.mock("jose", () => ({ decodeJwt: (token: string) => ({ sub: token }) }));

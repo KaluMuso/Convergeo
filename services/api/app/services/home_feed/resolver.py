@@ -21,7 +21,7 @@ from app.routers.catalog import (
     build_catalog_candidates,
     catalog_item_from_candidate,
 )
-from app.services.catalog_visibility import active_vendor_ids, visible_target_keys
+from app.services.catalog_visibility import active_vendor_ids, load_targets, visible_target_keys
 from app.services.home_feed.models import (
     AdCreativeOut,
     FeedSectionOut,
@@ -132,7 +132,12 @@ def placement_effective_state(row: dict[str, Any], *, now: datetime) -> str:
 
 def to_creative(row: dict[str, Any]) -> AdCreativeOut:
     href = str(row["cta_href"])
+    target_href = row.get("_target_href")
+    vendor_href = row.get("_vendor_href")
     return AdCreativeOut(
+        target_href=str(target_href) if target_href else None,
+        vendor_href=str(vendor_href) if vendor_href else None,
+        vendor_name=str(row["_vendor_name"]) if row.get("_vendor_name") else None,
         placement_id=str(row["id"]),
         advertiser_name=str(row["advertiser_name"]),
         image_public_id=str(row["image_public_id"]),
@@ -168,6 +173,7 @@ def load_live_placements(client: Any, *, now: datetime) -> list[dict[str, Any]]:
     )
     live = [row for row in rows if placement_is_live(row, now=now)]
     live = filter_placements_with_visible_targets(client, live)
+    live = attach_placement_links(client, live)
     live.sort(key=_placement_order)
     return live
 
@@ -210,6 +216,64 @@ def filter_placements_with_visible_targets(
                 continue
         kept.append(row)
     return kept
+
+
+def attach_placement_links(client: Any, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Resolve the promoted item's route and the advertising vendor's storefront route.
+
+    Read-only enrichment (``_target_href`` / ``_vendor_href`` / ``_vendor_name`` on the
+    row copies). Only runs for targeted or vendor-advertiser placements and fails soft:
+    on any error the placement is served unchanged and clients use ``cta_href``.
+    """
+    refs: dict[str, set[str]] = {}
+    for row in rows:
+        if row.get("target_kind") and row.get("target_id"):
+            refs.setdefault(str(row["target_kind"]), set()).add(str(row["target_id"]))
+    vendor_ids = {
+        str(row["advertiser_vendor_id"])
+        for row in rows
+        if row.get("advertiser_kind") == "vendor" and row.get("advertiser_vendor_id")
+    }
+    if not refs and not vendor_ids:
+        return rows
+    targets: dict[tuple[str, str], dict[str, Any]] = {}
+    vendors: dict[str, dict[str, Any]] = {}
+    try:
+        for kind, ids in refs.items():
+            for loaded in load_targets(client, kind, ids):
+                targets[(kind, loaded["id"])] = loaded
+                if loaded.get("vendor_id"):
+                    vendor_ids.add(str(loaded["vendor_id"]))
+                if kind == "vendor":
+                    vendor_ids.add(loaded["id"])
+        if vendor_ids:
+            vendor_rows = _rows(
+                client.table("vendors")
+                .select("id, slug, display_name")
+                .in_("id", sorted(vendor_ids))
+                .execute()
+            )
+            vendors = {str(v["id"]): v for v in vendor_rows if v.get("slug")}
+    except Exception:
+        logger.warning("home_feed_placement_links_failed", exc_info=True)
+        return rows
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        enriched = dict(row)
+        target = targets.get((str(row.get("target_kind")), str(row.get("target_id"))))
+        vendor_id: str | None = None
+        if row.get("advertiser_kind") == "vendor" and row.get("advertiser_vendor_id"):
+            vendor_id = str(row["advertiser_vendor_id"])
+        elif target is not None:
+            vendor_id = target["id"] if target["kind"] == "vendor" else target.get("vendor_id")
+        if target is not None and target["kind"] != "vendor":
+            enriched["_target_href"] = target["href"]
+        vendor = vendors.get(str(vendor_id)) if vendor_id else None
+        if vendor is not None:
+            enriched["_vendor_href"] = f"/v/{vendor['slug']}"
+            enriched["_vendor_name"] = vendor.get("display_name")
+        out.append(enriched)
+    return out
 
 
 # ---------------------------------------------------------------------------

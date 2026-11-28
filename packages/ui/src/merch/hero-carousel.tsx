@@ -107,7 +107,10 @@ export function HeroCarousel({
           // each auto-advance.
           const left = slide.offsetLeft;
           if (typeof strip.scrollTo === "function") {
-            strip.scrollTo({ left, behavior: prefersReducedMotion ? "auto" : behavior });
+            strip.scrollTo({
+              left,
+              behavior: prefersReducedMotion ? "auto" : behavior,
+            });
           } else {
             strip.scrollLeft = left;
           }
@@ -294,7 +297,7 @@ export function HeroCarousel({
                 position: "relative",
                 flex: "0 0 100%",
                 scrollSnapAlign: "start",
-                minHeight: "clamp(22rem, 46vw, 30rem)",
+                minHeight: "calc(clamp(22rem, 46vw, 30rem) + var(--hero-overlap, 0px))",
                 display: "grid",
                 alignItems: "end",
               }}
@@ -340,7 +343,13 @@ export function HeroCarousel({
                   ) : null}
                   {slide.subtitle ? <p className="v-hero__subtitle">{slide.subtitle}</p> : null}
                   {slide.cta ? (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-2)" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "var(--sp-2)",
+                      }}
+                    >
                       {slide.cta}
                     </div>
                   ) : null}
@@ -359,125 +368,133 @@ export function HeroCarousel({
           position: "absolute",
           insetInline: 0,
           bottom: 0,
-          height: "4.5rem",
+          // Fades into the PAGE background (theme token, so light and dark both work)
+          // so the hero has no hard bottom edge; the next section underlaps this strip.
+          height: "calc(7rem + var(--hero-overlap, 0px))",
           background:
-            "linear-gradient(to top, color-mix(in srgb, var(--panel) 70%, transparent), transparent)",
+            "linear-gradient(to top, var(--bg) 0%, color-mix(in srgb, var(--bg) 82%, transparent) 30%, transparent 100%)",
         }}
       />
 
       {total > 1 ? (
         <>
-          {/* Phones swipe or use the dots; side arrows would cover the headline. */}
-          <div
-            className="hidden sm:flex"
+          {/* Edge hover zones replace visible arrow buttons. Still real <button>s:
+              focusable, labelled, keyboard + screen-reader operable (ArrowLeft/Right
+              on the region also work). Touch users swipe the strip. */}
+          <button
+            type="button"
+            aria-label={labels.previous}
+            onClick={() => goPrevious(true)}
+            data-testid="hero-carousel-prev"
+            className="v-hero__zone v-hero__zone--prev"
             style={{
-              position: "absolute",
-              insetInline: "var(--sp-2)",
-              top: "50%",
-              transform: "translateY(-50%)",
-              justifyContent: "space-between",
-              pointerEvents: "none",
-              zIndex: 2,
+              minHeight: `${CONTROL_MIN_SIZE_PX}px`,
+              minWidth: `${CONTROL_MIN_SIZE_PX}px`,
             }}
           >
-            <button
-              type="button"
-              aria-label={labels.previous}
-              onClick={() => goPrevious(true)}
-              data-testid="hero-carousel-prev"
-              style={{
-                pointerEvents: "auto",
-                minHeight: `${CONTROL_MIN_SIZE_PX}px`,
-                minWidth: `${CONTROL_MIN_SIZE_PX}px`,
-                borderRadius: "999px",
-                border: "1px solid color-mix(in srgb, var(--panel-text) 32%, transparent)",
-                background: "color-mix(in srgb, var(--panel) 72%, transparent)",
-                boxShadow: "0 6px 18px color-mix(in srgb, var(--panel) 35%, transparent)",
-                color: "var(--panel-text)",
-                fontSize: "1.5rem",
-                lineHeight: 1,
-                cursor: "pointer",
-              }}
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              aria-label={labels.next}
-              onClick={() => goNext(true)}
-              data-testid="hero-carousel-next"
-              style={{
-                pointerEvents: "auto",
-                minHeight: `${CONTROL_MIN_SIZE_PX}px`,
-                minWidth: `${CONTROL_MIN_SIZE_PX}px`,
-                borderRadius: "999px",
-                border: "1px solid color-mix(in srgb, var(--panel-text) 32%, transparent)",
-                background: "color-mix(in srgb, var(--panel) 72%, transparent)",
-                boxShadow: "0 6px 18px color-mix(in srgb, var(--panel) 35%, transparent)",
-                color: "var(--panel-text)",
-                fontSize: "1.5rem",
-                lineHeight: 1,
-                cursor: "pointer",
-              }}
-            >
-              ›
-            </button>
-          </div>
+            <span aria-hidden className="v-hero__zone-chevron">
+              <svg
+                viewBox="0 0 24 24"
+                width="32"
+                height="32"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.25"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M15 5l-7 7 7 7" />
+              </svg>
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-label={labels.next}
+            onClick={() => goNext(true)}
+            data-testid="hero-carousel-next"
+            className="v-hero__zone v-hero__zone--next"
+            style={{
+              minHeight: `${CONTROL_MIN_SIZE_PX}px`,
+              minWidth: `${CONTROL_MIN_SIZE_PX}px`,
+            }}
+          >
+            <span aria-hidden className="v-hero__zone-chevron">
+              <svg
+                viewBox="0 0 24 24"
+                width="32"
+                height="32"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.25"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </button>
 
           <div
             data-testid="hero-carousel-dots"
             style={{
               position: "absolute",
               insetInline: 0,
-              bottom: "var(--sp-3)",
+              bottom: "calc(var(--sp-3) + var(--hero-overlap, 0px))",
               display: "flex",
               justifyContent: "center",
-              gap: "var(--sp-2)",
-              zIndex: 2,
+              zIndex: 3,
               pointerEvents: "none",
             }}
           >
-            {slides.map((slide, index) => (
-              <button
-                key={`dot-${slide.key}`}
-                type="button"
-                aria-label={labels.slideOf(index + 1, total)}
-                aria-current={index === currentIndex ? "true" : undefined}
-                onClick={() => {
-                  scrollToIndex(index, "smooth", true);
-                }}
-                data-testid={`hero-carousel-dot-${index}`}
-                style={{
-                  pointerEvents: "auto",
-                  minHeight: `${CONTROL_MIN_SIZE_PX}px`,
-                  minWidth: `${CONTROL_MIN_SIZE_PX}px`,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  padding: 0,
-                }}
-              >
-                <span
-                  aria-hidden
-                  style={{
-                    display: "block",
-                    width: index === currentIndex ? "1.5rem" : "0.5rem",
-                    height: "0.5rem",
-                    borderRadius: "999px",
-                    background:
-                      index === currentIndex
-                        ? "var(--primary)"
-                        : "color-mix(in srgb, var(--panel-text) 45%, transparent)",
-                    transition: prefersReducedMotion
-                      ? undefined
-                      : "width var(--dur) var(--ease-std)",
+            <div
+              className="v-hero__dots-pill"
+              style={{
+                display: "flex",
+                gap: "var(--sp-1)",
+                pointerEvents: "auto",
+              }}
+            >
+              {slides.map((slide, index) => (
+                <button
+                  key={`dot-${slide.key}`}
+                  type="button"
+                  aria-label={labels.slideOf(index + 1, total)}
+                  aria-current={index === currentIndex ? "true" : undefined}
+                  onClick={() => {
+                    scrollToIndex(index, "smooth", true);
                   }}
-                />
-              </button>
-            ))}
+                  data-testid={`hero-carousel-dot-${index}`}
+                  style={{
+                    minHeight: `${CONTROL_MIN_SIZE_PX}px`,
+                    minWidth: `${CONTROL_MIN_SIZE_PX}px`,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      display: "block",
+                      width: index === currentIndex ? "1.5rem" : "0.5rem",
+                      height: "0.5rem",
+                      borderRadius: "999px",
+                      background:
+                        index === currentIndex
+                          ? "var(--primary)"
+                          : "color-mix(in srgb, var(--panel-text) 45%, transparent)",
+                      transition: prefersReducedMotion
+                        ? undefined
+                        : "width var(--dur) var(--ease-std)",
+                    }}
+                  />
+                </button>
+              ))}
+            </div>
           </div>
 
           <p className="sr-only" aria-live="polite" data-testid="hero-carousel-live">

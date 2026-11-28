@@ -52,5 +52,53 @@
   "auth": {
     "backToShop": "Retour à la boutique",
     "help": "Aide"
+  },
+  "megaMenu": {
+    "railAria": "Parcourir les rayons",
+    "groupProducts": "Produits",
+    "groupServices": "Services",
+    "groupEvents": "Événements",
+    "forYou": "Catégories pour vous",
+    "viewAll": "Tout voir",
+    "browseFeatured": "Voir la sélection",
+    "viewAllIn": "Tout voir dans {name}",
+    "close": "Fermer le menu",
+    "menuOpen": "Menu",
+    "drawerAria": "Menu principal",
+    "mainMenu": "Menu principal",
+    "back": "Retour au menu principal",
+    "helloGuest": "Bonjour, connectez-vous",
+    "helloUser": "Bonjour, {name}",
+    "signIn": "Se connecter ou créer un compte",
+    "shopByDepartment": "Acheter par rayon",
+    "services": "Services",
+    "events": "Événements",
+    "deals": "Bonnes affaires",
+    "sell": "Vendre sur Convergeo",
+    "helpSettings": "Aide et paramètres",
+    "account": "Votre compte",
+    "orders": "Vos commandes",
+    "help": "Centre d'aide",
+    "seeAll": "Voir tout",
+    "seeLess": "Voir moins",
+    "allIn": "Tout dans {name}",
+    "serviceVerticals": {
+      "beauty": "Beauté",
+      "food-catering": "Restauration et traiteur",
+      "auto": "Auto et mécanique",
+      "printing-creative": "Impression et création",
+      "home-services": "Services à domicile",
+      "tech-services": "Services techniques",
+      "cleaning": "Nettoyage",
+      "tailoring": "Couture"
+    },
+    "eventCategories": {
+      "workshops": "Ateliers et formation",
+      "comedy-theatre": "Humour et théâtre",
+      "pop-up-dinners": "Dîners éphémères",
+      "cultural-arts": "Culture et arts",
+      "lifestyle-community": "Art de vivre et communauté",
+      "free-rsvp": "Inscription gratuite"
+    }
   }
 }

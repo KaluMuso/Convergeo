@@ -41,7 +41,7 @@ class SyntheticHistoryControls(unittest.TestCase):
 
     def test_six_column_shape_and_provisional_order(self) -> None:
         rows = self.rows
-        self.assertEqual(len(rows), 200)
+        self.assertEqual(len(rows), 201)
         self.assertEqual(rows[0]["statements"], None)
         self.assertEqual(rows[1]["statements"], [])
         self.assertEqual(rows[2]["statements_bounds"], "[0:0]")

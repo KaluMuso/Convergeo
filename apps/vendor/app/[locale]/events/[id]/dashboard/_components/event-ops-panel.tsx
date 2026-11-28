@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getCustomerAppPathUrl } from "../../../../../../lib/customer-app";
 import { Button, Input, Select } from "../../../_lib/ui";
 import {
   createDashboardClient,
@@ -106,7 +107,8 @@ export function EventOpsPanel({ eventId, getToken, locale }: EventOpsPanelProps)
     }
   };
 
-  const acceptPath = `/${locale}/account/event-team/accept`;
+  // The invite is accepted in the customer app: share a full link, not a bare path.
+  const acceptPath = getCustomerAppPathUrl(`/${locale}/account/event-team/accept`);
 
   return (
     <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-3 shadow-sm">

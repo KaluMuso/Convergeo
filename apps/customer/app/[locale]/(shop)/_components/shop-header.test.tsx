@@ -6,6 +6,7 @@ import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { TEST_LABELS } from "./mega-menu/test-fixtures";
 import { ShopHeader } from "./shop-header";
 
 const cartMocks = vi.hoisted(() => ({
@@ -15,9 +16,16 @@ const cartMocks = vi.hoisted(() => ({
 }));
 vi.mock("./cart/mini-cart-drawer", () => cartMocks);
 
-vi.mock("./category-mega-menu", () => ({
-  CategoryMegaMenu: ({ labels }: { labels: { trigger: string } }) => (
+vi.mock("./mega-menu/mega-menu-launcher", () => ({
+  MegaMenuLauncher: ({ labels }: { labels: { trigger: string } }) => (
     <button type="button">{labels.trigger}</button>
+  ),
+}));
+
+vi.mock("./mega-menu/mobile-menu-host", () => ({
+  MobileMenuHost: () => null,
+  MobileMenuButton: ({ label, onOpen }: { label: string; onOpen: () => void }) => (
+    <button type="button" aria-label={label} onClick={onOpen} />
   ),
 }));
 
@@ -79,6 +87,7 @@ const labels = {
   featuredTitle: "New on Convergeo",
   featuredPromo: "Compare sellers online.",
   featuredPromoCta: "Search marketplace",
+  megaMenu: TEST_LABELS,
   fallbackCategoryRoots: {
     electronics: "Electronics & phones",
   },
@@ -121,6 +130,12 @@ describe("ShopHeader", () => {
     expect(screen.queryByRole("link", { name: /browse/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /theme|dark|light/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Supplies" })).not.toBeInTheDocument();
+  });
+
+  it("offers a menu button for the drill-down drawer on phones and tablets", () => {
+    render(<ShopHeader locale="en" labels={labels} />);
+    expect(screen.getAllByRole("button", { name: "Menu" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "All Categories" }).length).toBeGreaterThan(0);
   });
 
   it("offers the appearance quick toggle when theme labels are provided", () => {

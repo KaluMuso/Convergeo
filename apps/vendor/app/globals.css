@@ -15,6 +15,13 @@ body {
   overflow-x: hidden;
 }
 
+/* `hidden` on body makes it a scroll container, which stops the sticky glass header
+   from sticking to the viewport. `clip` keeps the horizontal guard without that
+   (browsers without `clip` keep the `hidden` above). */
+body {
+  overflow-x: clip;
+}
+
 body {
   min-height: 100dvh;
   /* Ground palette from design tokens; flips with [data-theme="dark"]. */
