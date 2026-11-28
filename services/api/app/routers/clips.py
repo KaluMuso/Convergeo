@@ -26,6 +26,7 @@ from typing import Annotated, Any, Final, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services import busy_mode
 from app.services.clips import flags, pilot, ranking, state_machine
 from fastapi import APIRouter, Depends, Query
 
@@ -252,6 +253,8 @@ async def get_clip_feed(
 ) -> ClipFeedResponse:
     """The ranked, cursor-paginated public feed. Published clips only."""
     flags.require_clips_enabled(service_client)
+    if busy_mode.feature_paused(service_client, busy_mode.Feature.CLIPS_FEED):
+        return ClipFeedResponse(items=[], next_cursor=None)
     decoded = _decode_cursor(cursor)
     before = str(decoded.get("published_before")) if decoded else None
 

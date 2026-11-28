@@ -118,7 +118,9 @@
       "platformTitle": "Platform knobs",
       "platformBody": "Operational limits and platform settings.",
       "vendorPlansTitle": "Vendor plans",
-      "vendorPlansBody": "Plan prices, listing and photo limits, and per-vendor overrides."
+      "vendorPlansBody": "Plan prices, listing and photo limits, and per-vendor overrides.",
+      "busyModeTitle": "Busy mode",
+      "busyModeBody": "One switch (0 to 4) that pauses nice-to-have features when traffic spikes."
     }
   },
   "translations": {
@@ -199,7 +201,8 @@
       "platform": "Platform knobs",
       "flags": "Feature flags",
       "categories": "Category tree",
-      "vendorPlans": "Vendor plans"
+      "vendorPlans": "Vendor plans",
+      "busyMode": "Busy mode"
     },
     "common": {
       "save": "Save changes",
@@ -288,6 +291,23 @@
       "dangerousHint": "COD cap changes affect new checkout eligibility only.",
       "branchMinDistance": "Min. distance between branches (m)",
       "planAnnualDiscount": "Annual plan prepay discount (%)"
+    },
+    "busyMode": {
+      "title": "Busy mode",
+      "subtitle": "When traffic spikes, pause nice-to-have features in steps. Browse, cart, checkout and payments are never paused. Takes effect within about 30 seconds and every change is audit-logged.",
+      "current": "Current level",
+      "apply": "Apply level",
+      "applying": "Applying…",
+      "level0": "0 · Normal — everything on",
+      "level0Body": "Nothing is paused.",
+      "level1": "1 · Watch",
+      "level1Body": "Nothing paused in the apps. Pause n8n digests and nudges by hand.",
+      "level2": "2 · Light",
+      "level2Body": "Clips stop autoplaying, live counts and recommendation rails are hidden.",
+      "level3": "3 · Lean",
+      "level3Body": "Also pauses Ask Vergeo, the personalised home feed (everyone gets the cached feed) and search typeahead.",
+      "level4": "4 · Protect",
+      "level4Body": "Also pauses the Clips feed. Keeps database connections free for orders."
     },
     "flags": {
       "title": "Feature flags",

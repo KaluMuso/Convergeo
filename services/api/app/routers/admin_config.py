@@ -7,6 +7,7 @@ from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
+from app.services import busy_mode
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
@@ -568,6 +569,62 @@ async def update_feature_flag(
         after=after_row,
     )
     return FeatureFlagOut.model_validate(after_row)
+
+
+# ---------------------------------------------------------------------------
+# Busy mode (level 0-4 overlay; never touches cart/checkout/payments)
+# ---------------------------------------------------------------------------
+class BusyModeOut(BaseModel):
+    level: int
+    label: str
+    paused_features: list[str]
+
+
+class BusyModeUpdate(BaseModel):
+    level: int = Field(ge=busy_mode.MIN_LEVEL, le=busy_mode.MAX_LEVEL)
+
+
+def _busy_out(level: int) -> BusyModeOut:
+    return BusyModeOut(
+        level=level,
+        label=busy_mode.LEVEL_LABELS[level],
+        paused_features=busy_mode.paused_features(level),
+    )
+
+
+@config_router.get("/busy-mode", response_model=BusyModeOut)
+async def get_busy_mode(
+    service_client: Annotated[Any, Depends(get_supabase_client)],
+) -> BusyModeOut:
+    # Read straight from the table (not the 30 s cache) so admins see what is stored.
+    return _busy_out(busy_mode._read_level(service_client))
+
+
+@config_router.put("/busy-mode", response_model=BusyModeOut)
+async def set_busy_mode(
+    body: BusyModeUpdate,
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
+) -> BusyModeOut:
+    before_level = busy_mode._read_level(service_client)
+    _table(service_client, "platform_config").upsert(
+        {
+            "key": busy_mode.LEVEL_KEY,
+            "value": body.level,
+            "description": "Busy mode level 0-4 (pauses nice-to-have features only)",
+        },
+        on_conflict="key",
+    ).execute()
+    busy_mode.clear_cache()
+    _audit_mutation(
+        recorder,
+        action="config.busy_mode.update",
+        entity_type="platform_config",
+        entity_id=busy_mode.LEVEL_KEY,
+        before={"key": busy_mode.LEVEL_KEY, "value": before_level},
+        after={"key": busy_mode.LEVEL_KEY, "value": body.level},
+    )
+    return _busy_out(body.level)
 
 
 # ---------------------------------------------------------------------------

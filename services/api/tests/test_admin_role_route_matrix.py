@@ -340,6 +340,7 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "GET /admin/clips",
         "GET /admin/clips/reports",
         "GET /admin/clips/{clip_id}",
+        "GET /admin/config/busy-mode",
         "GET /admin/config/categories",
         "GET /admin/config/commissions",
         "GET /admin/config/delivery-zones",
@@ -387,6 +388,7 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "PATCH /admin/config/delivery-zones/{zone_key}",
         "PATCH /admin/config/flags/{flag}",
         "PATCH /admin/config/platform/{key}",
+        "PUT /admin/config/busy-mode",
         "POST /admin/ai-spend/reset-kill-switch",
         "POST /admin/clip-analytics/reset-kill-switch",
         "POST /admin/clip-pilot/vendors",
@@ -431,6 +433,7 @@ CONTROL_MUTATIONS: frozenset[str] = frozenset(
         "PATCH /admin/config/commissions/{category_key}",
         "PATCH /admin/config/platform/{key}",
         "PATCH /admin/config/flags/{flag}",
+        "PUT /admin/config/busy-mode",
     }
 )
 

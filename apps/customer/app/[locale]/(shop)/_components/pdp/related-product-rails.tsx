@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import { isPaused } from "../../../../../lib/busy-mode";
+import { useBusyMode } from "../../../../../lib/use-busy-mode";
 
 import {
   RelatedProducts,
@@ -63,6 +65,8 @@ export function RelatedProductRails({
   labels: RelatedRailsLabels;
   cloudName?: string;
 }) {
+  const busy = useBusyMode();
+  const railsPaused = isPaused(busy, "recommendation_rails");
   const key = `${slug}:${listingId ?? ""}`;
   const [state, setState] = useState<{
     key: string;
@@ -70,6 +74,8 @@ export function RelatedProductRails({
     error?: boolean;
   }>({ key: "" });
   useEffect(() => {
+    // Busy mode: wait for the level, then skip the extra API calls entirely.
+    if (!busy.ready || railsPaused) return;
     const controller = new AbortController();
     let active = true;
     const query = listingId ? `?listing_id=${encodeURIComponent(listingId)}` : "";
@@ -161,8 +167,9 @@ export function RelatedProductRails({
       active = false;
       controller.abort();
     };
-  }, [key, slug, listingId]);
+  }, [key, slug, listingId, busy.ready, railsPaused]);
 
+  if (railsPaused) return null;
   if (state.key !== key)
     return (
       <p role="status" className="text-sm text-text-2">

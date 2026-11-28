@@ -36,6 +36,12 @@ export type FeatureFlag = {
   description?: string | null;
 };
 
+export type BusyMode = {
+  level: number;
+  label: string;
+  paused_features: string[];
+};
+
 export type CategoryNode = {
   id: string;
   parent_id: string | null;

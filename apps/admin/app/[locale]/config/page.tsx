@@ -67,6 +67,12 @@ export default async function ConfigHubPage({ params }: PageProps) {
       title: t("vendorPlansTitle"),
       body: t("vendorPlansBody"),
     },
+    {
+      key: "busyMode",
+      href: `/${locale}/config/busy-mode`,
+      title: t("busyModeTitle"),
+      body: t("busyModeBody"),
+    },
   ] as const;
 
   return (

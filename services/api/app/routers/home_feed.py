@@ -18,6 +18,7 @@ from app.core.ratelimit_policies import PUBLIC_DISCOVERY_READ, TELEMETRY_VIEWS
 from app.core.ttl_cache import get_cached_json, set_cached_json
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services import busy_mode
 from app.services.home_feed.models import AdEventBatch, AdEventResult, HomeFeedPage
 from app.services.home_feed.resolver import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, build_feed_page
 from app.services.home_feed.stream import (
@@ -105,6 +106,11 @@ async def home_feed(
     )
     safe_locale = locale if locale in SUPPORTED_LOCALES else "en"
     user_id = await _optional_user_id(request)
+    if user_id is not None and busy_mode.feature_paused(
+        supabase, busy_mode.Feature.PERSONALISED_FEED
+    ):
+        # Busy mode (lean+): serve everyone the cached guest feed.
+        user_id = None
     cache_key = f"{FEED_CACHE_PREFIX}{safe_locale}:{page_size}:{cursor or '0'}"
 
     if user_id is None:

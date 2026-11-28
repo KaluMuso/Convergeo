@@ -19,6 +19,7 @@ from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
 from app.schemas.base import StrictModel
+from app.services import busy_mode
 from app.services.coupons.store import (
     BIRTHDAY_FLAG,
     COUPONS_FLAG,
@@ -209,3 +210,22 @@ async def get_public_areas(
     ]
     response.headers["Cache-Control"] = PUBLIC_AREAS_CACHE_CONTROL
     return PublicAreasResponse(areas=areas)
+
+
+PUBLIC_BUSY_MODE_CACHE_CONTROL = "public, s-maxage=30, stale-while-revalidate=30"
+
+
+class PublicBusyModeResponse(StrictModel):
+    level: int = Field(ge=busy_mode.MIN_LEVEL, le=busy_mode.MAX_LEVEL)
+    #: Customer-app features to hide at this level (see ``busy_mode.Feature``).
+    paused_features: list[str]
+
+
+@router.get("/busy-mode", response_model=PublicBusyModeResponse)
+async def get_public_busy_mode(
+    response: Response,
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> PublicBusyModeResponse:
+    level = busy_mode.get_level(service_client)
+    response.headers["Cache-Control"] = PUBLIC_BUSY_MODE_CACHE_CONTROL
+    return PublicBusyModeResponse(level=level, paused_features=busy_mode.paused_features(level))

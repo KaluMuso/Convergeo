@@ -179,6 +179,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PATCH /config/commissions/{category_key}": ADMIN_WRITE,
     "PATCH /config/delivery-zones/{zone_key}": ADMIN_WRITE,
     "PATCH /config/flags/{flag}": ADMIN_WRITE,
+    "PUT /config/busy-mode": ADMIN_WRITE,
     # Courier dispatch v1 (admin_dispatch.py). The handover-code endpoint is
     # SENSITIVE (brute-force surface) and additionally enforces a tighter
     # per-admin ceiling in-router plus a per-dispatch lockout in the service.
