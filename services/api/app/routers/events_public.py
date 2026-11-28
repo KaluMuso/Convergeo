@@ -535,6 +535,8 @@ def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
         .maybe_single()
         .execute()
     )
+    if response is None:
+        return None
     row = response.data
     return row if isinstance(row, dict) else None
 

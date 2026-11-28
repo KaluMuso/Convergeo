@@ -1107,13 +1107,21 @@
   flex-direction: column;
   align-self: end;
   gap: var(--sp-3);
-  padding: var(--sp-12) var(--sp-5) calc(var(--sp-14) + var(--hero-overlap, 0px));
+  padding: var(--sp-12) var(--sp-5)
+    calc(var(--sp-14) + var(--hero-overlap, 0px) + var(--hero-dots-clearance, 0px));
+}
+
+@media (max-width: 23.99rem) {
+  .v-hero__content {
+    padding-bottom: calc(var(--sp-16) + var(--hero-overlap, 0px) + var(--hero-dots-clearance, 0px));
+  }
 }
 
 @media (min-width: 64rem) {
   .v-hero__content {
     gap: var(--sp-4);
-    padding: var(--sp-16) var(--sp-12) calc(var(--sp-18) + var(--hero-overlap, 0px));
+    padding: var(--sp-16) var(--sp-12)
+      calc(var(--sp-18) + var(--hero-overlap, 0px) + var(--hero-dots-clearance, 0px));
   }
 }
 
