@@ -168,6 +168,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     voiceStop: fabCopy.voiceStop ?? "",
     listening: fabCopy.listening ?? "",
     voiceUnsupported: fabCopy.voiceUnsupported ?? "",
+    voiceDenied: fabCopy.voiceDenied ?? "",
     close: fabCopy.close ?? "",
     showFooter: fabCopy.showFooter ?? "",
     hideFooter: fabCopy.hideFooter ?? "",

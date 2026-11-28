@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { buildConnectSrc, isDevelopmentEnv, resolveApiConnectOrigins } from "./security-headers";
+import {
+  buildConnectSrc,
+  isDevelopmentEnv,
+  PERMISSIONS_POLICY_ADMIN,
+  PERMISSIONS_POLICY_CUSTOMER,
+  PERMISSIONS_POLICY_DEFAULT,
+  resolveApiConnectOrigins,
+} from "./security-headers";
 
 describe("security-headers", () => {
   it("includes localhost API in development", () => {
@@ -39,6 +46,16 @@ describe("security-headers", () => {
 
     const dev = buildConnectSrc({ NODE_ENV: "development" });
     expect(dev).not.toContain("https://*.vercel.app");
+  });
+
+  it("lets only the customer storefront use its own microphone and location (Ask Vergeo)", () => {
+    expect(PERMISSIONS_POLICY_CUSTOMER).toContain("microphone=(self)");
+    expect(PERMISSIONS_POLICY_CUSTOMER).toContain("geolocation=(self)");
+    expect(PERMISSIONS_POLICY_CUSTOMER).not.toContain("geolocation=*");
+    expect(PERMISSIONS_POLICY_CUSTOMER).toContain("camera=()");
+    expect(PERMISSIONS_POLICY_CUSTOMER).not.toContain("microphone=*");
+    expect(PERMISSIONS_POLICY_DEFAULT).toContain("microphone=()");
+    expect(PERMISSIONS_POLICY_ADMIN).toContain("microphone=()");
   });
 
   it("detects development env", () => {

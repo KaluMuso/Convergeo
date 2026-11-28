@@ -52,21 +52,19 @@
   "vendor.listings.count": "{count, plural, one {# listing} other {# listings}}",
   "vendor.payout.pending": "Pending payout: {amount}",
   "pitch": {
-    "signupUnavailable": "Public seller signup is not open. Seller onboarding is invite-only during the concierge beta — contact Convergeo if you were invited.",
-    "inviteOnlyNotice": "Invite-only seller beta. Public self-service selling is not open yet. Invited sellers can continue onboarding with the link they received.",
     "meta": {
-      "title": "Sell on Convergeo — invite-only seller beta",
-      "description": "Convergeo seller onboarding is invite/concierge-only during the pilot. Learn about commissions and verification — public self-service signup is not open yet."
+      "title": "Sell on Convergeo — open your shop",
+      "description": "Create a free seller account, verify your ID and start listing on Convergeo. Learn about commissions and verification before you sign up."
     },
     "hero": {
-      "eyebrow": "Invite-only seller beta",
+      "eyebrow": "Sell on Convergeo",
       "headline": "Free to list.",
       "headlineEmphasis": "Pay only when you sell.",
       "subheadline": "Reach buyers across Zambia with products, services, events, supplies, and your business profile — all from one vendor app.",
-      "primaryCta": "Continue seller invite",
+      "primaryCta": "Start selling — create account",
       "secondaryCta": "See commissions",
       "existingSellerCta": "Already selling? Open vendor portal",
-      "freeTierNote": "Invited sellers get the free tier (up to 30 listings) after admin approval. Public signup is not open."
+      "freeTierNote": "Sellers get the free tier (up to 30 listings) once their ID is verified and approved."
     },
     "valueProps": {
       "heading": "Five ways to grow",
@@ -160,7 +158,7 @@
     "payout": {
       "heading": "Online payouts: coming soon",
       "promise": "Customers pay with Mobile Money, card, or cash on delivery.",
-      "body": "Customer payments are held in escrow until delivery. Payouts to your Mobile Money number are coming soon; until then we will confirm settlement details with each invited seller."
+      "body": "Customer payments are held in escrow until delivery. Payouts to your Mobile Money number are coming soon; until then we will confirm settlement details with each seller."
     },
     "faq": {
       "heading": "Frequently asked questions",
@@ -171,7 +169,7 @@
         },
         "payout": {
           "question": "When do I get paid?",
-          "answer": "Customers pay with Mobile Money, card, or cash on delivery. Online payouts are coming soon — we will confirm timing with each invited seller."
+          "answer": "Customers pay with Mobile Money, card, or cash on delivery. Online payouts are coming soon — we will confirm timing with each seller."
         },
         "whatCanISell": {
           "question": "What can I sell?",
@@ -184,21 +182,21 @@
       }
     },
     "cta": {
-      "heading": "Invited to sell on Convergeo?",
-      "body": "Seller onboarding is concierge/invite-only during the pilot. If you have an invite, continue below — listing tools unlock only after admin approval.",
-      "button": "Continue seller invite",
+      "heading": "Ready to sell on Convergeo?",
+      "body": "Create your seller account, verify your ID, and start listing as soon as you are approved. Listing tools unlock only after admin approval.",
+      "button": "Create seller account",
       "loadingLabel": "Opening invite onboarding",
-      "haveInviteSignIn": "I have an invite — sign in"
+      "haveAccountSignIn": "Already have a seller account? Sign in"
     }
   },
   "onboarding": {
     "meta": {
-      "title": "Seller invite onboarding — Convergeo",
-      "description": "Complete your invite-only seller application and verify your ID. Listings stay locked until admin approval."
+      "title": "Seller onboarding — Convergeo",
+      "description": "Complete your seller application and verify your ID. Listings stay locked until admin approval."
     },
     "invite": {
-      "eyebrow": "You are invited",
-      "body": "You are finishing a seller invite application. Catalogue, payouts, and the vendor dashboard stay locked until Convergeo verifies your ID and grants seller access."
+      "eyebrow": "Finish your seller application",
+      "body": "Catalogue, payouts, and the vendor dashboard stay locked until Convergeo verifies your ID and grants seller access."
     },
     "steps": {
       "business": "Business",
@@ -1095,7 +1093,8 @@
       "empty": "No items",
       "variantOption": "{group}: {value}",
       "variantSeparator": " · ",
-      "sku": "SKU (item code) {sku}"
+      "sku": "SKU (item code) {sku}",
+      "untitledItem": "Unnamed item"
     },
     "timeline": {
       "heading": "What has happened",

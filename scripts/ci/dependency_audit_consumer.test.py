@@ -55,7 +55,7 @@ def fake(kind, args):
             return 0
         if args[0] == "export":
             requirements = "\n".join(f"{name}==1.0.0" for name in
-                ("fastapi", "httpx", "psycopg", "pydantic-settings", "sentry-sdk",
+                ("fastapi", "httpx", "psycopg", "pydantic-settings", "pywebpush", "sentry-sdk",
                  "slowapi", "supabase", "uvicorn"))
             if scenario != "api_missing":
                 requirements += "\ncryptography==50.0.2"
@@ -63,7 +63,7 @@ def fake(kind, args):
         if args[0] == "tool":
             deps = [{"name": name, "version": "50.0.2" if name == "cryptography" else "1.0.0",
                      "vulns": []} for name in
-                    ("fastapi", "httpx", "psycopg", "pydantic-settings", "sentry-sdk",
+                    ("fastapi", "httpx", "psycopg", "pydantic-settings", "pywebpush", "sentry-sdk",
                      "slowapi", "supabase", "uvicorn", "cryptography")]
             if scenario == "api_audit_missing":
                 deps.pop()

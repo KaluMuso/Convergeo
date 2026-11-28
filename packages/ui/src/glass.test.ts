@@ -16,7 +16,9 @@ describe("glassClass", () => {
 
 describe("glass css contract", () => {
   it("gates blur behind @supports and respects reduced transparency", () => {
-    expect(css).toMatch(/@supports \(\(-webkit-backdrop-filter: blur\(1px\)\) or \(backdrop-filter: blur\(1px\)\)\)/);
+    expect(css).toMatch(
+      /@supports \(\(-webkit-backdrop-filter: blur\(1px\)\) or \(backdrop-filter: blur\(1px\)\)\)/,
+    );
     expect(css).toMatch(/prefers-reduced-transparency: reduce/);
   });
   it("defines dark overrides", () => {

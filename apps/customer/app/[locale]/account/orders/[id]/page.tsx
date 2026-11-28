@@ -38,6 +38,8 @@ import { ReviewPromptBlock } from "./_components/review-prompt";
 
 import type { Metadata } from "next";
 
+import { codTrustLine } from "@/lib/cod-trust";
+
 export async function generateMetadata({
   params,
 }: {
@@ -202,10 +204,7 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
 
       {isCod ? (
         <div className={colMain}>
-          <CodTrustLine
-            text={createTranslator({ locale, messages, namespace: "codTrust" })("line")}
-            testId="order-cod-trust"
-          />
+          <CodTrustLine text={codTrustLine(locale, messages)} testId="order-cod-trust" />
         </div>
       ) : null}
 
@@ -348,7 +347,10 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
           {order.items.map((item: OrderItem) => (
             <li key={item.id} className="flex items-center justify-between gap-3 py-3 text-sm">
               <span className="text-display-ink">
-                {t("detail.lineQty", { title: item.title, qty: item.qty })}
+                {t("detail.lineQty", {
+                  title: item.title ?? t("detail.untitledItem"),
+                  qty: item.qty,
+                })}
                 {item.variant_options && item.variant_options.length > 0 ? (
                   <span
                     className="block text-xs text-text-2"
@@ -439,9 +441,7 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
             title: t("confirm.title"),
             // COD never touches escrow: no "held/released" wording on cash orders.
             body: isCod ? t("confirm.bodyCod") : t("confirm.body"),
-            trust: isCod
-              ? createTranslator({ locale, messages, namespace: "codTrust" })("line")
-              : t("confirm.trust"),
+            trust: isCod ? codTrustLine(locale, messages) : t("confirm.trust"),
             button: t("confirm.button"),
             confirming: t("confirm.confirming"),
             done: t("confirm.done"),

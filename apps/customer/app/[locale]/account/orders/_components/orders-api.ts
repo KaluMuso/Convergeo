@@ -27,7 +27,8 @@ export type CheckoutGroup = {
 
 export type OrderItem = {
   id: string;
-  title: string;
+  /** `null` when the API could not resolve a name; render the i18n fallback. */
+  title: string | null;
   qty: number;
   unit_price_ngwee: number;
   /** Chosen colour/size, snapshotted when the order was placed. */
@@ -86,7 +87,11 @@ export type GiftReceipt = {
   recipient_name: string | null;
   message: string | null;
   fulfilment: string;
-  items: { title: string; qty: number; variant_options: { group: string; value: string }[] }[];
+  items: {
+    title: string | null;
+    qty: number;
+    variant_options: { group: string; value: string }[];
+  }[];
 };
 
 export type CourierDeliveryStatus =
