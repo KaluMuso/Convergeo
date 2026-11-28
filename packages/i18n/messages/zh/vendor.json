@@ -2311,7 +2311,9 @@
       "home_services": "家政服务",
       "tech_services": "技术服务",
       "cleaning": "清洁",
-      "tailoring": "裁缝"
+      "tailoring": "裁缝",
+      "logistics": "物流",
+      "packaging": "包装"
     },
     "quoteForm": {
       "open": "发送报价",
@@ -2488,7 +2490,8 @@
       "settings": "设置",
       "offers": "优惠",
       "coupons": "优惠券",
-      "extras": "增值服务"
+      "extras": "增值服务",
+      "source": "采购"
     }
   },
   "intake": {
@@ -3195,6 +3198,135 @@
     },
     "reviews": {
       "posted": "Posted {date}"
+    }
+  },
+  "source": {
+    "title": "采购",
+    "intro": "找到要进的货：赞比亚供应商、本地制造、进口和企业服务。",
+    "searchLabel": "搜索",
+    "searchPlaceholder": "搜索商品、店铺、服务",
+    "categoryLabel": "分类",
+    "categoryAll": "全部分类",
+    "tabsLabel": "采购栏目",
+    "loading": "加载中…",
+    "empty": "没有结果，换个关键词试试。",
+    "loadMore": "显示更多",
+    "tabs": {
+      "suppliers": "赞比亚供应商",
+      "madeInZambia": "赞比亚制造",
+      "import": "进口",
+      "services": "企业服务"
+    },
+    "errors": {
+      "load": "加载失败，请重试。",
+      "generic": "出错了，请重试。",
+      "rateLimited": "请求过多，请稍候。",
+      "importRateLimited": "每天最多提交 5 个进口请求。",
+      "prohibited": "该商品不能通过 Vergeo5 进口。"
+    },
+    "card": {
+      "moq": "起订量 {qty}",
+      "tier": "{qty}+ 件：{price}",
+      "retail": "价格 {price}",
+      "from": "起价 {price}",
+      "verified": "已验证",
+      "madeInZambia": "赞比亚制造",
+      "shop": "供应商店铺",
+      "service": "服务",
+      "whatsapp": "WhatsApp 咨询",
+      "whatsappText": "你好，我在 Vergeo5 看到 {title}，想咨询库存和价格。",
+      "requestQuote": "索取报价",
+      "pricesLocked": "已认证的商家才能查看批发价。",
+      "verifyCta": "完成认证以查看批发价"
+    },
+    "supplierTypes": {
+      "wholesaler": "批发商",
+      "manufacturer": "制造商",
+      "importer": "进口商",
+      "service_provider": "服务商"
+    },
+    "rfq": {
+      "label": "您需要什么？",
+      "placeholder": "数量、尺寸、截止日期",
+      "send": "发送请求",
+      "sending": "发送中…",
+      "sent": "请求已发送。",
+      "error": "发送失败。"
+    },
+    "import": {
+      "heading": "从海外进口",
+      "estimateNotice": "仅为估算，不是报价。不收费，不下单。",
+      "howItWorks": "告诉我们想进口什么，团队会回复以克瓦查计的估算到岸成本。",
+      "newRequest": "新建进口请求",
+      "empty": "还没有进口请求。",
+      "submit": "发送请求",
+      "submitting": "发送中…",
+      "sent": "请求已发送，我们会回复估算。",
+      "cancel": "取消请求",
+      "close": "关闭",
+      "fields": {
+        "title": "想进口什么？",
+        "description": "规格、颜色、尺寸、备注",
+        "referenceUrl": "商品链接（https）",
+        "imageUrls": "图片链接，每行一个（https，最多 5 个）",
+        "quantity": "数量",
+        "unit": "单位",
+        "targetPrice": "目标单价（K）",
+        "destination": "收货城市"
+      },
+      "status": {
+        "submitted": "已发送",
+        "in_review": "审核中",
+        "quoted": "估算已出",
+        "closed": "已关闭",
+        "cancelled": "已取消"
+      },
+      "quote": {
+        "title": "估算到岸成本",
+        "product": "商品",
+        "freight": "运费",
+        "duty": "关税和税费",
+        "clearing": "清关",
+        "other": "其他",
+        "total": "估算合计",
+        "leadTime": "约 {days} 天",
+        "validUntil": "估算有效期至 {date}",
+        "partner": "由 {name} 提供",
+        "label": "估算"
+      },
+      "qtyLine": "{qty} {unit}",
+      "target": "目标：每件 {price}"
+    },
+    "profile": {
+      "title": "供应商资料",
+      "intro": "选择你在其他商家采购页中的展示方式。全部不选则不显示。",
+      "save": "保存",
+      "saving": "保存中…",
+      "saved": "已保存。",
+      "madeTitle": "赞比亚制造",
+      "madeIntro": "申请标记在赞比亚制造的产品。我们的团队会审核每项申请，只有通过审核的产品才会显示徽章。",
+      "noListings": "你还没有商品。",
+      "back": "返回采购",
+      "manage": "供应商资料",
+      "wholesaleTag": "批发",
+      "miz": {
+        "statusLabel": "状态",
+        "status": {
+          "none": "未申请",
+          "claimed": "等待审核",
+          "approved": "已通过",
+          "rejected": "未通过"
+        },
+        "claim": "申请",
+        "send": "提交申请",
+        "withdraw": "撤回申请",
+        "referenceLabel": "PACRA 或 ZABS 编号（选填）",
+        "referencePlaceholder": "例如 ZABS-2026-114",
+        "reviewNote": "团队备注：{note}",
+        "claimed": "申请已提交审核。",
+        "withdrawn": "申请已撤回。",
+        "referenceTooShort": "编号至少需要 3 个字符。"
+      }
     }
   }
 }

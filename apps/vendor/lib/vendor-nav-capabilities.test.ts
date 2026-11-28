@@ -16,6 +16,7 @@ function allVisible(): VendorNavCapabilities {
     home: true,
     orders: true,
     listings: true,
+    source: true,
     scan: true,
     returns: true,
     analytics: true,
@@ -76,9 +77,7 @@ describe("mobile More menu", () => {
   it("excludes primary tabs from the More sheet", () => {
     const groups = filterVendorNavGroups(allVisible());
     const moreGroups = buildVendorMoreMenuGroups(groups);
-    const keys = moreGroups.flatMap((group) =>
-      group.items.map((item) => item.key),
-    );
+    const keys = moreGroups.flatMap((group) => group.items.map((item) => item.key));
     expect(keys).not.toContain("home");
     expect(keys).not.toContain("orders");
     expect(keys).not.toContain("listings");
@@ -104,14 +103,11 @@ describe("mobile More menu", () => {
       settings: false,
       offers: false,
       coupons: false,
+      source: false,
       extras: false,
     };
     const groups = filterVendorNavGroups(caps);
-    expect(buildVendorMobilePrimary(groups)).toEqual([
-      "home",
-      "orders",
-      "listings",
-    ]);
+    expect(buildVendorMobilePrimary(groups)).toEqual(["home", "orders", "listings"]);
   });
 
   it("includes More when secondary items exist", () => {

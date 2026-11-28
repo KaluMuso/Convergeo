@@ -64,6 +64,8 @@ const NAV_ICON_MAP: Record<AdminNavItemKey, NavIconEntry> = {
   inventory: { hue: "green", Icon: LcBox },
   coupons: { hue: "amber", Icon: LcTicket },
   extras: { hue: "cyan", Icon: LcPackage },
+  importRequests: { hue: "teal", Icon: LcTruck },
+  madeInZambia: { hue: "green", Icon: LcShieldCheck },
   trials: { hue: "pink", Icon: LcGift },
   askAudit: { hue: "orange", Icon: LcAlertTriangle },
 };

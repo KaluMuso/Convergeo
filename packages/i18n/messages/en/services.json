@@ -35,7 +35,9 @@
     "home-services": "Home services",
     "tech-services": "Tech services",
     "cleaning": "Cleaning",
-    "tailoring": "Tailoring"
+    "tailoring": "Tailoring",
+    "logistics": "Logistics",
+    "packaging": "Packaging"
   },
   "badges": {
     "fast": "Fast responder",
@@ -226,7 +228,9 @@
       "home_services": "Home services",
       "tech_services": "Tech services",
       "cleaning": "Cleaning",
-      "tailoring": "Tailoring"
+      "tailoring": "Tailoring",
+      "logistics": "Logistics",
+      "packaging": "Packaging"
     },
     "description": {
       "label": "What do you need done?",
