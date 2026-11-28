@@ -5,6 +5,8 @@ import { formatK, formatNumber } from "@vergeo/i18n";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { useAdminPermissions } from "../../../../lib/roles-api";
 import { classifyAdminRequestError } from "../../_components/admin-request";
 import { dashboardApi } from "../../_components/api";
 import { TileShell } from "../../_components/TileShell";
@@ -26,6 +28,7 @@ import {
 } from "./analytics-data";
 import { AnalyticsTabs } from "./analytics-tabs";
 import { BarList } from "./bar-list";
+import { grantsAllow } from "./dashboards-data";
 
 type LoadState<T> =
   | { kind: "loading" }
@@ -43,11 +46,13 @@ type ViewProps = { locale: string; tab: AnalyticsTab };
  */
 export function AnalyticsView({ locale, tab }: ViewProps) {
   const t = useTranslations("admin.analytics");
+  const grants = useAdminPermissions();
   const [days, setDays] = useState<RangeDays>(7);
   const [state, setState] = useState<LoadState<unknown>>({ kind: "loading" });
   const api = ANALYTICS_TABS.find((entry) => entry.tab === tab)?.api ?? "overview";
+  const allowed = grantsAllow(grants, "analytics");
 
-  const load = useCallback(async () => {
+  const fetchReport = useCallback(async () => {
     setState({ kind: "loading" });
     try {
       const data = await dashboardApi.request<unknown>(
@@ -65,9 +70,36 @@ export function AnalyticsView({ locale, tab }: ViewProps) {
     }
   }, [api, days]);
 
+  const reload = useCallback(() => {
+    if (grants === null) {
+      return;
+    }
+    if (!allowed) {
+      setState({ kind: "permission" });
+      return;
+    }
+    if (!getApiBaseUrl()) {
+      setState({ kind: "error" });
+      return;
+    }
+    void fetchReport();
+  }, [allowed, fetchReport, grants]);
+
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (grants === null) {
+      setState({ kind: "loading" });
+      return;
+    }
+    if (!allowed) {
+      setState({ kind: "permission" });
+      return;
+    }
+    if (!getApiBaseUrl()) {
+      setState({ kind: "error" });
+      return;
+    }
+    void fetchReport();
+  }, [allowed, fetchReport, grants]);
 
   return (
     <div className="space-y-4">
@@ -115,7 +147,7 @@ export function AnalyticsView({ locale, tab }: ViewProps) {
           <button
             type="button"
             className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
-            onClick={() => void load()}
+            onClick={() => reload()}
           >
             {t("retry")}
           </button>
