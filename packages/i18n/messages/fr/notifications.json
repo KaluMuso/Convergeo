@@ -246,9 +246,10 @@
       "extras_cancelled": "Votre demande pour {name} a été annulée."
     },
     "admin": {
-      "kyc_submitted": "Nouvelle demande KYC en attente d'examen.",
+      "ask_answer_flagged": "Ask Vergeo a donné une réponse suspecte. Ouvrez-la pour vérifier.",
       "dispute_opened": "Nouveau litige ouvert sur la commande {ref}.",
-      "extras_requested": "Un vendeur a demandé une option : {name}."
+      "extras_requested": "Un vendeur a demandé une option : {name}.",
+      "kyc_submitted": "Nouvelle demande KYC en attente d'examen."
     }
   }
 }
