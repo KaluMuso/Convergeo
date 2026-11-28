@@ -28,6 +28,8 @@ SERVICE_CATEGORIES = frozenset(
         "tech_services",
         "cleaning",
         "tailoring",
+        "logistics",
+        "packaging",
     }
 )
 CANCELABLE_STATUSES = frozenset({"open", "quoted"})
