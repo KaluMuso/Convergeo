@@ -364,7 +364,9 @@ def test_continuation_page_loads_feed_slot_placements_only(
 ) -> None:
     seen: list[frozenset[str] | None] = []
 
-    def spy(_client: Any, *, now: datetime, placement_types: frozenset[str] | None = None) -> list:
+    def spy(
+        _client: Any, *, now: datetime, placement_types: frozenset[str] | None = None
+    ) -> list[Any]:
         seen.append(placement_types)
         return []
 
