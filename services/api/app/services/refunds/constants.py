@@ -14,3 +14,6 @@ ACTIVE_REFUND_STATUSES = frozenset(
 )
 TERMINAL_REFUND_STATUSES = frozenset({"completed", "failed"})
 AWAITING_PROVIDER_STATUSES = frozenset({"awaiting_payout", "needs_destination", "manual_review"})
+
+# Refund source_key prefix for late-collected Mobile Money refunds (suffix = payment id).
+LATE_COLLECTION_SOURCE_PREFIX = "late-collection-"
