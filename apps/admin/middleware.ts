@@ -12,8 +12,9 @@ import {
   resolveGatedRedirect,
   updateSession,
 } from "@vergeo/auth/middleware";
-import { buildConnectSrc, CSP_ORIGINS } from "@vergeo/config/security-headers";
+import { buildConnectSrc, CSP_ORIGINS, cspSha256Source } from "@vergeo/config/security-headers";
 import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
+import { THEME_SCRIPT } from "@vergeo/ui/src/theme-script";
 import { type NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 
@@ -32,25 +33,38 @@ const NONCE = `'nonce-${CSP_NONCE_PLACEHOLDER}'`;
 
 const connectSrc = buildConnectSrc(process.env, CSP_ORIGINS.sentryIngest);
 
-const REPORT_ONLY_CSP = appendCspReporting(
-  [
-    "default-src 'self'",
-    `script-src 'self' 'strict-dynamic' ${NONCE}`,
-    "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${CSP_ORIGINS.cloudinary}`,
-    "font-src 'self' data:",
-    `connect-src ${connectSrc}`,
-    "frame-src 'none'",
-    "worker-src 'self' blob:",
-    "manifest-src 'self'",
-    "media-src 'self'",
-    "base-uri 'self'",
-    "object-src 'none'",
-    "frame-ancestors 'none'",
-    "form-action 'self'",
-    "upgrade-insecure-requests",
-  ].join("; "),
-);
+// The pre-paint theme bootstrap (<ThemeScript/> in the root layout) is a static
+// inline script with no nonce, so it is allowed by its sha256 hash, as on the
+// customer origin. Without it every page reported an inline-script violation.
+export function buildReportOnlyCsp(inlineScriptHashes: string[] = []): string {
+  const hashes = inlineScriptHashes.length > 0 ? ` ${inlineScriptHashes.join(" ")}` : "";
+  return appendCspReporting(
+    [
+      "default-src 'self'",
+      `script-src 'self' 'strict-dynamic' ${NONCE}${hashes}`,
+      "style-src 'self' 'unsafe-inline'",
+      `img-src 'self' data: blob: ${CSP_ORIGINS.cloudinary}`,
+      "font-src 'self' data:",
+      `connect-src ${connectSrc}`,
+      "frame-src 'none'",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
+      "media-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      // No upgrade-insecure-requests here: browsers ignore it in report-only and log
+      // a console warning. The enforced CSP in next.config.ts still upgrades.
+    ].join("; "),
+  );
+}
+
+let reportOnlyCspCache: Promise<string> | undefined;
+function getReportOnlyCsp(): Promise<string> {
+  reportOnlyCspCache ??= cspSha256Source(THEME_SCRIPT).then((hash) => buildReportOnlyCsp([hash]));
+  return reportOnlyCspCache;
+}
 
 export function isProductionCfAccessRequired(): boolean {
   return process.env.NODE_ENV === "production" && !isAdminBypassActive();
@@ -109,13 +123,17 @@ export function hasCfAccessJwtAssertion(request: NextRequest): boolean {
 }
 
 export function createCfAccessForbiddenResponse(): NextResponse {
-  return new NextResponse("Forbidden — Cloudflare Access required", { status: 403 });
+  return new NextResponse("Forbidden — Cloudflare Access required", {
+    status: 403,
+  });
 }
 
 export default async function middleware(request: NextRequest) {
   if (isCspReportRequest(request)) {
     return handleCspReportRequest(request);
   }
+
+  const reportOnlyCsp = await getReportOnlyCsp();
 
   const session = await updateSession(request);
   const locale = getLocaleFromPath(request.nextUrl.pathname, LOCALES, DEFAULT_LOCALE);
@@ -132,7 +150,7 @@ export default async function middleware(request: NextRequest) {
     const assertion = request.headers.get(CF_ACCESS_HEADER);
     const cfAccess = await verifyCfAccessAssertion(assertion);
     if (!cfAccess.ok) {
-      return applyReportOnlyCspNonce(request, createCfAccessForbiddenResponse(), REPORT_ONLY_CSP);
+      return applyReportOnlyCspNonce(request, createCfAccessForbiddenResponse(), reportOnlyCsp);
     }
   }
 
@@ -163,7 +181,7 @@ export default async function middleware(request: NextRequest) {
     return applyReportOnlyCspNonce(
       request,
       createPortalRedirect(gate, request, locale, session.response),
-      REPORT_ONLY_CSP,
+      reportOnlyCsp,
     );
   }
 
@@ -171,7 +189,7 @@ export default async function middleware(request: NextRequest) {
   return applyReportOnlyCspNonce(
     request,
     mergeSessionCookies(session.response, localeResponse),
-    REPORT_ONLY_CSP,
+    reportOnlyCsp,
   );
 }
 

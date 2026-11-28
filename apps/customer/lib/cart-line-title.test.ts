@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { cartLineTitle } from "./cart-line-title";
 
 const LISTING_ID = "1633639e-0000-4000-8000-000000000001";

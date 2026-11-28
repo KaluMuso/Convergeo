@@ -2,6 +2,8 @@
 
 Orange-cloud (proxied) records unless noted. TLS mode: **Full (strict)** on OCI origins once Caddy serves valid certs.
 
+> **Note (2026-11-28, D21 amended):** `vendor` and `admin` are Vercel projects, not VM origins; their records point at Vercel (admin behind Cloudflare Access). `api` points at the Hetzner API box and is currently DNS-only (grey cloud). The VM-origin rows below are the original OCI plan, kept for reference.
+
 ## Records
 
 | Name     | Type  | Target                 | Proxied | Notes                                                                    |

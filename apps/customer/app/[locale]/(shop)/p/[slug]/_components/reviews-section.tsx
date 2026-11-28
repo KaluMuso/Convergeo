@@ -5,14 +5,18 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { ReportReview, type ReportReviewLabels } from "./report-review";
-
+import type { ReportReviewLabels } from "./report-review";
 import type { GalleryImage } from "@vergeo/ui/src/media/image-gallery";
+
+/** Report form is click-only: keep it out of PDP first-load JS. */
+const ReportReview = dynamic(() => import("./report-review").then((mod) => mod.ReportReview), {
+  ssr: false,
+  loading: () => null,
+});
 
 /** Opened only after a photo tap: keep Modal + gallery out of PDP first-load JS. */
 const ReviewPhotoLightbox = dynamic(
-  () =>
-    import("./review-photo-lightbox").then((mod) => mod.ReviewPhotoLightbox),
+  () => import("./review-photo-lightbox").then((mod) => mod.ReviewPhotoLightbox),
   { ssr: false, loading: () => null },
 );
 
@@ -92,11 +96,7 @@ function StarRow({
   starEmpty: string;
 }) {
   return (
-    <div
-      className="flex items-center gap-0.5"
-      role="img"
-      aria-label={ariaLabel}
-    >
+    <div className="flex items-center gap-0.5" role="img" aria-label={ariaLabel}>
       {Array.from({ length: 5 }, (_, index) => (
         <span
           key={index}
@@ -127,9 +127,7 @@ function RatingDistribution({
 }) {
   const total = reviews.length;
   const rows = [5, 4, 3, 2, 1].map((star) => {
-    const count = reviews.filter(
-      (review) => Math.round(review.rating) === star,
-    ).length;
+    const count = reviews.filter((review) => Math.round(review.rating) === star).length;
     return {
       star,
       count,
@@ -144,9 +142,7 @@ function RatingDistribution({
       data-testid="review-distribution"
       className="space-y-1.5 rounded border border-border bg-surface p-4"
     >
-      <p className="text-micro font-semibold uppercase tracking-wide text-text-2">
-        {heading}
-      </p>
+      <p className="text-micro font-semibold uppercase tracking-wide text-text-2">{heading}</p>
       {rows.map((row) => (
         <div
           key={row.star}
@@ -156,17 +152,11 @@ function RatingDistribution({
             .replace("{count}", String(row.count))}
           className="flex items-center gap-2"
         >
-          <span
-            aria-hidden="true"
-            className="w-7 shrink-0 text-sm tabular-nums text-text-2"
-          >
+          <span aria-hidden="true" className="w-7 shrink-0 text-sm tabular-nums text-text-2">
             {row.star}
             {starGlyph}
           </span>
-          <span
-            aria-hidden="true"
-            className="h-2 flex-1 overflow-hidden rounded-pill bg-bg-2"
-          >
+          <span aria-hidden="true" className="h-2 flex-1 overflow-hidden rounded-pill bg-bg-2">
             <span
               className="block h-full rounded-pill bg-warning"
               style={{ width: `${row.pct}%` }}
@@ -213,10 +203,7 @@ export function ReviewsSection({
     >
       {hideHeading ? null : (
         <div className="flex items-center justify-between gap-3">
-          <h2
-            id="product-reviews-heading"
-            className="font-display text-h3 text-display-ink"
-          >
+          <h2 id="product-reviews-heading" className="font-display text-h3 text-display-ink">
             {labels.heading}
           </h2>
           {writeHref ? (
@@ -242,17 +229,11 @@ export function ReviewsSection({
           />
           <ul className="space-y-4">
             {reviews.map((review) => (
-              <li
-                key={review.id}
-                className="space-y-3 rounded border border-border bg-surface p-4"
-              >
+              <li key={review.id} className="space-y-3 rounded border border-border bg-surface p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <StarRow
                     rating={review.rating}
-                    ariaLabel={labels.starsAria.replace(
-                      "{rating}",
-                      String(review.rating),
-                    )}
+                    ariaLabel={labels.starsAria.replace("{rating}", String(review.rating))}
                     starFilled={labels.starFilled}
                     starEmpty={labels.starEmpty}
                   />
@@ -265,9 +246,7 @@ export function ReviewsSection({
                     </span>
                   ) : null}
                 </div>
-                {review.body ? (
-                  <p className="text-sm text-display-ink">{review.body}</p>
-                ) : null}
+                {review.body ? <p className="text-sm text-display-ink">{review.body}</p> : null}
                 {review.photos.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {review.photos.map((publicId) => (
@@ -300,9 +279,7 @@ export function ReviewsSection({
                 ) : null}
                 {review.vendor_reply ? (
                   <div className="rounded bg-bg-2 px-3 py-2 text-sm">
-                    <p className="font-medium text-display-ink">
-                      {labels.vendorReply}
-                    </p>
+                    <p className="font-medium text-display-ink">{labels.vendorReply}</p>
                     <p className="text-text-2">{review.vendor_reply}</p>
                   </div>
                 ) : null}

@@ -44,7 +44,11 @@ function matchingRules(pathname: string, opts: MatchOpts = {}) {
     headers = {},
   } = opts;
   const url = new URL(pathname, origin);
-  const request = { destination, method, headers: new Headers(headers) } as unknown as Request;
+  const request = {
+    destination,
+    method,
+    headers: new Headers(headers),
+  } as unknown as Request;
   const param = { url, request, sameOrigin } as unknown as Parameters<
     (typeof cacheRules)[number]["matcher"]
   >[0];
@@ -105,7 +109,10 @@ describe("service-worker runtime-cache rules", () => {
   it("images use CacheFirst with a capped, expiring cache", () => {
     expect(firstRuleName("/some/photo.webp")).toBe("images");
     expect(
-      firstRuleName("/img/x.png", { origin: "https://res.cloudinary.com", sameOrigin: false }),
+      firstRuleName("/img/x.png", {
+        origin: "https://res.cloudinary.com",
+        sameOrigin: false,
+      }),
     ).toBe("images");
     const images = ruleByName("images");
     expect(images.handler).toBeInstanceOf(CacheFirst);
@@ -114,12 +121,31 @@ describe("service-worker runtime-cache rules", () => {
     expect(plugins.some((p) => p instanceof ExpirationPlugin)).toBe(true);
   });
 
+  it("images answer 503 instead of a rejected FetchEvent when offline and uncached", async () => {
+    const plugins = (ruleByName("images").handler as { plugins?: unknown[] }).plugins ?? [];
+    const onError = plugins
+      .map((p) => (p as { handlerDidError?: () => Promise<Response | undefined> }).handlerDidError)
+      .find((fn) => typeof fn === "function");
+    expect(onError).toBeDefined();
+    const response = await onError!();
+    expect(response?.status).toBe(503);
+    expect(response?.headers.get("Cache-Control")).toBe("no-store");
+  });
+
   it("caches only API GETs and leaves mutations for the network", () => {
     expect(
-      firstRuleName("/products", { origin: API_ORIGIN, method: "GET", sameOrigin: false }),
+      firstRuleName("/products", {
+        origin: API_ORIGIN,
+        method: "GET",
+        sameOrigin: false,
+      }),
     ).toBe("api");
     expect(
-      firstRuleName("/cart/items", { origin: API_ORIGIN, method: "POST", sameOrigin: false }),
+      firstRuleName("/cart/items", {
+        origin: API_ORIGIN,
+        method: "POST",
+        sameOrigin: false,
+      }),
     ).toBeUndefined();
     expect(
       firstRuleName("/account/tickets/t-1", {
@@ -137,13 +163,21 @@ describe("service-worker runtime-cache rules", () => {
       "/me/notifications?audience=customer&limit=20",
       "/me/web-push",
     ]) {
-      expect(firstRuleName(path, { origin: API_ORIGIN, method: "GET", sameOrigin: false })).toBe(
-        "notifications-network-only",
-      );
+      expect(
+        firstRuleName(path, {
+          origin: API_ORIGIN,
+          method: "GET",
+          sameOrigin: false,
+        }),
+      ).toBe("notifications-network-only");
     }
     expect(ruleByName("notifications-network-only").handler).toBeInstanceOf(NetworkOnly);
     expect(
-      firstRuleName("/me/notifications", { origin: APP_ORIGIN, method: "GET", sameOrigin: true }),
+      firstRuleName("/me/notifications", {
+        origin: APP_ORIGIN,
+        method: "GET",
+        sameOrigin: true,
+      }),
     ).not.toBe("notifications-network-only");
   });
 
@@ -151,16 +185,22 @@ describe("service-worker runtime-cache rules", () => {
     expect(firstRuleName("/en/account/tickets", { destination: "document" })).toBe(
       "ticket-wallet-pages",
     );
-    expect(firstRuleName("/account/tickets/t-1", { origin: API_ORIGIN, sameOrigin: false })).toBe(
-      "ticket-wallet-api",
-    );
+    expect(
+      firstRuleName("/account/tickets/t-1", {
+        origin: API_ORIGIN,
+        sameOrigin: false,
+      }),
+    ).toBe("ticket-wallet-api");
     expect(ruleByName("ticket-wallet-pages").handler).toBeInstanceOf(NetworkFirst);
     expect(ruleByName("ticket-wallet-api").handler).toBeInstanceOf(NetworkFirst);
     expect(isWalletPage("/en/account/tickets")).toBe(true);
     expect(isWalletApi(new URL("/account/tickets/t-1", API_ORIGIN))).toBe(true);
     // Wallet API is not swallowed by the generic API rule (order preserved).
     expect(
-      firstRuleName("/account/tickets/t-1", { origin: API_ORIGIN, sameOrigin: false }),
+      firstRuleName("/account/tickets/t-1", {
+        origin: API_ORIGIN,
+        sameOrigin: false,
+      }),
     ).not.toBe("api");
   });
 
@@ -210,18 +250,26 @@ describe("service-worker runtime-cache rules", () => {
     });
 
     it("an Authorization header or wholesale flag forces NetworkOnly even on public paths", () => {
-      const auth = { origin: API_ORIGIN, headers: { Authorization: "Bearer x" } };
+      const auth = {
+        origin: API_ORIGIN,
+        headers: { Authorization: "Bearer x" },
+      };
       expect(firstRuleName("/home/feed", auth)).toBe("api-private");
       expect(firstRuleName("/catalog/listings", auth)).toBe("api-private");
-      expect(firstRuleName("/catalog/listings?wholesale=true", { origin: API_ORIGIN })).toBe(
-        "api-private",
-      );
+      expect(
+        firstRuleName("/catalog/listings?wholesale=true", {
+          origin: API_ORIGIN,
+        }),
+      ).toBe("api-private");
     });
 
     it("non-GET API calls are never routed to the cache rule", () => {
-      expect(firstRuleName("/catalog/listings", { origin: API_ORIGIN, method: "POST" })).not.toBe(
-        "api",
-      );
+      expect(
+        firstRuleName("/catalog/listings", {
+          origin: API_ORIGIN,
+          method: "POST",
+        }),
+      ).not.toBe("api");
       expect(
         isPublicApiRequest(new URL("/search", API_ORIGIN), {
           method: "POST",
@@ -243,7 +291,9 @@ describe("service-worker runtime-cache rules", () => {
         },
       });
       vi.stubGlobal("navigator", {
-        serviceWorker: { controller: { postMessage: (m: unknown) => posted.push(m) } },
+        serviceWorker: {
+          controller: { postMessage: (m: unknown) => posted.push(m) },
+        },
       });
       const { clearUserCaches } = await import("./lib/clear-user-caches");
       await clearUserCaches();

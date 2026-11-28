@@ -108,3 +108,15 @@ export function getVendorLoginUrl(locale: string): string {
   const base = getVendorAppUrl() ?? DEFAULT_VENDOR_APP_ORIGIN;
   return `${base}/${locale}${VENDOR_LOGIN_PATH}`;
 }
+
+export const VENDOR_SIGNUP_PATH = "/signup";
+
+/**
+ * Locale-aware self-serve seller sign-up URL (Start selling → create account →
+ * KYC). Like the sign-in link it never fails closed: it falls back to the
+ * canonical production origin, never localhost in a production build.
+ */
+export function getVendorJoinUrl(locale: string): string {
+  const base = getVendorAppUrl() ?? DEFAULT_VENDOR_APP_ORIGIN;
+  return `${base}/${locale}${VENDOR_SIGNUP_PATH}`;
+}
