@@ -85,13 +85,13 @@ const aiMessages = {
   ai: {
     ask: {
       title: "Ask Vergeo",
-      subtitle: "Ask about products, services, and events on Convergeo.",
+      subtitle: "Ask about products, services, and events on Vergeo5.",
       inputLabel: "Your question",
       inputPlaceholder: "e.g. Where can I buy a solar fridge in Lusaka?",
       submit: "Ask",
       submitting: "Thinking",
-      emptyHint: "Type a question to search across Convergeo.",
-      citationsTitle: "Related on Convergeo",
+      emptyHint: "Type a question to search across Vergeo5.",
+      citationsTitle: "Related on Vergeo5",
       signupCta: "Sign up",
       networkError: "Couldn't reach Ask Vergeo. Check your connection and try again.",
       viewProduct: "View product",
@@ -125,7 +125,7 @@ const aiMessages = {
       },
       escrow: {
         q: "Is my money safe?",
-        a: "Held by Convergeo until delivery.",
+        a: "Held by Vergeo5 until delivery.",
       },
     },
     quota: {
@@ -141,7 +141,7 @@ const aiMessages = {
       signupPrompt: "Sign up for 25 free questions per month.",
     },
     answer: {
-      not_found: "I couldn't find that on Convergeo.",
+      not_found: "I couldn't find that on Vergeo5.",
       unavailable: "Ask Vergeo is temporarily unavailable shortly.",
     },
     disclaimer: "AI answers are suggestions — verify before you buy",
@@ -378,7 +378,7 @@ describe("AskThread", () => {
     const user = userEvent.setup();
     request.mockResolvedValueOnce({
       query: "spaceship",
-      answer: "I couldn't find that on Convergeo.",
+      answer: "I couldn't find that on Vergeo5.",
       citations: [],
       cached: false,
       refused: true,
@@ -391,7 +391,7 @@ describe("AskThread", () => {
 
     await waitFor(() => expect(screen.getByTestId("ask-refusal")).toBeInTheDocument());
     expect(screen.getByTestId("ask-refusal")).toHaveTextContent(
-      "I couldn't find that on Convergeo.",
+      "I couldn't find that on Vergeo5.",
     );
     expect(screen.queryByTestId("ask-citation-card")).not.toBeInTheDocument();
   });

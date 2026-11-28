@@ -1,13 +1,13 @@
 {
   "about": {
     "meta": {
-      "title": "À propos de Convergeo",
-      "description": "Convergeo est la place de marché mobile de la Zambie pour les produits, services et événements — payez à la livraison pendant notre pilote."
+      "title": "À propos de Vergeo5",
+      "description": "Vergeo5 est la place de marché mobile de la Zambie pour les produits, services et événements — payez à la livraison pendant notre pilote."
     },
     "hero": {
       "eyebrow": "À propos",
       "headline": "La place de marché de la Zambie, conçue pour la confiance",
-      "subhead": "Convergeo réunit produits, services et événements au même endroit — et pendant notre pilote, vous payez à la livraison."
+      "subhead": "Vergeo5 réunit produits, services et événements au même endroit — et pendant notre pilote, vous payez à la livraison."
     },
     "mission": {
       "heading": "Notre mission",
@@ -33,7 +33,7 @@
       }
     },
     "howItWorks": {
-      "heading": "Comment fonctionne Convergeo",
+      "heading": "Comment fonctionne Vergeo5",
       "step1": "Découvrez des produits, services et événements proposés par des vendeurs partout en Zambie.",
       "step2": "Passez votre commande et payez en espèces à la livraison. Le paiement en ligne arrive bientôt.",
       "step3": "Votre commande est livrée ou prête à être retirée.",
@@ -48,8 +48,8 @@
   },
   "contact": {
     "meta": {
-      "title": "Contacter Convergeo",
-      "description": "Contactez l'équipe Convergeo sur WhatsApp pour une réponse rapide, ou envoyez-nous un message et nous vous répondrons par e-mail."
+      "title": "Contacter Vergeo5",
+      "description": "Contactez l'équipe Vergeo5 sur WhatsApp pour une réponse rapide, ou envoyez-nous un message et nous vous répondrons par e-mail."
     },
     "hero": {
       "eyebrow": "Contact",
@@ -94,7 +94,7 @@
   "help": {
     "meta": {
       "title": "Centre d'aide",
-      "description": "Réponses sur les paiements, la livraison, les retours, les billets et la vente sur Convergeo."
+      "description": "Réponses sur les paiements, la livraison, les retours, les billets et la vente sur Vergeo5."
     },
     "hero": {
       "eyebrow": "Centre d'aide",
@@ -115,7 +115,7 @@
       "delivery": "Livraison et retrait",
       "returns": "Retours et remboursements",
       "events": "Événements et billets",
-      "selling": "Vendre sur Convergeo",
+      "selling": "Vendre sur Vergeo5",
       "account": "Compte et confidentialité"
     },
     "article": {
@@ -157,13 +157,13 @@
   },
   "beta": {
     "meta": {
-      "title": "Accès à la bêta de Convergeo",
-      "description": "Convergeo est en bêta sur invitation uniquement. Saisissez votre code d'invitation pour accéder en avant-première à la place de marché de la Zambie."
+      "title": "Accès à la bêta de Vergeo5",
+      "description": "Vergeo5 est en bêta sur invitation uniquement. Saisissez votre code d'invitation pour accéder en avant-première à la place de marché de la Zambie."
     },
     "hero": {
       "eyebrow": "Bêta privée",
       "headline": "Vous êtes parmi les premiers",
-      "subhead": "Convergeo est en bêta sur invitation uniquement. Saisissez votre code d'invitation ci-dessous pour entrer."
+      "subhead": "Vergeo5 est en bêta sur invitation uniquement. Saisissez votre code d'invitation ci-dessous pour entrer."
     },
     "form": {
       "codeLabel": "Code d'invitation",
@@ -174,7 +174,7 @@
     },
     "success": {
       "heading": "Vous êtes entré !",
-      "body": "Votre invitation a fonctionné. Bienvenue dans la bêta de Convergeo.",
+      "body": "Votre invitation a fonctionné. Bienvenue dans la bêta de Vergeo5.",
       "cta": "Commencer à explorer"
     },
     "errors": {

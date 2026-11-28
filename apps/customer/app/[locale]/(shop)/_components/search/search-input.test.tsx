@@ -22,7 +22,7 @@ vi.mock("@vergeo/config", () => ({ createApiClient: () => ({ request }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const labels = {
-  placeholder: "Search Convergeo",
+  placeholder: "Search Vergeo5",
   submit: "Search",
   ariaLabel: "Search",
   suggestionsLabel: "Search suggestions",

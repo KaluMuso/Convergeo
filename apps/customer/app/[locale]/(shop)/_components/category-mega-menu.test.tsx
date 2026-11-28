@@ -22,7 +22,7 @@ const labels = {
   panelAria: "All categories",
   loading: "Loading categories…",
   viewAll: "View all categories",
-  featuredTitle: "New on Convergeo",
+  featuredTitle: "New on Vergeo5",
   featuredPromo: "Compare sellers online.",
   featuredPromoCta: "Search marketplace",
 };

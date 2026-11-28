@@ -34,7 +34,7 @@ import { SearchInput } from "./search-input";
 import { ZeroResults } from "./zero-results";
 
 const searchInputLabels = {
-  placeholder: "Search Convergeo",
+  placeholder: "Search Vergeo5",
   submit: "Search",
   ariaLabel: "Search",
   suggestionsLabel: "Search suggestions",
@@ -459,9 +459,9 @@ describe("search i18n messages", () => {
       askVergeo?: { slotLabel?: string };
     };
 
-    expect(messages.placeholder).toBe("Search Convergeo");
+    expect(messages.placeholder).toBe("Search Vergeo5");
     expect(messages.tabs?.all).toBe("All");
-    expect(messages.askVergeo?.slotLabel).toBe("Ask Convergeo assistant slot");
+    expect(messages.askVergeo?.slotLabel).toBe("Ask Vergeo5 assistant slot");
     expect(Object.keys(messages).some((key) => key.includes("."))).toBe(false);
   });
 });

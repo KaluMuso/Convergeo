@@ -1,8 +1,8 @@
 {
   "askVergeo": {
-    "slotLabel": "Slot ya Ask Convergeo assistant",
-    "teaser": "Simukudziwa chomwe mufuna? Funsa Convergeo kuti akuthandizeni kupeza chomwe mufuna.",
-    "title": "Funsa Convergeo"
+    "slotLabel": "Slot ya Ask Vergeo5 assistant",
+    "teaser": "Simukudziwa chomwe mufuna? Funsa Vergeo5 kuti akuthandizeni kupeza chomwe mufuna.",
+    "title": "Funsa Vergeo5"
   },
   "categories": {
     "electronics": "Za elektrik",
@@ -54,7 +54,7 @@
     "maxPriceOnly": "Kufikira K{max}",
     "facetCount": "{label} ({count})"
   },
-  "placeholder": "Sakani pa Convergeo",
+  "placeholder": "Sakani pa Vergeo5",
   "recent": {
     "clear": "Chotsani zonse",
     "remove": "Chotsani {term}",
