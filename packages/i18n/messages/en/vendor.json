@@ -720,7 +720,12 @@
         "saved": "Changes saved.",
         "pausedNotice": "Listing paused because it has open orders.",
         "deleted": "Listing removed.",
-        "priceChangedNotice": "Price updated — carts will be revalidated on next view."
+        "priceChangedNotice": "Price updated — carts will be revalidated on next view.",
+        "freeDeliveryLabel": "Free delivery on this listing",
+        "freeDeliveryHelp": "When every item in an order is free delivery, the customer pays no delivery and you cover the cost. See Settings for how it is delivered.",
+        "weightLabel": "Weight of one item (grams)",
+        "weightHelp": "Optional. Leave blank if you're not sure.",
+        "weightInvalid": "Enter a whole number of grams, from 1 to 10,000,000."
       },
       "delete": {
         "paused_instead": "This listing has open orders and was paused instead of deleted.",
@@ -2734,6 +2739,35 @@
       "toggle": "Accept collaboration requests",
       "inbox": "Open request inbox",
       "saveFailed": "Could not save. Try again."
+    },
+    "delivery": {
+      "heading": "Free delivery",
+      "intro": "Offer free delivery to win more orders. Customers pay nothing for delivery and you cover the cost.",
+      "loading": "Loading your delivery settings…",
+      "loadFailed": "We couldn't load your delivery settings. Please try again.",
+      "saveFailed": "We couldn't save that. Nothing was changed. Please try again.",
+      "rateLimited": "Too many changes in a short time. Please wait a minute and try again.",
+      "saved": "Saved. This applies to new orders.",
+      "allToggle": "Free delivery on every order",
+      "allHelp": "Customers never pay delivery on your orders, whatever they buy.",
+      "listingsHint": "You can also offer free delivery on single listings when you edit them.",
+      "appliesNote": "Orders already placed keep the delivery terms they were placed with.",
+      "methodHeading": "Who delivers your free orders?",
+      "method": {
+        "platform_courier": "A Vergeo5 courier",
+        "platform_courier_help": "A courier collects the order from you. The delivery fee for the customer's area is taken from your earnings once the order is complete.",
+        "self_delivery": "My own delivery",
+        "self_delivery_help": "You deliver the order yourself, with your own rider or a taxi. Nothing is taken from your earnings."
+      },
+      "confirm": {
+        "title": "Turn on free delivery for every order?",
+        "courier": "The delivery fee for each order will be taken from your earnings once the order is complete.",
+        "self": "You will deliver every order yourself. Nothing is taken from your earnings.",
+        "yes": "Turn on free delivery",
+        "no": "Keep as it is",
+        "working": "Saving…",
+        "methodTitle": "Switch to a Vergeo5 courier?"
+      }
     }
   },
   "offers": {

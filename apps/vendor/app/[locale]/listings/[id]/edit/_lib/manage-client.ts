@@ -43,6 +43,8 @@ export type ListingSummary = {
   moq: number;
   returnable: boolean;
   return_window_hours: number | null;
+  free_delivery?: boolean;
+  weight_grams?: number | null;
   status: ListingStatus | string;
   product_id: string | null;
   product_status?: string | null;
@@ -74,6 +76,8 @@ export type ListingUpdatePayload = {
   moq?: number;
   returnable?: boolean;
   return_window_hours?: number | null;
+  free_delivery?: boolean;
+  weight_grams?: number | null;
   status?: Exclude<ListingStatus, "removed">;
 };
 

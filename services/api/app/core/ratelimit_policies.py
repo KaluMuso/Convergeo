@@ -216,6 +216,9 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PATCH /vendor/listings/{listing_id}/images/reorder": STANDARD_WRITE,
     "PATCH /vendor/listings/{listing_id}/stock": STANDARD_WRITE,
     "PATCH /vendor/profile": STANDARD_WRITE,
+    # Shop-wide free-delivery terms (money-adjacent). Enforced in-router
+    # (vendor_delivery._limit), keyed by user.
+    "PATCH /vendor/delivery-terms": SENSITIVE_WRITE,
     "PATCH /vendor/services/{service_id}": STANDARD_WRITE,
     "POST /account/addresses": STANDARD_WRITE,
     "POST /account/delete": SENSITIVE_WRITE,

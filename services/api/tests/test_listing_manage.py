@@ -853,3 +853,59 @@ def test_used_listing_activates_with_ordered_evidence_images(
     result = response.json()["listing"]
     assert result["status"] == "active"
     assert [image["position"] for image in result["images"]] == [1, 2]
+
+
+def test_free_delivery_and_weight_are_saved_and_cleared(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"free_delivery": True, "weight_grams": 2500},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()["listing"]
+    assert body["free_delivery"] is True
+    assert body["weight_grams"] == 2500
+    row = fake_client.tables["vendor_listings"].rows[0]
+    assert row["free_delivery"] is True
+    assert row["weight_grams"] == 2500
+
+    cleared = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"free_delivery": False, "weight_grams": None},
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert row["free_delivery"] is False
+    assert row["weight_grams"] is None
+
+
+def test_weight_must_be_a_positive_whole_number_within_the_db_limit(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    before = dict(fake_client.tables["vendor_listings"].rows[0])
+    for bad in (0, -5, 10_000_001, 1.5, "heavy"):
+        response = manage_client.patch(
+            f"/vendor/listings/{LISTING_A_ID}",
+            headers=_auth_headers(),
+            json={"weight_grams": bad},
+        )
+        assert response.status_code == 422, bad
+    assert fake_client.tables["vendor_listings"].rows[0] == before
+
+
+def test_free_delivery_cannot_be_set_on_another_vendors_listing(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_B_ID}",
+        headers=_auth_headers(),
+        json={"free_delivery": True},
+    )
+    assert response.status_code in (403, 404)
+    other = next(r for r in fake_client.tables["vendor_listings"].rows if r["id"] == LISTING_B_ID)
+    assert not other.get("free_delivery")

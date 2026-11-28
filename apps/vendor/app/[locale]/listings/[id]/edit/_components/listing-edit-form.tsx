@@ -66,6 +66,8 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
   const [fieldValues, setFieldValues] = useState<ListingFieldValues | null>(null);
   const [returnable, setReturnable] = useState(false);
   const [returnWindowHours, setReturnWindowHours] = useState("");
+  const [freeDelivery, setFreeDelivery] = useState(false);
+  const [weightGrams, setWeightGrams] = useState("");
   const [compareAtZmw, setCompareAtZmw] = useState("");
   const [tiers, setTiers] = useState<TierDraft[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,6 +135,8 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
           moq: String(row.moq),
         });
         setReturnable(row.returnable);
+        setFreeDelivery(row.free_delivery === true);
+        setWeightGrams(row.weight_grams == null ? "" : String(row.weight_grams));
         setReturnWindowHours(
           row.return_window_hours === null ? "" : String(row.return_window_hours),
         );
@@ -221,6 +225,18 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       setError(t("listings.manage.errors.returnWindowRequired"));
       return;
     }
+    const trimmedWeight = weightGrams.trim();
+    if (
+      trimmedWeight !== "" &&
+      !(
+        /^\d+$/.test(trimmedWeight) &&
+        Number(trimmedWeight) >= 1 &&
+        Number(trimmedWeight) <= 10_000_000
+      )
+    ) {
+      setError(t("listings.manage.edit.weightInvalid"));
+      return;
+    }
     const trimmedCompareAt = compareAtZmw.trim();
     if (trimmedCompareAt !== "" && !isValidZmwDecimal(trimmedCompareAt)) {
       setError(t("listings.manage.edit.compareAtInvalid"));
@@ -256,6 +272,8 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         price_tiers: priceTiers,
         returnable,
         return_window_hours: returnable ? Number(returnWindowHours) : null,
+        free_delivery: freeDelivery,
+        weight_grams: trimmedWeight === "" ? null : Number(trimmedWeight),
       });
       setListing((current) => ({
         ...response.listing,
@@ -530,6 +548,36 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
                   />
                 </FormField>
               ) : null}
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-text">
+                    {t("listings.manage.edit.freeDeliveryLabel")}
+                  </p>
+                  <p className="text-xs text-text-2">
+                    {t("listings.manage.edit.freeDeliveryHelp")}
+                  </p>
+                </div>
+                <Switch
+                  label={t("listings.manage.edit.freeDeliveryLabel")}
+                  checked={freeDelivery}
+                  data-testid="listing-free-delivery"
+                  onChange={(event) => setFreeDelivery(event.target.checked)}
+                />
+              </div>
+              <FormField
+                label={t("listings.manage.edit.weightLabel")}
+                helpText={t("listings.manage.edit.weightHelp")}
+              >
+                <Input
+                  inputMode="numeric"
+                  value={weightGrams}
+                  data-testid="listing-weight-grams"
+                  onChange={(event) => setWeightGrams(event.target.value)}
+                />
+              </FormField>
             </div>
 
             <ImageManager
