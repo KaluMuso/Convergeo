@@ -401,9 +401,22 @@ def test_cancellation_racing_claim_preserves_late_money_without_fulfilment(
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         cancel_future, claim_future = pool.submit(cancel), pool.submit(pay)
-        assert cancel_future.result(timeout=20).to_status == order_state.OrderStatus.CANCELLED
         payment, reference, claimed = claim_future.result(timeout=20)
+        try:
+            cancelled = cancel_future.result(timeout=20)
+        except order_state.PaymentInFlightError:
+            # The claim won the race: its live attempt must block the customer cancel,
+            # and the order must be left exactly as it was.
+            cancelled = None
     assert claimed["result"] in {"claimed", "order_not_payable"}
+    if cancelled is None:
+        assert claimed["result"] == "claimed"
+        result = _db().run(f"""SELECT status,
+          (SELECT count(*) FROM public.ledger_transactions WHERE order_id='{f["order"]}')
+          FROM public.orders WHERE id='{f["order"]}';""")
+        assert result.ok and result.rows == ["placed|0"], result.error
+        return
+    assert cancelled.to_status == order_state.OrderStatus.CANCELLED
     if claimed["result"] == "claimed":
         result = (
             _service()
@@ -501,9 +514,19 @@ def test_balance_receipt_requires_refund_path_even_without_deposit_receipt(
 def _system_confirm(f: dict[str, Any]) -> Any:
     from app.services.payments.state import SYSTEM_ACTOR_ID
 
-    return _service().client.rpc("confirm_funded_service", {
-        "p_job_id": f["job"], "p_actor_id": SYSTEM_ACTOR_ID, "p_system": True,
-    }).execute().data
+    return (
+        _service()
+        .client.rpc(
+            "confirm_funded_service",
+            {
+                "p_job_id": f["job"],
+                "p_actor_id": SYSTEM_ACTOR_ID,
+                "p_system": True,
+            },
+        )
+        .execute()
+        .data
+    )
 
 
 def test_system_cannot_create_buyer_acknowledgement_or_balance_invoice() -> None:
@@ -512,11 +535,11 @@ def test_system_cannot_create_buyer_acknowledgement_or_balance_invoice() -> None
         _system_confirm(f)
     assert claim(f, "balance")[2]["result"] == "obligation_not_payable"
     result = _db().run(f"""SELECT
-      (SELECT count(*) FROM public.audit_log WHERE entity_id='{f['job']}'
+      (SELECT count(*) FROM public.audit_log WHERE entity_id='{f["job"]}'
        AND action='job.work_acknowledged'),
-      (SELECT count(*) FROM public.order_items WHERE order_id='{f['order']}'
+      (SELECT count(*) FROM public.order_items WHERE order_id='{f["order"]}'
        AND item_kind='service_balance'),
-      (SELECT count(*) FROM public.service_payment_obligations WHERE order_id='{f['order']}'
+      (SELECT count(*) FROM public.service_payment_obligations WHERE order_id='{f["order"]}'
        AND work_acknowledged_at IS NOT NULL);""")
     assert result.ok and result.rows == ["0|0|0"], result.error
 
@@ -525,16 +548,16 @@ def test_legacy_system_acknowledgement_does_not_authorize_balance() -> None:
     f = seed()
     result = _db().run_script(f"""BEGIN;
       INSERT INTO public.audit_log(actor,action,entity_type,entity_id,after)
-      VALUES (NULL,'job.work_acknowledged','job','{f['job']}','{{"system":true}}');
+      VALUES (NULL,'job.work_acknowledged','job','{f["job"]}','{{"system":true}}');
       UPDATE public.service_payment_obligations SET work_acknowledged_at=now()
-       WHERE order_id='{f['order']}'; COMMIT;""")
+       WHERE order_id='{f["order"]}'; COMMIT;""")
     assert result.ok, result.error
     assert claim(f, "balance")[2]["result"] == "obligation_not_payable"
     with pytest.raises(APIError, match="buyer acknowledgement required"):
         _system_confirm(f)
     # Preserve legacy evidence; never relabel it as customer consent.
     result = _db().run(f"""SELECT count(*)::text FROM public.audit_log
-      WHERE entity_id='{f['job']}' AND action='job.work_acknowledged'
+      WHERE entity_id='{f["job"]}' AND action='job.work_acknowledged'
         AND actor IS NULL AND after->>'system'='true';""")
     assert result.ok and result.rows == ["1"]
 
@@ -557,21 +580,35 @@ def test_funded_service_still_requires_buyer_acknowledgement() -> None:
     reference = f"synthetic-prior-balance-{payment}"
     result = _db().run(f"""INSERT INTO public.payments
       (id,checkout_group_id,provider,rail,lenco_reference,amount_ngwee,status)
-      VALUES ('{payment}','{f['balance']['checkout_group_id']}','lenco','mtn',
-        '{reference}',{f['balance']['amount_ngwee']},'ussd_pushed');""")
+      VALUES ('{payment}','{f["balance"]["checkout_group_id"]}','lenco','mtn',
+        '{reference}',{f["balance"]["amount_ngwee"]},'ussd_pushed');""")
     assert result.ok, result.error
-    observed = _service().client.rpc("apply_prepaid_collection_success", {
-        "p_payment_id": payment, "p_actor_id": f["buyer"], "p_note": "Synthetic old attempt",
-        "p_observation": {"reference": reference, "amount_ngwee": f["balance"]["amount_ngwee"],
-                          "currency": "ZMW", "provider_reference": f"synthetic-{payment}",
-                          "source": "isolated_test"},
-    }).execute().data
+    observed = (
+        _service()
+        .client.rpc(
+            "apply_prepaid_collection_success",
+            {
+                "p_payment_id": payment,
+                "p_actor_id": f["buyer"],
+                "p_note": "Synthetic old attempt",
+                "p_observation": {
+                    "reference": reference,
+                    "amount_ngwee": f["balance"]["amount_ngwee"],
+                    "currency": "ZMW",
+                    "provider_reference": f"synthetic-{payment}",
+                    "source": "isolated_test",
+                },
+            },
+        )
+        .execute()
+        .data
+    )
     assert observed["result"] == "applied"
     with pytest.raises(APIError, match="buyer acknowledgement required"):
         _system_confirm(f)
     result = _db().run(f"""SELECT status, (SELECT count(*) FROM public.ledger_transactions
-      WHERE order_id='{f['order']}' AND kind IN ('commission_capture','release_to_vendor'))
-      FROM public.orders WHERE id='{f['order']}';""")
+      WHERE order_id='{f["order"]}' AND kind IN ('commission_capture','release_to_vendor'))
+      FROM public.orders WHERE id='{f["order"]}';""")
     assert result.ok and result.rows == ["placed|0"], result.error
     assert confirm(f)["released"] is True
 
@@ -584,7 +621,7 @@ def test_worker_can_retry_funded_completion_after_explicit_buyer_acknowledgement
     assert _system_confirm(f)["released"] is True
     assert _system_confirm(f)["already_confirmed"] is True
     result = _db().run(f"""SELECT count(*)::text FROM public.ledger_transactions
-      WHERE order_id='{f['order']}' AND kind='release_to_vendor';""")
+      WHERE order_id='{f["order"]}' AND kind='release_to_vendor';""")
     assert result.ok and result.rows == ["1"]
 
 
@@ -596,13 +633,20 @@ def test_unpayable_balance_observation_retains_late_money_without_funding() -> N
     reference = f"synthetic-unpayable-{payment}"
     result = _db().run(f"""INSERT INTO public.payments
       (id,checkout_group_id,provider,rail,lenco_reference,amount_ngwee,status)
-      VALUES ('{payment}','{f['balance']['checkout_group_id']}','lenco','mtn',
+      VALUES ('{payment}','{f["balance"]["checkout_group_id"]}','lenco','mtn',
         '{reference}',70000,'ussd_pushed');""")
     assert result.ok, result.error
     params = {
-        "p_payment_id": payment, "p_actor_id": f["buyer"], "p_note": "Synthetic unpayable attempt",
-        "p_observation": {"reference": reference, "amount_ngwee": 70000, "currency": "ZMW",
-                          "provider_reference": f"synthetic-{payment}", "source": "isolated_test"},
+        "p_payment_id": payment,
+        "p_actor_id": f["buyer"],
+        "p_note": "Synthetic unpayable attempt",
+        "p_observation": {
+            "reference": reference,
+            "amount_ngwee": 70000,
+            "currency": "ZMW",
+            "provider_reference": f"synthetic-{payment}",
+            "source": "isolated_test",
+        },
     }
     for _ in range(2):
         observed = _service().client.rpc("apply_prepaid_collection_success", params).execute().data
@@ -612,12 +656,12 @@ def test_unpayable_balance_observation_retains_late_money_without_funding() -> N
       (SELECT occurrences FROM public.payment_collection_exceptions WHERE payment_id='{payment}'),
       (SELECT count(*) FROM public.payment_collection_receipts WHERE payment_id='{payment}'),
       (SELECT count(*) FROM public.ledger_transactions WHERE payment_id='{payment}'),
-      (SELECT public.order_has_collected_money('{f['order']}'));
+      (SELECT public.order_has_collected_money('{f["order"]}'));
       """)
     assert result.ok and result.rows == ["2|0|0|t"], result.error
     with pytest.raises(APIError, match="buyer acknowledgement required"):
         _system_confirm(f)
     assert confirm(f)["status"] == "awaiting_payment"
     result = _db().run(f"""SELECT count(*) FROM public.ledger_transactions
-      WHERE order_id='{f['order']}' AND kind IN ('commission_capture','release_to_vendor');""")
+      WHERE order_id='{f["order"]}' AND kind IN ('commission_capture','release_to_vendor');""")
     assert result.ok and result.rows == ["0"], result.error

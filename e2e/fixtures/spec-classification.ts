@@ -125,6 +125,12 @@ export const SPEC_CLASSIFICATION: readonly SpecEntry[] = [
       "overflow/touch-target/viewport-fit assertions read page.viewportSize() at runtime — genuinely viewport-dependent, owned by the Playwright project (no internal viewport loop).",
   },
   {
+    file: "mobile-header-menu.spec.ts",
+    class: "BEHAVIORAL_ONCE",
+    rationale:
+      "Mobile shop header + category drawer a11y at pinned 360×800; Escape, focus trap, navigation close — viewport-independent once pinned in test.use().",
+  },
+  {
     file: "performance-smoke.spec.ts",
     class: "NETWORK_THROTTLED_ONLY",
     rationale:

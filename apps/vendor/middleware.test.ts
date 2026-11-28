@@ -292,4 +292,24 @@ describe("vendor report-only CSP theme-script hash", () => {
     const scriptSrc = getScriptSrc(response.headers.get(CSP_REPORT_ONLY_HEADER));
     expect(scriptSrc).toContain(await cspSha256Source(THEME_SCRIPT));
   });
+
+  it("still serves the request when theme hash computation rejects", async () => {
+    vi.resetModules();
+    vi.doMock("@vergeo/config/security-headers", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@vergeo/config/security-headers")>();
+      return {
+        ...actual,
+        cspSha256Source: vi.fn(() => Promise.reject(new Error("hash unavailable"))),
+      };
+    });
+    resolveGatedRedirectMock.mockReturnValue(null);
+
+    const { default: freshMiddleware } = await import("./middleware");
+    const response = await freshMiddleware(new NextRequest("https://vendor.vergeo5.com/en"));
+
+    expect(response.status).toBe(200);
+    const scriptSrc = getScriptSrc(response.headers.get(CSP_REPORT_ONLY_HEADER));
+    expect(scriptSrc).toMatch(/'nonce-[^']+'/);
+    expect(scriptSrc).not.toMatch(/'sha256-/);
+  });
 });
