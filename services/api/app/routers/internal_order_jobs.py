@@ -22,6 +22,7 @@ from app.services.escrow.release import (
 )
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.orders.state import (
+    IN_FLIGHT_ATTEMPT_MAX_AGE_MINUTES,
     SYSTEM_ACTOR_ID,
     ActorRole,
     OrderEvent,
@@ -64,6 +65,16 @@ class UnpaidCancelJobResponse(StrictModel):
     skipped: int
     cancelled: int
     next_cursor: str | None = None
+
+
+class LateCollectionRefundJobResponse(StrictModel):
+    enabled: bool
+    payouts_enabled: bool
+    scanned: int
+    refunded: int
+    already_refunded: int
+    manual_review: int
+    failed: int
 
 
 class AutoReleaseJobResponse(StrictModel):
@@ -285,6 +296,7 @@ WHERE o.status = 'placed'
     WHERE p.status NOT IN ('expired', 'cancelled')
       AND NOT (p.status = 'failed'
                AND coalesce(p.raw->>'terminal_provider_failure', 'false') = 'true')
+      AND p.created_at > now() - interval '{IN_FLIGHT_ATTEMPT_MAX_AGE_MINUTES} minutes'
   )
   {cursor_filter}
 ORDER BY o.id ASC
@@ -423,6 +435,36 @@ async def cancel_unpaid_batch(
         skipped=skipped,
         cancelled=cancelled,
         next_cursor=_next_cursor(order_ids, request.limit),
+    )
+
+
+@router.post(
+    "/refund-late-collections",
+    response_model=LateCollectionRefundJobResponse,
+    dependencies=[Depends(require_internal_order_jobs_token)],
+)
+async def refund_late_collections_batch(
+    body: BatchJobRequest | None = None,
+) -> LateCollectionRefundJobResponse:
+    """Refund Mobile Money that arrived after its order/attempt was cancelled.
+
+    Off unless LATE_COLLECTION_AUTO_REFUND_ENABLED and PAYOUTS_ENABLED are both set;
+    every refund is keyed by its payment id so repeated ticks never double-refund.
+    """
+    from app.deps import get_supabase_client
+    from app.services.refunds.late_collection import sweep_late_collection_refunds
+
+    service: Any = next(get_supabase_client())
+    request = body or BatchJobRequest()
+    outcome = sweep_late_collection_refunds(service, limit=request.limit)
+    return LateCollectionRefundJobResponse(
+        enabled=outcome.enabled,
+        payouts_enabled=outcome.payouts_enabled,
+        scanned=outcome.scanned,
+        refunded=outcome.refunded,
+        already_refunded=outcome.already_refunded,
+        manual_review=outcome.manual_review,
+        failed=outcome.failed,
     )
 
 
