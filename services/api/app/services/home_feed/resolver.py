@@ -186,9 +186,7 @@ def _slice_needs_catalog_candidates(
     return any(row.get("section_type") in _CATALOG_SECTION_TYPES for row in sections[offset:end])
 
 
-def _slice_may_need_trending(
-    sections: list[dict[str, Any]], offset: int, page_size: int
-) -> bool:
+def _slice_may_need_trending(sections: list[dict[str, Any]], offset: int, page_size: int) -> bool:
     """Whether the continuation window might call :attr:`FeedContext.trending_ids`."""
     end = min(len(sections), offset + page_size + 12)
     for row in sections[offset:end]:

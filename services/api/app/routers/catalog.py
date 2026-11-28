@@ -32,9 +32,7 @@ EARTH_RADIUS_M = 6_371_000
 
 CATALOG_CANDIDATES_CACHE_TTL_SECONDS = 45
 CATALOG_CANDIDATES_CACHE_PREFIX = "catalog:candidates:v1:"
-PUBLIC_CATALOG_LISTINGS_CACHE_CONTROL = (
-    "public, s-maxage=30, stale-while-revalidate=120"
-)
+PUBLIC_CATALOG_LISTINGS_CACHE_CONTROL = "public, s-maxage=30, stale-while-revalidate=120"
 
 CatalogSort = Literal[
     "relevance", "cheapest", "nearest", "newest", "price_asc", "verified", "bundle", "best"
@@ -746,9 +744,7 @@ def _fetch_listing_ratings(client: Any, listing_ids: list[str]) -> dict[str, tup
             .execute()
         ),
     )
-    rating_by_order_item = {
-        str(row["order_item_id"]): int(row["rating"]) for row in review_rows
-    }
+    rating_by_order_item = {str(row["order_item_id"]): int(row["rating"]) for row in review_rows}
 
     totals: dict[str, list[int]] = {}
     for row in oip_rows:
