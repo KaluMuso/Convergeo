@@ -60,8 +60,18 @@ export function createLoginLabels(
     phoneToggle: t("login.phoneToggle"),
     google: t("login.google"),
     googleLoading: t("google.loading"),
-    signupPrompt: variant === "customer" ? t("login.noAccount") : undefined,
-    signupLink: variant === "customer" ? t("login.signupLink") : undefined,
+    signupPrompt:
+      variant === "customer"
+        ? t("login.noAccount")
+        : variant === "vendor"
+          ? t("login.vendorNoAccount")
+          : undefined,
+    signupLink:
+      variant === "customer"
+        ? t("login.signupLink")
+        : variant === "vendor"
+          ? t("login.vendorSignupLink")
+          : undefined,
     genericError: t("errors.generic"),
   };
 }

@@ -1,12 +1,12 @@
 import { createBrowserClient } from "@vergeo/auth/browser-client";
 
+import { getApiBaseUrl } from "../api-base-url";
+
 import {
   categoryPathsEligibleForSitemap,
   type CategorySitemapRow,
 } from "./category-listing-eligibility";
 import { isSitemapEligibleCategorySlug, isSitemapEligibleEntitySlug } from "./sitemap-eligibility";
-
-import { getApiBaseUrl } from "../api-base-url";
 
 type CatalogListResponse = {
   items: Array<{ product_slug: string | null }>;

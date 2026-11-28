@@ -52,6 +52,11 @@ ADDITIVE_NEUTRAL_DEFAULTS: dict[str, Any] = {
     "coupon_discount_ngwee": 0,
     "is_gift": False,
     "order_lane": "goods",
+    # 20261122100000_logistics_phase1 orders: customer-paid delivery, nothing funded
+    # by the vendor/platform, deliver together (the only behaviour before the split).
+    "delivery_funding": "customer",
+    "delivery_funded_ngwee": 0,
+    "deliver_together": True,
 }
 
 
