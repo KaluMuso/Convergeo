@@ -22,6 +22,7 @@ from app.services.ask.citations import route_path
 from app.services.ask.enrich import rows_of
 from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends, Query
+from postgrest.exceptions import APIError
 from pydantic import BaseModel
 
 # Not named `router`: app.main auto-mounts any module-level `router` at the app root,
@@ -34,6 +35,21 @@ _ANSWER_COLUMNS = (
     "citations,audit_status,audit_severity,audited_at"
 )
 _FINDING_COLUMNS = "id,answer_id,rule,severity,reason,entity_kind,entity_id,vendor_id,details"
+
+_MISSING_TABLE_CODES = frozenset({"42P01", "PGRST205"})
+
+
+def _is_missing_table(exc: APIError) -> bool:
+    return exc.code in _MISSING_TABLE_CODES
+
+
+def _safe_rows(execute: Any) -> list[dict[str, Any]]:
+    try:
+        return rows_of(execute())
+    except APIError as exc:
+        if _is_missing_table(exc):
+            return []
+        raise
 
 
 class CitedItemOut(BaseModel):
@@ -165,13 +181,13 @@ def list_ask_answers(
         else:
             query = query.lt("created_at", before_iso)
 
-    rows = rows_of(query.execute())
+    rows = _safe_rows(lambda: query.execute())
     page = rows[:limit]
 
     findings_by_answer: dict[str, list[dict[str, Any]]] = {}
     if page:
-        for finding in rows_of(
-            client.table("ask_answer_findings")
+        for finding in _safe_rows(
+            lambda: client.table("ask_answer_findings")
             .select(_FINDING_COLUMNS)
             .in_("answer_id", [str(r["id"]) for r in page])
             .order("created_at")

@@ -14,6 +14,7 @@ from app.services.ask.answer_log import citation_entries, log_and_audit
 from app.services.ask.citations import CitationRef, route_path
 from app.services.ask.enrich import attach_vendor_info
 from fastapi.testclient import TestClient
+from postgrest.exceptions import APIError
 
 
 def _id() -> str:
@@ -727,6 +728,29 @@ def test_post_ask_schedules_the_answer_log_without_changing_the_response(
 # ---------------------------------------------------------------------------
 # Admin listing
 # ---------------------------------------------------------------------------
+
+
+def test_admin_list_returns_empty_when_ask_tables_missing() -> None:
+    missing = APIError({"code": "42P01", "message": "relation does not exist"})
+
+    class MissingTableDb(FakeDb):
+        def table(self, name: str) -> Query:
+            query = super().table(name)
+            if name in {"ask_answers", "ask_answer_findings"}:
+
+                def execute_raises() -> Result:
+                    raise missing
+
+                query.execute = execute_raises  # type: ignore[method-assign]
+            return query
+
+    class Service:
+        client = MissingTableDb()
+
+    page = list_ask_answers(Service(), flagged_only=False, limit=25)
+    assert page.items == []
+    assert page.next_before is None
+    assert page.next_before_id is None
 
 
 def test_admin_list_shows_findings_links_and_filters_flagged() -> None:
