@@ -9,8 +9,8 @@ from typing import Any, Literal
 
 import httpx
 from app.errors import AppError
+from app.services.payments.lenco.config import get_base_url
 
-LENCO_API_BASE = "https://api.lenco.co/access/v2"
 MomoOperator = Literal["mtn", "airtel", "zamtel"]
 
 
@@ -103,7 +103,9 @@ async def resolve_momo_account_name(
     headers = {"Authorization": f"Bearer {token}"}
     payload = {"phone": phone, "operator": resolved_operator}
     owns_client = client is None
-    http = client or httpx.AsyncClient(base_url=LENCO_API_BASE, timeout=15.0)
+    # Same sandbox/production split (and staging guard) as every other Lenco
+    # call, so a sandbox token is never sent to the live host or vice versa.
+    http = client or httpx.AsyncClient(base_url=get_base_url(), timeout=15.0)
     try:
         response = await http.post("/resolve/mobile-money", json=payload, headers=headers)
         response.raise_for_status()

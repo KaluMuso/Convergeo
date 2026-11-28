@@ -7,6 +7,7 @@ import asyncio
 import httpx
 import pytest
 from app.errors import AppError
+from app.services.kyc import name_match
 from app.services.kyc.name_match import detect_momo_operator, resolve_momo_account_name
 
 
@@ -76,3 +77,48 @@ def test_name_match_accepts_missing_middle_name(momo: str, legal: str, matched: 
     from app.services.kyc.name_match import score_name_match
 
     assert score_name_match(momo, legal)[1] is matched
+
+
+def test_resolve_uses_sandbox_host_when_lenco_env_is_sandbox(monkeypatch):
+    seen: dict[str, str] = {}
+
+    class _Client:
+        def __init__(self, *, base_url: str, timeout: float) -> None:
+            seen["base_url"] = base_url
+
+        async def post(self, *_a, **_k):
+            raise httpx.ConnectError("stop here")
+
+        async def aclose(self) -> None:
+            return None
+
+    monkeypatch.setenv("LENCO_API_TOKEN", "x")
+    monkeypatch.setenv("LENCO_ENV", "sandbox")
+    monkeypatch.setenv("ENV", "test")
+    monkeypatch.delenv("LENCO_SANDBOX_BASE_URL", raising=False)
+    monkeypatch.setattr(name_match.httpx, "AsyncClient", _Client)
+    with pytest.raises(AppError):
+        asyncio.run(name_match.resolve_momo_account_name("0961000000", "mtn"))
+    assert seen["base_url"] == "https://api.sandbox.lenco.co/access/v2"
+
+
+def test_resolve_uses_production_host_by_default(monkeypatch):
+    seen: dict[str, str] = {}
+
+    class _Client:
+        def __init__(self, *, base_url: str, timeout: float) -> None:
+            seen["base_url"] = base_url
+
+        async def post(self, *_a, **_k):
+            raise httpx.ConnectError("stop here")
+
+        async def aclose(self) -> None:
+            return None
+
+    monkeypatch.setenv("LENCO_API_TOKEN", "x")
+    monkeypatch.delenv("LENCO_ENV", raising=False)
+    monkeypatch.setenv("ENV", "test")
+    monkeypatch.setattr(name_match.httpx, "AsyncClient", _Client)
+    with pytest.raises(AppError):
+        asyncio.run(name_match.resolve_momo_account_name("0961000000", "mtn"))
+    assert seen["base_url"] == "https://api.lenco.co/access/v2"
