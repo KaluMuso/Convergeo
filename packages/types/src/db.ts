@@ -8154,6 +8154,7 @@ export type Database = {
       }
       service_packages: {
         Row: {
+          attributes: Json
           created_at: string
           delivery_days: number
           description: string | null
@@ -8170,6 +8171,7 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          attributes?: Json
           created_at?: string
           delivery_days: number
           description?: string | null
@@ -8186,6 +8188,7 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          attributes?: Json
           created_at?: string
           delivery_days?: number
           description?: string | null
@@ -8353,6 +8356,8 @@ export type Database = {
       }
       services: {
         Row: {
+          archetype: string | null
+          attributes: Json
           bookable: boolean
           booking_price_ngwee: number | null
           category: string
@@ -8370,6 +8375,8 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          archetype?: string | null
+          attributes?: Json
           bookable?: boolean
           booking_price_ngwee?: number | null
           category: string
@@ -8387,6 +8394,8 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          archetype?: string | null
+          attributes?: Json
           bookable?: boolean
           booking_price_ngwee?: number | null
           category?: string

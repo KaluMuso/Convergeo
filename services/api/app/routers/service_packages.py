@@ -27,6 +27,11 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.services_listings import UUID_RE
 from app.routers.services_listings import _assert_vendor_owns_service as _owns_service
+from app.schemas.service_archetypes import (
+    attribute_text,
+    effective_archetype,
+    validate_offer_attributes,
+)
 from app.schemas.service_packages import (
     PackageReorderRequest,
     PackageUpsertRequest,
@@ -73,7 +78,11 @@ def _rate_limit(service_client: ServiceRoleClient, user_id: str) -> None:
 
 
 def _screen(body: PackageUpsertRequest, category: Any) -> None:
-    text = " ".join(part for part in [body.description or "", *body.includes] if part)
+    text = " ".join(
+        part
+        for part in [body.description or "", *body.includes, attribute_text(body.attributes)]
+        if part
+    )
     verdict = screen_listing(title=body.name, description=text or None, category=category)
     if not verdict.allowed:
         raise AppError(
@@ -108,8 +117,10 @@ def _load_owned_package(
     return existing
 
 
-def _fields(body: PackageUpsertRequest) -> dict[str, Any]:
+def _fields(body: PackageUpsertRequest, service: dict[str, Any]) -> dict[str, Any]:
+    """Row fields; attributes are validated against the service's effective archetype."""
     return {
+        "attributes": validate_offer_attributes(effective_archetype(service), body.attributes),
         "name": body.name,
         "description": body.description,
         "price_ngwee": body.price_ngwee,
@@ -188,7 +199,7 @@ def create_service_package(
                 "vendor_id": str(vendor["id"]),
                 "status": state.ACTIVE,
                 "sort_order": next_order,
-                **_fields(body),
+                **_fields(body, service),
             }
         )
         .execute()
@@ -217,7 +228,7 @@ def update_service_package(
         siblings = state.list_for_service(service_client, str(service["id"]))
         state.assert_below_cap(state.count_active(siblings))
 
-    fields = _fields(body)
+    fields = _fields(body, service)
     updated = state.rows(
         service_client.client.table(state.TABLE)
         .update(fields)
