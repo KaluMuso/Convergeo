@@ -27,7 +27,9 @@
     "home-services": "家庭服务",
     "tech-services": "技术服务",
     "cleaning": "清洁",
-    "tailoring": "裁缝"
+    "tailoring": "裁缝",
+    "logistics": "物流",
+    "packaging": "包装"
   },
   "badges": {
     "fast": "快速响应",
@@ -190,7 +192,9 @@
       "home_services": "家庭服务",
       "tech_services": "技术服务",
       "cleaning": "清洁",
-      "tailoring": "裁缝"
+      "tailoring": "裁缝",
+      "logistics": "物流",
+      "packaging": "包装"
     },
     "description": {
       "label": "您需要完成什么？",

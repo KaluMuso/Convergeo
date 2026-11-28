@@ -1,14 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LOCALES } from "@vergeo/i18n";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
@@ -21,9 +14,7 @@ import vendorMessages from "../../../../../../packages/i18n/messages/en/vendor.j
 import { ResetRequestForm } from "../../../../../customer/app/[locale]/(auth)/_components/reset-request-form";
 import { VendorShell } from "../../_components/vendor-shell";
 
-import ConfirmPage, {
-  generateStaticParams as confirmParams,
-} from "./confirm/page";
+import ConfirmPage, { generateStaticParams as confirmParams } from "./confirm/page";
 import RecoveryLayout from "./layout";
 import RequestPage, { generateStaticParams as requestParams } from "./page";
 
@@ -34,6 +25,7 @@ const capabilities = {
   home: true,
   orders: true,
   listings: true,
+  source: true,
   scan: false,
   returns: true,
   analytics: true,
@@ -64,11 +56,7 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   refresh: vi.fn(),
   authCallback: null as
-    | ((
-        event: string,
-        session?: { user: { id: string }; access_token: string },
-      ) => void)
-    | null,
+    ((event: string, session?: { user: { id: string }; access_token: string }) => void) | null,
   pathname: "/en/reset-password",
 }));
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
@@ -85,9 +73,7 @@ vi.mock("next/navigation", () => ({
 }));
 async function renderRoute(confirm = false, locale = "en") {
   const params = Promise.resolve({ locale });
-  const page = await (confirm
-    ? ConfirmPage({ params })
-    : RequestPage({ params }));
+  const page = await (confirm ? ConfirmPage({ params }) : RequestPage({ params }));
   return render(await RecoveryLayout({ params, children: page }));
 }
 
@@ -100,11 +86,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.authCallback = null;
   mocks.pathname = "/en/reset-password";
-  window.history.replaceState(
-    {},
-    "",
-    "/en/reset-password?next=https://evil.example.test",
-  );
+  window.history.replaceState({}, "", "/en/reset-password?next=https://evil.example.test");
   mocks.client.mockResolvedValue({
     auth: {
       resetPasswordForEmail: mocks.reset,
@@ -113,10 +95,7 @@ beforeEach(() => {
       getSession: mocks.session,
       getClaims: mocks.claims,
       onAuthStateChange: (
-        callback: (
-          event: string,
-          session?: { user: { id: string }; access_token: string },
-        ) => void,
+        callback: (event: string, session?: { user: { id: string }; access_token: string }) => void,
       ) => {
         mocks.authCallback = callback;
         return { data: { subscription: { unsubscribe: vi.fn() } } };
@@ -154,10 +133,7 @@ beforeEach(() => {
   });
   mocks.fetch.mockResolvedValue({ ok: true });
   vi.stubGlobal("fetch", mocks.fetch);
-  vi.stubEnv(
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "https://staging.example.supabase.co/",
-  );
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://staging.example.supabase.co/");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public-fixture-key");
 });
 afterEach(() => {
@@ -169,9 +145,7 @@ afterEach(() => {
 describe("shared vendor password recovery forms with isolated Auth fixtures", () => {
   it("renders the request form without loading Auth or sending an email", async () => {
     await renderRoute();
-    expect(
-      screen.getByRole("heading", { name: "Reset your password" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Reset your password" })).toBeInTheDocument();
     expect(mocks.client).not.toHaveBeenCalled();
   });
 
@@ -184,9 +158,7 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
       </NextIntlClientProvider>,
     );
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Send reset link" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send reset link" })).toBeInTheDocument();
   });
 
   it("can move from recovery to the vendor shell without changing hook order", async () => {
@@ -214,30 +186,22 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
     await user.click(screen.getByRole("button", { name: "Send reset link" }));
     expect(mocks.client).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    await user.type(
-      screen.getByLabelText(/email address/i),
-      "fixture@example.test",
-    );
+    await user.type(screen.getByLabelText(/email address/i), "fixture@example.test");
     await user.click(screen.getByRole("button", { name: "Send reset link" }));
-    expect(mocks.reset).toHaveBeenCalledExactlyOnceWith(
-      "fixture@example.test",
-      {
-        redirectTo: `${window.location.origin}/en/reset-password/confirm`,
-      },
+    expect(mocks.reset).toHaveBeenCalledExactlyOnceWith("fixture@example.test", {
+      redirectTo: `${window.location.origin}/en/reset-password/confirm`,
+    });
+    expect(await screen.findByRole("status")).toHaveTextContent("If an account exists");
+    expect(screen.getByRole("link", { name: "Back to sign in" })).toHaveAttribute(
+      "href",
+      "/en/login",
     );
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "If an account exists",
-    );
-    expect(
-      screen.getByRole("link", { name: "Back to sign in" }),
-    ).toHaveAttribute("href", "/en/login");
   });
 
   it.each(["returned", "rejected", "throttled"])(
     "shows a retryable request failure: %s",
     async (kind) => {
-      if (kind === "rejected")
-        mocks.reset.mockRejectedValue(new Error("fixture"));
+      if (kind === "rejected") mocks.reset.mockRejectedValue(new Error("fixture"));
       else
         mocks.reset.mockResolvedValue({
           error:
@@ -249,16 +213,10 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
       fireEvent.change(screen.getByLabelText(/email address/i), {
         target: { value: "fixture@example.test" },
       });
-      fireEvent.submit(
-        screen
-          .getByRole("button", { name: "Send reset link" })
-          .closest("form")!,
-      );
+      fireEvent.submit(screen.getByRole("button", { name: "Send reset link" }).closest("form")!);
       expect(await screen.findByRole("alert")).toBeInTheDocument();
       await waitFor(() =>
-        expect(
-          screen.getByRole("button", { name: "Send reset link" }),
-        ).toBeEnabled(),
+        expect(screen.getByRole("button", { name: "Send reset link" })).toBeEnabled(),
       );
     },
   );
@@ -272,10 +230,7 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
     );
     const user = userEvent.setup();
     await renderRoute();
-    await user.type(
-      screen.getByLabelText(/email address/i),
-      "fixture@example.test",
-    );
+    await user.type(screen.getByLabelText(/email address/i), "fixture@example.test");
     await user.click(screen.getByRole("button", { name: "Send reset link" }));
     expect(screen.getByRole("button", { name: /sending/i })).toBeDisabled();
     expect(mocks.reset).toHaveBeenCalledOnce();
@@ -287,20 +242,15 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
     "shows the recovery link failure and correct retry route: %s",
     async (kind) => {
       if (kind === "expired") {
-        window.history.replaceState(
-          {},
-          "",
-          "/en/reset-password/confirm?code=fixture",
-        );
+        window.history.replaceState({}, "", "/en/reset-password/confirm?code=fixture");
         mocks.exchange.mockResolvedValue({ error: { message: "expired" } });
       }
       await renderRoute(true);
-      expect(await screen.findByRole("alert")).toHaveTextContent(
-        "This link is old or wrong",
+      expect(await screen.findByRole("alert")).toHaveTextContent("This link is old or wrong");
+      expect(screen.getByRole("link", { name: "Send reset link" })).toHaveAttribute(
+        "href",
+        "/en/reset-password",
       );
-      expect(
-        screen.getByRole("link", { name: "Send reset link" }),
-      ).toHaveAttribute("href", "/en/reset-password");
       expect(mocks.update).not.toHaveBeenCalled();
     },
   );
@@ -315,11 +265,7 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
     const password = await screen.findByLabelText(/^new password/i);
     const confirm = screen.getByLabelText(/^confirm new password/i);
     const submit = () =>
-      fireEvent.submit(
-        screen
-          .getByRole("button", { name: "Update password" })
-          .closest("form")!,
-      );
+      fireEvent.submit(screen.getByRole("button", { name: "Update password" }).closest("form")!);
     fireEvent.change(password, { target: { value: "short" } });
     submit();
     expect(screen.getByRole("alert")).toHaveTextContent("8 or more");
@@ -334,18 +280,12 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
       headers: { get: () => null },
     });
     submit();
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Something went wrong",
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Something went wrong");
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Update password" }),
-      ).toBeEnabled(),
+      expect(screen.getByRole("button", { name: "Update password" })).toBeEnabled(),
     );
     submit();
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Password updated",
-    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Password updated");
     fireEvent.click(screen.getByRole("button", { name: "Go to sign in" }));
     expect(mocks.exchange).toHaveBeenCalledExactlyOnceWith("fixture");
     expect(mocks.fetch).toHaveBeenCalledTimes(2);
@@ -368,23 +308,15 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
     const error = vi.spyOn(console, "error");
     const warn = vi.spyOn(console, "warn");
     try {
-      window.history.replaceState(
-        {},
-        "",
-        "/en/reset-password/confirm?code=fixture-reused-code",
-      );
+      window.history.replaceState({}, "", "/en/reset-password/confirm?code=fixture-reused-code");
       mocks.exchange.mockResolvedValue({
         error: { message: "fixture-reused-code" },
       });
       await renderRoute(true);
-      expect(await screen.findByRole("alert")).toHaveTextContent(
-        "This link is old or wrong",
-      );
+      expect(await screen.findByRole("alert")).toHaveTextContent("This link is old or wrong");
       cleanup();
       await renderRoute(true);
-      expect(await screen.findByRole("alert")).toHaveTextContent(
-        "This link is old or wrong",
-      );
+      expect(await screen.findByRole("alert")).toHaveTextContent("This link is old or wrong");
       expect(mocks.exchange).toHaveBeenCalledTimes(2);
       expect(mocks.update).not.toHaveBeenCalled();
       expect(log).not.toHaveBeenCalled();
@@ -407,9 +339,7 @@ describe("vendor recovery route wiring", () => {
     const params = Promise.resolve({ locale: "xx" });
     expect(await RequestPage({ params })).toBeNull();
     expect(await ConfirmPage({ params })).toBeNull();
-    expect(
-      await RecoveryLayout({ params, children: <p>Fixture</p> }),
-    ).toBeNull();
+    expect(await RecoveryLayout({ params, children: <p>Fixture</p> })).toBeNull();
   });
   it.each(LOCALES)(
     "uses the %s locale for the same-origin callback and return link",
@@ -421,16 +351,10 @@ describe("vendor recovery route wiring", () => {
       fireEvent.change(input, { target: { value: "fixture@example.test" } });
       fireEvent.submit(view.container.querySelector("form")!);
       await screen.findByRole("status");
-      expect(mocks.reset).toHaveBeenCalledExactlyOnceWith(
-        "fixture@example.test",
-        {
-          redirectTo: `${window.location.origin}/${locale}/reset-password/confirm`,
-        },
-      );
-      expect(screen.getByRole("link")).toHaveAttribute(
-        "href",
-        `/${locale}/login`,
-      );
+      expect(mocks.reset).toHaveBeenCalledExactlyOnceWith("fixture@example.test", {
+        redirectTo: `${window.location.origin}/${locale}/reset-password/confirm`,
+      });
+      expect(screen.getByRole("link")).toHaveAttribute("href", `/${locale}/login`);
     },
   );
   it("supports keyboard entry and submission with labeled controls", async () => {
@@ -440,13 +364,9 @@ describe("vendor recovery route wiring", () => {
     expect(screen.getByLabelText(/email address/i)).toHaveFocus();
     await user.keyboard("fixture@example.test");
     await user.tab();
-    expect(
-      screen.getByRole("button", { name: "Send reset link" }),
-    ).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Send reset link" })).toHaveFocus();
     await user.keyboard("{Enter}");
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "If an account exists",
-    );
+    expect(await screen.findByRole("status")).toHaveTextContent("If an account exists");
     expect(mocks.reset).toHaveBeenCalledOnce();
   });
   it("does not exchange a code after leaving recovery during a lazy Auth load", async () => {
@@ -456,11 +376,7 @@ describe("vendor recovery route wiring", () => {
         resolve = done;
       }),
     );
-    window.history.replaceState(
-      {},
-      "",
-      "/en/reset-password/confirm?code=synthetic-fixture",
-    );
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=synthetic-fixture");
     const view = await renderRoute(true);
     view.unmount();
     await act(async () =>
@@ -481,26 +397,16 @@ describe("vendor recovery route wiring", () => {
         resolve = done;
       }),
     );
-    window.history.replaceState(
-      {},
-      "",
-      "/en/reset-password/confirm?code=synthetic-fixture",
-    );
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=synthetic-fixture");
     const old = await renderRoute(true);
     await waitFor(() => expect(mocks.exchange).toHaveBeenCalledOnce());
     old.unmount();
     window.history.replaceState({}, "", "/en/reset-password/confirm");
     await renderRoute(true);
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "This link is old or wrong",
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("This link is old or wrong");
     await act(async () => resolve({ error: null }));
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "This link is old or wrong",
-    );
-    expect(
-      screen.queryByRole("button", { name: "Update password" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("This link is old or wrong");
+    expect(screen.queryByRole("button", { name: "Update password" })).not.toBeInTheDocument();
     expect(mocks.update).not.toHaveBeenCalled();
   });
 });

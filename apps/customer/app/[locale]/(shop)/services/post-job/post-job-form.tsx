@@ -7,14 +7,7 @@ import { Input } from "@vergeo/ui/src/input";
 import { Textarea } from "@vergeo/ui/src/textarea";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { useSession } from "../../../../../lib/customer-session";
@@ -28,15 +21,11 @@ const SERVICE_CATEGORIES = [
   "tech_services",
   "cleaning",
   "tailoring",
+  "logistics",
+  "packaging",
 ] as const;
 
-const BUDGET_BANDS = [
-  "under_500",
-  "500_2000",
-  "2000_5000",
-  "over_5000",
-  "flexible",
-] as const;
+const BUDGET_BANDS = ["under_500", "500_2000", "2000_5000", "over_5000", "flexible"] as const;
 
 type ServiceCategory = (typeof SERVICE_CATEGORIES)[number];
 type BudgetBand = (typeof BUDGET_BANDS)[number];
@@ -90,21 +79,14 @@ function readDraft(): Partial<DraftJob> | null {
     // Validate each field independently so one corrupt field cannot discard valid input.
     return {
       category:
-        typeof fields.category === "string"
-          ? normalizeServiceCategory(fields.category)
-          : undefined,
-      description:
-        typeof fields.description === "string" ? fields.description : undefined,
-      service_area:
-        typeof fields.service_area === "string"
-          ? fields.service_area
-          : undefined,
+        typeof fields.category === "string" ? normalizeServiceCategory(fields.category) : undefined,
+      description: typeof fields.description === "string" ? fields.description : undefined,
+      service_area: typeof fields.service_area === "string" ? fields.service_area : undefined,
       preferred_date:
         typeof fields.preferred_date === "string" &&
         /^\d{4}-\d{2}-\d{2}$/.test(fields.preferred_date) &&
         !Number.isNaN(Date.parse(fields.preferred_date)) &&
-        new Date(fields.preferred_date).toISOString().slice(0, 10) ===
-          fields.preferred_date
+        new Date(fields.preferred_date).toISOString().slice(0, 10) === fields.preferred_date
           ? fields.preferred_date
           : undefined,
       budget_band:
@@ -138,10 +120,7 @@ function draftSnapshot(): string | null {
 function clearDraft(snapshot: string | null): void {
   try {
     // A pending request must not remove a newer draft written after navigation.
-    if (
-      snapshot !== null &&
-      window.localStorage.getItem(DRAFT_STORAGE_KEY) === snapshot
-    ) {
+    if (snapshot !== null && window.localStorage.getItem(DRAFT_STORAGE_KEY) === snapshot) {
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     }
   } catch {
@@ -156,9 +135,7 @@ function clearDraft(snapshot: string | null): void {
  * link from a service page preselects the right category instead of silently
  * defaulting (or being rejected by the API if it were forwarded verbatim).
  */
-function normalizeServiceCategory(
-  value: string | undefined,
-): ServiceCategory | undefined {
+function normalizeServiceCategory(value: string | undefined): ServiceCategory | undefined {
   if (!value) {
     return undefined;
   }
@@ -174,18 +151,12 @@ export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
   const draft = useMemo(() => readDraft(), []);
 
   const [category, setCategory] = useState<ServiceCategory>(
-    normalizeServiceCategory(initialCategory) ??
-      draft?.category ??
-      "home_services",
+    normalizeServiceCategory(initialCategory) ?? draft?.category ?? "home_services",
   );
   const [description, setDescription] = useState(draft?.description ?? "");
   const [serviceArea, setServiceArea] = useState(draft?.service_area ?? "");
-  const [preferredDate, setPreferredDate] = useState(
-    draft?.preferred_date ?? "",
-  );
-  const [budgetBand, setBudgetBand] = useState<BudgetBand>(
-    draft?.budget_band ?? "flexible",
-  );
+  const [preferredDate, setPreferredDate] = useState(draft?.preferred_date ?? "");
+  const [budgetBand, setBudgetBand] = useState<BudgetBand>(draft?.budget_band ?? "flexible");
   const [submitting, setSubmitting] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
   const submission = useRef<"idle" | "pending" | "succeeded">("idle");
@@ -289,14 +260,9 @@ export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
   }
 
   return (
-    <form
-      className="mx-auto flex w-full max-w-[360px] flex-col gap-4"
-      onSubmit={handleSubmit}
-    >
+    <form className="mx-auto flex w-full max-w-[360px] flex-col gap-4" onSubmit={handleSubmit}>
       <header className="space-y-1">
-        <h1 className="font-display text-h1 text-display-ink">
-          {t("postJob.title")}
-        </h1>
+        <h1 className="font-display text-h1 text-display-ink">{t("postJob.title")}</h1>
         <p className="font-body text-sm text-text-2">{t("postJob.subtitle")}</p>
       </header>
 
@@ -319,9 +285,7 @@ export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
           id="post-job-category"
           className="min-h-11 w-full rounded-md border border-border bg-surface px-3 font-body text-sm text-text"
           value={category}
-          onChange={(event) =>
-            setCategory(event.target.value as ServiceCategory)
-          }
+          onChange={(event) => setCategory(event.target.value as ServiceCategory)}
           required
         >
           {SERVICE_CATEGORIES.map((value) => (
@@ -332,10 +296,7 @@ export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
         </select>
       </FormField>
 
-      <FormField
-        id="post-job-description"
-        label={t("postJob.description.label")}
-      >
+      <FormField id="post-job-description" label={t("postJob.description.label")}>
         <Textarea
           id="post-job-description"
           value={description}
@@ -383,12 +344,8 @@ export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
       </FormField>
 
       <div className="space-y-1">
-        <p className="font-body text-sm font-medium text-text">
-          {t("postJob.photos.label")}
-        </p>
-        <p className="font-body text-xs text-text-3">
-          {t("postJob.photos.help")}
-        </p>
+        <p className="font-body text-sm font-medium text-text">{t("postJob.photos.label")}</p>
+        <p className="font-body text-xs text-text-3">{t("postJob.photos.help")}</p>
       </div>
 
       {errorMessage ? (

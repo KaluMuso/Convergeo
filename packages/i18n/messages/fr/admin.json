@@ -54,6 +54,8 @@
     "branches": "Vérification des succursales",
     "extras": "Demandes d'options",
     "trials": "Essais gratuits",
+    "importRequests": "Demandes d'importation",
+    "madeInZambia": "Fabriqué en Zambie",
     "askAudit": "Audit Ask Vergeo"
   },
   "boards": {
@@ -1924,6 +1926,90 @@
       "notLater": "La nouvelle fin doit être postérieure à l'actuelle.",
       "alreadyEnded": "Cet essai est déjà terminé."
     }
+  },
+  "importRequests": {
+    "title": "Demandes d'importation",
+    "intro": "Demandes d'importation des vendeurs. Répondez avec un coût estimé. Estimations uniquement : aucun paiement, aucune commande.",
+    "empty": "Aucune demande.",
+    "filterLabel": "Statut",
+    "all": "Tous",
+    "status": {
+      "submitted": "Envoyée",
+      "in_review": "En examen",
+      "quoted": "Estimée",
+      "closed": "Clôturée",
+      "cancelled": "Annulée"
+    },
+    "request": {
+      "qty": "{qty} {unit}",
+      "target": "Cible {price} par unité",
+      "link": "Lien du produit",
+      "by": "De {vendor}",
+      "noQuote": "Pas encore d'estimation",
+      "latest": "Dernière estimation : {total}"
+    },
+    "actions": {
+      "review": "Marquer en examen",
+      "close": "Clôturer",
+      "quote": "Envoyer l'estimation",
+      "sending": "Envoi…"
+    },
+    "form": {
+      "title": "Estimation du coût rendu (ZMW)",
+      "partner": "Partenaire ou importateur",
+      "product": "Produit (K)",
+      "freight": "Fret (K)",
+      "duty": "Droits et taxes (K)",
+      "clearing": "Dédouanement (K)",
+      "other": "Autre (K)",
+      "leadTime": "Délai (jours)",
+      "validUntil": "Valable jusqu'au",
+      "notes": "Notes pour le vendeur",
+      "total": "Total",
+      "estimateOnly": "Toujours présentée au vendeur comme une estimation, pas une offre."
+    },
+    "errors": {
+      "load": "Chargement impossible.",
+      "generic": "Enregistrement impossible. Réessayez.",
+      "invalidTransition": "Cette demande ne peut plus changer ainsi.",
+      "rateLimited": "Trop de changements. Patientez.",
+      "amount": "Saisissez des montants valides en kwacha."
+    },
+    "loading": "Chargement…",
+    "retry": "Réessayer"
+  },
+  "madeInZambia": {
+    "title": "Demandes Fabriqué en Zambie",
+    "intro": "Les vendeurs déclarent qu'un produit est fabriqué en Zambie. Approuvez ou rejetez chaque demande. Seuls les produits approuvés affichent le badge et apparaissent dans l'onglet Fabriqué en Zambie.",
+    "empty": "Aucune demande.",
+    "filterLabel": "Statut",
+    "status": {
+      "claimed": "En attente d'examen",
+      "approved": "Approuvée",
+      "rejected": "Rejetée"
+    },
+    "claim": {
+      "by": "De {vendor}",
+      "reference": "Référence : {ref}",
+      "noReference": "Aucune référence fournie",
+      "claimedAt": "Déclarée le {date}",
+      "reviewedAt": "Examinée le {date}",
+      "note": "Note : {note}"
+    },
+    "actions": {
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "revoke": "Révoquer l'approbation"
+    },
+    "noteLabel": "Note pour le vendeur (facultatif)",
+    "errors": {
+      "load": "Chargement impossible.",
+      "generic": "Enregistrement impossible. Réessayez.",
+      "invalidTransition": "Cette demande ne peut plus changer ainsi.",
+      "rateLimited": "Trop de changements. Patientez."
+    },
+    "loading": "Chargement…",
+    "retry": "Réessayer"
   },
   "askAudit": {
     "title": "Audit Ask Vergeo",
