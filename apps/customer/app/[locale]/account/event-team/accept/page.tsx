@@ -27,14 +27,14 @@ export default async function EventTeamAcceptPage({ params }: PageProps) {
   const t = createTranslator({
     locale,
     messages: { events } as AbstractIntlMessages,
-    namespace: "events.teamAccept",
+    namespace: "events",
   }) as unknown as (key: string) => string;
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-8">
       <header className="space-y-1">
-        <h1 className="font-display text-xl">{t("title")}</h1>
-        <p className="text-sm text-text-2">{t("intro")}</p>
+        <h1 className="font-display text-xl">{t("teamAccept.title")}</h1>
+        <p className="text-sm text-text-2">{t("teamAccept.intro")}</p>
       </header>
       <Suspense fallback={null}>
         <EventTeamAcceptForm />
