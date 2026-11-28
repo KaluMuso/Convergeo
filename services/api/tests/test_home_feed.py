@@ -299,6 +299,9 @@ def _page(client: FakeClient, **kwargs: Any) -> Any:
 
 @pytest.fixture(autouse=True)
 def _no_trending(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.core.ttl_cache import clear_ttl_cache_store
+
+    clear_ttl_cache_store()
     monkeypatch.setattr(
         "app.services.discovery.trending.fetch_trending_listings",
         lambda _client, limit=24: [MagicMock(listing_id="l-case")],
@@ -342,6 +345,37 @@ def test_cursor_pagination_is_stable_and_continues() -> None:
     assert [s.key for s in second.sections] == ["s3", "s4"]
     with pytest.raises(ValueError):
         _page(client, cursor="garbage")
+
+
+def test_continuation_slice_skips_expensive_prefetch() -> None:
+    sections = [
+        _section(f"s{i}", "category", i, config={"category_path": "electronics"})
+        for i in range(1, 8)
+    ] + [
+        _section("vendors", "vendors", 20),
+        _section("events", "events", 21),
+    ]
+    assert resolver._slice_needs_catalog_candidates(sections, 7, 2) is False
+    assert resolver._slice_may_need_trending(sections, 7, 2) is False
+
+
+def test_continuation_page_loads_feed_slot_placements_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[frozenset[str] | None] = []
+
+    def spy(_client: Any, *, now: datetime, placement_types: frozenset[str] | None = None) -> list:
+        seen.append(placement_types)
+        return []
+
+    monkeypatch.setattr(resolver, "load_live_placements", spy)
+    sections = [
+        _section(f"s{i}", "category", i, config={"category_path": "fashion"}) for i in range(1, 7)
+    ]
+    client = _feed_client(sections, [])
+    _page(client, cursor=None, page_size=2)
+    _page(client, cursor="v1.2", page_size=2)
+    assert seen == [None, frozenset({"feed_slot"})]
 
 
 def test_disabled_and_out_of_window_sections_hidden() -> None:
@@ -534,6 +568,38 @@ def test_public_feed_endpoint_is_cacheable(http: TestClient, fake: FakeClient) -
     assert response.json()["sections"][0]["key"] == "fashion"
     assert response.headers["cache-control"].startswith("public")
     assert http.get("/home/feed?cursor=bad").status_code == 422
+
+
+def test_signed_in_cursor_second_request_serves_from_ttl_cache(
+    http: TestClient,
+    fake: FakeClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core import ttl_cache
+
+    monkeypatch.setattr("app.routers.home_feed.get_cached_json", ttl_cache.get_cached_json)
+    monkeypatch.setattr("app.routers.home_feed.set_cached_json", ttl_cache.set_cached_json)
+    ttl_cache.clear_ttl_cache_store()
+
+    build_calls = 0
+    original_build = resolver.build_feed_page
+
+    def counting_build(*args: Any, **kwargs: Any) -> Any:
+        nonlocal build_calls
+        build_calls += 1
+        return original_build(*args, **kwargs)
+
+    monkeypatch.setattr("app.routers.home_feed.build_feed_page", counting_build)
+
+    fake.table("home_feed_sections").rows = [
+        _section(f"s{i}", "category", i, config={"category_path": "fashion"}) for i in range(1, 7)
+    ]
+    headers = _login(monkeypatch, CUSTOMER_ID, frozenset({"customer"}))
+    assert http.get("/home/feed?cursor=v1.2&page_size=2", headers=headers).status_code == 200
+    repeat = http.get("/home/feed?cursor=v1.2&page_size=2", headers=headers)
+    assert repeat.status_code == 200
+    assert build_calls == 1
+    assert repeat.headers["cache-control"] == "private, no-store"
 
 
 def test_ad_events_counts_are_bounded(http: TestClient, fake: FakeClient) -> None:
