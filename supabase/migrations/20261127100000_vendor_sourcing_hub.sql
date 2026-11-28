@@ -90,6 +90,17 @@ begin
     end if;
   end if;
 
+  -- A decided claim is frozen for owners: editing the evidence (reference or claim
+  -- timestamp) after a decision drops the claim back to 'claimed' for re-review, so
+  -- an approved badge can never silently point at changed evidence.
+  if not privileged and tg_op = 'UPDATE'
+     and old_status in ('approved', 'rejected')
+     and new.made_in_zambia_status is not distinct from old_status
+     and (new.made_in_zambia_reference is distinct from old.made_in_zambia_reference
+          or new.made_in_zambia_claimed_at is distinct from old.made_in_zambia_claimed_at) then
+    new.made_in_zambia_status := 'claimed';
+  end if;
+
   if new.made_in_zambia_status in ('approved', 'rejected')
      and (new.made_in_zambia_reviewed_by is null or new.made_in_zambia_reviewed_at is null)
      and (tg_op = 'INSERT' or new.made_in_zambia_status is distinct from old_status) then
@@ -121,7 +132,8 @@ create trigger vendor_listings_made_in_zambia_guard
 create table public.import_requests (
   id uuid primary key default gen_random_uuid(),
   vendor_id uuid not null references public.vendors (id) on delete cascade,
-  requested_by uuid not null references auth.users (id) on delete restrict,
+  -- Nullable + SET NULL so account erasure is never blocked by a request row.
+  requested_by uuid references auth.users (id) on delete set null,
   title text not null check (char_length(btrim(title)) between 3 and 120),
   description text check (description is null or char_length(description) <= 2000),
   reference_url text check (
@@ -162,7 +174,7 @@ create trigger import_requests_set_updated_at
 create table public.import_request_quotes (
   id uuid primary key default gen_random_uuid(),
   request_id uuid not null references public.import_requests (id) on delete cascade,
-  quoted_by uuid not null references auth.users (id) on delete restrict,
+  quoted_by uuid references auth.users (id) on delete set null,
   partner_label text check (partner_label is null or char_length(btrim(partner_label)) <= 80),
   product_ngwee bigint not null check (product_ngwee >= 0),
   freight_ngwee bigint not null check (freight_ngwee >= 0),
