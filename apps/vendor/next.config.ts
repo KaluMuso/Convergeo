@@ -72,6 +72,17 @@ const REPORT_ONLY_CSP = [
   CSP_REPORTING,
 ].join("; ");
 
+/**
+ * Header name applied by middleware.ts with a substituted per-request nonce, not set
+ * here. Emitting it from next.config with the literal `{{CSP_NONCE}}` token added a
+ * second report-only policy whose nonce never matches, so browsers logged
+ * `invalid source` and reported every inline script. `REPORT_ONLY_CSP` stays as the
+ * reference policy that middleware mirrors.
+ */
+const CSP_REPORT_ONLY_HEADER = "Content-Security-Policy-Report-Only";
+void CSP_REPORT_ONLY_HEADER;
+void REPORT_ONLY_CSP;
+
 const BASE_HEADERS = buildStaticSecurityHeaders({
   xFrameOptions: "DENY",
   permissionsPolicy: PERMISSIONS_POLICY_DEFAULT,
@@ -80,20 +91,17 @@ const BASE_HEADERS = buildStaticSecurityHeaders({
 
 const COMMON_HEADERS = [
   ...BASE_HEADERS,
-  { key: "Content-Security-Policy-Report-Only", value: REPORT_ONLY_CSP },
   { key: "Permissions-Policy", value: permissionsPolicy(false) },
 ];
 
 const cameraAllowedHeaders = [
   ...BASE_HEADERS,
-  { key: "Content-Security-Policy-Report-Only", value: REPORT_ONLY_CSP },
   { key: "Permissions-Policy", value: permissionsPolicy(true) },
 ];
 
 // Shop location ("Use my current location") on the profile and branch pages.
 const geolocationAllowedHeaders = [
   ...BASE_HEADERS,
-  { key: "Content-Security-Policy-Report-Only", value: REPORT_ONLY_CSP },
   { key: "Permissions-Policy", value: permissionsPolicy(false, true) },
 ];
 
@@ -129,7 +137,10 @@ const nextConfig: NextConfig = {
       { source: "/:locale/clips/:path*", headers: cameraAllowedHeaders },
       // Shop location pin — geolocation allowed, camera still denied.
       { source: "/:locale/profile/:path*", headers: geolocationAllowedHeaders },
-      { source: "/:locale/businesses/:path*", headers: geolocationAllowedHeaders },
+      {
+        source: "/:locale/businesses/:path*",
+        headers: geolocationAllowedHeaders,
+      },
       // Everything else — camera and geolocation denied (routes above excluded).
       {
         source: "/((?!.*(?:scan|onboarding|clips|profile|businesses)).*)",

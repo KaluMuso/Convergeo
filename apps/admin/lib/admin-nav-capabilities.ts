@@ -52,5 +52,7 @@ export function resolveAdminNavCapabilities(
     coupons: unrestricted,
     extras: has("vendors.manage"),
     trials: unrestricted,
+    // Ask Vergeo answer log + auditor: admin / superadmin only (API: unrestricted route).
+    askAudit: unrestricted,
   };
 }
