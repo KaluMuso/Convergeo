@@ -4426,6 +4426,134 @@ export type Database = {
         }
         Relationships: []
       }
+      import_request_quotes: {
+        Row: {
+          clearing_ngwee: number
+          created_at: string
+          duty_ngwee: number
+          freight_ngwee: number
+          id: string
+          is_estimate: boolean
+          lead_time_days: number | null
+          notes: string | null
+          other_ngwee: number
+          partner_label: string | null
+          product_ngwee: number
+          quoted_by: string | null
+          request_id: string
+          total_ngwee: number | null
+          valid_until: string | null
+        }
+        Insert: {
+          clearing_ngwee: number
+          created_at?: string
+          duty_ngwee: number
+          freight_ngwee: number
+          id?: string
+          is_estimate?: boolean
+          lead_time_days?: number | null
+          notes?: string | null
+          other_ngwee?: number
+          partner_label?: string | null
+          product_ngwee: number
+          quoted_by?: string | null
+          request_id: string
+          total_ngwee?: number | null
+          valid_until?: string | null
+        }
+        Update: {
+          clearing_ngwee?: number
+          created_at?: string
+          duty_ngwee?: number
+          freight_ngwee?: number
+          id?: string
+          is_estimate?: boolean
+          lead_time_days?: number | null
+          notes?: string | null
+          other_ngwee?: number
+          partner_label?: string | null
+          product_ngwee?: number
+          quoted_by?: string | null
+          request_id?: string
+          total_ngwee?: number | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_request_quotes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "import_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_requests: {
+        Row: {
+          created_at: string
+          description: string | null
+          destination_city: string | null
+          id: string
+          image_urls: string[]
+          quantity: number
+          reference_url: string | null
+          requested_by: string | null
+          status: string
+          target_unit_price_ngwee: number | null
+          title: string
+          unit: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          destination_city?: string | null
+          id?: string
+          image_urls?: string[]
+          quantity: number
+          reference_url?: string | null
+          requested_by?: string | null
+          status?: string
+          target_unit_price_ngwee?: number | null
+          title: string
+          unit?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          destination_city?: string | null
+          id?: string
+          image_urls?: string[]
+          quantity?: number
+          reference_url?: string | null
+          requested_by?: string | null
+          status?: string
+          target_unit_price_ngwee?: number | null
+          title?: string
+          unit?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_requests_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "import_requests_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       in_app_notifications: {
         Row: {
           audience: string
@@ -9526,6 +9654,12 @@ export type Database = {
           id: string
           imei: string | null
           lead_time_days: number | null
+          made_in_zambia_claimed_at: string | null
+          made_in_zambia_reference: string | null
+          made_in_zambia_review_note: string | null
+          made_in_zambia_reviewed_at: string | null
+          made_in_zambia_reviewed_by: string | null
+          made_in_zambia_status: string | null
           mileage_km: number | null
           min_steps: number
           moq: number
@@ -9570,6 +9704,12 @@ export type Database = {
           id?: string
           imei?: string | null
           lead_time_days?: number | null
+          made_in_zambia_claimed_at?: string | null
+          made_in_zambia_reference?: string | null
+          made_in_zambia_review_note?: string | null
+          made_in_zambia_reviewed_at?: string | null
+          made_in_zambia_reviewed_by?: string | null
+          made_in_zambia_status?: string | null
           mileage_km?: number | null
           min_steps?: number
           moq?: number
@@ -9614,6 +9754,12 @@ export type Database = {
           id?: string
           imei?: string | null
           lead_time_days?: number | null
+          made_in_zambia_claimed_at?: string | null
+          made_in_zambia_reference?: string | null
+          made_in_zambia_review_note?: string | null
+          made_in_zambia_reviewed_at?: string | null
+          made_in_zambia_reviewed_by?: string | null
+          made_in_zambia_status?: string | null
           mileage_km?: number | null
           min_steps?: number
           moq?: number
@@ -10144,6 +10290,7 @@ export type Database = {
           preferred_badge: boolean
           slug: string
           status: string
+          supplier_types: string[]
           updated_at: string
           whatsapp_msisdn: string | null
         }
@@ -10175,6 +10322,7 @@ export type Database = {
           preferred_badge?: boolean
           slug: string
           status?: string
+          supplier_types?: string[]
           updated_at?: string
           whatsapp_msisdn?: string | null
         }
@@ -10206,6 +10354,7 @@ export type Database = {
           preferred_badge?: boolean
           slug?: string
           status?: string
+          supplier_types?: string[]
           updated_at?: string
           whatsapp_msisdn?: string | null
         }
