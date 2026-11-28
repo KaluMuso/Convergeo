@@ -108,16 +108,23 @@ async def home_feed(
     )
     safe_locale = locale if locale in SUPPORTED_LOCALES else "en"
     user_id = await _optional_user_id(request)
-    cache_key = f"{FEED_CACHE_PREFIX}{safe_locale}:{page_size}:{cursor or '0'}"
-
+    cache_key: str | None = None
     if user_id is None:
+        cache_key = f"{FEED_CACHE_PREFIX}{safe_locale}:{page_size}:{cursor or '0'}:anon"
+    elif cursor is not None:
+        cache_key = f"{FEED_CACHE_PREFIX}{safe_locale}:{page_size}:{cursor}:uid:{user_id}"
+
+    if cache_key is not None:
         cached = get_cached_json(cache_key)
         if isinstance(cached, dict):
             try:
                 page = HomeFeedPage.model_validate(cached)
-                response.headers["Cache-Control"] = (
-                    f"public, s-maxage={FEED_CACHE_TTL_SECONDS}, stale-while-revalidate=60"
-                )
+                if user_id is None:
+                    response.headers["Cache-Control"] = (
+                        f"public, s-maxage={FEED_CACHE_TTL_SECONDS}, stale-while-revalidate=60"
+                    )
+                else:
+                    response.headers["Cache-Control"] = "private, no-store"
                 return page
             except Exception:
                 pass
@@ -145,8 +152,9 @@ async def home_feed(
             code="validation_error", message="Invalid feed cursor", http_status=422
         ) from exc
 
-    if user_id is None:
+    if cache_key is not None:
         set_cached_json(cache_key, page.model_dump(mode="json"), ttl_seconds=FEED_CACHE_TTL_SECONDS)
+    if user_id is None:
         response.headers["Cache-Control"] = (
             f"public, s-maxage={FEED_CACHE_TTL_SECONDS}, stale-while-revalidate=60"
         )
