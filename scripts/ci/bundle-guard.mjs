@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Per-route first-load JS budget guard for apps/customer.
- * Parses .next/app-build-manifest.json, sums gzip sizes of route JS chunks,
+ * Per-route first-load JS + CSS budget guard for apps/customer.
+ * Parses .next/app-build-manifest.json, sums gzip sizes of route chunks,
  * compares against budgets (lighthouserc.json → vergeo.bundle) and optional base snapshot.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -19,8 +19,9 @@ const LIGHTHOUSE_RC = join(ROOT, "lighthouserc.json");
 // After M16-P02 merges, master is the new baseline, so this tolerance still
 // catches genuine per-PR regressions (>2 KB) going forward.
 const REGRESSION_TOLERANCE_KB = 2.0;
+const CSS_REGRESSION_TOLERANCE_KB = 1.0;
 
-/** @typedef {{ defaultMaxKbGz: number, defaultJustification: string, routes: Record<string, { maxKbGz: number, justification: string }>, auditRoutes?: string[] }} BundleBudgetConfig */
+/** @typedef {{ defaultMaxKbGz: number, defaultJustification: string, defaultMaxCssKbGz: number, defaultMaxCssJustification: string, routes: Record<string, { maxKbGz?: number, maxCssKbGz?: number, justification: string }>, auditRoutes?: string[] }} BundleBudgetConfig */
 
 /**
  * @returns {BundleBudgetConfig}
@@ -31,6 +32,11 @@ export function loadBudgetConfig() {
   if (!bundle?.defaultMaxKbGz || !bundle.defaultJustification) {
     throw new Error(
       "lighthouserc.json missing vergeo.bundle.defaultMaxKbGz or defaultJustification",
+    );
+  }
+  if (!bundle.defaultMaxCssKbGz || !bundle.defaultMaxCssJustification) {
+    throw new Error(
+      "lighthouserc.json missing vergeo.bundle.defaultMaxCssKbGz or defaultMaxCssJustification",
     );
   }
   return bundle;
@@ -49,15 +55,49 @@ export function auditRouteSet(config) {
 }
 
 /**
+ * @param {string} pageRoute
+ * @param {Record<string, string[]>} pages
+ */
+export function layoutChainForPage(pageRoute, pages) {
+  const base = pageRoute.replace(/\/page$/, "");
+  const segments = base.split("/").filter(Boolean);
+  /** @type {string[]} */
+  const layouts = [];
+  for (let i = 1; i <= segments.length; i += 1) {
+    const candidate = `/${segments.slice(0, i).join("/")}/layout`;
+    if (pages[candidate]) {
+      layouts.push(candidate);
+    }
+  }
+  return layouts;
+}
+
+/**
+ * @param {string} pageRoute
+ * @param {Record<string, string[]>} pages
+ */
+export function chunksForPageRoute(pageRoute, pages) {
+  const chunks = [];
+  for (const layout of layoutChainForPage(pageRoute, pages)) {
+    chunks.push(...(pages[layout] ?? []));
+  }
+  chunks.push(...(pages[pageRoute] ?? []));
+  return chunks;
+}
+
+/**
  * @param {string[]} chunks
  * @param {string} nextDir
+ * @param {string} suffix
  */
-export function gzipJsKbForChunks(chunks, nextDir) {
+export function gzipKbForChunks(chunks, nextDir, suffix) {
+  const seen = new Set();
   let bytes = 0;
   for (const chunk of chunks) {
-    if (!chunk.endsWith(".js")) {
+    if (!chunk.endsWith(suffix) || seen.has(chunk)) {
       continue;
     }
+    seen.add(chunk);
     const filePath = join(nextDir, chunk);
     if (!existsSync(filePath)) {
       continue;
@@ -65,6 +105,22 @@ export function gzipJsKbForChunks(chunks, nextDir) {
     bytes += gzipSync(readFileSync(filePath)).length;
   }
   return bytes / 1024;
+}
+
+/**
+ * @param {string[]} chunks
+ * @param {string} nextDir
+ */
+export function gzipJsKbForChunks(chunks, nextDir) {
+  return gzipKbForChunks(chunks, nextDir, ".js");
+}
+
+/**
+ * @param {string[]} chunks
+ * @param {string} nextDir
+ */
+export function gzipCssKbForChunks(chunks, nextDir) {
+  return gzipKbForChunks(chunks, nextDir, ".css");
 }
 
 /**
@@ -82,13 +138,42 @@ export function collectRouteSizes(
     );
   }
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const pages = manifest.pages ?? {};
   /** @type {Record<string, number>} */
   const sizes = {};
-  for (const [route, chunks] of Object.entries(manifest.pages ?? {})) {
+  for (const [route, chunks] of Object.entries(pages)) {
     if (!route.endsWith("/page")) {
       continue;
     }
     sizes[route] = roundKb(gzipJsKbForChunks(chunks, nextDir));
+  }
+  return sizes;
+}
+
+/**
+ * @param {string} manifestPath
+ * @param {string} [nextDir]
+ * @returns {Record<string, number>}
+ */
+export function collectRouteCssSizes(
+  manifestPath = MANIFEST_PATH,
+  nextDir = join(CUSTOMER_DIR, ".next"),
+) {
+  if (!existsSync(manifestPath)) {
+    throw new Error(
+      `Missing Next.js build output: ${manifestPath} (run pnpm --filter customer build first)`,
+    );
+  }
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const pages = manifest.pages ?? {};
+  /** @type {Record<string, number>} */
+  const sizes = {};
+  for (const route of Object.keys(pages)) {
+    if (!route.endsWith("/page")) {
+      continue;
+    }
+    const chunks = chunksForPageRoute(route, pages);
+    sizes[route] = roundKb(gzipCssKbForChunks(chunks, nextDir));
   }
   return sizes;
 }
@@ -115,15 +200,20 @@ export function routeToLabel(route) {
  * @param {Record<string, number>} current
  * @param {BundleBudgetConfig} config
  * @param {Record<string, number>} [baseline]
+ * @param {{ kind: 'js' | 'css', defaultMaxKbGz: number, regressionToleranceKb: number }} budget
  */
-export function evaluateRoutes(current, config, baseline) {
-  /** @type {Array<{ route: string, label: string, sizeKb: number, maxKb: number, deltaKb: number | null, reason: string }>} */
+export function evaluateRoutes(current, config, baseline, budget) {
+  /** @type {Array<{ route: string, label: string, sizeKb: number, maxKb: number, deltaKb: number | null, reason: string, kind: 'js' | 'css' }>} */
   const violations = [];
   const audited = auditRouteSet(config);
+  const kindLabel = budget.kind === "css" ? "CSS" : "JS";
 
   for (const [route, sizeKb] of Object.entries(current)) {
     const override = config.routes?.[route];
-    const maxKb = override?.maxKbGz ?? config.defaultMaxKbGz;
+    const maxKb =
+      budget.kind === "css"
+        ? (override?.maxCssKbGz ?? budget.defaultMaxKbGz)
+        : (override?.maxKbGz ?? budget.defaultMaxKbGz);
     const baseKb = baseline?.[route];
 
     if (sizeKb > maxKb) {
@@ -134,20 +224,22 @@ export function evaluateRoutes(current, config, baseline) {
         sizeKb,
         maxKb,
         deltaKb,
-        reason: `exceeds budget ${maxKb} KB gz (actual ${sizeKb} KB gz${deltaKb != null ? `, +${deltaKb} KB vs base` : ""})`,
+        kind: budget.kind,
+        reason: `${kindLabel} exceeds budget ${maxKb} KB gz (actual ${sizeKb} KB gz${deltaKb != null ? `, +${deltaKb} KB vs base` : ""})`,
       });
       continue;
     }
 
     const trackRegression = audited.size === 0 || audited.has(route);
-    if (trackRegression && baseKb != null && sizeKb > baseKb + REGRESSION_TOLERANCE_KB) {
+    if (trackRegression && baseKb != null && sizeKb > baseKb + budget.regressionToleranceKb) {
       violations.push({
         route,
         label: routeToLabel(route),
         sizeKb,
         maxKb,
         deltaKb: roundKb(sizeKb - baseKb),
-        reason: `regression vs base (+${roundKb(sizeKb - baseKb)} KB gz; base ${baseKb} KB gz)`,
+        kind: budget.kind,
+        reason: `${kindLabel} regression vs base (+${roundKb(sizeKb - baseKb)} KB gz; base ${baseKb} KB gz)`,
       });
     }
   }
@@ -181,8 +273,9 @@ function printViolations(violations) {
         : v.deltaKb > 0
           ? ` (+${v.deltaKb} KB vs base)`
           : ` (${v.deltaKb} KB vs base)`;
+    const kind = v.kind === "css" ? "CSS" : "JS";
     console.error(
-      `  • ${v.label}: ${v.sizeKb} KB gz (limit ${v.maxKb} KB gz)${delta} — ${v.reason}`,
+      `  • [${kind}] ${v.label}: ${v.sizeKb} KB gz (limit ${v.maxKb} KB gz)${delta} — ${v.reason}`,
     );
   }
 }
@@ -202,15 +295,36 @@ function runSelfTest() {
 
   const passSizes = { "/fixture/pass/page": 80 };
   const failSizes = { "/fixture/fail/page": 200 };
-  const passViolations = evaluateRoutes(passSizes, config, { "/fixture/pass/page": 80 });
-  const failViolations = evaluateRoutes(failSizes, config, { "/fixture/fail/page": 120 });
+  const passViolations = evaluateRoutes(passSizes, config, { "/fixture/pass/page": 80 }, {
+    kind: "js",
+    defaultMaxKbGz: config.defaultMaxKbGz,
+    regressionToleranceKb: REGRESSION_TOLERANCE_KB,
+  });
+  const failViolations = evaluateRoutes(failSizes, config, { "/fixture/fail/page": 120 }, {
+    kind: "js",
+    defaultMaxKbGz: config.defaultMaxKbGz,
+    regressionToleranceKb: REGRESSION_TOLERANCE_KB,
+  });
+
+  const cssPassSizes = { "/fixture/pass/page": 12 };
+  const cssFailSizes = { "/fixture/fail/page": 40 };
+  const cssPassViolations = evaluateRoutes(cssPassSizes, config, { "/fixture/pass/page": 12 }, {
+    kind: "css",
+    defaultMaxKbGz: config.defaultMaxCssKbGz,
+    regressionToleranceKb: CSS_REGRESSION_TOLERANCE_KB,
+  });
+  const cssFailViolations = evaluateRoutes(cssFailSizes, config, { "/fixture/fail/page": 20 }, {
+    kind: "css",
+    defaultMaxKbGz: config.defaultMaxCssKbGz,
+    regressionToleranceKb: CSS_REGRESSION_TOLERANCE_KB,
+  });
 
   let failed = false;
   if (passViolations.length !== 0) {
     console.error("SELF-TEST FAIL: expected pass fixture to be clean");
     failed = true;
   } else {
-    console.log("SELF-TEST PASS: under-budget route (80 KB gz)");
+    console.log("SELF-TEST PASS: under-budget route (80 KB gz JS)");
   }
 
   if (failViolations.length === 0) {
@@ -220,6 +334,23 @@ function runSelfTest() {
     const v = failViolations[0];
     console.log(
       `SELF-TEST FAIL (expected): ${v.label} ${v.sizeKb} KB gz exceeds ${v.maxKb} KB gz (+${v.deltaKb} KB vs base)`,
+    );
+  }
+
+  if (cssPassViolations.length !== 0) {
+    console.error("SELF-TEST FAIL: expected CSS pass fixture to be clean");
+    failed = true;
+  } else {
+    console.log(`SELF-TEST PASS: under-budget route (12 KB gz CSS, limit ${config.defaultMaxCssKbGz})`);
+  }
+
+  if (cssFailViolations.length === 0) {
+    console.error("SELF-TEST FAIL: expected CSS over-budget fixture to violate");
+    failed = true;
+  } else {
+    const v = cssFailViolations[0];
+    console.log(
+      `SELF-TEST FAIL (expected): [CSS] ${v.label} ${v.sizeKb} KB gz exceeds ${v.maxKb} KB gz (+${v.deltaKb} KB vs base)`,
     );
   }
 
@@ -249,6 +380,7 @@ function main() {
   const writeOnly = args.includes("--write-baseline-only");
 
   const sizes = collectRouteSizes(manifestPath, nextDir);
+  const cssSizes = collectRouteCssSizes(manifestPath, nextDir);
   if (writePath) {
     writeSnapshot(sizes, resolve(writePath));
     console.log(`Wrote bundle snapshot (${Object.keys(sizes).length} routes) → ${writePath}`);
@@ -259,7 +391,19 @@ function main() {
 
   const config = loadBudgetConfig();
   const baseline = baselinePath && existsSync(baselinePath) ? readSnapshot(baselinePath) : null;
-  const violations = evaluateRoutes(sizes, config, baseline);
+  const violations = [
+    ...evaluateRoutes(sizes, config, baseline, {
+      kind: "js",
+      defaultMaxKbGz: config.defaultMaxKbGz,
+      regressionToleranceKb: REGRESSION_TOLERANCE_KB,
+    }),
+    // CSS snapshots are not baselined in CI yet — ceiling-only until a css snapshot ships.
+    ...evaluateRoutes(cssSizes, config, null, {
+      kind: "css",
+      defaultMaxKbGz: config.defaultMaxCssKbGz,
+      regressionToleranceKb: CSS_REGRESSION_TOLERANCE_KB,
+    }),
+  ];
 
   if (violations.length > 0) {
     printViolations(violations);
@@ -267,7 +411,9 @@ function main() {
   }
 
   const routeCount = Object.keys(sizes).length;
-  console.log(`Bundle guard OK — ${routeCount} routes within budget.`);
+  console.log(
+    `Bundle guard OK — ${routeCount} routes within JS and CSS budgets (CSS max observed ${Math.max(...Object.values(cssSizes)).toFixed(1)} KB gz).`,
+  );
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);

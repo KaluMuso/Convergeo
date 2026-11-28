@@ -107,6 +107,8 @@
     "bundle": {
       "defaultMaxKbGz": 150,
       "defaultJustification": "CLAUDE.md convention #7 — customer routes ≤150 KB gz first-load JS on Fast-3G/360px devices.",
+      "defaultMaxCssKbGz": 30,
+      "defaultMaxCssJustification": "Local prod customer build (2026-11-28): shop layouts ship ~20.8 KB gz CSS per route (locale + shop layouts); heaviest route /(dev)/ui ~26.7 KB gz — 30 KB ceiling leaves headroom for token growth without bloating 3G first paint.",
       "reductionNote": "2026-07: code-split @vergeo/auth (the Supabase browser client) off first-load via a lazy getBrowserClient accessor — useSession and every direct consumer now import it dynamically. Dropped ~60 KB gz from each customer route (PDP 195→131, auth/checkout/account routes 184–192→120–128), bringing ALL 47 routes under the 150 KB target, so the per-route overrides (previously up to 197 KB) are gone and the default 150 now genuinely gates every route.",
       "routes": {},
       "auditRoutes": [

@@ -8,7 +8,10 @@ import { readFileSync } from "node:fs";
 
 const cfg = JSON.parse(readFileSync("lighthouserc.json", "utf8"));
 if (!cfg.ci?.collect?.url?.length) throw new Error("missing ci.collect.url");
-if (!cfg.vergeo?.bundle?.defaultMaxKbGz) throw new Error("missing vergeo.bundle");
+if (!cfg.vergeo?.bundle?.defaultMaxKbGz) throw new Error("missing vergeo.bundle.defaultMaxKbGz");
+if (!cfg.vergeo?.bundle?.defaultMaxCssKbGz) {
+  throw new Error("missing vergeo.bundle.defaultMaxCssKbGz");
+}
 
 const numberOfRuns = cfg.ci.collect?.numberOfRuns ?? 3;
 if (numberOfRuns < 3) {
