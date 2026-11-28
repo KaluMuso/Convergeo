@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@vergeo/ui/src/data-table";
 import { IconTile } from "@vergeo/ui/src/icon-tile";
 import { LcStore } from "@vergeo/ui/src/lucide-icons";
 import { useTranslations } from "next-intl";
@@ -117,7 +118,7 @@ export function KycQueue({ locale }: KycQueueProps) {
             ))}
           </ul>
           <div className="hidden overflow-x-auto sm:block">
-            <table className="admin-data-table min-w-full">
+            <DataTable className="admin-data-table min-w-full">
               <thead>
                 <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
                   <th className="px-2 py-3 font-medium">{t("vendor")}</th>
@@ -174,7 +175,7 @@ export function KycQueue({ locale }: KycQueueProps) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </DataTable>
           </div>
         </>
       )}
