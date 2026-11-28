@@ -141,6 +141,9 @@ def verify_pickup_by_pin(
     note: str = "Pickup verified via PIN",
 ) -> PickupVerifyResult:
     row = _fetch_pickup_state(order_id)
+    # Ownership first: a vendor must not learn whether a PIN is right for an
+    # order that is not theirs (a 403 for any PIN, never a PIN oracle).
+    _assert_vendor_scope(expected_vendor_id=vendor_id, order_vendor_id=str(row["vendor_id"]))
     pin_hash = row.get("pin_hash")
     if not isinstance(pin_hash, str):
         pin_ok = False
