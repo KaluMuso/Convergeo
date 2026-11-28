@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Annotated, Any
 
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
@@ -31,9 +32,11 @@ from app.services.discovery.trending import (
     TrendingListing,
     fetch_trending_listings,
 )
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 
 router = APIRouter(prefix="/discovery", tags=["discovery"])
+
+PUBLIC_HOME_CACHE_CONTROL = "public, s-maxage=30, stale-while-revalidate=60"
 
 
 def _rate_limit_discovery_read(request: Request, supabase: Any) -> None:
@@ -92,6 +95,7 @@ async def trending_listings(
 @router.get("/home", response_model=HomeFeedResponse)
 async def home_feed(
     request: Request,
+    response: Response,
     supabase: Annotated[Any, Depends(get_supabase_client)],
     department_paths: Annotated[
         str | None,
@@ -107,15 +111,21 @@ async def home_feed(
     trending_limit: Annotated[int, Query(ge=0, le=12)] = 8,
 ) -> HomeFeedResponse:
     """Homepage discovery BFF — concurrent fan-in, partial failure OK."""
-    _rate_limit_discovery_read(request, supabase)
     paths = [part.strip() for part in (department_paths or "").split(",") if part.strip()]
-    payload = await build_home_feed(
-        supabase.client,
-        department_paths=paths,
-        newest_limit=newest_limit,
-        department_limit=department_limit,
-        services_limit=services_limit,
-        vendors_limit=vendors_limit,
-        trending_limit=trending_limit,
+    # The limiter is a blocking Supabase RPC: run it in the threadpool (never on the
+    # event loop) and overlap it with the feed build instead of serialising them.
+    # A 429 from the limiter propagates out of gather as before.
+    _, payload = await asyncio.gather(
+        asyncio.to_thread(_rate_limit_discovery_read, request, supabase),
+        build_home_feed(
+            supabase.client,
+            department_paths=paths,
+            newest_limit=newest_limit,
+            department_limit=department_limit,
+            services_limit=services_limit,
+            vendors_limit=vendors_limit,
+            trending_limit=trending_limit,
+        ),
     )
+    response.headers["Cache-Control"] = PUBLIC_HOME_CACHE_CONTROL
     return HomeFeedResponse.model_validate(payload.model_dump())
