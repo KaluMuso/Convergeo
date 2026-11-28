@@ -155,9 +155,7 @@ class FakeTable:
     def update(self, payload: dict[str, Any]) -> FakeQuery:
         return FakeQuery(self, []).update(payload)
 
-    def upsert(
-        self, payload: dict[str, Any], *, on_conflict: str | None = None
-    ) -> FakeQuery:
+    def upsert(self, payload: dict[str, Any], *, on_conflict: str | None = None) -> FakeQuery:
         return FakeQuery(self, []).upsert(payload, on_conflict=on_conflict)
 
     def delete(self) -> FakeQuery:
@@ -410,9 +408,7 @@ def test_create_and_list_events(
 def test_create_event_with_ends_at(organiser_client: TestClient) -> None:
     payload = _create_payload(starts_at="2026-09-01T18:00:00+02:00")
     payload["instances"][0]["ends_at"] = "2026-09-01T22:00:00+02:00"
-    response = organiser_client.post(
-        "/organiser/events", headers=_auth_headers(), json=payload
-    )
+    response = organiser_client.post("/organiser/events", headers=_auth_headers(), json=payload)
     assert response.status_code == 200
     instances = response.json()["event"]["instances"]
     assert len(instances) == 1
@@ -439,9 +435,7 @@ def test_create_private_event_defaults_visibility_and_hashes_code(
     payload = _create_payload()
     payload["event_type"] = "private"
     payload["access_code"] = "vip-only"
-    response = organiser_client.post(
-        "/organiser/events", headers=_auth_headers(), json=payload
-    )
+    response = organiser_client.post("/organiser/events", headers=_auth_headers(), json=payload)
     assert response.status_code == 200
     body = response.json()["event"]
     assert body["event_type"] == "private"
@@ -506,9 +500,7 @@ def test_leaving_private_visibility_clears_access_credential(
 def test_create_event_rejects_ends_at_before_starts_at(organiser_client: TestClient) -> None:
     payload = _create_payload(starts_at="2026-09-01T18:00:00+02:00")
     payload["instances"][0]["ends_at"] = "2026-09-01T17:00:00+02:00"  # before start
-    response = organiser_client.post(
-        "/organiser/events", headers=_auth_headers(), json=payload
-    )
+    response = organiser_client.post("/organiser/events", headers=_auth_headers(), json=payload)
     assert response.status_code == 422
 
 
@@ -722,3 +714,86 @@ def test_child_category_create_edit_roundtrip(organiser_client: TestClient) -> N
     assert rejected.status_code == 422
     readback = organiser_client.get(f"/organiser/events/{event['id']}", headers=_auth_headers())
     assert readback.json()["event"]["category"] == "football"
+
+
+def test_create_derives_archetype_and_validates_details(organiser_client: TestClient) -> None:
+    payload = _create_payload()
+    payload["category"] = "church"
+    payload["archetype_details"] = {"agenda": [{"time": "09:00", "title": "Worship"}]}
+    response = organiser_client.post("/organiser/events", headers=_auth_headers(), json=payload)
+    assert response.status_code == 200
+    body = response.json()["event"]
+    assert body["archetype"] == "religious"
+    assert body["archetype_source"] == "derived"
+    assert body["archetype_details"]["agenda"][0]["title"] == "Worship"
+
+
+def test_create_override_archetype(organiser_client: TestClient) -> None:
+    payload = _create_payload()
+    payload["archetype"] = "concert"
+    payload["archetype_details"] = {"sponsors": [{"name": "Mosi", "status": "approved"}]}
+    body = organiser_client.post("/organiser/events", headers=_auth_headers(), json=payload).json()[
+        "event"
+    ]
+    assert (body["archetype"], body["archetype_source"]) == ("concert", "override")
+    # Client-sent approval is ignored: sponsors start pending until an admin approves.
+    assert body["archetype_details"]["sponsors"][0]["status"] == "pending"
+
+
+def test_create_rejects_details_for_wrong_archetype(
+    organiser_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    payload = _create_payload()  # workshops -> generic
+    payload["archetype_details"] = {"lineup": [{"name": "A"}]}
+    response = organiser_client.post("/organiser/events", headers=_auth_headers(), json=payload)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_archetype_details"
+    assert len(fake_client.tables["events"].rows) == 0
+
+
+def test_create_rejects_unsafe_sponsor_url(organiser_client: TestClient) -> None:
+    payload = _create_payload()
+    payload["archetype_details"] = {"sponsors": [{"name": "x", "link_url": "javascript:1"}]}
+    response = organiser_client.post("/organiser/events", headers=_auth_headers(), json=payload)
+    assert response.status_code == 422
+
+
+def test_update_details_override_and_prune(
+    organiser_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    _seed_event(fake_client)
+    url = f"/organiser/events/{EVENT_A_ID}"
+    ok = organiser_client.patch(
+        url,
+        headers=_auth_headers(),
+        json={
+            "archetype": "concert",
+            "archetype_details": {"stages": ["Main"], "dress_code": "Smart"},
+        },
+    )
+    assert ok.status_code == 200
+    assert ok.json()["event"]["archetype"] == "concert"
+    # Switching archetype without new details prunes foreign keys but keeps common ones.
+    switched = organiser_client.patch(url, headers=_auth_headers(), json={"archetype": "religious"})
+    assert switched.status_code == 200
+    assert switched.json()["event"]["archetype_details"] == {"dress_code": "Smart"}
+    # null clears the override back to the derived archetype (workshops -> generic).
+    cleared = organiser_client.patch(url, headers=_auth_headers(), json={"archetype": None})
+    assert cleared.json()["event"]["archetype"] == "generic"
+    assert cleared.json()["event"]["archetype_source"] == "derived"
+    bad = organiser_client.patch(
+        url, headers=_auth_headers(), json={"archetype_details": {"lineup": []}}
+    )
+    assert bad.status_code == 422
+
+
+def test_other_vendor_cannot_write_archetype(
+    organiser_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    _seed_event(fake_client)
+    response = organiser_client.patch(
+        f"/organiser/events/{EVENT_A_ID}",
+        headers=_auth_headers(TOKEN_B),
+        json={"archetype": "concert"},
+    )
+    assert response.status_code == 404

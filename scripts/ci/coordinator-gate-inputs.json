@@ -618,7 +618,11 @@
     "20261127090000_ask_answer_log_audit.sql": "b7ca232c2057dd1e79214f178d4ecc77d7c41106c3f3171b1f3f473c025fa648",
     "20261127100000_vendor_sourcing_hub.sql": "f34416a5fb92af7eb26151e536a90d0f2ffd25c5ea08d0abb82c4a5305e41925",
     "20261127120000_service_packages_open_list.sql": "778f6a4028f4d90996ede2ada4836ab1a9179ad9a3a7b2b70fa94d8ef7f139c6",
-    "20261128090000_service_archetypes.sql": "7cf1c0ad6699ab199cddc19dcc9ec01914e2268e3f2d3cf47f444dd7fe4fa39a"
+    "20261127130000_catalog_taxonomy_admin_control.sql": "0813c5017dcf2a661bf1eb83f67b776e90f91b3f35ef476529fb02aeaa08d797",
+    "20261127150000_event_archetypes.sql": "238fe1d535bc976aa8a9074c887174402e6546f8d36f5d735a81b51310f31f62",
+    "20261128000000_lock_vendor_payout_columns_and_client_inserts.sql": "4c700238efef8f7b2565833e9609d376e46b496042258d8043c75e0bbd928f71",
+    "20261128090000_service_archetypes.sql": "7cf1c0ad6699ab199cddc19dcc9ec01914e2268e3f2d3cf47f444dd7fe4fa39a",
+    "20261128100000_service_categories_archetype_seed.sql": "05c27f388472952bcf02d570aa93b618bc68d1eee9201be3d78c69381ed51bce"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
@@ -634,7 +638,7 @@
     "scripts/ci/critical-real-stack-nodes.txt": "19b1ce00d621f4fe39c521e799f31f23fdbd6d8a736e07525bee5b4444abb496",
     "scripts/ci/migration-replay.sh": "9556f94d0ab002c8eb3e2f7e200d52ccf72e56d7479489ecd7fecf2281dedaed",
     "scripts/ci/run-critical-real-stack.sh": "66c7f5bb889c8fbfcc7da88bdf4be6a14485e99850192fcd490f038eb152335c",
-    "scripts/ci/run_financial_real_stack.py": "a20ba3bdf958d873deb166625b257886da940777edd690da22ce64037cab40bb",
+    "scripts/ci/run_financial_real_stack.py": "733f49ced00bce3c4682f989cc35951f35dd96500e7e2ac2261ed155bf2c0f01",
     "scripts/drills/f2_collection_manifest.py": "655cdeafbaf6017870dadb9677a3e7315bc7d25f245528440048220ecb8c782e",
     "scripts/drills/f2_real_stack_report.py": "ac274ad1292f6998e17514d268c3c9bc0692730122c2ca2e46c7c76891ca75c8",
     "scripts/drills/f2_upgrade_probe.py": "e475fa8843d5a921755ce8e8f7cdf35a3611a25ad43b45252341948b7ad4cf6c",

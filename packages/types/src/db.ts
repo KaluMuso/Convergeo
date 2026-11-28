@@ -1246,40 +1246,64 @@ export type Database = {
         Row: {
           commission_key: string
           created_at: string
+          icon: string | null
           id: string
+          image_alt: string | null
+          image_public_id: string | null
           name: string
           parent_id: string | null
           path: string
           position: number
           prohibited: boolean
+          show_in_customer: boolean
+          show_in_vendor: boolean
           slug: string
+          status: Database["public"]["Enums"]["taxonomy_status"]
+          umbrella: Database["public"]["Enums"]["taxonomy_umbrella"]
           updated_at: string
+          updated_by: string | null
           vat_flag: boolean
         }
         Insert: {
           commission_key: string
           created_at?: string
+          icon?: string | null
           id?: string
+          image_alt?: string | null
+          image_public_id?: string | null
           name: string
           parent_id?: string | null
           path: string
           position?: number
           prohibited?: boolean
+          show_in_customer?: boolean
+          show_in_vendor?: boolean
           slug: string
+          status?: Database["public"]["Enums"]["taxonomy_status"]
+          umbrella?: Database["public"]["Enums"]["taxonomy_umbrella"]
           updated_at?: string
+          updated_by?: string | null
           vat_flag?: boolean
         }
         Update: {
           commission_key?: string
           created_at?: string
+          icon?: string | null
           id?: string
+          image_alt?: string | null
+          image_public_id?: string | null
           name?: string
           parent_id?: string | null
           path?: string
           position?: number
           prohibited?: boolean
+          show_in_customer?: boolean
+          show_in_vendor?: boolean
           slug?: string
+          status?: Database["public"]["Enums"]["taxonomy_status"]
+          umbrella?: Database["public"]["Enums"]["taxonomy_umbrella"]
           updated_at?: string
+          updated_by?: string | null
           vat_flag?: boolean
         }
         Relationships: [
@@ -3050,24 +3074,51 @@ export type Database = {
       event_categories: {
         Row: {
           created_at: string
+          icon: string | null
+          image_alt: string | null
+          image_public_id: string | null
           label_key: string
+          name: string | null
           parent_slug: string | null
+          show_in_customer: boolean
+          show_in_vendor: boolean
           slug: string
           sort: number
+          status: Database["public"]["Enums"]["taxonomy_status"]
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
           created_at?: string
+          icon?: string | null
+          image_alt?: string | null
+          image_public_id?: string | null
           label_key: string
+          name?: string | null
           parent_slug?: string | null
+          show_in_customer?: boolean
+          show_in_vendor?: boolean
           slug: string
           sort?: number
+          status?: Database["public"]["Enums"]["taxonomy_status"]
+          updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           created_at?: string
+          icon?: string | null
+          image_alt?: string | null
+          image_public_id?: string | null
           label_key?: string
+          name?: string | null
           parent_slug?: string | null
+          show_in_customer?: boolean
+          show_in_vendor?: boolean
           slug?: string
           sort?: number
+          status?: Database["public"]["Enums"]["taxonomy_status"]
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -3952,6 +4003,8 @@ export type Database = {
         Row: {
           access_code_hash: string | null
           age_restriction: number | null
+          archetype: string | null
+          archetype_details: Json
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -3976,6 +4029,7 @@ export type Database = {
           recurrence_until: string | null
           refund_policy_key: string | null
           slug: string
+          sponsor_review_pending: boolean
           status: string
           terms: string | null
           title: string
@@ -3986,6 +4040,8 @@ export type Database = {
         Insert: {
           access_code_hash?: string | null
           age_restriction?: number | null
+          archetype?: string | null
+          archetype_details?: Json
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -4010,6 +4066,7 @@ export type Database = {
           recurrence_until?: string | null
           refund_policy_key?: string | null
           slug: string
+          sponsor_review_pending?: boolean
           status?: string
           terms?: string | null
           title: string
@@ -4020,6 +4077,8 @@ export type Database = {
         Update: {
           access_code_hash?: string | null
           age_restriction?: number | null
+          archetype?: string | null
+          archetype_details?: Json
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -4044,6 +4103,7 @@ export type Database = {
           recurrence_until?: string | null
           refund_policy_key?: string | null
           slug?: string
+          sponsor_review_pending?: boolean
           status?: string
           terms?: string | null
           title?: string
@@ -8045,38 +8105,59 @@ export type Database = {
         Row: {
           archetype: string | null
           created_at: string
+          icon: string | null
+          image_alt: string | null
+          image_public_id: string | null
           is_active: boolean
           name: string
           parent_slug: string | null
           path: string
           regulator: string | null
+          show_in_customer: boolean
+          show_in_vendor: boolean
           slug: string
           sort: number
+          status: Database["public"]["Enums"]["taxonomy_status"]
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           archetype?: string | null
           created_at?: string
+          icon?: string | null
+          image_alt?: string | null
+          image_public_id?: string | null
           is_active?: boolean
           name: string
           parent_slug?: string | null
           path: string
           regulator?: string | null
+          show_in_customer?: boolean
+          show_in_vendor?: boolean
           slug: string
           sort?: number
+          status?: Database["public"]["Enums"]["taxonomy_status"]
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           archetype?: string | null
           created_at?: string
+          icon?: string | null
+          image_alt?: string | null
+          image_public_id?: string | null
           is_active?: boolean
           name?: string
           parent_slug?: string | null
           path?: string
           regulator?: string | null
+          show_in_customer?: boolean
+          show_in_vendor?: boolean
           slug?: string
           sort?: number
+          status?: Database["public"]["Enums"]["taxonomy_status"]
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -11405,6 +11486,8 @@ export type Database = {
         | "WARMA"
         | "TCZ"
         | "OTHER"
+      taxonomy_status: "draft" | "published" | "blocked"
+      taxonomy_umbrella: "product" | "service" | "event" | "wholesale"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -11547,6 +11630,8 @@ export const Constants = {
         "TCZ",
         "OTHER",
       ],
+      taxonomy_status: ["draft", "published", "blocked"],
+      taxonomy_umbrella: ["product", "service", "event", "wholesale"],
     },
   },
 } as const
