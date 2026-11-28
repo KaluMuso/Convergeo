@@ -1,0 +1,9 @@
+# Install as /etc/cron.d/vergeo5-backup on the Hetzner API host (root-owned, mode 0644).
+# Twice-daily encrypted production backup to R2, plus a weekly copy and a weekly restore drill.
+CRON_TZ=Africa/Lusaka
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+0 2,14 * * * root /usr/local/bin/vergeo5-db-backup daily >> /var/log/vergeo5-backup.log 2>&1
+30 3 * * 0 root /usr/local/bin/vergeo5-db-backup weekly >> /var/log/vergeo5-backup.log 2>&1
+# Weekly restore drill into a throwaway Postgres (needs the drill key, see docs/ops/backup-runbook-r2.md).
+30 4 * * 0 root /usr/local/bin/vergeo5-restore-drill >> /var/log/vergeo5-restore-drill.log 2>&1
