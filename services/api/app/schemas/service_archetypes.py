@@ -49,6 +49,8 @@ VERTICAL_ARCHETYPE: Final[dict[str, str]] = {
     "printing-creative": "professional",
     "food-catering": "professional",
     "staffing": "professional",
+    "logistics": "professional",
+    "packaging": "professional",
 }
 
 MAX_ATTRIBUTES_BYTES: Final = 8000
