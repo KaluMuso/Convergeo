@@ -201,7 +201,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       serwist:
         specifier: ^9.5.13
-        version: 9.5.13(browserslist@4.28.8)(typescript@5.9.3)
+        version: 9.5.13(browserslist@4.28.7)(typescript@5.9.3)
     devDependencies:
       '@serwist/next':
         specifier: ^9.5.13
@@ -275,7 +275,13 @@ importers:
       react-dom:
         specifier: ^19.3.0
         version: 19.3.1(react@19.3.1)
+      serwist:
+        specifier: ^9.5.13
+        version: 9.5.13(browserslist@4.28.8)(typescript@5.9.3)
     devDependencies:
+      '@serwist/next':
+        specifier: ^9.5.13
+        version: 9.5.13(next@15.5.29(patch_hash=qhifjjz47xkknspj4bhmaa55uu)(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)(typescript@5.9.3)(webpack@5.108.4(lightningcss@1.33.0))
       '@tailwindcss/postcss':
         specifier: ^4.3.5
         version: 4.3.5
@@ -1900,7 +1906,7 @@ packages:
   '@serwist/utils@9.5.13':
     resolution: {integrity: sha512-jJJSvl0pSc6udJ7pN2u0oduOfQqSY6oJNjbIc82YcVnkpzj1O+qFHYdrR6tu9bspa30Nc8ZVV+VncOcyguvk5w==}
     peerDependencies:
-      browserslist: 4.28.8
+      browserslist: 4.28.7
     peerDependenciesMeta:
       browserslist:
         optional: true
@@ -5987,6 +5993,10 @@ snapshots:
     transitivePeerDependencies:
       - webpack
 
+  '@serwist/utils@9.5.13(browserslist@4.28.7)':
+    optionalDependencies:
+      browserslist: 4.28.7
+
   '@serwist/utils@9.5.13(browserslist@4.28.8)':
     optionalDependencies:
       browserslist: 4.28.8
@@ -8407,6 +8417,15 @@ snapshots:
 
   sentry@0.49.0: {}
 
+  serwist@9.5.13(browserslist@4.28.7)(typescript@5.9.3):
+    dependencies:
+      '@serwist/utils': 9.5.13(browserslist@4.28.7)
+      idb: 8.0.3
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - browserslist
+
   serwist@9.5.13(browserslist@4.28.8)(typescript@5.9.3):
     dependencies:
       '@serwist/utils': 9.5.13(browserslist@4.28.8)
@@ -8869,7 +8888,7 @@ snapshots:
       '@webassemblyjs/wasm-parser': 1.14.1
       acorn: 8.19.0
       acorn-import-phases: 1.0.4(acorn@8.19.0)
-      browserslist: 4.28.7
+      browserslist: 4.28.8
       chrome-trace-event: 1.0.4
       enhanced-resolve: 5.27.0
       es-module-lexer: 2.3.2
@@ -8912,7 +8931,7 @@ snapshots:
       '@webassemblyjs/wasm-parser': 1.14.1
       acorn: 8.19.0
       acorn-import-phases: 1.0.4(acorn@8.19.0)
-      browserslist: 4.28.7
+      browserslist: 4.28.8
       chrome-trace-event: 1.0.4
       enhanced-resolve: 5.27.0
       es-module-lexer: 2.3.2

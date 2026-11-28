@@ -1,11 +1,8 @@
 import { resolveApiBaseUrl } from "./lib/api-base-url";
 
 /**
- * Serwist runtime-caching fragment for the organiser event-ticket scanner.
- * Mirrors apps/customer/sw-wallet.ts -- a standalone fragment awaiting merge
- * into the vendor app's service worker by a later PWA-wiring pebble. Do not
- * import from pages; do not edit the (not-yet-created) vendor serwist config
- * from here.
+ * Serwist runtime-caching predicates for the organiser event-ticket scanner.
+ * Wired into `sw.ts` — do not import from pages.
  *
  * The scanner itself is offline-first via IndexedDB (see
  * app/[locale]/events/[id]/scan/_lib/offline-store.ts), not via the service
@@ -29,7 +26,12 @@ export type ScannerRuntimeCaching = {
   };
 };
 
-const SCANNER_PAGE_PATTERN = /\/[^/]+\/events\/[^/]+\/scan(?:\/|$)/;
+export const SCANNER_PAGE_PATTERN = /\/[^/]+\/events\/[^/]+\/scan\/?$/;
+
+/** Locale-prefixed event ticket scanner document route. */
+export function isScannerPagePathname(pathname: string): boolean {
+  return SCANNER_PAGE_PATTERN.test(pathname);
+}
 
 function matchesScanSyncApi(url: URL): boolean {
   const apiBase = resolveApiBaseUrl();
@@ -47,9 +49,14 @@ function matchesScanSyncApi(url: URL): boolean {
   }
 }
 
+/** scan-sync GET on the public API origin (secondary safety net beside IndexedDB). */
+export function isScanSyncApiUrl(url: URL): boolean {
+  return matchesScanSyncApi(url);
+}
+
 /** Scanner app-shell route -- cache-first so the PWA boots offline after the first visit. */
 export const scannerPageCache: ScannerRuntimeCaching = {
-  matcher: ({ url }) => SCANNER_PAGE_PATTERN.test(url.pathname),
+  matcher: ({ url }) => isScannerPagePathname(url.pathname),
   handler: "StaleWhileRevalidate",
   options: {
     cacheName: "event-scanner-pages-v1",

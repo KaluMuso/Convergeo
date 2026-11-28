@@ -10,6 +10,8 @@ out/
 # Serwist / PWA generated service worker (customer) — M16-P02
 apps/customer/public/sw.js
 apps/customer/public/sw.js.map
+apps/vendor/public/sw.js
+apps/vendor/public/sw.js.map
 apps/customer/public/swe-worker-*.js
 apps/customer/public/swe-worker-*.js.map
 
