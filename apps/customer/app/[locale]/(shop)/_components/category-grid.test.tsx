@@ -166,4 +166,45 @@ describe("CategoryGrid (CUST-HOME-01)", () => {
       "campaign/electronics-tile",
     );
   });
+
+  it("uses the admin-set icon over the built-in photo, but campaign art still wins", () => {
+    const category = {
+      id: "1",
+      name: "Electronics",
+      slug: "electronics",
+      path: "electronics",
+      position: 0,
+      parent_id: null,
+      prohibited: false,
+      icon_public_id: "categories/icons/electronics",
+    };
+    const { unmount } = render(<CategoryGrid categories={[category]} locale="en" t={t} />);
+    expect(screen.getByTestId("cloudinary-image")).toHaveAttribute(
+      "data-public-id",
+      "categories/icons/electronics",
+    );
+    unmount();
+
+    render(
+      <CategoryGrid
+        slot={{
+          id: "cat-grid",
+          slot_key: "category_grid",
+          variant_key: "default",
+          payload: { images: { electronics: "campaign/electronics-tile" } },
+          schedule_from: null,
+          schedule_to: null,
+          position: 0,
+          active: true,
+        }}
+        categories={[category]}
+        locale="en"
+        t={t}
+      />,
+    );
+    expect(screen.getByTestId("cloudinary-image")).toHaveAttribute(
+      "data-public-id",
+      "campaign/electronics-tile",
+    );
+  });
 });

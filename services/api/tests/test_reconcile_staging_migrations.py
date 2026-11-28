@@ -161,6 +161,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261127090000",
     # Vendor sourcing hub (additive, documented down).
     "20261127100000",
+    # Admin category presentation (additive, documented down).
+    "20261128190000",
 }
 
 

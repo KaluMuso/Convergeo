@@ -2973,6 +2973,8 @@ EXPECTATIONS: TableExpectations = {
     "ad_placement_daily_stats": client_invisible(),
     # Admin catalog control holds (20261123100000): service-role only.
     "catalog_moderation_holds": client_invisible(),
+    # Admin category icon / banner / copy (20261128190000): service-role only.
+    "category_presentations": client_invisible(),
     "flash_deals": client_invisible(),
     "product_questions": client_invisible(),
     "product_answers": client_invisible(),

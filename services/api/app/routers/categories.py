@@ -7,12 +7,18 @@ from typing import Annotated, Any, Protocol
 from app.deps import get_supabase_client
 from app.routers.organiser_events import EVENT_CATEGORIES
 from app.schemas.base import StrictModel
+from app.services.categories.presentation import (
+    CategoryPresentationOut,
+    list_public_presentations,
+)
 from app.services.categories.public import PublicCategory, list_public_categories
 from fastapi import APIRouter, Depends, Response
 
 router = APIRouter(tags=["categories"])
 
 PUBLIC_CATEGORIES_CACHE_CONTROL = "public, s-maxage=3600, stale-while-revalidate=300"
+# Shorter than the tree: admins expect a new banner to show within minutes.
+PUBLIC_PRESENTATION_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=300"
 
 
 class ServiceRoleClient(Protocol):
@@ -28,6 +34,17 @@ async def get_categories(
     categories = list_public_categories(service_client.client)
     response.headers["Cache-Control"] = PUBLIC_CATEGORIES_CACHE_CONTROL
     return categories
+
+
+@router.get("/categories/presentation", response_model=list[CategoryPresentationOut])
+async def get_category_presentations(
+    response: Response,
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> list[CategoryPresentationOut]:
+    """Admin-set icons, banners and per-locale banner copy for public categories."""
+    presentations = list_public_presentations(service_client.client)
+    response.headers["Cache-Control"] = PUBLIC_PRESENTATION_CACHE_CONTROL
+    return presentations
 
 
 class EventCategoryOption(StrictModel):

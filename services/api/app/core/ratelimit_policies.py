@@ -176,6 +176,10 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PATCH /account/profile": STANDARD_WRITE,
     "PATCH /cart/items/{listing_id}": CART_WRITE,
     "PATCH /config/categories/{category_id}": ADMIN_WRITE,
+    # Admin category icon / banner / banner copy (20261128190000).
+    "PUT /config/categories/{category_id}/presentation": ADMIN_WRITE,
+    "DELETE /config/categories/{category_id}/presentation": ADMIN_WRITE,
+    "POST /config/category-media/sign": ADMIN_WRITE,
     "PATCH /config/commissions/{category_key}": ADMIN_WRITE,
     "PATCH /config/delivery-zones/{zone_key}": ADMIN_WRITE,
     "PATCH /config/flags/{flag}": ADMIN_WRITE,
