@@ -12,8 +12,9 @@ from tests.test_listing_create import (  # noqa: F401 - fixtures
 )
 
 
-def test_category_options_hide_blocked_and_vendor_hidden(
-    listing_client: TestClient, fake_client: FakeSupabaseClient
+def test_category_options_hide_blocked_and_vendor_hidden(  # noqa: F811
+    listing_client: TestClient,
+    fake_client: FakeSupabaseClient,  # noqa: F811 - pytest fixtures
 ) -> None:
     rows = fake_client.tables["categories"].rows
     rows.append(
@@ -27,7 +28,13 @@ def test_category_options_hide_blocked_and_vendor_hidden(
         }
     )
     rows.append(
-        {"id": "blocked-cat", "name": "B", "commission_key": "default", "prohibited": False, "status": "blocked"}
+        {
+            "id": "blocked-cat",
+            "name": "B",
+            "commission_key": "default",
+            "prohibited": False,
+            "status": "blocked",
+        }
     )
     rows.append(
         {
@@ -45,7 +52,7 @@ def test_category_options_hide_blocked_and_vendor_hidden(
 
 
 def test_new_listing_in_blocked_category_is_rejected(
-    fake_client: FakeSupabaseClient,
+    fake_client: FakeSupabaseClient,  # noqa: F811
 ) -> None:
     from app.routers.vendor_listings import _load_category_commission_key
 
