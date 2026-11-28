@@ -624,7 +624,7 @@ test("one NO_NAVSTART trace retry retains evidence and all valid budget samples"
   }
 });
 
-test("repeated NO_NAVSTART fails after one retry and retains both invalid reports", async () => {
+test("repeated NO_NAVSTART fails after two retries and retains every invalid report", async () => {
   const dir = await mkdtemp(join(tmpdir(), "performance-trace-exhaustion-"));
   let calls = 0;
   try {
@@ -640,13 +640,13 @@ test("repeated NO_NAVSTART fails after one retry and retains both invalid report
       },
     });
     assert.equal(result.exitCode, 1);
-    assert.equal(calls, 2);
+    assert.equal(calls, 3);
     const output = join(dir, ".lighthouseci");
     const summary = JSON.parse(
       await readFile(join(output, "run-summary.json")),
     );
     const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
-    assert.equal(summary.collectionRetries.length, 1);
+    assert.equal(summary.collectionRetries.length, 2);
     assert.match(summary.errors[0].message, /NO_NAVSTART/);
     assert.equal(manifest.length, 1);
     assert.equal(
@@ -1208,10 +1208,18 @@ test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () =
         auditWithChrome(url, settings, deps, context),
     });
     assert.equal(result.exitCode, 1);
-    assert.equal(calls, 2);
-    assert.equal(pages.length, 2);
+    assert.equal(calls, 3);
+    assert.equal(pages.length, 3);
     assert.notEqual(pages[0], pages[1]);
+    assert.notEqual(pages[1], pages[2]);
     assert.deepEqual(events, [
+      "launch",
+      "connect",
+      "newPage",
+      "engine",
+      "page.close",
+      "disconnect",
+      "kill",
       "launch",
       "connect",
       "newPage",
@@ -1228,7 +1236,7 @@ test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () =
       "kill",
     ]);
     const output = join(dir, ".lighthouseci");
-    for (const suffix of ["", "-retry"]) {
+    for (const suffix of ["", "-retry", "-retry2"]) {
       const bytes = await readFile(
         join(output, `chrome-startup-1-1${suffix}.json`),
         "utf8",
@@ -1242,7 +1250,7 @@ test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () =
     const summary = JSON.parse(
       await readFile(join(output, "run-summary.json"), "utf8"),
     );
-    assert.equal(summary.collectionRetries.length, 1);
+    assert.equal(summary.collectionRetries.length, 2);
     assert.match(summary.errors[0].message, /NO_NAVSTART/);
   } finally {
     if (previous === undefined) delete process.env.CI_PERF_HARNESS;

@@ -22,6 +22,9 @@ import { promisify } from "node:util";
 import { inspectMeasuredContent } from "./perf-content-readiness.mjs";
 
 const execute = promisify(execFile);
+// A run gets its first collection plus up to two fresh-Chrome retries, only for an
+// unusable NO_NAVSTART trace. Thresholds and every other failure stay blocking.
+const MAX_COLLECTION_ATTEMPTS = 3;
 const sha = (value) =>
   typeof value === "string" && /^[0-9a-f]{40}$/.test(value) ? value : null;
 export const INCOMPLETE_LOAD_WARNING =
@@ -802,7 +805,7 @@ export async function runPerformance(
     for (let run = 0; run < config.ci.collect.numberOfRuns; run++) {
       try {
         let result;
-        for (let attempt = 1; attempt <= 2; attempt++) {
+        for (let attempt = 1; attempt <= MAX_COLLECTION_ATTEMPTS; attempt++) {
           result = await audit(
             url,
             structuredClone(config.ci.collect.settings ?? {}),
@@ -810,7 +813,7 @@ export async function runPerformance(
             {
               diagnosticsPath: join(
                 output,
-                `chrome-startup-${urlIndex + 1}-${run + 1}${attempt === 2 ? "-retry" : ""}.json`,
+                `chrome-startup-${urlIndex + 1}-${run + 1}${attempt === 1 ? "" : attempt === 2 ? "-retry" : `-retry${attempt - 1}`}.json`,
               ),
               source,
               urlIndex: urlIndex + 1,
@@ -820,7 +823,7 @@ export async function runPerformance(
           );
           const lhr = result?.lhr;
           if (
-            attempt !== 1 ||
+            attempt >= MAX_COLLECTION_ATTEMPTS ||
             lhr?.runtimeError?.code !== "NO_NAVSTART" ||
             lhr.requestedUrl !== url ||
             lhr.categories?.performance?.score != null ||
@@ -831,9 +834,9 @@ export async function runPerformance(
             !result.report.length
           )
             break;
-          // Keep the rejected trace outside the valid sample manifest and retry once
+          // Keep the rejected trace outside the valid sample manifest and retry up to twice
           // with a fresh Chrome session. Other failures remain blocking.
-          const stem = `rejected-lhr-${urlIndex + 1}-${run + 1}-attempt-1`;
+          const stem = `rejected-lhr-${urlIndex + 1}-${run + 1}-attempt-${attempt}`;
           const jsonPath = join(output, `${stem}.json`),
             htmlPath = join(output, `${stem}.html`);
           await writeFile(jsonPath, JSON.stringify(lhr, null, 2) + "\n");
