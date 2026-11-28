@@ -19,6 +19,8 @@ export type ServicePackage = {
   delivery_days: number;
   revisions: number | null;
   includes: string[];
+  /** Archetype-specific offer attributes (docs/plan/service-type-templates.md). */
+  attributes?: Record<string, unknown>;
 };
 
 /**
@@ -56,6 +58,10 @@ export function normalisePackages(input: unknown): ServicePackage[] {
       includes: Array.isArray(pkg.includes)
         ? pkg.includes.filter((item): item is string => typeof item === "string")
         : [],
+      attributes:
+        pkg.attributes && typeof pkg.attributes === "object" && !Array.isArray(pkg.attributes)
+          ? (pkg.attributes as Record<string, unknown>)
+          : {},
     });
   }
   return valid.slice(0, MAX_PACKAGES);

@@ -16,7 +16,36 @@
     "preferredBadge": "Recommandé",
     "verticalLabel": "Catégorie",
     "providerCta": "Proposez votre service",
-    "providerPitch": "Touchez les clients qui recherchent ce que vous proposez."
+    "providerPitch": "Touchez les clients qui recherchent ce que vous proposez.",
+    "fullyBooked": "Complet",
+    "ratingLine": "{rating} ({count})",
+    "filters": {
+      "heading": "Filtres",
+      "more": "Plus de filtres",
+      "clear": "Tout effacer",
+      "remove": "Retirer le filtre : {label}",
+      "results": "{count, plural, one {# service} other {# services}}",
+      "area": "Zone",
+      "areaAll": "Partout",
+      "price": "Prix",
+      "priceAny": "Tous les prix",
+      "priceBands": {
+        "under100": "Moins de K100",
+        "mid": "K100 à K500",
+        "high": "K500 à K2 000",
+        "premium": "Plus de K2 000"
+      },
+      "rating": "Note",
+      "ratingAny": "Toutes les notes",
+      "ratingOptions": {
+        "45": "4,5 et plus",
+        "4": "4 et plus",
+        "3": "3 et plus"
+      },
+      "availability": "Disponibilité",
+      "availabilityAny": "Toutes",
+      "availabilityNow": "Disponible maintenant"
+    }
   },
   "categories": {
     "all": "Toutes",
@@ -27,7 +56,13 @@
     "home-services": "Services à domicile",
     "tech-services": "Services techniques",
     "cleaning": "Nettoyage",
-    "tailoring": "Couture"
+    "tailoring": "Couture",
+    "lodging": "Hôtels et lodges",
+    "property": "Logement",
+    "fitness": "Salles de sport",
+    "rentals": "Locations",
+    "family-fun": "Loisirs en famille",
+    "staffing": "Recrutement et personnel"
   },
   "badges": {
     "fast": "Réponse rapide",
@@ -423,6 +458,194 @@
     "noPaymentNote": "Demander une formule ne vous débite rien. Vous convenez du prix final avec le prestataire dans la discussion du devis.",
     "errors": {
       "unavailable": "Cette formule n'est plus disponible. Actualisez la page pour voir les formules actuelles."
+    }
+  },
+  "templates": {
+    "archetypes": {
+      "accommodation": "Séjours",
+      "appointment": "Rendez-vous",
+      "membership": "Abonnements",
+      "on_site": "Services à domicile",
+      "rental": "Locations",
+      "ticketed": "Billets et visites",
+      "professional": "Services professionnels"
+    },
+    "common": {
+      "from": "À partir de",
+      "priceQuote": "Prix sur demande",
+      "select": "Choisir",
+      "noOffers": "Aucune option n'est encore listée. Envoyez une demande et le prestataire vous répondra.",
+      "perNight": "/ nuit",
+      "perMonth": "/ mois",
+      "per": {
+        "hour": "/ heure",
+        "day": "/ jour",
+        "week": "/ semaine"
+      },
+      "cancellation": "Annulation",
+      "cancellationKinds": {
+        "flexible": "Flexible",
+        "moderate": "Modérée",
+        "strict": "Stricte"
+      },
+      "availabilityLabel": "Disponibilité",
+      "availability": {
+        "available": "Accepte les demandes",
+        "limited": "Disponibilité limitée",
+        "unavailable": "Complet"
+      }
+    },
+    "days": {
+      "0": "Dimanche",
+      "1": "Lundi",
+      "2": "Mardi",
+      "3": "Mercredi",
+      "4": "Jeudi",
+      "5": "Vendredi",
+      "6": "Samedi"
+    },
+    "accommodation": {
+      "heading": "Chambres",
+      "amenities": "Équipements et services",
+      "checkIn": "Arrivée",
+      "checkOut": "Départ",
+      "roomTypes": {
+        "standard": "Standard",
+        "premium": "Premium",
+        "presidential": "Présidentielle",
+        "family": "Familiale",
+        "dorm": "Dortoir",
+        "other": "Chambre"
+      },
+      "bedTypes": {
+        "single": "simple",
+        "double": "double",
+        "queen": "queen",
+        "king": "king",
+        "bunk": "superposé"
+      },
+      "sleeps": "{count, plural, one {# personne} other {# personnes}}",
+      "beds": "{count, plural, one {# lit} other {# lits}}",
+      "bedsOfType": "{count, plural, one {# lit {type}} other {# lits {type}}}",
+      "size": "{sqm} m²",
+      "breakfast": "Petit-déjeuner inclus",
+      "minNights": "{count, plural, one {Min. # nuit} other {Min. # nuits}}",
+      "unitsLeft": "{count, plural, one {Plus que #} other {Plus que #}}"
+    },
+    "appointment": {
+      "heading": "Carte des soins",
+      "team": "L'équipe",
+      "walkIns": "Sans rendez-vous",
+      "walkInsYes": "Bienvenue",
+      "homeVisit": "À domicile",
+      "minutes": "{count} min",
+      "hours": "{count, plural, one {# heure} other {# heures}}",
+      "hoursMinutes": "{hours} h {minutes} min"
+    },
+    "membership": {
+      "heading": "Pass et abonnements",
+      "schedule": "Horaires des cours",
+      "facilities": "Équipements",
+      "bestValue": "Meilleur rapport",
+      "kinds": {
+        "day": "Pass journée",
+        "week": "Hebdomadaire",
+        "month": "Mensuel",
+        "quarter": "Trimestriel",
+        "year": "Annuel",
+        "class_pack": "Carnet de cours"
+      },
+      "perDay": "Environ {price} par jour",
+      "validFor": "{count, plural, one {Valable # jour} other {Valable # jours}}",
+      "visits": "{count, plural, one {# visite incluse} other {# visites incluses}}",
+      "unlimited": "Visites illimitées",
+      "classes": "Cours inclus",
+      "guests": "{count, plural, one {# pass invité} other {# pass invités}}",
+      "peakOnly": "Heures creuses uniquement",
+      "spots": "{count} places"
+    },
+    "rental": {
+      "heading": "À louer",
+      "pickup": "Retrait",
+      "withOperator": "Avec opérateur",
+      "delivery": "Livraison possible",
+      "available": "{count} disponibles",
+      "minPeriod": {
+        "hour": "{count, plural, one {Min. # heure} other {Min. # heures}}",
+        "day": "{count, plural, one {Min. # jour} other {Min. # jours}}",
+        "week": "{count, plural, one {Min. # semaine} other {Min. # semaines}}"
+      },
+      "deposit": "Caution {price}, versée au prestataire"
+    },
+    "request": {
+      "heading": {
+        "accommodation": "Demander ce séjour",
+        "appointment": "Demander un rendez-vous",
+        "membership": "Demander un pass",
+        "on_site": "Demander une visite",
+        "rental": "Demander cette location",
+        "ticketed": "Demander des billets",
+        "professional": "Demander un devis"
+      },
+      "cta": {
+        "accommodation": "Demander à réserver",
+        "appointment": "Demander un rendez-vous",
+        "membership": "Demander ce pass",
+        "on_site": "Demander une visite",
+        "rental": "Demander la location",
+        "ticketed": "Demander des billets",
+        "professional": "Demander un devis"
+      },
+      "selectOffer": "Option",
+      "chooseOffer": "Choisissez une option",
+      "fix": "Complétez les détails",
+      "startDate": {
+        "accommodation": "Arrivée",
+        "appointment": "Date souhaitée",
+        "membership": "Date de début",
+        "on_site": "Date souhaitée",
+        "rental": "Date de retrait",
+        "ticketed": "Date de visite",
+        "professional": "Date souhaitée"
+      },
+      "endDate": "Départ",
+      "time": "Horaire souhaité",
+      "guests": "Personnes",
+      "quantity": "Quantité",
+      "period": "Durée de location",
+      "staff": "Coiffeur préféré",
+      "anyStaff": "Peu importe",
+      "timeOfDay": {
+        "any": "Peu importe",
+        "morning": "Matin",
+        "afternoon": "Après-midi",
+        "evening": "Soir"
+      },
+      "nightsOne": "{count} nuit",
+      "nightsMany": "{count} nuits",
+      "periods": {
+        "hour": {
+          "one": "{count} heure",
+          "many": "{count} heures"
+        },
+        "day": {
+          "one": "{count} jour",
+          "many": "{count} jours"
+        },
+        "week": {
+          "one": "{count} semaine",
+          "many": "{count} semaines"
+        }
+      },
+      "errors": {
+        "pickOffer": "Choisissez d'abord une option.",
+        "pickDate": "Choisissez une date.",
+        "pickEnd": "Choisissez une date de départ.",
+        "endBeforeStart": "Le départ doit suivre l'arrivée.",
+        "pastDate": "Cette date est passée."
+      },
+      "noPaymentNote": "Ceci envoie une demande. Rien n'est réservé ni payé avant la confirmation du prestataire.",
+      "dialogTitle": "Demande : {name}"
     }
   }
 }
