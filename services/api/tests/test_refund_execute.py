@@ -744,13 +744,16 @@ class TestItemScopedRefund:
                 customer_momo=CUSTOMER_MOMO,
                 idempotency_key="return-item-b-refund",
                 item_ngwee_override=300_000,
+                # Delivery was already refunded with the first return; refunding it
+                # twice would exceed what the customer paid (cumulative cap).
+                delivery_fee_ngwee_override=0,
             )
 
         assert first.created is True
         assert second.created is True
         assert first.refund_id != second.refund_id
         assert first.amount_ngwee == 205_000
-        assert second.amount_ngwee == 305_000
+        assert second.amount_ngwee == 300_000
         active = [r for r in fake.tables["refunds"].rows if r["status"] in FakeTable._ACTIVE]
         assert len(active) == 2
         assert {r["source_key"] for r in active} == {

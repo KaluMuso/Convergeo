@@ -204,7 +204,7 @@ def financial_identities() -> dict[str, list[str]]:
     """Bind this NEW proposal's concrete inventory, without an approval claim."""
     manifest = json.loads((ROOT / "scripts/ci/coordinator-gate-inputs.json").read_text())
     identities: dict[str, list[str]] = manifest["financial"]
-    for group, count in (("f1", 6), ("f2", 43), ("related", 828)):
+    for group, count in (("f1", 6), ("f2", 43), ("related", 842)):
         if len(identities[group]) != count or len(set(identities[group])) != count:
             raise RuntimeError("Financial concrete identity binding differs: " + group)
     require_collection(F1_NODES, identities["f1"], 0)
@@ -478,12 +478,14 @@ class Runner:
         related, _ = report.related_report(Path(self.env.pop("F2_COLLECTION_OUTPUT")), merged,
                                           int(any(exits)), collection_rc)
         # Reviewer bound 764 identities (760 + four #759 C1 guards); logistics phase 1
-        # (#788) adds the ready_for_collection / return transitions: 828.
+        # (#788) adds the ready_for_collection / return transitions: 828; the refund
+        # guards (#1019) add 14 cancel-blocked-while-payment-in-flight cases: 842
+        # (the 14 extra identities are pending independent review).
         # Do not silently accept a reduced collection.
-        if related.get("expected") != 828:
+        if related.get("expected") != 842:
             related["accepted"] = False
             related["inventory_error"] = (
-                "Expected the independently reviewed 828 related identities"
+                "Expected the 842 related identities (828 reviewed + 14 pending review)"
             )
         results["related"] = related
         self.write_result()
@@ -610,6 +612,34 @@ class Runner:
         self.write_result()
 
 
+def failure_lines(results: dict[str, object], limit: int = 40) -> list[str]:
+    """Output-only digest of why a run was not accepted; it never decides acceptance."""
+    lines: list[str] = []
+    for key in ("error", "cleanup_error"):
+        if results.get(key):
+            lines.append(f"{key}: {str(results[key])[:2200]}")
+    phases = results.get("phases")
+    for phase, groups in (phases.items() if isinstance(phases, dict) else ()):
+        for group, report in (groups.items() if isinstance(groups, dict) else ()):
+            if not isinstance(report, dict) or report.get("accepted") is True:
+                continue
+            counts = {k: report.get(k) for k in
+                      ("expected", "executed", "passed", "skipped", "failed",
+                       "pytest_exit", "collection_exit")}
+            lines.append(f"{phase}/{group} not accepted: {counts}")
+            for label in ("inventory_error", "errors", "duplicates", "unexpected"):
+                if report.get(label):
+                    lines.append(f"  {label}: {report[label]}")
+            identities = report.get("identities")
+            bad = sorted((i, v) for i, v in identities.items() if v != "PASS") \
+                if isinstance(identities, dict) else []
+            for identity, state in bad[:limit]:
+                lines.append(f"  {state} {identity}")
+            if len(bad) > limit:
+                lines.append(f"  ... and {len(bad) - limit} more not passing")
+    return lines
+
+
 def main() -> int:
     validate_host()  # No database, network or runtime operation precedes this check.
     runner = Runner()
@@ -622,6 +652,9 @@ def main() -> int:
         print("::error::real-stack failure: " + detail, file=sys.stderr)
     finally:
         runner.finish()
+    if not runner.results["accepted"]:
+        for line in failure_lines(runner.results):
+            print(runner.redact(line), file=sys.stderr)
     print("FINANCIAL_REAL_STACK_PASS" if runner.results["accepted"]
           else "FINANCIAL_REAL_STACK_INCOMPLETE")
     return 0 if runner.results["accepted"] else 1
