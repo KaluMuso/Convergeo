@@ -737,7 +737,7 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
     if len(files) != 201 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 200 source migrations",
+            "disposable copy does not match 201 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
