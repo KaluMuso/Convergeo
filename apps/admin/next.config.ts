@@ -65,6 +65,17 @@ const REPORT_ONLY_CSP = [
   CSP_REPORTING,
 ].join("; ");
 
+/**
+ * Header name applied by middleware.ts with a substituted per-request nonce, not set
+ * here. Emitting it from next.config with the literal `{{CSP_NONCE}}` token added a
+ * second report-only policy whose nonce never matches, so browsers logged
+ * `invalid source` and reported every inline script. `REPORT_ONLY_CSP` stays as the
+ * reference policy that middleware mirrors.
+ */
+const CSP_REPORT_ONLY_HEADER = "Content-Security-Policy-Report-Only";
+void CSP_REPORT_ONLY_HEADER;
+void REPORT_ONLY_CSP;
+
 const SECURITY_HEADERS = [
   ...buildStaticSecurityHeaders({
     xFrameOptions: "DENY",
@@ -72,7 +83,6 @@ const SECURITY_HEADERS = [
     enforcedCsp: ENFORCED_CSP,
   }),
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
-  { key: "Content-Security-Policy-Report-Only", value: REPORT_ONLY_CSP },
 ];
 
 const nextConfig: NextConfig = {
