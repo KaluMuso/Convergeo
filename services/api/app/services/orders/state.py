@@ -58,6 +58,10 @@ class ActorRole(StrEnum):
 Fulfilment = Literal["delivery", "pickup"]
 
 CANCELLATION_EVENTS = frozenset({OrderEvent.REJECT, OrderEvent.CANCEL})
+# A payment attempt older than this can no longer block a customer/system cancel: the
+# USSD prompt is long dead, and a late success is refunded by the late-collection
+# job. Keeps an order from being stuck on a `failed` attempt that never got a verdict.
+IN_FLIGHT_ATTEMPT_MAX_AGE_MINUTES = 30
 
 # Events a restricted operator with ``logistics.manage`` may drive as ADMIN
 # (courier pickup / delivery coupling, readiness on the vendor's behalf). A
@@ -171,6 +175,26 @@ class RefundPathRequiredError(AppError):
             message=("Collected money requires an authorized financial-resolution path"),
             http_status=409,
             details={"refund_path_required": True},
+        )
+
+
+class PaymentInFlightError(OrderTransitionError):
+    """Raised when a customer/system cancel races a live Mobile Money attempt.
+
+    A late MoMo success would land on a cancelled order and the money would have to
+    be refunded by hand. Refuse the cancel instead; the unpaid-cancel sweeper treats
+    this as "skip, retry on the next run" once the attempt resolves or expires.
+    """
+
+    def __init__(self, *, from_status: str, event: str, actor_role: str) -> None:
+        super().__init__(
+            "A payment attempt is still in progress for this order; try again shortly",
+            from_status=from_status,
+            event=event,
+            actor_role=actor_role,
+            code="order_payment_in_flight",
+            http_status=409,
+            extra_details={"payment_in_flight": True},
         )
 
 
@@ -566,6 +590,12 @@ def transition_order(
         or (return_restock and snapshot.status == OrderStatus.SHIPPED),
     )
     cancellation = event in CANCELLATION_EVENTS
+    # Customer/system cancels never get to race a live payment attempt (vendor reject
+    # and admin cancel keep their own financial-resolution path).
+    cancel_blocked_by_inflight = event == OrderEvent.CANCEL and actor_role in {
+        ActorRole.CUSTOMER,
+        ActorRole.SYSTEM,
+    }
     refund_authority = refund_path and actor_role in {ActorRole.ADMIN, ActorRole.VENDOR}
     update_script = f"""
 BEGIN;
@@ -578,6 +608,7 @@ SELECT id, status FROM public.orders WHERE id={order_sql} FOR UPDATE;
 SELECT pg_advisory_xact_lock(hashtext('order_escrow:' || {order_sql}::text));
 DO $order_authority$
 DECLARE o public.orders%rowtype; has_money boolean; has_uncertain_attempt boolean;
+  has_inflight_attempt boolean;
 BEGIN
   SELECT * INTO STRICT o FROM public.orders WHERE id={order_sql};
   IF NOT ({authority_sql}) THEN
@@ -593,6 +624,20 @@ BEGIN
     WHERE p.status NOT IN ('success','cancelled')
       AND (p.status<>'failed' OR coalesce(p.raw->>'terminal_provider_failure','false')<>'true')
   );
+  -- A live attempt (initiated/ussd_pushed/pay_offline, or failed without a terminal
+  -- provider verdict) may still succeed. Same predicate as the unpaid-cancel sweeper:
+  -- expired/cancelled/terminally-failed attempts do not block.
+  has_inflight_attempt := EXISTS (
+    SELECT 1 FROM public.order_payment_checkouts(o.id) scope
+    JOIN public.payments p ON p.checkout_group_id=scope.checkout_group_id
+    WHERE p.status NOT IN ('success','expired','cancelled')
+      AND (p.status<>'failed' OR coalesce(p.raw->>'terminal_provider_failure','false')<>'true')
+      AND p.created_at > now() - interval '{IN_FLIGHT_ATTEMPT_MAX_AGE_MINUTES} minutes'
+  );
+  IF {str(cancel_blocked_by_inflight).lower()} AND has_inflight_attempt AND NOT has_money
+     AND NOT o.cod THEN
+    RAISE EXCEPTION 'ORDER_PAYMENT_IN_FLIGHT';
+  END IF;
   IF {str(cancellation).lower()} AND has_money AND NOT o.cod THEN
     IF NOT {str(refund_authority).lower()} THEN
       RAISE EXCEPTION 'ORDER_REFUND_AUTHORITY_REQUIRED';
@@ -641,6 +686,12 @@ COMMIT;
             )
         if "ORDER_REFUND_AUTHORITY_REQUIRED" in error:
             raise RefundPathRequiredError()
+        if "ORDER_PAYMENT_IN_FLIGHT" in error:
+            raise PaymentInFlightError(
+                from_status=from_status,
+                event=event.value,
+                actor_role=actor_role.value,
+            )
         if "ORDER_TRANSITION_CONFLICT" in error:
             current = _fetch_order_snapshot(order_id)
             if (

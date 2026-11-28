@@ -23,7 +23,8 @@
   },
   "errors": {
     "loadFailed": "Tatwaishibe ukuleta ama-order yenu. Wesheni limbi.",
-    "notFound": "Order tacasangwa"
+    "notFound": "Order tacasangwa",
+    "paymentInFlight": "Ukulipila kuli mu kuya pa order iyi. Linda pa mineti inono, pa numa mukese ukucilila kabili."
   },
   "escrow": {
     "cod": "Lipileni mu cash ilyo mwapokelela order yenu.",

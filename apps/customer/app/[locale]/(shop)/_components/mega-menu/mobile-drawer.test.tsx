@@ -152,6 +152,18 @@ describe("MobileDrawer", () => {
     expect(window.localStorage.getItem("vergeo5:browsed-categories:v1")).toContain("laptops");
   });
 
+  it("keeps Tab inside the drill pane and skips the inert main pane", async () => {
+    await renderDrawer();
+    fireEvent.click(screen.getByRole("button", { name: "Department 1" }));
+    const drill = screen.getByTestId("mobile-drawer-drill");
+    const back = within(drill).getByRole("button", { name: "Main menu" });
+    back.focus();
+    fireEvent.keyDown(back, { key: "Tab" });
+    const active = document.activeElement;
+    expect(drill.contains(active)).toBe(true);
+    expect(screen.getByTestId("mobile-drawer-main")).toHaveAttribute("inert");
+  });
+
   it("traps Tab inside the dialog (wraps first <-> last, skipping the off-screen pane)", async () => {
     await renderDrawer();
     const first = screen.getByRole("link", { name: /Hello, sign in/ });
