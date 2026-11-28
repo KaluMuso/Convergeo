@@ -46,10 +46,12 @@ def test_anon_reads_only_published_visible_nodes(db: PgConn, as_anon: RoleSessio
     _seed_service_nodes(db)
     try:
         result = as_anon.execute(
-            "SELECT slug FROM public.service_categories WHERE slug LIKE 'tx-%' ORDER BY slug"
+            "SELECT string_agg(slug, ',' ORDER BY slug) FROM public.service_categories "
+            "WHERE slug LIKE 'tx-%'"
         )
         assert result.ok, result.error
-        assert result.rows == ["tx-pub", "tx-vendor-only"]
+        # One aggregated row: the harness keeps only the last row of a BEGIN-wrapped script.
+        assert result.rows == ["tx-pub,tx-vendor-only"]
     finally:
         _cleanup(db)
 
