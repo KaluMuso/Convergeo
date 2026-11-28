@@ -34,55 +34,55 @@ def _amount(payload: Mapping[str, Any], *keys: str) -> str:
 def _order_confirmed(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "your order")
     return (
-        f"Convergeo: order {ref} is confirmed. Total K{_amount(p, 'total_ngwee', 'amount_ngwee')}. "
-        "Your money is held safely by Convergeo until delivery."
+        f"Vergeo5: order {ref} is confirmed. Total K{_amount(p, 'total_ngwee', 'amount_ngwee')}. "
+        "Your money is held safely by Vergeo5 until delivery."
     )
 
 
 def _payment_received(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "your order")
     return (
-        f"Convergeo: payment of K{_amount(p, 'amount_ngwee', 'total_ngwee')} received for order "
-        f"{ref}. Held safely by Convergeo until delivery."
+        f"Vergeo5: payment of K{_amount(p, 'amount_ngwee', 'total_ngwee')} received for order "
+        f"{ref}. Held safely by Vergeo5 until delivery."
     )
 
 
 def _order_shipped(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "your order")
     info = _text(p, "tracking_info")
-    return f"Convergeo: order {ref} is on its way.{(' ' + info) if info else ''}"
+    return f"Vergeo5: order {ref} is on its way.{(' ' + info) if info else ''}"
 
 
 def _order_ready_pickup(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "your order")
     details = _text(p, "pickup_details")
-    return f"Convergeo: order {ref} is ready for pickup.{(' ' + details) if details else ''}"
+    return f"Vergeo5: order {ref} is ready for pickup.{(' ' + details) if details else ''}"
 
 
 def _order_delivered(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "your order")
-    return f"Convergeo: order {ref} was delivered. Thank you for shopping with Convergeo!"
+    return f"Vergeo5: order {ref} was delivered. Thank you for shopping with Vergeo5!"
 
 
 def _vendor_new_order(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "a new order")
     title = _text(p, "product_title", "an item")
     qty = _text(p, "quantity", "1")
-    return f"Convergeo: new order {ref} — {qty} x {title}. Open the vendor app to accept it."
+    return f"Vergeo5: new order {ref} — {qty} x {title}. Open the vendor app to accept it."
 
 
 def _rfq_job_broadcast(p: Mapping[str, Any]) -> str:
     category = _text(p, "category", "a job")
     area = _text(p, "service_area", "your area")
-    return f"Convergeo: a customer needs {category} near {area}. Open Convergeo to send a quote."
+    return f"Vergeo5: a customer needs {category} near {area}. Open Vergeo5 to send a quote."
 
 
 def _service_quote_accepted(p: Mapping[str, Any]) -> str:
     deposit = _amount(p, "deposit_ngwee")
     total = _amount(p, "total_job_ngwee")
     return (
-        f"Convergeo: your quote was accepted! Deposit of K{deposit} (job total K{total}) "
-        "is secured in Convergeo escrow. Open Convergeo to start the job."
+        f"Vergeo5: your quote was accepted! Deposit of K{deposit} (job total K{total}) "
+        "is secured in Vergeo5 escrow. Open Vergeo5 to start the job."
     )
 
 
@@ -90,7 +90,7 @@ def _event_cancelled(p: Mapping[str, Any]) -> str:
     title = _text(p, "event_title", "your event")
     event_date = _text(p, "event_date", "the scheduled date")
     refund_detail = _text(p, "refund_detail")
-    return f'Convergeo: "{title}" on {event_date} cancelled. {refund_detail}'.strip()
+    return f'Vergeo5: "{title}" on {event_date} cancelled. {refund_detail}'.strip()
 
 
 def _event_schedule_changed(p: Mapping[str, Any]) -> str:
@@ -98,7 +98,7 @@ def _event_schedule_changed(p: Mapping[str, Any]) -> str:
     event_date = _text(p, "event_date", "see the app")
     venue = _text(p, "venue", "see the app")
     return (
-        f'Convergeo: "{title}" details updated. Date: {event_date}. Venue: {venue}. '
+        f'Vergeo5: "{title}" details updated. Date: {event_date}. Venue: {venue}. '
         "Check the app for details."
     )
 
@@ -107,7 +107,7 @@ def _courier_dispatch_request(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "a delivery")
     pickup = _text(p, "pickup_line", "see WhatsApp")
     cod = _text(p, "cod_line", "")
-    return f"Convergeo job {ref}. Pickup: {pickup}. {cod}".strip()
+    return f"Vergeo5 job {ref}. Pickup: {pickup}. {cod}".strip()
 
 
 def _dispatch_stale_alert(p: Mapping[str, Any]) -> str:
@@ -116,70 +116,70 @@ def _dispatch_stale_alert(p: Mapping[str, Any]) -> str:
     minutes = _text(p, "minutes_waiting", "45")
     status = _text(p, "status", "requested")
     stage = {"accepted": "not collected", "picked_up": "not delivered"}.get(status, "not accepted")
-    return f"Convergeo ops: {ref} with {courier} {stage} after {minutes} min."
+    return f"Vergeo5 ops: {ref} with {courier} {stage} after {minutes} min."
 
 
 def _order_cancelled(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "your order")
-    return f"Convergeo: order {ref} was cancelled. If you paid, we will handle your refund."
+    return f"Vergeo5: order {ref} was cancelled. If you paid, we will handle your refund."
 
 
 def _payment_failed(p: Mapping[str, Any]) -> str:
     amount = _amount(p, "amount_ngwee", "total_ngwee")
-    return f"Convergeo: your payment of K{amount} did not go through. Open the app to try again."
+    return f"Vergeo5: your payment of K{amount} did not go through. Open the app to try again."
 
 
 def _order_completed(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "your order")
-    return f"Convergeo: order {ref} is complete. Thank you for shopping with us!"
+    return f"Vergeo5: order {ref} is complete. Thank you for shopping with us!"
 
 
 def _ticket_issued(p: Mapping[str, Any]) -> str:
     title = _text(p, "event_title", "your event")
-    return f'Convergeo: your ticket for "{title}" is ready. Open My tickets to show the QR.'
+    return f'Vergeo5: your ticket for "{title}" is ready. Open My tickets to show the QR.'
 
 
 def _dispute_opened(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "an order")
-    return f"Convergeo: a dispute was opened on order {ref}. Open the vendor app to respond."
+    return f"Vergeo5: a dispute was opened on order {ref}. Open the vendor app to respond."
 
 
 def _dispute_resolved(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "your order")
-    return f"Convergeo: the dispute on order {ref} is resolved. Open the app to see the outcome."
+    return f"Vergeo5: the dispute on order {ref} is resolved. Open the app to see the outcome."
 
 
 def _payout_sent(p: Mapping[str, Any]) -> str:
     amount = _amount(p, "amount_ngwee")
     dest = _text(p, "destination_label", "mobile money number")
-    return f"Convergeo: your payout of K{amount} is on its way to your {dest}."
+    return f"Vergeo5: your payout of K{amount} is on its way to your {dest}."
 
 
 def _payout_failed(p: Mapping[str, Any]) -> str:
     amount = _amount(p, "amount_ngwee")
     return (
-        f"Convergeo: your payout of K{amount} could not be sent. "
+        f"Vergeo5: your payout of K{amount} could not be sent. "
         "Check your payout number in the vendor app."
     )
 
 
 def _rfq_quoted(p: Mapping[str, Any]) -> str:
     price = _amount(p, "quote_price_ngwee")
-    return f"Convergeo: you received a quote of K{price}. Open the app to review it."
+    return f"Vergeo5: you received a quote of K{price}. Open the app to review it."
 
 
 def _vendor_order_unconfirmed_alert(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "an order")
     vendor = _text(p, "vendor_name", "the vendor")
     minutes = _text(p, "minutes_waiting", "120")
-    return f"Convergeo ops: {ref} not confirmed by {vendor} after {minutes} min. Call the shop."
+    return f"Vergeo5 ops: {ref} not confirmed by {vendor} after {minutes} min. Call the shop."
 
 
 def _gift_recipient_notice(p: Mapping[str, Any]) -> str:
     sender = _text(p, "sender_name", "A friend")
     shop = _text(p, "shop_name", "a shop")
     return (
-        f"Convergeo: {sender} sent you a gift from {shop}. We will message you about "
+        f"Vergeo5: {sender} sent you a gift from {shop}. We will message you about "
         "delivery or pickup only. Reply STOP to opt out."
     )
 
@@ -187,14 +187,14 @@ def _gift_recipient_notice(p: Mapping[str, Any]) -> str:
 def _gift_ready_pickup(p: Mapping[str, Any]) -> str:
     shop = _text(p, "shop_name", "the shop")
     pin = _text(p, "pickup_pin")
-    return f"Convergeo: your gift is ready to collect at {shop}. Pickup PIN {pin}. Do not share it."
+    return f"Vergeo5: your gift is ready to collect at {shop}. Pickup PIN {pin}. Do not share it."
 
 
 def _birthday_greeting(p: Mapping[str, Any]) -> str:
     code = _text(p, "coupon_code")
     days = _text(p, "valid_days", "14")
     return (
-        f"Convergeo: happy birthday! Use code {code} for K{_amount(p, 'amount_ngwee')} off "
+        f"Vergeo5: happy birthday! Use code {code} for K{_amount(p, 'amount_ngwee')} off "
         f"orders of K{_amount(p, 'min_spend_ngwee')} or more, valid {days} days. "
         "Reply STOP to opt out."
     )

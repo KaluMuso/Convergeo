@@ -18,7 +18,7 @@
     "categoriesLoading": "Ikuyenda ma-categories…",
     "categoriesEmpty": "Ma-categories salipo pano. Yesaninso posachedwa.",
     "viewAllCategories": "Onani ma-categories onse",
-    "featuredTitle": "Zatsopano pa Convergeo",
+    "featuredTitle": "Zatsopano pa Vergeo5",
     "featuredPromo": "Fananani ogulitsa ndikulipira cash on delivery pa ma-order oyenera.",
     "featuredPromoCta": "Sakani msika",
     "fallbackCategoryRoots": {
@@ -33,15 +33,15 @@
     "directory": "Malo a ogulitsa",
     "services": "Ntchito",
     "events": "Zochitika",
-    "askVergeo": "Funsa Convergeo",
+    "askVergeo": "Funsa Vergeo5",
     "browseChipsAria": "Yang'anani ndi gawo"
   },
   "marketing": {
     "ariaLabel": "Navigation ya marketing",
-    "about": "Za Convergeo",
+    "about": "Za Vergeo5",
     "contact": "Titandizireni",
     "help": "Thandizo",
-    "sell": "Gulitsani pa Convergeo",
+    "sell": "Gulitsani pa Vergeo5",
     "signIn": "Lowani",
     "account": "Akaunti"
   },

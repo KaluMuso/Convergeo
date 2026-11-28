@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 
 /**
  * Localised `<title>` for a page, from the same message key as its visible heading.
- * The root layout supplies the `%s | Convergeo` template, so this returns just the
+ * The root layout supplies the `%s | Vergeo5` template, so this returns just the
  * page name. Server-only: costs no client JS.
  */
 export async function getPageTitle(

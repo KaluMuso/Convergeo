@@ -28,20 +28,20 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "payment_receipt": {
         "en": {
             "subject_key": "notifications.email.receipt.subject",
-            "subject": "Your Convergeo receipt — order {order_id}",
+            "subject": "Your Vergeo5 receipt — order {order_id}",
             "body_key": "notifications.email.receipt.body",
             "body": (
                 "<p>Thank you for your payment.</p>"
                 "<p><strong>Order:</strong> {order_id}</p>"
                 "<p><strong>Amount:</strong> K{amount}</p>"
-                "<p>Funds are held safely by Convergeo until delivery.</p>"
+                "<p>Funds are held safely by Vergeo5 until delivery.</p>"
             ),
         },
     },
     "order_receipt": {
         "en": {
             "subject_key": "notifications.email.receipt.subject",
-            "subject": "Your Convergeo receipt — order {order_id}",
+            "subject": "Your Vergeo5 receipt — order {order_id}",
             "body_key": "notifications.email.receipt.body",
             "body": (
                 "<p>Thank you for your order.</p>"
@@ -53,18 +53,18 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "kyc_approved": {
         "en": {
             "subject_key": "notifications.email.kyc.approved.subject",
-            "subject": "Your Convergeo vendor verification is approved",
+            "subject": "Your Vergeo5 vendor verification is approved",
             "body_key": "notifications.email.kyc.approved.body",
             "body": (
                 "<p>Good news — your vendor identity verification is approved.</p>"
-                "<p>You can now publish listings and receive payouts on Convergeo.</p>"
+                "<p>You can now publish listings and receive payouts on Vergeo5.</p>"
             ),
         },
     },
     "kyc_rejected": {
         "en": {
             "subject_key": "notifications.email.kyc.rejected.subject",
-            "subject": "Your Convergeo vendor verification needs attention",
+            "subject": "Your Vergeo5 vendor verification needs attention",
             "body_key": "notifications.email.kyc.rejected.body",
             "body": (
                 "<p>We could not approve your vendor verification.</p>"
@@ -76,19 +76,19 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "business_verified": {
         "en": {
             "subject_key": "notifications.email.business.verified.subject",
-            "subject": "Your Convergeo business account is verified",
+            "subject": "Your Vergeo5 business account is verified",
             "body_key": "notifications.email.business.verified.body",
             "body": (
                 "<p>Good news — your business account is verified.</p>"
                 "<p>Business mode is now on: you can browse and buy wholesale "
-                "supplies with tier pricing across Convergeo.</p>"
+                "supplies with tier pricing across Vergeo5.</p>"
             ),
         },
     },
     "business_rejected": {
         "en": {
             "subject_key": "notifications.email.business.rejected.subject",
-            "subject": "Your Convergeo business verification needs attention",
+            "subject": "Your Vergeo5 business verification needs attention",
             "body_key": "notifications.email.business.rejected.body",
             "body": (
                 "<p>We could not verify your business account.</p>"
@@ -102,33 +102,33 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "order_confirmed": {
         "en": {
             "subject_key": "notifications.email.order_confirmed.subject",
-            "subject": "Your Convergeo order {order_id} is confirmed",
+            "subject": "Your Vergeo5 order {order_id} is confirmed",
             "body_key": "notifications.email.order_confirmed.body",
             "body": (
                 "<p>Your order is confirmed.</p>"
                 "<p><strong>Order:</strong> {order_id}</p>"
                 "<p><strong>Total:</strong> K{amount}</p>"
-                "<p>Your money is held safely by Convergeo until delivery.</p>"
+                "<p>Your money is held safely by Vergeo5 until delivery.</p>"
             ),
         },
     },
     "payment_received": {
         "en": {
             "subject_key": "notifications.email.payment_received.subject",
-            "subject": "Payment received — Convergeo order {order_id}",
+            "subject": "Payment received — Vergeo5 order {order_id}",
             "body_key": "notifications.email.payment_received.body",
             "body": (
                 "<p>We received your payment.</p>"
                 "<p><strong>Order:</strong> {order_id}</p>"
                 "<p><strong>Amount:</strong> K{amount}</p>"
-                "<p>Funds are held safely by Convergeo until delivery.</p>"
+                "<p>Funds are held safely by Vergeo5 until delivery.</p>"
             ),
         },
     },
     "order_shipped": {
         "en": {
             "subject_key": "notifications.email.order_shipped.subject",
-            "subject": "Your Convergeo order {order_id} is on its way",
+            "subject": "Your Vergeo5 order {order_id} is on its way",
             "body_key": "notifications.email.order_shipped.body",
             "body": (
                 "<p>Your order is on its way.</p>"
@@ -140,7 +140,7 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "order_ready_pickup": {
         "en": {
             "subject_key": "notifications.email.order_ready_pickup.subject",
-            "subject": "Your Convergeo order {order_id} is ready for pickup",
+            "subject": "Your Vergeo5 order {order_id} is ready for pickup",
             "body_key": "notifications.email.order_ready_pickup.body",
             "body": (
                 "<p>Your order is ready for pickup.</p>"
@@ -152,18 +152,18 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "order_delivered": {
         "en": {
             "subject_key": "notifications.email.order_delivered.subject",
-            "subject": "Your Convergeo order {order_id} was delivered",
+            "subject": "Your Vergeo5 order {order_id} was delivered",
             "body_key": "notifications.email.order_delivered.body",
             "body": (
                 "<p>Your order {order_id} was delivered.</p>"
-                "<p>Thank you for shopping with Convergeo.</p>"
+                "<p>Thank you for shopping with Vergeo5.</p>"
             ),
         },
     },
     "vendor_new_order": {
         "en": {
             "subject_key": "notifications.email.vendor_new_order.subject",
-            "subject": "New Convergeo order {order_id}",
+            "subject": "New Vergeo5 order {order_id}",
             "body_key": "notifications.email.vendor_new_order.body",
             "body": (
                 "<p>You have a new order.</p>"
@@ -176,12 +176,12 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "rfq_job_broadcast": {
         "en": {
             "subject_key": "notifications.email.rfq_job_broadcast.subject",
-            "subject": "New {category} request on Convergeo",
+            "subject": "New {category} request on Vergeo5",
             "body_key": "notifications.email.rfq_job_broadcast.body",
             "body": (
                 "<p>A customer is looking for {category} near {service_area}.</p>"
                 "<p>{description_preview}</p>"
-                "<p>Open Convergeo to send your quote.</p>"
+                "<p>Open Vergeo5 to send your quote.</p>"
             ),
         },
     },
@@ -190,9 +190,9 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "courier_dispatch_request": {
         "en": {
             "subject_key": "notifications.email.courier_dispatch_request.subject",
-            "subject": "Convergeo delivery request {order_id}",
+            "subject": "Vergeo5 delivery request {order_id}",
             "body_key": "notifications.email.courier_dispatch_request.body",
-            "body": ("<p>New delivery job from Convergeo.</p><p>{dispatch_message}</p>"),
+            "body": ("<p>New delivery job from Vergeo5.</p><p>{dispatch_message}</p>"),
         },
     },
     "dispatch_stale_alert": {
@@ -208,32 +208,32 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "service_quote_accepted": {
         "en": {
             "subject_key": "notifications.email.service_quote_accepted.subject",
-            "subject": "Your Convergeo quote was accepted",
+            "subject": "Your Vergeo5 quote was accepted",
             "body_key": "notifications.email.service_quote_accepted.body",
             "body": (
                 "<p>Good news — a customer accepted your quote.</p>"
                 "<p><strong>Deposit secured:</strong> K{deposit}</p>"
                 "<p><strong>Job total:</strong> K{total}</p>"
-                "<p>The deposit is held safely by Convergeo escrow. "
-                "Open Convergeo to start the job.</p>"
+                "<p>The deposit is held safely by Vergeo5 escrow. "
+                "Open Vergeo5 to start the job.</p>"
             ),
         },
     },
     "rfq_quoted": {
         "en": {
             "subject_key": "notifications.email.rfq_quoted.subject",
-            "subject": "You received a quote on Convergeo",
+            "subject": "You received a quote on Vergeo5",
             "body_key": "notifications.email.rfq_quoted.body",
             "body": (
                 "<p>A provider sent you a quote of <strong>K{quote_price}</strong>.</p>"
-                "<p>Open the Convergeo app to review and accept it.</p>"
+                "<p>Open the Vergeo5 app to review and accept it.</p>"
             ),
         },
     },
     "order_cancelled": {
         "en": {
             "subject_key": "notifications.email.order_cancelled.subject",
-            "subject": "Your Convergeo order {order_id} was cancelled",
+            "subject": "Your Vergeo5 order {order_id} was cancelled",
             "body_key": "notifications.email.order_cancelled.body",
             "body": (
                 "<p>Your order was cancelled.</p>"
@@ -245,7 +245,7 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "payment_failed": {
         "en": {
             "subject_key": "notifications.email.payment_failed.subject",
-            "subject": "Your Convergeo payment did not go through",
+            "subject": "Your Vergeo5 payment did not go through",
             "body_key": "notifications.email.payment_failed.body",
             "body": (
                 "<p>Your payment of K{amount} did not go through.</p>"
@@ -257,11 +257,11 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "order_completed": {
         "en": {
             "subject_key": "notifications.email.order_completed.subject",
-            "subject": "Your Convergeo order {order_id} is complete",
+            "subject": "Your Vergeo5 order {order_id} is complete",
             "body_key": "notifications.email.order_completed.body",
             "body": (
                 "<p>Your order {order_id} is complete.</p>"
-                "<p>Thank you for shopping with Convergeo.</p>"
+                "<p>Thank you for shopping with Vergeo5.</p>"
             ),
         },
     },
@@ -272,7 +272,7 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             "body_key": "notifications.email.ticket_issued.body",
             "body": (
                 "<p>Your ticket for <strong>{event_title}</strong> is ready.</p>"
-                "<p>Open My tickets in the Convergeo app and show the QR code at the door.</p>"
+                "<p>Open My tickets in the Vergeo5 app and show the QR code at the door.</p>"
             ),
         },
     },
@@ -300,18 +300,18 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "payout_sent": {
         "en": {
             "subject_key": "notifications.email.payout_sent.subject",
-            "subject": "Your Convergeo payout of K{amount} is on its way",
+            "subject": "Your Vergeo5 payout of K{amount} is on its way",
             "body_key": "notifications.email.payout_sent.body",
             "body": (
                 "<p>Your payout of K{amount} is on its way to your {destination_label}.</p>"
-                "<p>It should arrive shortly. Thank you for selling on Convergeo.</p>"
+                "<p>It should arrive shortly. Thank you for selling on Vergeo5.</p>"
             ),
         },
     },
     "payout_failed": {
         "en": {
             "subject_key": "notifications.email.payout_failed.subject",
-            "subject": "Your Convergeo payout of K{amount} could not be sent",
+            "subject": "Your Vergeo5 payout of K{amount} could not be sent",
             "body_key": "notifications.email.payout_failed.body",
             "body": (
                 "<p>Your payout of K{amount} could not be sent.</p>"
@@ -378,7 +378,7 @@ def render_email_html(
         "refund_detail": html.escape(
             str(payload.get("refund_detail") or "If you already paid, we will handle your refund.")
         ),
-        "retry_url": html.escape(str(payload.get("retry_url") or "open the Convergeo app")),
+        "retry_url": html.escape(str(payload.get("retry_url") or "open the Vergeo5 app")),
         "event_title": html.escape(str(payload.get("event_title") or "your event")),
         "resolution_summary": html.escape(
             str(payload.get("resolution_summary") or "Open the app to see the outcome.")
@@ -402,7 +402,7 @@ def render_email_html(
     wrapped = (
         '<div style="font-family:DM Sans,Arial,sans-serif;color:#1a1a1a;max-width:560px">'
         f"{body}"
-        '<p style="color:#666;font-size:12px">Convergeo · vergeo5.com</p>'
+        '<p style="color:#666;font-size:12px">Vergeo5 · vergeo5.com</p>'
         "</div>"
     )
     return subject, wrapped, subject_key, body_key
