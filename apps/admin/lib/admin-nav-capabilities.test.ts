@@ -82,7 +82,19 @@ describe("admin navigation from current API permissions", () => {
     ["finance.read", ["analytics", "orders"]],
     ["events.manage", ["catalog", "events"]],
     ["products.manage", ["moderation", "catalog"]],
-    ["vendors.manage", ["kyc", "branches", "catalog", "intake", "business", "extras"]],
+    [
+      "vendors.manage",
+      [
+        "kyc",
+        "branches",
+        "catalog",
+        "intake",
+        "business",
+        "extras",
+        "importRequests",
+        "madeInZambia",
+      ],
+    ],
     ["ads.manage", ["merch", "homeFeed", "advertising", "offers"]],
     ["analytics.read", ["home", "analytics"]],
     ["services.read", ["services"]],
@@ -108,6 +120,8 @@ describe("admin navigation from current API permissions", () => {
       "orders",
       "business",
       "extras",
+      "importRequests",
+      "madeInZambia",
     ]);
     const caps = resolveAdminNavCapabilities(["finance.read", "analytics.read"]);
     expect(caps.disputes).toBe(false);
@@ -124,7 +138,8 @@ describe("admin navigation from current API permissions", () => {
     expect(keys).toContain("disputes");
     expect(keys).toContain("coupons");
     expect(keys).toContain("askAudit");
-    expect(keys).toHaveLength(27);
+    expect(keys).toContain("importRequests");
+    expect(keys).toHaveLength(29);
     expect(keys).not.toContain("roles");
     expect(visible([], true, true)).toContain("roles");
   });
@@ -792,7 +807,11 @@ describe("explicit-grant destinations are denied by URL, not only hidden", () =>
   );
 
   it("opens them for a superadmin holding every grant", async () => {
-    current = { permissions: ["audit.read"], unrestricted: true, can_manage_roles: true };
+    current = {
+      permissions: ["audit.read"],
+      unrestricted: true,
+      can_manage_roles: true,
+    };
     for (const path of ["/en/roles", "/en/accounts", "/en/audit-log"]) {
       await renderRoute(path);
       expect(container.querySelector(`[data-protected-route="${path}"]`)).not.toBeNull();

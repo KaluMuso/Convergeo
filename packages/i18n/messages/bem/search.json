@@ -1,8 +1,8 @@
 {
   "askVergeo": {
-    "slotLabel": "Slot ya Ask Convergeo assistant",
-    "teaser": "Tamwishibe ico mufwaya? Ipusheni Convergeo pakuti mwafwena ico mufwaya.",
-    "title": "Ipusheni Convergeo"
+    "slotLabel": "Slot ya Ask Vergeo5 assistant",
+    "teaser": "Tamwishibe ico mufwaya? Ipusheni Vergeo5 pakuti mwafwena ico mufwaya.",
+    "title": "Ipusheni Vergeo5"
   },
   "categories": {
     "electronics": "Ifya elektrik",
@@ -54,7 +54,7 @@
     "maxPriceOnly": "Kufika K{max}",
     "facetCount": "{label} ({count})"
   },
-  "placeholder": "Fweni pa Convergeo",
+  "placeholder": "Fweni pa Vergeo5",
   "recent": {
     "clear": "Futeni fyonse",
     "remove": "Futeni {term}",

@@ -1,11 +1,11 @@
 {
   "app": {
-    "name": "Convergeo",
+    "name": "Vergeo5",
     "tagline": "⚠ Zambia's marketplace — pay when it arrives"
   },
   "meta": {
-    "defaultDescription": "Gulani zinthu, bookani ma-service, ndipo pezani ma-event mu Zambia pa Convergeo.",
-    "defaultTitle": "Convergeo — Zambia marketplace"
+    "defaultDescription": "Gulani zinthu, bookani ma-service, ndipo pezani ma-event mu Zambia pa Vergeo5.",
+    "defaultTitle": "Vergeo5 — Zambia marketplace"
   },
   "common": {
     "loading": "Ikuyenda…",
@@ -20,11 +20,11 @@
   "greeting": "Moni, {name}!",
   "install": {
     "action": "Ika app",
-    "body": "Onjezani Convergeo pa home screen kuti mufike mwachangu ndi app ya full-screen.",
+    "body": "Onjezani Vergeo5 pa home screen kuti mufike mwachangu ndi app ya full-screen.",
     "dismiss": "Osati pano",
-    "title": "Ikani Convergeo",
+    "title": "Ikani Vergeo5",
     "updateAction": "Reload kuti mu-update",
-    "updateBody": "Version yatsopano ya Convergeo yalipo."
+    "updateBody": "Version yatsopano ya Vergeo5 yalipo."
   },
   "offline": {
     "body": "Palibe connection pano. Mapeji omwe mwaonako kale amagwirabe ntchito — connectaninso kuti muone zonse.",
@@ -60,10 +60,10 @@
   "utilityBar": {
     "ariaLabel": "Chilankhulo, contact, ndi social links",
     "socialAria": "Social media",
-    "facebookAria": "Convergeo pa Facebook",
-    "twitterAria": "Convergeo pa X",
-    "instagramAria": "Convergeo pa Instagram",
-    "emailAria": "Email Convergeo",
+    "facebookAria": "Vergeo5 pa Facebook",
+    "twitterAria": "Vergeo5 pa X",
+    "instagramAria": "Vergeo5 pa Instagram",
+    "emailAria": "Email Vergeo5",
     "countryCode": "ZM"
   },
   "toast": {
@@ -93,8 +93,8 @@
     "label": "Share"
   },
   "fab": {
-    "ask": "⚠ Ask Convergeo",
-    "askTitle": "⚠ Ask Convergeo",
+    "ask": "⚠ Ask Vergeo5",
+    "askTitle": "⚠ Ask Vergeo5",
     "askHint": "Describe what you need — a product, a service or an event.",
     "askPlaceholder": "e.g. solar panel under K3,000 in Lusaka",
     "send": "Ask",
@@ -124,8 +124,8 @@
       "savedAnnounce": "Saved to your list"
     },
     "trust": {
-      "ariaLabel": "Why it's safe to buy on Convergeo",
-      "escrow": "Held by Convergeo until you're happy",
+      "ariaLabel": "Why it's safe to buy on Vergeo5",
+      "escrow": "Held by Vergeo5 until you're happy",
       "verified": "Verified sellers",
       "returns": "Returns policy",
       "momoCod": "Pay with Mobile Money or cash on delivery"

@@ -103,7 +103,8 @@
   },
   "errors": {
     "loadFailed": "Impossible d'ouvrir vos commandes. Vérifiez votre connexion et réessayez.",
-    "notFound": "Commande introuvable. Revenez à vos commandes."
+    "notFound": "Commande introuvable. Revenez à vos commandes.",
+    "paymentInFlight": "Un paiement est encore en cours pour cette commande. Patientez quelques minutes, puis réessayez d'annuler."
   },
   "confirm": {
     "title": "Avez-vous reçu votre commande ?",

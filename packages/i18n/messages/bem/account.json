@@ -32,7 +32,7 @@
   "title": "Account yandi",
   "hub": {
     "title": "Akalola ka account",
-    "description": "Sungileni ama-order, ifyasungwa, delivery, na ifyo Convergeo ilanguka.",
+    "description": "Sungileni ama-order, ifyasungwa, delivery, na ifyo Vergeo5 ilanguka.",
     "backToShop": "Bwelela ku shopping",
     "ordersTitle": "Ama-order",
     "ordersBody": "Loleni delivery, pickup, na payment pa ushitisha cila umo.",
@@ -116,7 +116,7 @@
     },
     "analytics": {
       "title": "Analytics",
-      "description": "Tumwafwe ukusuma Convergeo pa kutwebelela ukumona ifyo mubomfya, nga amapeji mwingila.",
+      "description": "Tumwafwe ukusuma Vergeo5 pa kutwebelela ukumona ifyo mubomfya, nga amapeji mwingila.",
       "toggleLabel": "Ukwabana ifyo mubomfya",
       "on": "Kuli: tulemona amapeji mwingila, kabili panuma ya kwingila tulemulumanya ku akaunti yenu. Ifilumanya fisulwa panuma ya matazi 30.",
       "off": "Cilekwa: tusunga fye ubwingi bwa bantu (anonymous counts), nga bangaye bamona peji. Takuli ifyo mwacita ifisungwa, kabili takuli cilumenwe kuli imwe.",
@@ -167,7 +167,7 @@
   },
   "rewards": {
     "title": "⚠ Rewards",
-    "description": "⚠ Convergeo Points for your orders and reviews.",
+    "description": "⚠ Vergeo5 Points for your orders and reviews.",
     "balanceLabel": "⚠ Your points",
     "balance": "⚠ {points, plural, one {# point} other {# points}}",
     "progress": "⚠ {remaining, plural, =0 {You've reached a reward coupon.} one {# point to your next reward coupon} other {# points to your next reward coupon}}",

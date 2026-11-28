@@ -19,8 +19,8 @@ import "../globals.css";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s · Convergeo Vendor",
-    default: "Convergeo Vendor",
+    template: "%s · Vergeo5 Vendor",
+    default: "Vergeo5 Vendor",
   },
 };
 

@@ -3,13 +3,13 @@ import { tokens } from "@vergeo/ui/tokens";
 import type { MetadataRoute } from "next";
 
 /**
- * PWA web manifest — Convergeo founder artwork icons from `public/brand/`
+ * PWA web manifest — Vergeo5 founder artwork icons from `public/brand/`
  * (glass pinwheel mark on a dark tile). `start_url` uses the default locale.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Convergeo",
-    short_name: "Convergeo",
+    name: "Vergeo5",
+    short_name: "Vergeo5",
     description: "Discover products, services, and events across Zambia.",
     start_url: "/en",
     scope: "/",

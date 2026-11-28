@@ -159,6 +159,12 @@ PENDING_REPAIR_VERSIONS = {
     "20261126190000",
     # Ask Vergeo answer log + auditor findings (additive tables, trigger-based admin alert).
     "20261127090000",
+    # Vendor sourcing hub (additive, documented down).
+    "20261127100000",
+    # Service packages become an open ordered list, cap 10 (additive, documented down).
+    "20261127120000",
+    # Service archetypes + validated attribute blobs (additive, documented down).
+    "20261128090000",
 }
 
 

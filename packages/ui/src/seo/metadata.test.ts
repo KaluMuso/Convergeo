@@ -18,13 +18,13 @@ describe("buildSocialMetadata", () => {
   it("returns openGraph with siteName and twitter summary_large_image", () => {
     const social = buildSocialMetadata({
       title: "Itel A70",
-      description: "Shop Itel A70 on Convergeo",
+      description: "Shop Itel A70 on Vergeo5",
       locale: "en",
       url: "/en/p/itel-a70",
       imageUrl: "/en/opengraph-image?name=Itel+A70",
     });
 
-    expect(social.openGraph?.siteName).toBe("Convergeo");
+    expect(social.openGraph?.siteName).toBe("Vergeo5");
     expect(social.openGraph?.url).toBe("https://vergeo5.com/en/p/itel-a70");
     expect(social.twitter).toEqual(
       expect.objectContaining({

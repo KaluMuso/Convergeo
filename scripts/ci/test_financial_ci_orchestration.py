@@ -95,8 +95,9 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: T8 social contacts, requests, blocks, 1:1 chat (additive).
         # + 1 reviewed: Ask Vergeo service-role checks use auth.role().
         # + 1 reviewed: Ask Vergeo answer log + auditor findings.
-        self.assertEqual(len(runner.FORWARD), 73)
-        self.assertEqual(len(set(runner.FORWARD)), 73)
+        # + 1 reviewed: vendor sourcing hub.
+        self.assertEqual(len(runner.FORWARD), 76)
+        self.assertEqual(len(set(runner.FORWARD)), 76)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)
@@ -118,6 +119,32 @@ class FinancialOrchestrationControls(unittest.TestCase):
             ET.SubElement(suite, "testcase", classname=path[:-3].replace("/", "."), name="test_x")
         self.assertEqual(len(list(root.iter("testcase"))), 4)
         self.assertEqual(len({n.attrib["classname"] for n in root.iter("testcase")}), 4)
+
+
+class FinancialFailureOutputControls(unittest.TestCase):
+    def test_failure_lines_name_failing_ids_and_inventory_error(self) -> None:
+        results: dict[str, object] = {"accepted": False, "phases": {"pristine": {
+            "f1": {"accepted": True},
+            "f2": {"accepted": False, "expected": 2, "failed": 1, "pytest_exit": 1,
+                   "identities": {"a.py::ok": "PASS", "a.py::bad": "FAIL",
+                              "a.py::gone": "NOT_RUN"}},
+            "related": {"accepted": False, "inventory_error": "Expected 842", "errors": ["x"]},
+        }}}
+        text = "\n".join(runner.failure_lines(results))
+        self.assertIn("pristine/f2 not accepted", text)
+        self.assertIn("FAIL a.py::bad", text)
+        self.assertIn("NOT_RUN a.py::gone", text)
+        self.assertNotIn("a.py::ok", text)
+        self.assertIn("inventory_error: Expected 842", text)
+        self.assertNotIn("pristine/f1", text)
+
+    def test_accepted_run_prints_nothing_and_cap_is_applied(self) -> None:
+        self.assertEqual(runner.failure_lines({"accepted": True, "phases": {}}), [])
+        ids = {f"t::{n:03d}": "FAIL" for n in range(60)}
+        out = runner.failure_lines({"phases": {"p": {"g": {"accepted": False,
+                                                           "identities": ids}}}}, limit=5)
+        self.assertEqual(sum(line.startswith("  FAIL") for line in out), 5)
+        self.assertIn("55 more not passing", "\n".join(out))
 
 
 class FinancialRestCleanupControls(unittest.TestCase):

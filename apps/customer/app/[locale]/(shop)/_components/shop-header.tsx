@@ -160,12 +160,21 @@ export function ShopHeader({
   }));
   const accountHref = withMerchPreviewParam(`/${locale}/account`, previewToken);
 
-  const logo = (
+  const logoLinkClassName =
+    "inline-flex shrink-0 items-center rounded-sm transition-opacity duration-fast ease-std hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing";
+
+  const mobileLogo = (
     <MerchPreviewLink
       href={`/${locale}`}
-      className="inline-flex shrink-0 items-center rounded-sm transition-opacity duration-fast ease-std hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing"
+      className={`${logoLinkClassName} min-w-0 max-w-[46%]`}
       aria-label={labels.appName}
     >
+      <BrandLogo appName={labels.appName} compact className="min-w-0 max-w-[8.25rem]" />
+    </MerchPreviewLink>
+  );
+
+  const desktopLogo = (
+    <MerchPreviewLink href={`/${locale}`} className={logoLinkClassName} aria-label={labels.appName}>
       <BrandLogo appName={labels.appName} />
     </MerchPreviewLink>
   );
@@ -178,7 +187,7 @@ export function ShopHeader({
     <MobileMenuButton
       label={labels.megaMenu.menuOpen}
       onOpen={openMobileMenu}
-      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing"
+      className="inline-flex size-11 shrink-0 touch-manipulation items-center justify-center rounded text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing"
     >
       <IconMenu />
     </MobileMenuButton>
@@ -210,7 +219,7 @@ export function ShopHeader({
     <header
       data-testid="shop-header"
       data-scrolled={scrolled ? "true" : "false"}
-      className="v-shop-header sticky top-0 z-50 w-full"
+      className="v-shop-header sticky top-0 z-50 w-full max-w-[100vw] overflow-x-clip"
     >
       <a
         href="#shop-main"
@@ -227,7 +236,7 @@ export function ShopHeader({
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1">
             {menuButton}
-            {logo}
+            {mobileLogo}
           </div>
           {/* Simple-UX: every phone action keeps its icon and gets a short
               word under it, so nothing is a bare icon and nothing is removed.
@@ -265,7 +274,7 @@ export function ShopHeader({
       >
         <div className="order-1 flex h-14 items-center gap-1">
           <span className="lg:hidden">{menuButton}</span>
-          {logo}
+          {desktopLogo}
         </div>
         <div className="order-2 mx-1 min-w-0 flex-1 lg:order-3 lg:mx-2 lg:max-w-3xl xl:max-w-4xl">
           <DesktopHeaderSearch

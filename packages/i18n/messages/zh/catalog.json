@@ -5,7 +5,7 @@
   "plp": {
     "title": "浏览 {category}",
     "meta": {
-      "description": "在 Convergeo 浏览 {category} — 比较赞比亚卖家、价格与库存。"
+      "description": "在 Vergeo5 浏览 {category} — 比较赞比亚卖家、价格与库存。"
     },
     "defaultCategory": "全部商品",
     "breadcrumbAria": "面包屑导航",
@@ -90,7 +90,7 @@
   "home": {
     "meta": {
       "title": "发现赞比亚",
-      "description": "在 Convergeo 比较卖家、预订服务、发现赞比亚各地的活动——货到付款、卢萨卡配送、全国自提。"
+      "description": "在 Vergeo5 比较卖家、预订服务、发现赞比亚各地的活动——货到付款、卢萨卡配送、全国自提。"
     },
     "serviceBar": {
       "ariaLabel": "配送与自提说明",
@@ -101,9 +101,9 @@
       "fallbackTitle": "在赞比亚选购商品、服务与活动",
       "fallbackSubtitle": "找到附近的卖家。卢萨卡可送货，全国可自取。",
       "primaryCta": "开始浏览",
-      "secondaryCta": "在 Convergeo 开店",
+      "secondaryCta": "在 Vergeo5 开店",
       "placeholder": {
-        "title": "欢迎来到 Convergeo",
+        "title": "欢迎来到 Vergeo5",
         "subtitle": "随着营销板块上线，您的可配置店面将显示在此处。"
       },
       "escrowLine": "订单送达时现金支付。线上支付即将推出。",
@@ -136,7 +136,7 @@
       }
     },
     "trust": {
-      "ariaLabel": "为何选择 Convergeo",
+      "ariaLabel": "为何选择 Vergeo5",
       "sellers": "每家店都有自己的页面，看清您向谁买。",
       "fulfillment": "卢萨卡送货，全国自取。",
       "returns": "商品坏了或发错？48 小时内可退。",
@@ -167,7 +167,7 @@
       "browseLabel": "浏览{category}"
     },
     "rails": {
-      "newTitle": "Convergeo 新品",
+      "newTitle": "Vergeo5 新品",
       "departmentTitle": "{category} 新品",
       "viewAll": "查看全部",
       "servicesTitle": "服务",
@@ -193,7 +193,7 @@
       "recentViewProduct": "查看 {name}"
     },
     "sellCta": {
-      "title": "想在 Convergeo 开店？",
+      "title": "想在 Vergeo5 开店？",
       "body": "创建卖家账号，验证身份即可开始上架。看看怎么运作。",
       "cta": "了解如何开店"
     },
@@ -242,11 +242,11 @@
         "moreLoaded": "已加载更多 {count} 件商品。",
         "emptyTitle": "新品即将上架",
         "emptyBody": "卖家每周都会上新。与此同时，您可以浏览分类或开始销售。",
-        "emptyCta": "在 Convergeo 开店"
+        "emptyCta": "在 Vergeo5 开店"
       }
     },
     "trustStrip": {
-      "ariaLabel": "为何选择 Convergeo",
+      "ariaLabel": "为何选择 Vergeo5",
       "cod": "货到付款",
       "verified": "认证卖家",
       "lusaka": "卢萨卡配送",
@@ -287,8 +287,8 @@
     },
     "meta": {
       "notFoundTitle": "未找到该商品",
-      "descriptionFallback": "在 Convergeo 上选购 {name}",
-      "descriptionWithPrice": "在 Convergeo 比较 {name} 的 {count, plural, one {# 个卖家} other {# 个卖家}} 价格。起价 {price}。"
+      "descriptionFallback": "在 Vergeo5 上选购 {name}",
+      "descriptionWithPrice": "在 Vergeo5 比较 {name} 的 {count, plural, one {# 个卖家} other {# 个卖家}} 价格。起价 {price}。"
     },
     "tabs": {
       "ariaLabel": "商品详情",

@@ -36,15 +36,15 @@ one still ends in the same action: **book, make an appointment, or request a quo
 
 ## 3. Archetypes
 
-| Archetype      | Verticals (existing, **new**)                          | Offer unit              | Booking primitive (request)              |
-| -------------- | ------------------------------------------------------ | ----------------------- | ---------------------------------------- |
-| `accommodation`| **lodging** (hotel, lodge, guesthouse), **property**   | room type / unit        | date range + room + guests (+ viewing for property) |
-| `appointment`  | beauty, tailoring, auto                                | treatment / fitting / slot service | day + time slot + stylist preference |
-| `membership`   | **fitness** (gym, studio, classes)                     | pass / membership       | start date + pass (recurring)            |
-| `on_site`      | cleaning, home-services                                | hourly or per-visit job | date + time window + home size           |
-| `rental`       | **rentals** (equipment, vehicles, party items)         | item                    | pickup date + period (hours/days) + qty  |
-| `ticketed`     | **family-fun** (play parks, farms, attractions)        | ticket by audience      | visit date + timed entry + party mix     |
-| `professional` | tech-services, printing-creative, food-catering, **staffing** (hiring) | package / role / rate | brief + deadline (classic RFQ)           |
+| Archetype       | Verticals (existing, **new**)                                          | Offer unit                         | Booking primitive (request)                         |
+| --------------- | ---------------------------------------------------------------------- | ---------------------------------- | --------------------------------------------------- |
+| `accommodation` | **lodging** (hotel, lodge, guesthouse), **property**                   | room type / unit                   | date range + room + guests (+ viewing for property) |
+| `appointment`   | beauty, tailoring, auto                                                | treatment / fitting / slot service | day + time slot + stylist preference                |
+| `membership`    | **fitness** (gym, studio, classes)                                     | pass / membership                  | start date + pass (recurring)                       |
+| `on_site`       | cleaning, home-services                                                | hourly or per-visit job            | date + time window + home size                      |
+| `rental`        | **rentals** (equipment, vehicles, party items)                         | item                               | pickup date + period (hours/days) + qty             |
+| `ticketed`      | **family-fun** (play parks, farms, attractions)                        | ticket by audience                 | visit date + timed entry + party mix                |
+| `professional`  | tech-services, printing-creative, food-catering, **staffing** (hiring) | package / role / rate              | brief + deadline (classic RFQ)                      |
 
 Mapping is a pure function (`vertical -> archetype`) with a stored override
 (`services.archetype`, nullable). Null means derived. `services.archetype` is **not**
@@ -60,8 +60,9 @@ panel, "about", provider card, reviews. Optional service-level attributes common
 `hours` (<=7 day rows), `policy` (cancellation `flexible | moderate | strict`, note <=200).
 
 **accommodation** (rooms)
+
 - Offer attributes: `room_type` (`standard | premium | presidential | family | dorm |
-  other`), `sleeps` 1-20, `beds` 1-10 + `bed_type`, `size_sqm`, `amenities` (<=10 tags),
+other`), `sleeps` 1-20, `beds` 1-10 + `bed_type`, `size_sqm`, `amenities` (<=10 tags),
   `breakfast_included`, `min_nights` 1-30, `stay_kind` (`nightly | monthly`; monthly is the
   housing/"homing" listing, price = per month), `units_available` (hint).
 - Price meaning: per night (or per month). `delivery_days` is unused (hidden).
@@ -72,6 +73,7 @@ panel, "about", provider card, reviews. Optional service-level attributes common
 - Service attrs: `check_in`, `check_out` (HH:MM), `star_class` optional later.
 
 **appointment** (salon/barber/tailor/garage)
+
 - Offer attributes: `duration_min` 5-480 (step 5), `group` (menu section label <=30, e.g.
   "Hair", "Nails"), `staff` (<=6 names allowed to perform it, optional), `home_visit`,
   `price_is_from`.
@@ -82,6 +84,7 @@ panel, "about", provider card, reviews. Optional service-level attributes common
 - Service attrs: `staff` roster (<=10 `{name, role}`), `walk_ins`.
 
 **membership** (gym/studio)
+
 - Offer attributes: `pass_kind` (`day | week | month | quarter | year | class_pack`),
   `valid_days` 1-730, `visits_included` (null = unlimited) 1-1000, `classes_included`,
   `guest_passes` 0-10, `peak_hours_only`.
@@ -91,9 +94,10 @@ panel, "about", provider card, reviews. Optional service-level attributes common
   (day tabs, <=21 entries), facilities, panel with start date + pass. Vibe: **orange/red**
   (energy).
 - Service attrs: `class_schedule` (<=21 `{day 0-6, start, title, duration_min,
-  capacity?}`).
+capacity?}`).
 
 **on_site** (maid, cleaning, handyman)
+
 - Offer attributes: `pricing_unit` (`hour | visit | room`), `min_hours` 1-12, `home_size`
   (`studio | one_two_bed | three_bed | four_plus`), `crew_size` 1-10, `supplies_included`.
 - Layout: "how big is your home" picker mapped to offers, what's included checklist, trust
@@ -101,6 +105,7 @@ panel, "about", provider card, reviews. Optional service-level attributes common
   address area. Vibe: **green/cyan** (fresh).
 
 **rental** (equipment, vehicles)
+
 - Offer attributes: `unit` (`hour | day | week`), `deposit_ngwee` (integer ngwee, informational,
   collected by the vendor, **not** by Vergeo5), `quantity_available` 1-500 (hint),
   `specs` (<=8 `{label, value}`), `with_operator`, `delivery_available`, `min_period` 1-30.
@@ -108,6 +113,7 @@ panel, "about", provider card, reviews. Optional service-level attributes common
   start date + period + quantity. Vibe: **amber** (utility).
 
 **ticketed** (family fun)
+
 - Offer attributes: `ticket_kind` (`adult | child | toddler | senior | family | group`),
   `age_min`, `age_max` (0-120), `party_size` (family/group bundle size 1-20),
   `entry` (`any_time | timed`), `slot_capacity` (hint).
@@ -117,6 +123,7 @@ panel, "about", provider card, reviews. Optional service-level attributes common
 - Service attrs: `age_policy` note.
 
 **professional** (default)
+
 - Offer attributes (all optional): `rate_unit` (`hour | day | month | project`), `role`
   (<=40, for staffing), `experience_years` 0-50, `availability` (`now | week | booked`),
   `certifications` (<=5 short strings).
@@ -190,28 +197,28 @@ policy, hours, schedule, staff, availability) appear in a collapsible "details" 
 
 ## 7. MVP vs later
 
-| MVP (this phase)                                                   | Later                                         |
-| ------------------------------------------------------------------ | --------------------------------------------- |
-| 7 archetypes, mapping + override, 6 new verticals                  | per-archetype fields as columns if we need SQL filters |
-| Attribute validation, public/vendor read-write                     | real availability calendars + inventory locks |
-| 4 bespoke layouts (accommodation, appointment, membership, rental) | bespoke on_site, ticketed, professional      |
-| Request panel -> RFQ text + package snapshot                       | structured `booking_request` object, vendor confirm flow |
-| Filter boxes + rating/availability (vendor-declared)               | live availability, map/near-me                |
+| MVP (this phase)                                                   | Later                                                                     |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| 7 archetypes, mapping + override, 6 new verticals                  | per-archetype fields as columns if we need SQL filters                    |
+| Attribute validation, public/vendor read-write                     | real availability calendars + inventory locks                             |
+| 4 bespoke layouts (accommodation, appointment, membership, rental) | bespoke on_site, ticketed, professional                                   |
+| Request panel -> RFQ text + package snapshot                       | structured `booking_request` object, vendor confirm flow                  |
+| Filter boxes + rating/availability (vendor-declared)               | live availability, map/near-me                                            |
 | No payments for bookings                                           | deposits via the existing `accept_quote` spine once live; rental deposits |
-| Vendor-declared hours/schedules                                    | timed-entry ticket QR (events spine)          |
+| Vendor-declared hours/schedules                                    | timed-entry ticket QR (events spine)                                      |
 
 ## 8. Decisions taken (reversible)
 
-| #     | Decision                                                                                   |
-| ----- | ------------------------------------------------------------------------------------------ |
-| ST-1  | 7 archetypes; verticals map to them; per-service override stored, null = derived.         |
-| ST-2  | Offer = package row + `attributes` jsonb; validated per archetype in Pydantic, not SQL.    |
-| ST-3  | Property/housing ships as `accommodation` with `stay_kind=monthly` (viewing request).      |
-| ST-4  | Staffing/hiring ships as `professional` with role + rate attributes.                       |
-| ST-5  | Availability filter = vendor-declared flag; rating filter = vendor-level review average.   |
-| ST-6  | Bookings are requests through RFQ; the package snapshot carries `attributes`.              |
-| ST-7  | Broken attributes degrade to the generic layout, never an error page.                      |
-| ST-8  | Deposits (rental, lodging) are informational copy; Vergeo5 never collects them in MVP.     |
+| #    | Decision                                                                                 |
+| ---- | ---------------------------------------------------------------------------------------- |
+| ST-1 | 7 archetypes; verticals map to them; per-service override stored, null = derived.        |
+| ST-2 | Offer = package row + `attributes` jsonb; validated per archetype in Pydantic, not SQL.  |
+| ST-3 | Property/housing ships as `accommodation` with `stay_kind=monthly` (viewing request).    |
+| ST-4 | Staffing/hiring ships as `professional` with role + rate attributes.                     |
+| ST-5 | Availability filter = vendor-declared flag; rating filter = vendor-level review average. |
+| ST-6 | Bookings are requests through RFQ; the package snapshot carries `attributes`.            |
+| ST-7 | Broken attributes degrade to the generic layout, never an error page.                    |
+| ST-8 | Deposits (rental, lodging) are informational copy; Vergeo5 never collects them in MVP.   |
 
 ## 9. Open questions for the founder
 

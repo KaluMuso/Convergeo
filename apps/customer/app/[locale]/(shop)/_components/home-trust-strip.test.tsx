@@ -39,7 +39,7 @@ describe("HomeTrustStrip", () => {
   it("renders the four trust items in order", () => {
     render(<HomeTrustStrip labels={labelsFrom(catalogMessages)} />);
     const strip = screen.getByTestId("home-trust-strip");
-    expect(strip).toHaveAttribute("aria-label", "Why shop on Convergeo");
+    expect(strip).toHaveAttribute("aria-label", "Why shop on Vergeo5");
     const items = within(strip).getAllByRole("listitem");
     expect(items.map((item) => item.textContent)).toEqual([
       catalogMessages.home.trustStrip.cod,

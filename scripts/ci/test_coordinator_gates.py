@@ -124,8 +124,8 @@ class CoordinatorControls(unittest.TestCase):
         self.assertEqual(len(contract["review_db"]), 18)
         self.assertEqual(len(contract["ui"]), 6)
         self.assertEqual(len(contract["normal"]), 333)
-        self.assertEqual(len(contract["migrations"]), 200)
-        self.assertEqual(sum(map(len, financial.financial_identities().values())), 877)
+        self.assertEqual(len(contract["migrations"]), 203)
+        self.assertEqual(sum(map(len, financial.financial_identities().values())), 891)
 
     def test_local_host_rejected_before_resource_allocation(self) -> None:
         with patch.dict(os.environ, {}, clear=True), patch.object(gates, "Runner") as factory:
@@ -158,7 +158,7 @@ class CoordinatorControls(unittest.TestCase):
         self.assertEqual(len(prefix), 131)
         self.assertIn("20260929120003_adopt_existing_service_obligations.sql", prefix)
         self.assertNotIn(gates.F3_MIGRATION, prefix)
-        self.assertEqual(len([n for n in contract["migrations"] if n > gates.F3_MIGRATION]), 68)
+        self.assertEqual(len([n for n in contract["migrations"] if n > gates.F3_MIGRATION]), 71)
 
     def test_mounted_false_success_partial_skip_duplicate_and_exit_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

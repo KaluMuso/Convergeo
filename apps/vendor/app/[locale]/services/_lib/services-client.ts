@@ -10,7 +10,9 @@ export type ServiceVertical =
   | "home-services"
   | "tech-services"
   | "cleaning"
-  | "tailoring";
+  | "tailoring"
+  | "logistics"
+  | "packaging";
 
 export type ServiceStatus = "draft" | "active" | "paused";
 
@@ -82,4 +84,6 @@ export const SERVICE_VERTICALS: ServiceVertical[] = [
   "tech-services",
   "cleaning",
   "tailoring",
+  "logistics",
+  "packaging",
 ];

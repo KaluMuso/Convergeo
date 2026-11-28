@@ -17,17 +17,18 @@
     "untitledItem": "Chinthu chopanda dzina"
   },
   "empty": {
-    "body": "Mukagula kuchokera kwa ogulitsa a Convergeo, ma-order ndi tracking zidzaonekera apa.",
+    "body": "Mukagula kuchokera kwa ogulitsa a Vergeo5, ma-order ndi tracking zidzaonekera apa.",
     "cta": "Yambani kugula",
     "title": "Palibe ma-order"
   },
   "errors": {
     "loadFailed": "Sitinathe kutenga ma-order anu. Yesaninso.",
-    "notFound": "Order sichipezeka"
+    "notFound": "Order sichipezeka",
+    "paymentInFlight": "Kulipira kukuchitika pa oda iyi. Dikirani mphindi zingapo, kenako yesaninso kuletsa."
   },
   "escrow": {
     "cod": "Lipirani mu cash mukalandira order yanu.",
-    "held": "Payment yanu ikusungidwa ndi Convergeo mpaka mulandire order yanu.",
+    "held": "Payment yanu ikusungidwa ndi Vergeo5 mpaka mulandire order yanu.",
     "refunded": "Refund ikubwerera ku mobile money wallet yanu.",
     "released": "Ndalama zatsimikizidwa kwa vendor pambuyo pa fulfilment.",
     "strip": {
@@ -65,7 +66,7 @@
     "confirmed": "Vendor yatsimikiza order yanu",
     "delivered": "Yafika",
     "paymentCod": "Lipirani vendor pa delivery",
-    "paymentHeld": "Mwalipira — ikusungidwa ndi Convergeo",
+    "paymentHeld": "Mwalipira — ikusungidwa ndi Vergeo5",
     "placed": "Order yaiyikidwa",
     "processing": "Vendor ikukonza order yanu",
     "ready": "Yakonzeka ku pickup",
@@ -74,7 +75,7 @@
     "title": "Progress ya order",
     "explain": {
       "placed": "Talandira order yanu ndi kuitumiza kwa seller.",
-      "paymentHeld": "Ndalama yanu ikusungidwa ndi Convergeo. Seller amalipidwa pambuyo pa delivery basi.",
+      "paymentHeld": "Ndalama yanu ikusungidwa ndi Vergeo5. Seller amalipidwa pambuyo pa delivery basi.",
       "paymentCod": "Palibe ndalama yotengedwa. Mumalipira mu cash mukalandira order.",
       "confirmed": "Seller wavomereza order yanu ndipo akuikonza.",
       "processing": "Seller akunyamula zinthu zanu.",

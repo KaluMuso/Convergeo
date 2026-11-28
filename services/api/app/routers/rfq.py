@@ -107,12 +107,14 @@ class RfqMessageResponse(StrictModel):
 
 class RfqPackageSnapshot(StrictModel):
     package_id: str
-    tier: str
+    tier: str | None = None
     name: str
     price_ngwee: int | None
     delivery_days: int | None
     revisions: int | None
     includes: list[str]
+    #: Archetype-specific offer attributes the customer saw (docs/plan/service-type-templates.md).
+    attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class RfqThreadResponse(StrictModel):

@@ -55,7 +55,7 @@ const labels = {
   empty: {
     title: "New products are on the way",
     body: "Sellers are listing more every week.",
-    cta: "Sell on Convergeo",
+    cta: "Sell on Vergeo5",
   },
 };
 
@@ -100,7 +100,7 @@ describe("HomeListingStream", () => {
     );
 
     expect(screen.getByTestId("home-stream-empty")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Sell on Convergeo" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Sell on Vergeo5" })).toHaveAttribute(
       "href",
       "/en/sell",
     );
