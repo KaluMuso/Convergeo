@@ -27,5 +27,8 @@
   "ai.faq.cod.a": "Pendant le pilote, toutes les commandes se paient en espèces à la livraison : rien n'est débité en ligne. Certaines commandes peuvent ne pas être éligibles ; le paiement vous le dit avant de commander.",
   "ai.faq.escrow.a": "Le paiement en ligne avec protection acheteur par séquestre arrive bientôt. D'ici là, vous payez en espèces à la livraison.",
   "ai.faq.payment.a": "Pendant le pilote, vous payez en espèces à la livraison. Les paiements par mobile money et par carte arrivent bientôt.",
-  "ai.faq.returns.a": "Signalez un problème depuis la page de votre commande et notre équipe l'examinera. Nous organiserons directement avec vous tout remboursement approuvé."
+  "ai.faq.returns.a": "Signalez un problème depuis la page de votre commande et notre équipe l'examinera. Nous organiserons directement avec vous tout remboursement approuvé.",
+  "ai.ask.voiceDenied": "Le microphone est bloqué. Autorisez-le dans les paramètres du navigateur, ou tapez votre question.",
+  "ai.ask.speak": "Lire la réponse à voix haute",
+  "ai.ask.speakStop": "Arrêter la lecture"
 }

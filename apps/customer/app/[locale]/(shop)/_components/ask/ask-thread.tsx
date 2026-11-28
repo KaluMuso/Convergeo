@@ -13,6 +13,7 @@ import { CitationCard } from "./citation-card";
 import { FaqList } from "./faq-list";
 import { QuotaBanner } from "./quota-banner";
 import { QuotaMeter } from "./quota-meter";
+import { AskSpeakButton } from "./speak-button";
 import {
   extractErrorState,
   parseQuota,
@@ -79,8 +80,9 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
         getToken: () => session?.access_token ?? null,
       });
 
-      const payload: { query: string; lat?: number; lng?: number } = {
+      const payload: { query: string; lat?: number; lng?: number; locale: string } = {
         query: trimmed,
+        locale,
       };
       if (coords) {
         payload.lat = roundCoord(coords.lat);
@@ -103,7 +105,7 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
         setStatus("error");
       }
     },
-    [session?.access_token],
+    [session?.access_token, locale],
   );
 
   // Auto-run a seeded `?q=` query (deep-link from nav / search zero-results / voice FAB).
@@ -193,9 +195,7 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
   return (
     <div className="mx-auto flex w-full max-w-[360px] flex-col gap-4">
       <header className="space-y-1">
-        <h1 className="font-display text-h1 text-display-ink">
-          {t("ask.title")}
-        </h1>
+        <h1 className="font-display text-h1 text-display-ink">{t("ask.title")}</h1>
         <p className="text-sm text-text-2">{t("ask.subtitle")}</p>
       </header>
 
@@ -222,6 +222,7 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
               stop: t("ask.voiceStop"),
               listening: t("ask.voiceListening"),
               error: t("ask.voiceError"),
+              denied: t("ask.voiceDenied"),
             }}
           />
         </div>
@@ -244,9 +245,7 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
       </form>
 
       <div aria-live="polite" className="space-y-4">
-        {status === "idle" ? (
-          <p className="text-sm text-text-3">{t("ask.emptyHint")}</p>
-        ) : null}
+        {status === "idle" ? <p className="text-sm text-text-3">{t("ask.emptyHint")}</p> : null}
 
         {status === "loading" ? (
           <p className="text-sm text-text-3" data-testid="ask-loading">
@@ -275,11 +274,7 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
               {t(relativeAiKey(answer.message_key ?? "ai.answer.not_found"))}
             </p>
           ) : (
-            <article
-              className="space-y-3"
-              data-testid="ask-answer"
-              data-source={source}
-            >
+            <article className="space-y-3" data-testid="ask-answer" data-source={source}>
               {answer.notice_key ? (
                 <QuotaBanner
                   message={t(relativeAiKey(answer.notice_key))}
@@ -296,7 +291,14 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
               ) : null}
 
               {text ? (
-                <p className="whitespace-pre-wrap text-sm text-text">{text}</p>
+                <div className="flex items-start gap-2">
+                  <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm text-text">{text}</p>
+                  <AskSpeakButton
+                    text={text}
+                    locale={locale}
+                    labels={{ speak: t("ask.speak"), stop: t("ask.speakStop") }}
+                  />
+                </div>
               ) : null}
 
               {answer.sign_in_required ? (
@@ -322,22 +324,14 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
                     {t("ask.useLocation")}
                   </Button>
                   {locationDenied ? (
-                    <p className="text-xs text-text-3">
-                      {t("ask.locationDenied")}
-                    </p>
+                    <p className="text-xs text-text-3">{t("ask.locationDenied")}</p>
                   ) : null}
                 </div>
               ) : null}
 
               {orders.length > 0 ? (
-                <section
-                  aria-labelledby="ask-orders-title"
-                  className="space-y-2"
-                >
-                  <h2
-                    id="ask-orders-title"
-                    className="text-sm font-semibold text-text"
-                  >
+                <section aria-labelledby="ask-orders-title" className="space-y-2">
+                  <h2 id="ask-orders-title" className="text-sm font-semibold text-text">
                     {t("ask.ordersTitle")}
                   </h2>
                   <ul className="grid grid-cols-1 gap-2">
@@ -363,17 +357,9 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
               ) : null}
 
               {citations.length > 0 ? (
-                <section
-                  aria-labelledby="ask-citations-title"
-                  className="space-y-2"
-                >
-                  <h2
-                    id="ask-citations-title"
-                    className="text-sm font-semibold text-text"
-                  >
-                    {source === "fallback"
-                      ? t("fallback.resultsTitle")
-                      : t("ask.citationsTitle")}
+                <section aria-labelledby="ask-citations-title" className="space-y-2">
+                  <h2 id="ask-citations-title" className="text-sm font-semibold text-text">
+                    {source === "fallback" ? t("fallback.resultsTitle") : t("ask.citationsTitle")}
                   </h2>
                   <ul className="grid grid-cols-1 gap-2">
                     {citations.map((citation) => (
@@ -382,6 +368,11 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
                           citation={citation}
                           locale={locale}
                           viewLabel={t(viewLabelKey(citation.entity_kind))}
+                          vendorLabel={
+                            citation.vendor_name
+                              ? t("ask.soldBy", { vendor: citation.vendor_name })
+                              : null
+                          }
                           meta={citationMeta(citation)}
                         />
                       </li>
@@ -392,9 +383,7 @@ export function AskThread({ locale, initialQuery }: AskThreadProps) {
 
               <FaqList title={t("ask.faqTitle")} items={faqItems} />
 
-              {source === "ai" ? (
-                <p className="text-xs text-text-3">{t("disclaimer")}</p>
-              ) : null}
+              {source === "ai" ? <p className="text-xs text-text-3">{t("disclaimer")}</p> : null}
             </article>
           )
         ) : null}

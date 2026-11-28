@@ -9,7 +9,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import checkoutMessages from "../../../../../../../packages/i18n/messages/en/checkout.json";
 
 import { ChangeNotices } from "./change-notices";
-import { MiniCartEmptyState, vendorGroupLabel } from "./mini-cart-drawer";
+import { vendorGroupLabel } from "./mini-cart-drawer";
+import { MiniCartEmptyState } from "./mini-cart-drawer-view";
 import { QtyStepper } from "./qty-stepper";
 import { CartEmptyState, VendorGroups, indexNoticesByListing } from "./vendor-groups";
 

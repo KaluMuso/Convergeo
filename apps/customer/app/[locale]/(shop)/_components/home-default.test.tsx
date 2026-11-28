@@ -301,10 +301,10 @@ describe("HomeHeroBand", () => {
 });
 
 describe("HomeSellCta", () => {
-  it("links to the sell page with invite-only messaging", () => {
+  it("links to the sell page", () => {
     render(<HomeSellCta locale="en" t={t} />);
     expect(screen.getByRole("heading", { name: "Want to sell on Convergeo?" })).toBeInTheDocument();
-    expect(screen.getByText(/only invited shops can join/i)).toBeInTheDocument();
+    expect(screen.getByText(/Create a seller account/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "See how selling works" })).toHaveAttribute(
       "href",
       "/en/sell",

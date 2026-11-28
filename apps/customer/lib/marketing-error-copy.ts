@@ -1,8 +1,9 @@
+import { DEFAULT_LOCALE, LOCALES, type Locale } from "@vergeo/i18n";
+
 import bemMarketing from "../../../packages/i18n/messages/bem/marketing.json";
 import enMarketing from "../../../packages/i18n/messages/en/marketing.json";
 import frMarketing from "../../../packages/i18n/messages/fr/marketing.json";
 import nyaMarketing from "../../../packages/i18n/messages/nya/marketing.json";
-import { DEFAULT_LOCALE, LOCALES, type Locale } from "@vergeo/i18n";
 
 type MarketingErrorCopy = (typeof enMarketing)["error"];
 
