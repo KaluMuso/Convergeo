@@ -665,7 +665,7 @@
     "services/api/tests/test_listing_manage.py": "473a37d63b121e55a3a874296065de924b06b3c3fe26175f1fd50b9c97550557",
     "services/api/tests/test_listing_pricing.py": "4fd1cff67152052fa9e49f84a69f8011ad058e568affe22cbd03bd87a81bd5ce",
     "services/api/tests/test_location_stock.py": "9695617bfcb9813bd788aaa3b12bf9806895fe5c43ab4cafde8c83332f7d64e8",
-    "services/api/tests/test_order_state.py": "4268058cd995e82a2b86d8bea0937ab19892483ff5ee61f61b662cbbe057a703",
+    "services/api/tests/test_order_state.py": "2dd9a87944b53eb988a5bce3e3b6a2421a77cbf17d1a16153b020d157c87178d",
     "services/api/tests/test_product_class_cart.py": "de81662aa6e46a4c3b6b058b322265b1dfb4bcd4dcb28b72577764dc3acf599a",
     "services/api/tests/test_prohibited.py": "a1b708a5c8be267ad6435430525b4cf569ccf59a4fdac74020fb94c84367dac9",
     "services/api/tests/test_review_aggregate.py": "552c6e4dbde3c21b7635db758a0ef87f83d0a175cd20adcefb8aef273a777743",
