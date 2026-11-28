@@ -46,7 +46,7 @@ export function ContextPanel({ order, locale }: ContextPanelProps) {
             {order.items.map((item) => (
               <li key={item.id}>
                 {t("itemLine", {
-                  title: item.title_snapshot ?? item.item_kind,
+                  title: item.title_snapshot?.trim() || t("untitledItem"),
                   qty: item.qty,
                   price: formatK(item.unit_price_ngwee),
                 })}

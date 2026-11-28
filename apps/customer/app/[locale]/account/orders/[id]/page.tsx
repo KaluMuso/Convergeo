@@ -347,7 +347,10 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
           {order.items.map((item: OrderItem) => (
             <li key={item.id} className="flex items-center justify-between gap-3 py-3 text-sm">
               <span className="text-display-ink">
-                {t("detail.lineQty", { title: item.title, qty: item.qty })}
+                {t("detail.lineQty", {
+                  title: item.title ?? t("detail.untitledItem"),
+                  qty: item.qty,
+                })}
                 {item.variant_options && item.variant_options.length > 0 ? (
                   <span
                     className="block text-xs text-text-2"
