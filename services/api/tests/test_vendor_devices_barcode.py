@@ -459,3 +459,47 @@ def test_migration_never_grants_the_token_column_to_clients() -> None:
     )
     assert m is not None
     assert "token" not in {c.strip() for c in m.group(1).split(",")}
+
+
+def _other_owner_row(last_seen: str | None) -> dict[str, Any]:
+    return {
+        "id": "d0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0",
+        "user_id": USER_B,
+        "vendor_id": VENDOR_B,
+        "token": TOKEN,
+        "revoked_at": None,
+        "last_seen_at": last_seen,
+    }
+
+
+@pytest.mark.parametrize("days,expected", [(13, 409), (14, 200), (30, 200)])
+def test_takeover_only_when_owner_silent_for_14_days(
+    monkeypatch: pytest.MonkeyPatch, fake: FakeClient, days: int, expected: int
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    seen = (datetime.now(UTC) - timedelta(days=days, minutes=1 if days == 14 else -1)).isoformat()
+    fake.tables["device_tokens"].rows.append(_other_owner_row(seen))
+    c = next(_client(monkeypatch, fake, USER_A, frozenset({"vendor"})))
+    assert (
+        c.post(
+            "/vendor/devices", headers=H, json={"token": TOKEN, "platform": "android"}
+        ).status_code
+        == expected
+    )
+    row = fake.tables["device_tokens"].rows[0]
+    assert row["user_id"] == (USER_A if expected == 200 else USER_B)
+
+
+def test_missing_or_garbled_last_seen_is_never_stale(
+    monkeypatch: pytest.MonkeyPatch, fake: FakeClient
+) -> None:
+    for bad in (None, "not-a-date"):
+        fake.tables["device_tokens"].rows[:] = [_other_owner_row(bad)]
+        c = next(_client(monkeypatch, fake, USER_A, frozenset({"vendor"})))
+        assert (
+            c.post(
+                "/vendor/devices", headers=H, json={"token": TOKEN, "platform": "android"}
+            ).status_code
+            == 409
+        )

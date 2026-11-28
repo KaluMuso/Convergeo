@@ -8,7 +8,7 @@ registration, so a leaked response cannot be replayed to send pushes.
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, require_role
@@ -29,6 +29,8 @@ router = APIRouter(
 #: Active devices kept per vendor. A reinstall mints a new token, so the oldest are
 #: revoked rather than refused.
 MAX_ACTIVE_DEVICES = 10
+#: An active token whose owner has been silent this long may be taken over by another account.
+STALE_TOKEN_DAYS = 14
 _EXPO_TOKEN = re.compile(r"^Expo(?:nent)?PushToken\[[A-Za-z0-9_-]{8,128}\]$")
 _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE)
 
@@ -71,6 +73,19 @@ def _rows(response: Any) -> list[dict[str, Any]]:
     return []
 
 
+def _is_stale(last_seen_at: Any) -> bool:
+    """True when the token's owner has not been seen for STALE_TOKEN_DAYS or more."""
+    if not isinstance(last_seen_at, str):
+        return False
+    try:
+        seen = datetime.fromisoformat(last_seen_at.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if seen.tzinfo is None:
+        seen = seen.replace(tzinfo=UTC)
+    return datetime.now(UTC) - seen >= timedelta(days=STALE_TOKEN_DAYS)
+
+
 def _revoke_overflow(service_client: _ServiceRoleClient, vendor_id: str, now: str) -> None:
     active = _rows(
         service_client.client.table("device_tokens")
@@ -98,7 +113,7 @@ def register_device(
     now = datetime.now(UTC).isoformat()
     existing = _rows(
         service_client.client.table("device_tokens")
-        .select("id, user_id, revoked_at")
+        .select("id, user_id, revoked_at, last_seen_at")
         .eq("token", body.token)
         .execute()
     )
@@ -106,9 +121,12 @@ def register_device(
         existing
         and existing[0].get("revoked_at") is None
         and str(existing[0]["user_id"]) != str(current_user.id)
+        and not _is_stale(existing[0].get("last_seen_at"))
     ):
         # An active token belongs to whoever registered it. Taking it over would send
-        # that person's order alerts to this account, so it must be revoked by its owner first.
+        # that person's order alerts to this account, so it must be revoked by its owner
+        # first, unless the owner's app has not checked in for STALE_TOKEN_DAYS (a phone
+        # that changed hands without a clean sign-out).
         raise AppError(
             code="conflict",
             message="This device is registered to another account",
