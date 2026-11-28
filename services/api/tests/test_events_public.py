@@ -113,7 +113,7 @@ class FakeQuery:
         self._maybe_single = True
         return self
 
-    def execute(self) -> FakeResponse:
+    def execute(self) -> FakeResponse | None:
         rows = self.store.query(self.table, self._filters)
         if self._order:
             column, desc = self._order
