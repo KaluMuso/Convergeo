@@ -74,7 +74,8 @@
     "coupons": "Coupons",
     "branches": "Branch verification",
     "extras": "Extras requests",
-    "trials": "Free trials"
+    "trials": "Free trials",
+    "askAudit": "Ask Vergeo audit"
   },
   "boards": {
     "states": {
@@ -947,7 +948,8 @@
       "stepCurrent": "Current:",
       "stepUpcoming": "Upcoming:",
       "copyOrderId": "Copy order ID",
-      "advancedEscrow": "Advanced: manual escrow hold / release"
+      "advancedEscrow": "Advanced: manual escrow hold / release",
+      "untitledItem": "Unnamed item"
     },
     "dispatch": {
       "title": "Manual dispatch",
@@ -1260,7 +1262,8 @@
         "paymentLine": "{rail} · {status} · {amount} · {at}",
         "ledger": "Ledger",
         "ledgerEmpty": "No ledger transactions.",
-        "ledgerBalance": "Σ postings: {balance} ngwee"
+        "ledgerBalance": "Σ postings: {balance} ngwee",
+        "untitledItem": "Unnamed item"
       },
       "decision": {
         "title": "Decision",
@@ -3087,5 +3090,55 @@
       "conflict": "Not allowed from its current state (it may already be hidden, or the vendor’s KYC is not approved).",
       "permission": "You do not have permission for this action."
     }
+  },
+  "askAudit": {
+    "title": "Ask Vergeo audit",
+    "subtitle": "Every answer Ask Vergeo showed customers, checked against live prices, listings and vendors. Open the listing and the vendor to investigate and make contact.",
+    "filters": {
+      "label": "Filters",
+      "flaggedOnly": "Flagged only",
+      "severity": "Severity",
+      "severityAll": "All severities"
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "status": {
+      "pending": "Awaiting audit",
+      "passed": "Passed",
+      "flagged": "Flagged",
+      "error": "Audit failed"
+    },
+    "asker": {
+      "customer": "Signed-in customer",
+      "guest": "Guest"
+    },
+    "question": "Question",
+    "answer": "Answer shown",
+    "findings": "Findings",
+    "citedItems": "Items cited",
+    "viewItem": "View listing",
+    "viewVendor": "View vendor {vendor}",
+    "vendor": "Vendor",
+    "rules": {
+      "entity_missing": "Cited item does not exist",
+      "entity_inactive": "Cited item is not live",
+      "vendor_inactive": "Seller is not active",
+      "vendor_mismatch": "Wrong seller",
+      "price_mismatch": "Price differs from the listing",
+      "price_below_category_floor": "Price below the category floor",
+      "price_far_below_median": "Price far below the category median",
+      "price_far_above_median": "Price far above the category median",
+      "text_price_unsupported": "Price in the answer matches no cited item"
+    },
+    "loading": "Loading answers…",
+    "error": "Could not load the answer log.",
+    "permissionDenied": "Only admins can view the Ask Vergeo audit.",
+    "retry": "Retry",
+    "empty": "No answers logged yet.",
+    "emptyFlagged": "No flagged answers. Untick \"Flagged only\" to see every answer.",
+    "loadMore": "Load more"
   }
 }

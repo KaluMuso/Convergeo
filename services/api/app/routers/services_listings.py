@@ -33,6 +33,8 @@ SERVICE_VERTICALS = (
     "tech-services",
     "cleaning",
     "tailoring",
+    "logistics",
+    "packaging",
 )
 
 ServiceVertical = Literal[
@@ -44,6 +46,8 @@ ServiceVertical = Literal[
     "tech-services",
     "cleaning",
     "tailoring",
+    "logistics",
+    "packaging",
 ]
 
 ServiceStatus = Literal["draft", "active", "paused"]

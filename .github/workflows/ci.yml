@@ -10,11 +10,14 @@ on:
     # every scheduled trigger; other jobs are unchanged and simply re-run green.
     - cron: "17 2 * * *"
 
-# Supersede a pull request's older run when it is pushed again. Pushes (master,
-# release), the nightly schedule and manual runs get a run-unique group, so they
-# are never cancelled and never replaced while queued.
+# Supersede a pull request's older run when it is pushed again. Master pushes
+# share one group without cancel-in-progress: the running master run always
+# finishes, and only the newest pushed SHA waits behind it (older waiting master
+# runs are superseded). Without this, a day of merges queued a full CI run per
+# commit and starved pull-request checks of runners for hours. The nightly
+# schedule and manual runs keep a run-unique group and are never replaced.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.ref) || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -308,14 +311,28 @@ jobs:
   python:
     # Required check context "Python API" (master ruleset). Aggregates the shards.
     name: Python API
-    needs: python-shard
+    needs: [changes, python-shard]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: All API test shards passed
+        # A docs-only change legitimately skips the shards (run_python != true):
+        # that is a pass, not a failure. Any other skipped, cancelled or failed
+        # shard result still fails the required check.
         run: |
+          echo "changes result: ${{ needs.changes.result }}"
+          echo "run_python: ${{ needs.changes.outputs.run_python }}"
           echo "python-shard result: ${{ needs.python-shard.result }}"
-          test "${{ needs.python-shard.result }}" = "success"
+          if [ "${{ needs.python-shard.result }}" = "success" ]; then
+            exit 0
+          fi
+          if [ "${{ needs.python-shard.result }}" = "skipped" ] \
+            && [ "${{ needs.changes.result }}" = "success" ] \
+            && [ "${{ needs.changes.outputs.run_python }}" != "true" ]; then
+            echo "API shards skipped: no Python-affecting change"
+            exit 0
+          fi
+          exit 1
 
   ask-evals:
     name: Ask Vergeo grounding evals
@@ -1135,7 +1152,7 @@ jobs:
       EXPECTED_VECTOR_VERSION: "0.8.2"
       EXPECTED_PG_GRAPHQL_VERSION: "1.6.1"
       EXPECTED_PGCRYPTO_VERSION: "1.3"
-      EXPECTED_TYPEGEN_MIGRATION_COUNT: "200"
+      EXPECTED_TYPEGEN_MIGRATION_COUNT: "202"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -1286,7 +1303,7 @@ jobs:
     name: RLS isolation matrix
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: pgvector/pgvector:0.8.0-pg17-trixie
@@ -1388,7 +1405,7 @@ jobs:
     name: Critical real-stack execution (88 identities)
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: pgvector/pgvector:0.8.0-pg17-trixie
@@ -1428,6 +1445,8 @@ jobs:
 
       - name: Execute exact critical identities on isolated PostgreSQL and PostgREST
         shell: bash
+        env:
+          CI_POSTGREST_MIRROR: "1"
         run: bash scripts/ci/run-critical-real-stack.sh
 
       - name: Retain critical execution identity and JUnit evidence
@@ -1442,7 +1461,7 @@ jobs:
     name: Financial real-stack execution (fresh and upgrade)
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
       contents: read
@@ -1486,6 +1505,8 @@ jobs:
         run: python -m unittest discover -s scripts/ci -p test_guard_shared_service_adoption.py -v
       - name: Execute real financial database gates
         shell: bash
+        env:
+          CI_POSTGREST_MIRROR: "1"
         run: python scripts/ci/run_financial_real_stack.py
       - name: Rehearse guarded adoption catalog and atomic history
         env:
@@ -1506,7 +1527,7 @@ jobs:
     name: Coordinator acceptance (${{ matrix.gate }})
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
       contents: read
@@ -1568,6 +1589,8 @@ jobs:
       - name: Coordinator orchestration controls
         run: python -m unittest discover -s scripts/ci -p test_coordinator_gates.py -v
       - name: Execute retained acceptance contracts
+        env:
+          CI_POSTGREST_MIRROR: "1"
         run: python scripts/ci/run_coordinator_gates.py ${{ matrix.gate }}
       - name: Retain sanitized gate evidence
         if: always()
@@ -1581,7 +1604,7 @@ jobs:
     name: Money DB-trigger integration
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Release-accounting, release-idempotency and reconciliation DB tests exercise the
     # SQL-trigger money path (zero-sum, guarded release ordering, recon report uniqueness).
     # They skip without a live Postgres, and each seeds its own platform ledger-account id

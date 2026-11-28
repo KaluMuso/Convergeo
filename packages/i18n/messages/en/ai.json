@@ -36,6 +36,7 @@
   "ai.ask.viewOrder": "View order",
   "ai.ask.viewVendor": "View shop",
   "ai.ask.viewService": "View service",
+  "ai.ask.soldBy": "Sold by {vendor}",
   "ai.ask.faqTitle": "Good to know",
   "ai.ask.inStock": "In stock",
   "ai.ask.outOfStock": "Out of stock",
@@ -82,5 +83,8 @@
   "ai.faq.payment.q": "How can I pay?",
   "ai.faq.payment.a": "Pay with MTN or Airtel Mobile Money, debit or credit card, or cash on delivery for orders up to K500. Mobile Money and card payments are held in escrow until you confirm delivery.",
   "ai.faq.returns.q": "What if something goes wrong with my order?",
-  "ai.faq.returns.a": "Report a problem from your order page and our team will review it. We will arrange any approved refund with you directly."
+  "ai.faq.returns.a": "Report a problem from your order page and our team will review it. We will arrange any approved refund with you directly.",
+  "ai.ask.voiceDenied": "Microphone is blocked. Allow it in your browser settings, or type your question.",
+  "ai.ask.speak": "Read the answer aloud",
+  "ai.ask.speakStop": "Stop reading"
 }
