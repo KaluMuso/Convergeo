@@ -129,7 +129,8 @@ export function DateFilterChips({
 
   const setDateWindow = (window: EventDateWindow) => {
     updateParams({
-      date_window: window === "tonight" ? null : window,
+      // With a type filter the default window is "all", so "tonight" must be explicit.
+      date_window: window === "tonight" && !searchParams.get("archetype") ? null : window,
       on_date: null,
     });
   };

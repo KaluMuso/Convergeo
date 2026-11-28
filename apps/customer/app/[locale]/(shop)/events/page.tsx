@@ -15,6 +15,12 @@ import { ApiUnavailablePanel } from "../_components/api-unavailable";
 import { BackToTop } from "../_components/back-to-top";
 import { BrowsePager, parseBrowsePage, sliceBrowsePage } from "../_components/browse-pager";
 import { DateFilterChips } from "../_components/events/date-filter-chips";
+import {
+  EventFilterBoxes,
+  parseArchetypeParam,
+  parseFreeParam,
+  parsePriceMaxParam,
+} from "../_components/events/event-filter-boxes";
 import { EventGrid, type EventBrowseItem } from "../_components/events/event-grid";
 import {
   EVENT_CATEGORIES,
@@ -43,6 +49,9 @@ type PageProps = {
     neighbourhood?: string;
     lat?: string;
     lng?: string;
+    archetype?: string;
+    price_max?: string;
+    free?: string;
     page?: string;
   }>;
 };
@@ -126,6 +135,9 @@ async function fetchEvents(params: {
   neighbourhood: string;
   lat: number | null;
   lng: number | null;
+  archetype: string | null;
+  priceMax: number | null;
+  freeOnly: boolean;
 }): Promise<{ kind: "ok"; data: EventsApiResponse } | { kind: "unavailable" }> {
   const search = new URLSearchParams();
   if (params.onDate) {
@@ -141,6 +153,15 @@ async function fetchEvents(params: {
   }
   if (params.neighbourhood) {
     search.set("neighbourhood", params.neighbourhood);
+  }
+  if (params.archetype) {
+    search.set("archetype", params.archetype);
+  }
+  if (params.priceMax !== null) {
+    search.set("price_max", String(params.priceMax));
+  }
+  if (params.freeOnly) {
+    search.set("free", "true");
   }
   if (params.lat !== null && params.lng !== null) {
     search.set("lat", String(params.lat));
@@ -180,6 +201,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     Boolean(query.on_date) ||
     Boolean(query.city) ||
     Boolean(query.neighbourhood) ||
+    Boolean(query.archetype) ||
+    Boolean(query.price_max) ||
+    Boolean(query.free) ||
     Boolean(query.lat);
 
   return {
@@ -209,7 +233,11 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
     messages: { catalog: catalogMessages },
     namespace: "catalog",
   }) as EventsTranslator;
-  const dateWindow = parseDateWindow(query.date_window);
+  // Founder decision: with a type filter, default to all upcoming dates (not "tonight").
+  const dateWindow =
+    query.date_window === undefined && parseArchetypeParam(query.archetype)
+      ? "all"
+      : parseDateWindow(query.date_window);
   const category = parseCategory(query.category);
   const onDate = parseOnDate(query.on_date);
   const city = (query.city ?? "").trim();
@@ -217,7 +245,13 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   const lat = parseCoord(query.lat, -90, 90);
   const lng = parseCoord(query.lng, -180, 180);
   const page = parseBrowsePage(query.page);
+  const archetype = parseArchetypeParam(query.archetype);
+  const priceMax = parsePriceMaxParam(query.price_max);
+  const freeOnly = parseFreeParam(query.free);
   const eventsResult = await fetchEvents({
+    archetype,
+    priceMax,
+    freeOnly,
     dateWindow,
     category,
     onDate,
@@ -288,6 +322,9 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
     neighbourhood: neighbourhood || undefined,
     lat: lat !== null ? String(lat) : undefined,
     lng: lng !== null ? String(lng) : undefined,
+    archetype: archetype ?? undefined,
+    price_max: priceMax !== null ? String(priceMax) : undefined,
+    free: freeOnly ? "1" : undefined,
   };
 
   const filterLabels = {
@@ -430,6 +467,29 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
             />
           </Suspense>
         </div>
+
+        <Suspense fallback={null}>
+          <EventFilterBoxes
+            labels={{
+              typeLabel: t("filters.typeLabel"),
+              typeAll: t("filters.typeAll"),
+              types: {
+                concert: t("archetype.names.concert"),
+                religious: t("archetype.names.religious"),
+                sports_family: t("archetype.names.sports_family"),
+                restaurant: t("archetype.names.restaurant"),
+                private_gathering: t("archetype.names.private_gathering"),
+              },
+              priceLabel: t("filters.priceLabel"),
+              priceAny: t("filters.priceAny"),
+              priceUpTo: t("filters.priceUpTo", { price: "{price}" }),
+              freeLabel: t("filters.freeOnly"),
+            }}
+            activeArchetype={archetype}
+            activePriceMax={priceMax}
+            freeOnly={freeOnly}
+          />
+        </Suspense>
 
         {allItems.length === 0 ? (
           <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
