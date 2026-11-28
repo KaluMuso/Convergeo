@@ -22,7 +22,7 @@ REFUND_AUDIT_ACTION = "refund.transition"
 
 # Ledger kinds execute_refund posts at decision time (refund_lane1/2 pre-release,
 # clawback post-release). A definitive provider failure reverses exactly these.
-REVERSIBLE_REFUND_KINDS = ("refund_lane1", "refund_lane2", "clawback")
+REVERSIBLE_REFUND_KINDS = ("refund_lane1", "refund_lane2", "clawback", "late_collection_refund")
 DEFINITIVE_FAILURE_REASON = "provider_failed"
 
 

@@ -23,6 +23,7 @@ from tests.test_order_jobs import (  # noqa: F401  (fixtures re-exported for thi
     GROSS_NGEWEE,
     VENDOR_A,
     _insert_order,
+    _insert_order_event,
     db,
     db_url_env,
     jobs_client,
@@ -54,6 +55,15 @@ def _refund_ledger_without_fk(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def _clean_exceptions(db: PgConn) -> Iterator[None]:  # noqa: F811
     db.run("DELETE FROM public.payment_collection_exceptions;")
+    # Seeded by the pay-at-door migration; re-assert it so the module also passes on a
+    # database whose ledger_accounts were reset by another test.
+    seeded = db.run_script(
+        "BEGIN; SET LOCAL role service_role; "
+        "INSERT INTO public.ledger_accounts (id, kind) VALUES "
+        "('c7000000-0000-0000-0000-000000000008', 'door_payment_suspense') "
+        "ON CONFLICT DO NOTHING; COMMIT;"
+    )
+    assert seeded.ok, seeded.error
     yield
 
 
@@ -226,6 +236,116 @@ class TestLateCollectionRefund:
         order_id, _, payment_id = _late_collection(db, order_status="placed")
         client = _client(order_id, payment_id)
         assert sweep_late_collection_refunds(client).scanned == 0
+
+
+def _release_vendor_amount(db: PgConn, order_id: str) -> int:
+    result = db.run(
+        "SELECT coalesce(sum(abs(lp.amount_ngwee)), 0) FROM public.ledger_transactions lt "
+        "JOIN public.ledger_postings lp ON lp.transaction_id = lt.id "
+        "JOIN public.ledger_accounts la ON la.id = lp.account_id "
+        f"WHERE lt.order_id = '{order_id}' AND lt.kind = 'release_to_vendor' "
+        "AND la.kind = 'vendor_payable';"
+    )
+    assert result.ok and result.rows, result.error
+    return int(result.rows[0])
+
+
+def _shipped_and_funded(db: PgConn, order_id: str, now: Any) -> None:
+    from datetime import timedelta
+
+    from app.services.ledger.engine import post_transaction
+    from app.services.ledger.templates import LedgerTemplate
+
+    _insert_order_event(
+        db,
+        order_id=order_id,
+        from_status="processing",
+        to_status="shipped",
+        actor=VENDOR_A,
+        created_at=now - timedelta(days=8),
+    )
+    post_transaction(
+        idempotency_key=f"escrow-hold-{order_id}",
+        template=LedgerTemplate.ESCROW_HOLD,
+        order_id=order_id,
+        order_amount_ngwee=GROSS_NGEWEE,
+    )
+
+
+class TestLateCashNeverReachesVendor:
+    def test_refund_step_failure_then_release_leaves_vendor_amount_unchanged(
+        self, db: PgConn, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Duplicate payment on a LIVE order, refund fails, order later released.
+
+        The late cash is parked in door_payment_suspense (never escrow), so the
+        release pays the vendor exactly what an identical order without a duplicate
+        payment gets.
+        """
+        from datetime import UTC, datetime
+
+        from app.errors import AppError
+        from app.services.escrow.release import evaluate_and_release
+        from app.services.escrow.release_accounting import summarize_order_release_ledger
+
+        now = datetime.now(UTC)
+        live_order, _, payment_id = _late_collection(
+            db, reason="payment_cancelled", order_status="shipped", payment_status="cancelled"
+        )
+        control_order, control_group = str(uuid.uuid4()), str(uuid.uuid4())
+        _insert_order(db, order_id=control_order, group_id=control_group, status="shipped")
+        _shipped_and_funded(db, live_order, now)
+        _shipped_and_funded(db, control_order, now)
+
+        def boom(**_: Any) -> Any:
+            raise AppError("refund_gate_failed", "simulated refund-step failure", 503)
+
+        monkeypatch.setattr("app.services.refunds.late_collection.execute_refund", boom)
+        client = _client(live_order, payment_id)
+        outcome = sweep_late_collection_refunds(client)
+        assert (outcome.refunded, outcome.failed) == (0, 1)
+        assert _rows(client, "refunds") == []
+
+        # Cash is booked, but to suspense: no escrow leg exists for the late payment.
+        assert _count(db, late_collection_charge_key(payment_id)) == 1
+        summary = summarize_order_release_ledger(live_order)
+        assert summary.charge_received_ngwee == GROSS_NGEWEE  # only the real escrow hold
+        suspense = db.run(
+            "SELECT coalesce(sum(lp.amount_ngwee), 0) FROM public.ledger_postings lp "
+            "JOIN public.ledger_accounts la ON la.id = lp.account_id "
+            "JOIN public.ledger_transactions lt ON lt.id = lp.transaction_id "
+            f"WHERE lt.payment_id = '{payment_id}' AND la.kind = 'door_payment_suspense';"
+        )
+        assert suspense.rows[0] == str(-GROSS_NGEWEE)
+
+        evaluate_and_release(client, live_order, now=now)
+        evaluate_and_release(client, control_order, now=now)
+        live_amount = _release_vendor_amount(db, live_order)
+        assert live_amount > 0
+        assert live_amount == _release_vendor_amount(db, control_order)
+
+
+class TestMultiOrderCheckoutAudit:
+    def test_audit_row_records_checkout_group_and_every_order(self, db: PgConn) -> None:
+        order_id, group_id, payment_id = _late_collection(db)
+        sibling = str(uuid.uuid4())
+        # One order per (group, vendor): the sibling belongs to a second shop.
+        _insert_order(db, order_id=sibling, group_id=str(uuid.uuid4()), status="placed")
+        moved = db.run(
+            f"UPDATE public.orders SET checkout_group_id = '{group_id}', "
+            f"vendor_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' WHERE id = '{sibling}';"
+        )
+        assert moved.ok, moved.error
+        client = _client(order_id, payment_id)
+        outcome = sweep_late_collection_refunds(client)
+        assert outcome.refunded == 1
+        (audit,) = [
+            r
+            for r in _rows(client, "audit_log")
+            if r.get("action") == "payment.late_collection_refund"
+        ]
+        assert audit["after"]["checkout_group_id"] == group_id
+        assert sorted(audit["after"]["checkout_group_order_ids"]) == sorted([order_id, sibling])
 
 
 class TestLateCollectionEndpoint:

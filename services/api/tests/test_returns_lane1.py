@@ -639,9 +639,48 @@ def test_delivery_already_refunded_only_for_other_active_refunds() -> None:
     own = "return-b-refund"
     none = _RefundRowsClient([])
     assert not _delivery_already_refunded(none, order_id="o1", own_source_key=own)  # type: ignore[arg-type]
-    first = _RefundRowsClient([{"source_key": "return-a-refund", "status": "completed"}])
+    first = _RefundRowsClient(
+        [
+            {
+                "source_key": "return-a-refund",
+                "status": "completed",
+                "breakdown": {"delivery_fee_ngwee": 5_000},
+            }
+        ]
+    )
     assert _delivery_already_refunded(first, order_id="o1", own_source_key=own)  # type: ignore[arg-type]
-    failed = _RefundRowsClient([{"source_key": "return-a-refund", "status": "failed"}])
+    failed = _RefundRowsClient(
+        [
+            {
+                "source_key": "return-a-refund",
+                "status": "failed",
+                "breakdown": {"delivery_fee_ngwee": 5_000},
+            }
+        ]
+    )
     assert not _delivery_already_refunded(failed, order_id="o1", own_source_key=own)  # type: ignore[arg-type]
-    replay = _RefundRowsClient([{"source_key": own, "status": "completed"}])
+    replay = _RefundRowsClient(
+        [{"source_key": own, "status": "completed", "breakdown": {"delivery_fee_ngwee": 5_000}}]
+    )
     assert not _delivery_already_refunded(replay, order_id="o1", own_source_key=own)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "breakdown",
+    [{}, {"delivery_fee_ngwee": 0}, {"refund_ngwee": 60_000}, None],
+    ids=["empty", "zero_delivery", "no_delivery_key", "no_breakdown"],
+)
+def test_delivery_not_counted_when_earlier_refund_carried_no_delivery(
+    breakdown: dict[str, int] | None,
+) -> None:
+    """An active earlier refund that did NOT return delivery must not zero this one's."""
+    from app.services.returns.lane1 import _delivery_already_refunded
+
+    earlier = _RefundRowsClient(
+        [{"source_key": "return-a-refund", "status": "awaiting_payout", "breakdown": breakdown}]
+    )
+    assert not _delivery_already_refunded(
+        earlier,  # type: ignore[arg-type]
+        order_id="o1",
+        own_source_key="return-b-refund",
+    )

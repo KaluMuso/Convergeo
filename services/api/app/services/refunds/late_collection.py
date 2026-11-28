@@ -8,9 +8,9 @@ or ``payment_cancelled``). The cash is real but unbooked: no ledger leg exists f
 Lenco has no refunds API, so the refund is a ledger-orchestrated payout, exactly like
 every other refund:
 
-1. Book the collection that really happened (``charge_received`` -> platform_cash /
-   escrow) under the deterministic key ``late-collection-charge-<payment id>``.
-2. ``execute_refund`` drains that escrow back to platform_cash and queues a
+1. Book the collection that really happened to ``door_payment_suspense`` (never escrow,
+   so it can never reach a vendor) under key ``late-collection-charge-<payment id>``.
+2. ``execute_refund(from_suspense=True)`` pays it back out of suspense and queues a
    ``customer_refund`` payout to the ORIGINAL PAYER's MSISDN, under the deterministic
    source key ``late-collection-<payment id>``. Same key => same ledger rows, same
    ``refunds`` row, same ``rfd-*`` payout reference, so running this twice (or two
@@ -99,6 +99,9 @@ SELECT json_build_object(
   'rail', p.rail,
   'payer_phone', p.raw->>'payer_phone',
   'order_id', ord.id::text,
+  'checkout_group_id', p.checkout_group_id::text,
+  'order_ids', (SELECT coalesce(json_agg(o3.id::text ORDER BY o3.id), '[]'::json)
+                FROM public.orders o3 WHERE o3.checkout_group_id = p.checkout_group_id),
   'order_released', coalesce(ord.released, false)
 )::text
 FROM public.payment_collection_exceptions e
@@ -151,7 +154,11 @@ def _refund_rows_for_key(
 
 
 def _resolve_exception(
-    service_client: ServiceRoleClient, *, payment_id: str, refund: RefundExecutionResult
+    service_client: ServiceRoleClient,
+    *,
+    payment_id: str,
+    refund: RefundExecutionResult,
+    candidate: dict[str, Any],
 ) -> None:
     service_client.client.table("payment_collection_exceptions").update(
         {"resolved_at": datetime.now(UTC).isoformat()}
@@ -168,6 +175,9 @@ def _resolve_exception(
                 "order_id": refund.order_id,
                 "amount_ngwee": refund.amount_ngwee,
                 "source_key": late_collection_source_key(payment_id),
+                # The payment covered the WHOLE checkout group, not just this order.
+                "checkout_group_id": candidate.get("checkout_group_id"),
+                "checkout_group_order_ids": candidate.get("order_ids") or [],
             },
         }
     ).execute()
@@ -212,14 +222,15 @@ def refund_late_collection(
         idempotency_key=source_key,
         surface="late_collection_refund",
     )
-    # Book the cash that really arrived so the refund drains real escrow. No
-    # checkout_group_id on purpose: it must not look like the checkout was allocated.
+    # Book the cash that really arrived into door_payment_suspense (platform_cash in,
+    # suspense out) - NEVER escrow. If the refund step below fails, this money still
+    # cannot be released to the vendor of a live order (release reads escrow only).
     post_transaction(
         idempotency_key=late_collection_charge_key(payment_id),
-        template=LedgerTemplate.CHARGE_RECEIVED,
+        template=LedgerTemplate.DOOR_PAYMENT_EXCEPTION,
         order_id=order_id,
         payment_id=payment_id,
-        gross_ngwee=amount,
+        received_ngwee=amount,
     )
     refund = execute_refund(
         service_client=service_client,
@@ -231,8 +242,9 @@ def refund_late_collection(
         item_ngwee_override=amount,
         delivery_fee_ngwee_override=0,
         ignore_coupon_share=True,
+        from_suspense=True,
     )
-    _resolve_exception(service_client, payment_id=payment_id, refund=refund)
+    _resolve_exception(service_client, payment_id=payment_id, refund=refund, candidate=candidate)
     return refund
 
 

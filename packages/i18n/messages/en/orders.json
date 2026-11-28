@@ -102,7 +102,8 @@
   },
   "errors": {
     "loadFailed": "We couldn't open your orders. Check your internet and try again.",
-    "notFound": "We couldn't find this order. Go back to your orders."
+    "notFound": "We couldn't find this order. Go back to your orders.",
+    "paymentInFlight": "A payment is still in progress for this order. Wait a few minutes, then try cancelling again."
   },
   "confirm": {
     "title": "Did you get your order?",

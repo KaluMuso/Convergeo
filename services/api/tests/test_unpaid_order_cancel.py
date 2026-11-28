@@ -157,6 +157,31 @@ class TestCancelUnpaid:
         assert _run(jobs_client)["cancelled"] == 1
         assert _status(db, order_id) == "cancelled"
 
+    def test_stale_failed_attempt_does_not_stop_the_auto_cancel(
+        self,
+        db: PgConn,
+        jobs_client: TestClient,
+    ) -> None:
+        """failed-without-verdict older than 30 minutes must not wedge a 14h-old order."""
+        order_id, group_id = _place(db, age_hours=14)
+        _pay(db, group_id, "failed")
+        db.run(
+            "UPDATE public.payments SET created_at = now() - interval '45 minutes' "
+            f"WHERE checkout_group_id = '{group_id}';"
+        )
+        assert _run(jobs_client)["cancelled"] == 1
+        assert _status(db, order_id) == "cancelled"
+
+    def test_fresh_failed_attempt_still_defers_the_auto_cancel(
+        self,
+        db: PgConn,
+        jobs_client: TestClient,
+    ) -> None:
+        order_id, group_id = _place(db, age_hours=14)
+        _pay(db, group_id, "failed")
+        assert _run(jobs_client)["cancelled"] == 0
+        assert _status(db, order_id) == "placed"
+
     def test_second_run_does_nothing(
         self,
         db: PgConn,

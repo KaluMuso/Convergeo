@@ -58,6 +58,10 @@ class ActorRole(StrEnum):
 Fulfilment = Literal["delivery", "pickup"]
 
 CANCELLATION_EVENTS = frozenset({OrderEvent.REJECT, OrderEvent.CANCEL})
+# A payment attempt older than this can no longer block a customer/system cancel: the
+# USSD prompt is long dead, and a late success is refunded by the late-collection
+# job. Keeps an order from being stuck on a `failed` attempt that never got a verdict.
+IN_FLIGHT_ATTEMPT_MAX_AGE_MINUTES = 30
 
 # Events a restricted operator with ``logistics.manage`` may drive as ADMIN
 # (courier pickup / delivery coupling, readiness on the vendor's behalf). A
@@ -628,6 +632,7 @@ BEGIN
     JOIN public.payments p ON p.checkout_group_id=scope.checkout_group_id
     WHERE p.status NOT IN ('success','expired','cancelled')
       AND (p.status<>'failed' OR coalesce(p.raw->>'terminal_provider_failure','false')<>'true')
+      AND p.created_at > now() - interval '{IN_FLIGHT_ATTEMPT_MAX_AGE_MINUTES} minutes'
   );
   IF {str(cancel_blocked_by_inflight).lower()} AND has_inflight_attempt AND NOT has_money
      AND NOT o.cod THEN

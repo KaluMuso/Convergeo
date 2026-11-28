@@ -22,6 +22,7 @@ from app.services.escrow.release import (
 )
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.orders.state import (
+    IN_FLIGHT_ATTEMPT_MAX_AGE_MINUTES,
     SYSTEM_ACTOR_ID,
     ActorRole,
     OrderEvent,
@@ -295,6 +296,7 @@ WHERE o.status = 'placed'
     WHERE p.status NOT IN ('expired', 'cancelled')
       AND NOT (p.status = 'failed'
                AND coalesce(p.raw->>'terminal_provider_failure', 'false') = 'true')
+      AND p.created_at > now() - interval '{IN_FLIGHT_ATTEMPT_MAX_AGE_MINUTES} minutes'
   )
   {cursor_filter}
 ORDER BY o.id ASC

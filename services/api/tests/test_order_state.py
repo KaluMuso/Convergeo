@@ -455,6 +455,44 @@ class TestCancelBlockedWhilePaymentInFlight:
                 note="x",
             )
 
+    @pytest.mark.parametrize("status", ["failed", "initiated", "ussd_pushed"])
+    def test_attempt_older_than_30_minutes_no_longer_blocks(self, db: PgConn, status: str) -> None:
+        """A failed-without-verdict (or abandoned) attempt can never wedge an order."""
+        order_id, group_id = str(uuid.uuid4()), str(uuid.uuid4())
+        _insert_order(db, order_id=order_id, checkout_group_id=group_id, status="placed")
+        payment_id = str(uuid.uuid4())
+        _insert_payment(db, payment_id=payment_id, checkout_group_id=group_id, status=status)
+        db.run(
+            f"UPDATE public.payments SET created_at = now() - interval '31 minutes' "
+            f"WHERE id = '{payment_id}';"
+        )
+        transition_order(
+            order_id=order_id,
+            event=OrderEvent.CANCEL,
+            actor_role=ActorRole.SYSTEM,
+            actor_id=SYSTEM_ACTOR_ID,
+            note="stale attempt",
+        )
+        assert _order_status(db, order_id) == "cancelled"
+
+    def test_attempt_inside_30_minutes_still_blocks(self, db: PgConn) -> None:
+        order_id, group_id = str(uuid.uuid4()), str(uuid.uuid4())
+        _insert_order(db, order_id=order_id, checkout_group_id=group_id, status="placed")
+        payment_id = str(uuid.uuid4())
+        _insert_payment(db, payment_id=payment_id, checkout_group_id=group_id, status="failed")
+        db.run(
+            f"UPDATE public.payments SET created_at = now() - interval '29 minutes' "
+            f"WHERE id = '{payment_id}';"
+        )
+        with pytest.raises(PaymentInFlightError):
+            transition_order(
+                order_id=order_id,
+                event=OrderEvent.CANCEL,
+                actor_role=ActorRole.CUSTOMER,
+                actor_id=CUSTOMER_ID,
+                note="too soon",
+            )
+
     @pytest.mark.parametrize("status", ["expired", "cancelled"])
     def test_finished_attempts_do_not_block(self, db: PgConn, status: str) -> None:
         order_id, group_id = str(uuid.uuid4()), str(uuid.uuid4())

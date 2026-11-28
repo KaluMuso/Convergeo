@@ -462,6 +462,11 @@ def _refunded_total_ngwee(service_client: ServiceRoleClient, order_id: str) -> i
     for row in _rows(response):
         if str(row.get("status") or "") in _NON_COUNTING_REFUND_STATUSES:
             continue
+        row_breakdown = row.get("breakdown")
+        if isinstance(row_breakdown, dict) and row_breakdown.get("funds_source") == "suspense":
+            # Paid out of parked late cash, not this order's escrow: it neither
+            # consumes nor relates to what the order's own payment may refund.
+            continue
         amount = row.get("amount_ngwee")
         if isinstance(amount, int) and not isinstance(amount, bool) and amount > 0:
             total += amount
@@ -543,7 +548,17 @@ def _complete_refund_money_path(
     ledger_ids: list[str] = []
     promo_raw = breakdown.get("promo_return_ngwee")
     promo_return = promo_raw if isinstance(promo_raw, int) and promo_raw > 0 else 0
-    if phase == RefundPhase.PRE_RELEASE:
+    if breakdown.get("funds_source") == "suspense":
+        # Late collection parked in suspense: pay it back from there, never from escrow.
+        posted = post_transaction(
+            idempotency_key=f"{ledger_key_base}-ledger",
+            template=LedgerTemplate.LATE_COLLECTION_REFUND,
+            order_id=order_id,
+            refund_id=refund_id,
+            refund_ngwee=refund_amount,
+        )
+        ledger_ids.append(posted.id)
+    elif phase == RefundPhase.PRE_RELEASE:
         ledger_ids.extend(
             _post_pre_release_ledger(
                 lane=lane,
@@ -679,6 +694,67 @@ def _resume_processing_refund(
     )
 
 
+def _insert_and_complete_suspense_refund(
+    *,
+    service_client: ServiceRoleClient,
+    order_id: str,
+    vendor_id: str,
+    source_key: str,
+    refund_amount: int,
+    lane1: Lane1RefundAmount,
+    breakdown: dict[str, Any],
+    return_transport_ngwee: int,
+    customer_rail: CustomerRail,
+    customer_momo: str,
+) -> RefundExecutionResult:
+    refund_id = str(uuid.uuid4())
+    insert_row = {
+        "id": refund_id,
+        "order_id": order_id,
+        "source_key": source_key,
+        "lane": 1,
+        "breakdown": breakdown,
+        "amount_ngwee": refund_amount,
+        "status": "processing",
+    }
+    try:
+        insert_response = service_client.client.table("refunds").insert(insert_row).execute()
+    except APIError as exc:
+        if getattr(exc, "code", None) != _UNIQUE_VIOLATION:
+            raise
+        raced = _find_existing_refund(service_client, source_key=source_key)
+        if raced is None:
+            raise
+        if str(raced.get("status") or "") in {"processing", "pending"}:
+            return _resume_processing_refund(
+                service_client=service_client,
+                existing=raced,
+                return_transport_ngwee=return_transport_ngwee,
+                customer_rail=customer_rail,
+                customer_momo=customer_momo,
+            )
+        return _result_from_existing(raced)
+    inserted = _single_row(insert_response)
+    if inserted is not None:
+        refund_id = str(inserted.get("id", refund_id))
+    return _complete_refund_money_path(
+        service_client=service_client,
+        refund_id=refund_id,
+        order_id=order_id,
+        vendor_id=vendor_id,
+        lane=1,
+        phase=RefundPhase.PRE_RELEASE,
+        refund_amount=refund_amount,
+        breakdown=breakdown,
+        ledger_key_base=source_key,
+        lane1=lane1,
+        lane2=None,
+        customer_rail=customer_rail,
+        customer_momo=customer_momo,
+        created=True,
+    )
+
+
 def _order_advance_recovered(order_id: str) -> bool:
     summary = summarize_order_release_ledger(order_id)
     return summary.advance_recovered_ngwee > 0
@@ -697,6 +773,7 @@ def execute_refund(
     item_ngwee_override: int | None = None,
     delivery_fee_ngwee_override: int | None = None,
     ignore_coupon_share: bool = False,
+    from_suspense: bool = False,
 ) -> RefundExecutionResult:
     """Execute or return an existing refund for a caller source_key (double-execution guarded).
 
@@ -787,6 +864,32 @@ def execute_refund(
 
     # Fail fast before claiming the gate (a zero refund must never claim it).
     coupon_share, refund_amount, lane1, lane2 = _amounts()
+
+    if from_suspense:
+        # Late collection parked in door_payment_suspense: it is not in this order's
+        # escrow, so the escrow gate (which would also block a live order's release),
+        # the escrow cap and the per-order paid cap do not apply. The refund is
+        # bounded by its own source key (one per payment) and fixed amount.
+        assert lane1 is not None
+        suspense_breakdown = _lane1_breakdown(lane1, RefundPhase.PRE_RELEASE)
+        suspense_breakdown["idempotency_key"] = source_key
+        suspense_breakdown["funds_source"] = "suspense"
+        if item_ngwee_override is not None:
+            suspense_breakdown["item_ngwee_override"] = item_ngwee_override
+        if delivery_fee_ngwee_override is not None:
+            suspense_breakdown["delivery_fee_ngwee_override"] = delivery_fee_ngwee_override
+        return _insert_and_complete_suspense_refund(
+            service_client=service_client,
+            order_id=order_id,
+            vendor_id=vendor_id,
+            source_key=source_key,
+            refund_amount=refund_amount,
+            lane1=lane1,
+            breakdown=suspense_breakdown,
+            return_transport_ngwee=return_transport_ngwee,
+            customer_rail=customer_rail,
+            customer_momo=customer_momo,
+        )
 
     # D17 single-drain: decide phase under the shared order escrow gate so a
     # concurrent release cannot also drain escrow after we chose PRE_RELEASE.
