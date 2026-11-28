@@ -29,7 +29,7 @@ self.addEventListener("push", (event) => {
   }
   const badge = typeof data.badge === "number" && data.badge >= 0 ? Math.floor(data.badge) : null;
   const tasks = [
-    self.registration.showNotification(text(data.title) || "Convergeo", {
+    self.registration.showNotification(text(data.title) || "Vergeo5", {
       body: text(data.body),
       tag: "vergeo-vendor-notification",
       data: { url: safeUrl(data.url) },

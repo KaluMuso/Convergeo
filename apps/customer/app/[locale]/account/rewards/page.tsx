@@ -20,7 +20,7 @@ type PageProps = {
   params: Promise<{ locale: string }>;
 };
 
-/** Convergeo Points (flag `loyalty_points`): server-rendered, zero client JS. */
+/** Vergeo5 Points (flag `loyalty_points`): server-rendered, zero client JS. */
 export default async function AccountRewardsPage({ params }: PageProps) {
   const { locale } = await params;
   if (!LOCALES.includes(locale as Locale)) {

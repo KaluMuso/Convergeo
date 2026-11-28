@@ -18,8 +18,8 @@ import "../globals.css";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s · Convergeo Admin",
-    default: "Convergeo Admin",
+    template: "%s · Vergeo5 Admin",
+    default: "Vergeo5 Admin",
   },
   robots: {
     index: false,

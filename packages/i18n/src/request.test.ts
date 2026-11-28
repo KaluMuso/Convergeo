@@ -23,7 +23,7 @@ describe("resolveMessage", () => {
 
   it("falls back to English for missing locale files", async () => {
     const message = await resolveMessage("bem", "app.name");
-    expect(message).toBe("Convergeo");
+    expect(message).toBe("Vergeo5");
   });
 
   it("falls back to the key when missing in all locales", async () => {

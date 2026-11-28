@@ -80,7 +80,7 @@ function parseCollections(
               vendorLabel:
                 typeof item.vendor_label === "string"
                   ? item.vendor_label
-                  : "Convergeo vendor",
+                  : "Vergeo5 vendor",
             },
           ];
         })

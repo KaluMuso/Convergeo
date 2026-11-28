@@ -495,7 +495,7 @@ function point(lat: number | null | undefined, lng: number | null | undefined): 
 }
 
 /**
- * Google Maps directions link for the dispatcher (opens Google Maps; Convergeo
+ * Google Maps directions link for the dispatcher (opens Google Maps; Vergeo5
  * makes no Maps API call, so it costs nothing). Shop -> customer, with the
  * customer's area name + "Lusaka" when the address has no pin. Null when there
  * is no usable destination.

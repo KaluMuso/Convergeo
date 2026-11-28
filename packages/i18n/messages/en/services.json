@@ -44,7 +44,7 @@
   },
   "detail": {
     "metaTitle": "{title} — Services",
-    "metaDescription": "{title} in {area}. View portfolio and request a quote on Convergeo.",
+    "metaDescription": "{title} in {area}. View portfolio and request a quote on Vergeo5.",
     "about": "About this service",
     "whatsIncluded": "What's included",
     "includeMarker": "✓",
@@ -287,7 +287,7 @@
     "back": "← Back to jobs",
     "empty": "No active quotes yet — providers usually respond within a day.",
     "unknownProvider": "Provider",
-    "preferredBadge": "Convergeo Preferred",
+    "preferredBadge": "Vergeo5 Preferred",
     "rating": "{rating}★ ({count, plural, one {# review} other {# reviews}})",
     "validUntil": "Valid until {date}",
     "status": {
@@ -321,7 +321,7 @@
     "totalLabel": "Total job value",
     "depositLabel": "Deposit due now",
     "balanceLabel": "Balance on completion",
-    "escrowNote": "Your deposit is held safely by Convergeo and only released to the provider once the work is confirmed.",
+    "escrowNote": "Your deposit is held safely by Vergeo5 and only released to the provider once the work is confirmed.",
     "confirmCta": "Pay deposit of {amount}",
     "payCta": "Accept and pay",
     "submitting": "Setting up your deposit…",

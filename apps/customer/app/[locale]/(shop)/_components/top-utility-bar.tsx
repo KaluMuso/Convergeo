@@ -106,7 +106,7 @@ function SocialIcon({
 }
 
 /**
- * Thin utility strip: Zambia + language, contact, socials (legacy Convergeo chrome).
+ * Thin utility strip: Zambia + language, contact, socials (legacy Vergeo5 chrome).
  */
 export function TopUtilityBar({ locale, labels, links }: TopUtilityBarProps) {
   const pathname = usePathname();

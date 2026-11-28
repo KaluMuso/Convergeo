@@ -8,16 +8,16 @@
     "stopReply": "Lembani STOP kuleka.",
     "stopKeyword": "STOP",
     "startKeyword": "START",
-    "stopConfirmation": "Mwaleka kulandiridwa mauthenga a marketing a Convergeo. Zosintha za order zidzapitirira kutumizidwa.",
-    "startConfirmation": "Mwalandiridwa zosintha za Convergeo. Lembani STOP kuleka."
+    "stopConfirmation": "Mwaleka kulandiridwa mauthenga a marketing a Vergeo5. Zosintha za order zidzapitirira kutumizidwa.",
+    "startConfirmation": "Mwalandiridwa zosintha za Vergeo5. Lembani STOP kuleka."
   },
   "whatsapp": {
     "order_confirmed": {
-      "body": "Order yanu ya Convergeo {order_reference} yatsimikizidwa. Total {total}. Onani: {track_url} Lembani STOP kuleka."
+      "body": "Order yanu ya Vergeo5 {order_reference} yatsimikizidwa. Total {total}. Onani: {track_url} Lembani STOP kuleka."
     },
     "payment_received": {
       "body": "{trust_narrative} Order {order_reference}. Lembani STOP kuleka.",
-      "trust_narrative": "K{amount} yanu ikusungidwa ndi Convergeo mpaka kutumiza."
+      "trust_narrative": "K{amount} yanu ikusungidwa ndi Vergeo5 mpaka kutumiza."
     },
     "order_shipped": {
       "body": "Order yanu {order_reference} yatumizidwa. {tracking_info} Lembani STOP kuleka."
@@ -29,27 +29,27 @@
       "body": "Order yanu {order_reference} adafika. Lembani ndemanga: {review_url} Lembani STOP kuleka."
     },
     "vendor_new_order": {
-      "body": "Order yatsopano {order_reference} pa Convergeo: {product_title} × {quantity}. Tsimikizani mu vendor app."
+      "body": "Order yatsopano {order_reference} pa Vergeo5: {product_title} × {quantity}. Tsimikizani mu vendor app."
     },
     "otp_login": {
-      "body": "Code yanu yolowera mu Convergeo ndi {otp_code}. Imatha mu mphindi 10. Musagawane code iyi."
+      "body": "Code yanu yolowera mu Vergeo5 ndi {otp_code}. Imatha mu mphindi 10. Musagawane code iyi."
     },
     "event_cancelled": {
-      "body": "Event ya Convergeo \"{event_title}\" pa {event_date} yacancelled. {refund_detail} Lembani STOP kuleka.",
-      "refund_pending": "Kubwezeredwa kwa malipiro anu kukuchita process ndi Convergeo.",
+      "body": "Event ya Vergeo5 \"{event_title}\" pa {event_date} yacancelled. {refund_detail} Lembani STOP kuleka.",
+      "refund_pending": "Kubwezeredwa kwa malipiro anu kukuchita process ndi Vergeo5.",
       "refund_none": "Palibe malipiro anapezeka pa akaunti yanu pa event iyi."
     },
     "event_schedule_changed": {
-      "body": "Zambiri za event ya Convergeo \"{event_title}\" zasinthidwa. Tsiku: {event_date}. Venue: {venue}. Onani tickets zanu mu app. Lembani STOP kuleka."
+      "body": "Zambiri za event ya Vergeo5 \"{event_title}\" zasinthidwa. Tsiku: {event_date}. Venue: {venue}. Onani tickets zanu mu app. Lembani STOP kuleka."
     },
     "gift_recipient_notice": {
-      "body": "Hi {recipient_name}, {sender_name} sent you a gift from {shop_name} on Convergeo. We'll only message you about this gift. Reply STOP to opt out."
+      "body": "Hi {recipient_name}, {sender_name} sent you a gift from {shop_name} on Vergeo5. We'll only message you about this gift. Reply STOP to opt out."
     },
     "gift_ready_pickup": {
       "body": "Your gift from {shop_name} is ready to collect. Pickup PIN: {pickup_pin}. Don't share it."
     },
     "birthday_greeting": {
-      "body": "Happy birthday from Convergeo! Use code {coupon_code} for {amount} off orders of {min_spend} or more, valid {valid_days} days. Reply STOP to opt out."
+      "body": "Happy birthday from Vergeo5! Use code {coupon_code} for {amount} off orders of {min_spend} or more, valid {valid_days} days. Reply STOP to opt out."
     },
     "points_earned": {
       "body": "You earned {points} points. You now have {balance}. At {threshold} you unlock a reward coupon."
@@ -58,13 +58,13 @@
       "body": "Your week, {shop_name}: {orders} orders, {sales} in sales. Top item: {top_item}. {new_followers} new followers. {pending_actions} actions waiting. Next payout: {next_payout}."
     },
     "order_cancelled": {
-      "body": "⚠ Your Convergeo order {order_reference} was cancelled. {refund_detail} Reply STOP to opt out."
+      "body": "⚠ Your Vergeo5 order {order_reference} was cancelled. {refund_detail} Reply STOP to opt out."
     },
     "payment_failed": {
       "body": "⚠ Your payment of {amount} did not go through. If you were charged, contact support and we will sort it out. Try again: {retry_url} Reply STOP to opt out."
     },
     "order_completed": {
-      "body": "⚠ Your Convergeo order {order_reference} is complete. Thank you for shopping with us! See it here: {order_url} Reply STOP to opt out."
+      "body": "⚠ Your Vergeo5 order {order_reference} is complete. Thank you for shopping with us! See it here: {order_url} Reply STOP to opt out."
     },
     "ticket_issued": {
       "body": "⚠ Your ticket for {event_title} is ready. Show the QR code at the door: {ticket_url} Reply STOP to opt out."
@@ -82,112 +82,112 @@
       "body": "⚠ Your payout of {amount} could not be sent. {failure_hint} We will retry once your details are correct."
     },
     "rfq_quoted": {
-      "body": "⚠ You received a quote of {quote_price} on Convergeo. Open the app to review it. Reply STOP to opt out."
+      "body": "⚠ You received a quote of {quote_price} on Vergeo5. Open the app to review it. Reply STOP to opt out."
     },
     "service_quote_accepted": {
-      "body": "⚠ Good news! Your quote was accepted. A deposit of {deposit} (job total {total}) is secured in Convergeo escrow. Open the app to start the job."
+      "body": "⚠ Good news! Your quote was accepted. A deposit of {deposit} (job total {total}) is secured in Vergeo5 escrow. Open the app to start the job."
     }
   },
   "sms": {
     "order_confirmed": {
-      "body": "Convergeo: order {order_reference} yatsimikizidwa. Total {total}. {track_url}"
+      "body": "Vergeo5: order {order_reference} yatsimikizidwa. Total {total}. {track_url}"
     },
     "payment_received": {
-      "body": "Convergeo: malipiro alandidwa pa {order_reference}. {trust_narrative}"
+      "body": "Vergeo5: malipiro alandidwa pa {order_reference}. {trust_narrative}"
     },
     "order_shipped": {
-      "body": "Convergeo: order {order_reference} yatumizidwa. {tracking_info}"
+      "body": "Vergeo5: order {order_reference} yatumizidwa. {tracking_info}"
     },
     "order_ready_pickup": {
-      "body": "Convergeo: order {order_reference} akuyenera kutengedwa. {pickup_details}"
+      "body": "Vergeo5: order {order_reference} akuyenera kutengedwa. {pickup_details}"
     },
     "order_delivered": {
-      "body": "Convergeo: order {order_reference} adafika. Ndemanga: {review_url}"
+      "body": "Vergeo5: order {order_reference} adafika. Ndemanga: {review_url}"
     },
     "vendor_new_order": {
-      "body": "Convergeo vendor: order yatsopano {order_reference} — {product_title} × {quantity}"
+      "body": "Vergeo5 vendor: order yatsopano {order_reference} — {product_title} × {quantity}"
     },
     "otp_login": {
-      "body": "Convergeo code: {otp_code}. Imatha mu mphindi 10. Musagawane."
+      "body": "Vergeo5 code: {otp_code}. Imatha mu mphindi 10. Musagawane."
     },
     "review_request": {
-      "body": "Order yanu {order_reference} pa Convergeo inali bwanji? Lembani ndemanga: {review_url} Lembani STOP kuleka."
+      "body": "Order yanu {order_reference} pa Vergeo5 inali bwanji? Lembani ndemanga: {review_url} Lembani STOP kuleka."
     },
     "abandoned_cart_recovery": {
-      "body": "Mwasiya zinthu mu cart yanu ya Convergeo. Malizitsani checkout: {checkout_url} Lembani STOP kuleka."
+      "body": "Mwasiya zinthu mu cart yanu ya Vergeo5. Malizitsani checkout: {checkout_url} Lembani STOP kuleka."
     },
     "kyc_nudge": {
-      "body": "Kutsimikizira kwa vendor wa Convergeo kukudikira. Malizitsani mu vendor app kuti muyambe kugulitsa."
+      "body": "Kutsimikizira kwa vendor wa Vergeo5 kukudikira. Malizitsani mu vendor app kuti muyambe kugulitsa."
     },
     "low_stock_alert": {
-      "body": "Convergeo: {title} ili ndi stock yochepa ({stock_qty} zatsala). Onjezerani stock mu vendor app."
+      "body": "Vergeo5: {title} ili ndi stock yochepa ({stock_qty} zatsala). Onjezerani stock mu vendor app."
     },
     "payout_failure_alert": {
-      "body": "Convergeo payout yalephera: {vendor_name} {amount} ref {lenco_reference}. Onani mu admin."
+      "body": "Vergeo5 payout yalephera: {vendor_name} {amount} ref {lenco_reference}. Onani mu admin."
     },
     "event_cancelled": {
-      "body": "Convergeo: \"{event_title}\" pa {event_date} yacancelled. {refund_detail}"
+      "body": "Vergeo5: \"{event_title}\" pa {event_date} yacancelled. {refund_detail}"
     },
     "event_schedule_changed": {
-      "body": "Convergeo: \"{event_title}\" zambiri zasinthidwa. Tsiku: {event_date}. Venue: {venue}. Onani mu app."
+      "body": "Vergeo5: \"{event_title}\" zambiri zasinthidwa. Tsiku: {event_date}. Venue: {venue}. Onani mu app."
     },
     "order_cancelled": {
-      "body": "⚠ Convergeo: order {order_reference} was cancelled. If you paid, we will handle your refund."
+      "body": "⚠ Vergeo5: order {order_reference} was cancelled. If you paid, we will handle your refund."
     },
     "payment_failed": {
-      "body": "⚠ Convergeo: your payment of K{amount} did not go through. Open the app to try again."
+      "body": "⚠ Vergeo5: your payment of K{amount} did not go through. Open the app to try again."
     },
     "order_completed": {
-      "body": "⚠ Convergeo: order {order_reference} is complete. Thank you for shopping with us!"
+      "body": "⚠ Vergeo5: order {order_reference} is complete. Thank you for shopping with us!"
     },
     "ticket_issued": {
-      "body": "⚠ Convergeo: your ticket for \"{event_title}\" is ready. Open My tickets to show the QR."
+      "body": "⚠ Vergeo5: your ticket for \"{event_title}\" is ready. Open My tickets to show the QR."
     },
     "dispute_opened": {
-      "body": "⚠ Convergeo: a dispute was opened on order {order_reference}. Open the vendor app to respond."
+      "body": "⚠ Vergeo5: a dispute was opened on order {order_reference}. Open the vendor app to respond."
     },
     "dispute_resolved": {
-      "body": "⚠ Convergeo: the dispute on order {order_reference} is resolved. Open the app to see the outcome."
+      "body": "⚠ Vergeo5: the dispute on order {order_reference} is resolved. Open the app to see the outcome."
     },
     "payout_sent": {
-      "body": "⚠ Convergeo: your payout of K{amount} is on its way to your {destination_label}."
+      "body": "⚠ Vergeo5: your payout of K{amount} is on its way to your {destination_label}."
     },
     "payout_failed": {
-      "body": "⚠ Convergeo: your payout of K{amount} could not be sent. Check your payout number in the vendor app."
+      "body": "⚠ Vergeo5: your payout of K{amount} could not be sent. Check your payout number in the vendor app."
     }
   },
   "email": {
     "receipt": {
-      "subject": "Receipt yanu ya Convergeo — order {order_id}",
-      "body": "<p>Zikomo chifukwa cha malipiro anu.</p><p><strong>Order:</strong> {order_id}</p><p><strong>Ndalama:</strong> K{amount}</p><p>Ndalama zikusungidwa ndi Convergeo mpaka kutumiza.</p>"
+      "subject": "Receipt yanu ya Vergeo5 — order {order_id}",
+      "body": "<p>Zikomo chifukwa cha malipiro anu.</p><p><strong>Order:</strong> {order_id}</p><p><strong>Ndalama:</strong> K{amount}</p><p>Ndalama zikusungidwa ndi Vergeo5 mpaka kutumiza.</p>"
     },
     "order_receipt": {
-      "subject": "Receipt yanu ya Convergeo — order {order_id}",
+      "subject": "Receipt yanu ya Vergeo5 — order {order_id}",
       "body": "<p>Zikomo chifukwa cha order yanu.</p><p><strong>Order:</strong> {order_id}</p><p><strong>Total:</strong> K{amount}</p>"
     },
     "kyc": {
       "approved": {
-        "subject": "Kutsimikizira kwa vendor wa Convergeo kwavomerezedwa",
-        "body": "<p>Uthenga wabwino — kutsimikizira kwa vendor kwapititsidwa.</p><p>Tsopano mungathe kufotokoza zinthu ndi kulandira payout pa Convergeo.</p>"
+        "subject": "Kutsimikizira kwa vendor wa Vergeo5 kwavomerezedwa",
+        "body": "<p>Uthenga wabwino — kutsimikizira kwa vendor kwapititsidwa.</p><p>Tsopano mungathe kufotokoza zinthu ndi kulandira payout pa Vergeo5.</p>"
       },
       "rejected": {
-        "subject": "Kutsimikizira kwa vendor wa Convergeo kufuna chidwi",
+        "subject": "Kutsimikizira kwa vendor wa Vergeo5 kufuna chidwi",
         "body": "<p>Sitinathe kuvomereza kutsimikizira kwa vendor.</p><p><strong>Chifukwa:</strong> {reason}</p><p>Chonde tumizanso ma documents kuchokera mu vendor app.</p>"
       }
     }
   },
   "marketing": {
     "review_request": {
-      "body": "Order yanu {order_reference} ya Convergeo kuchokera kwa {vendor_name} inali bwanji? Lembani ndemanga: {review_url} Lembani STOP kuleka."
+      "body": "Order yanu {order_reference} ya Vergeo5 kuchokera kwa {vendor_name} inali bwanji? Lembani ndemanga: {review_url} Lembani STOP kuleka."
     },
     "abandoned_cart_recovery": {
-      "body": "Mukadali ndi zinthu mu cart yanu ya Convergeo. Pitilitsani kumene munalekera: {checkout_url} Lembani STOP kuleka."
+      "body": "Mukadali ndi zinthu mu cart yanu ya Vergeo5. Pitilitsani kumene munalekera: {checkout_url} Lembani STOP kuleka."
     },
     "kyc_nudge": {
-      "body": "Pempho lanu la vendor la Convergeo lakudikira maola 48. Malizitsani kutsimikizira kuti muyambe kugulitsa."
+      "body": "Pempho lanu la vendor la Vergeo5 lakudikira maola 48. Malizitsani kutsimikizira kuti muyambe kugulitsa."
     },
     "low_stock_alert": {
-      "body": "Stock yochepa pa Convergeo: {title} ili ndi {stock_qty} zotsala (threshold {threshold}). Sinthani stock mu vendor app."
+      "body": "Stock yochepa pa Vergeo5: {title} ili ndi {stock_qty} zotsala (threshold {threshold}). Sinthani stock mu vendor app."
     },
     "payout_failure_alert": {
       "body": "Chenjezo la payout failure: {vendor_name} — {amount} (ref {lenco_reference}). Onani mu admin."
@@ -237,7 +237,7 @@
       "birthday_greeting": "Tsiku labwino lobadwa! Gwiritsani ntchito kuponi {code} m'masiku {valid_days}.",
       "points_earned": "⚠ You earned {points} points. You now have {balance}.",
       "order_cancelled": "⚠ Order {ref} was cancelled. Any payment will be refunded.",
-      "order_completed": "⚠ Order {ref} is complete. Thank you for shopping with Convergeo!",
+      "order_completed": "⚠ Order {ref} is complete. Thank you for shopping with Vergeo5!",
       "payment_failed": "⚠ Your payment did not go through. Open your orders to try again.",
       "dispute_resolved": "⚠ The dispute on order {ref} is resolved. Open it to see the outcome."
     },

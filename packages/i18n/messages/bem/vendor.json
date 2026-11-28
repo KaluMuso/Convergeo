@@ -1,7 +1,7 @@
 {
   "analytics": {
     "meta": {
-      "title": "Analytics — Convergeo Vendor",
+      "title": "Analytics — Vergeo5 Vendor",
       "description": "Track sales, orders and cart/checkout event counts over 7 or 30 days, and compare independent order and activity totals."
     },
     "eyebrow": "Storefront yenu",
@@ -53,11 +53,11 @@
   "vendor.payout.pending": "⚠ Payout iilindilila: {amount}",
   "pitch": {
     "meta": {
-      "title": "⚠ Sell on Convergeo — open your shop",
-      "description": "⚠ Create a free seller account, verify your ID and start listing on Convergeo. Learn about commissions and verification before you sign up."
+      "title": "⚠ Sell on Vergeo5 — open your shop",
+      "description": "⚠ Create a free seller account, verify your ID and start listing on Vergeo5. Learn about commissions and verification before you sign up."
     },
     "hero": {
-      "eyebrow": "⚠ Sell on Convergeo",
+      "eyebrow": "⚠ Sell on Vergeo5",
       "headline": "Ukulandika kwabula ukulipila.",
       "headlineEmphasis": "Lipileni fye nga mwashita.",
       "subheadline": "Fikeni abakashita mu Zambia yonse with products, services, events, supplies, and your business profile — all from one vendor app.",
@@ -149,7 +149,7 @@
           "description": "API access and banner placement eligibility for high-volume sellers."
         },
         "preferred": {
-          "badge": "Convergeo Preferred",
+          "badge": "Vergeo5 Preferred",
           "title": "Earned trust badge",
           "description": "≥20 orders, ≥4.5★ rating, <2% disputes, <5% cancellations — reviewed monthly."
         }
@@ -165,7 +165,7 @@
       "items": {
         "fees": {
           "question": "⚠ Are there monthly fees?",
-          "answer": "⚠ No. Convergeo is free to list at launch. You pay a commission only when you sell. The free tier includes up to 30 listings."
+          "answer": "⚠ No. Vergeo5 is free to list at launch. You pay a commission only when you sell. The free tier includes up to 30 listings."
         },
         "payout": {
           "question": "When do I get paid?",
@@ -182,7 +182,7 @@
       }
     },
     "cta": {
-      "heading": "⚠ Ready to sell on Convergeo?",
+      "heading": "⚠ Ready to sell on Vergeo5?",
       "body": "⚠ Create your seller account, verify your ID, and start listing as soon as you are approved. Listing tools unlock only after admin approval.",
       "button": "⚠ Create seller account",
       "loadingLabel": "Funguleniing invite onboarding",
@@ -191,12 +191,12 @@
   },
   "onboarding": {
     "meta": {
-      "title": "⚠ Seller onboarding — Convergeo",
+      "title": "⚠ Seller onboarding — Vergeo5",
       "description": "⚠ Complete your seller application and verify your ID. Listings stay locked until admin approval."
     },
     "invite": {
       "eyebrow": "⚠ Finish your seller application",
-      "body": "⚠ Catalogue, payouts, and the vendor dashboard stay locked until Convergeo verifies your ID and grants seller access."
+      "body": "⚠ Catalogue, payouts, and the vendor dashboard stay locked until Vergeo5 verifies your ID and grants seller access."
     },
     "steps": {
       "business": "Business",
@@ -326,7 +326,7 @@
       "submitFailed": "We couldn't send it. Check your internet and try again.",
       "momoNotFound": "We couldn't find a mobile money account for this number. Check the number, and that it is an MTN or Airtel line registered in your name.",
       "authRequired": "Sign in to finish your seller sign-up.",
-      "permissionDenied": "Tamuli na access to this seller application. Use the account that received the invite, or contact Convergeo.",
+      "permissionDenied": "Tamuli na access to this seller application. Use the account that received the invite, or contact Vergeo5.",
       "draftLocked": "You are approved, so shop details can't be changed here. Contact us to change them.",
       "notFound": "We couldn't find your sign-up. Contact us for help.",
       "retryHint": "Loleni connection yenu, then try again."
@@ -353,7 +353,7 @@
           "why": "Matched to your NRC photo so no one else can sell in your name."
         },
         "review": {
-          "title": "Ukulolesha kwa Convergeo",
+          "title": "Ukulolesha kwa Vergeo5",
           "why": "Our team checks everything, usually within 1 working day, and lets you know the result."
         }
       },
@@ -414,7 +414,7 @@
       "dedupCanonical": "This photo is already the product's main photo, so shoppers see it on your listing. No need to upload it again."
     },
     "meta": {
-      "title": "Add a product — Convergeo Seller",
+      "title": "Add a product — Vergeo5 Seller",
       "description": "Add a product: find it in our list, add a new one, or add a one-off item."
     },
     "title": "Create listing",
@@ -435,7 +435,7 @@
       "searchPlaceholder": "Fweni catalog products",
       "searching": "Fweniing…",
       "empty": "Not found. Try another name, or tap New product.",
-      "hint": "Fweni the Convergeo catalog to attach your offer.",
+      "hint": "Fweni the Vergeo5 catalog to attach your offer.",
       "changeProduct": "← Change product",
       "specHeading": "Product details",
       "publish": "Start selling",
@@ -578,7 +578,7 @@
     },
     "import": {
       "meta": {
-        "title": "Import listings — Convergeo Vendor",
+        "title": "Import listings — Vergeo5 Vendor",
         "description": "⚠ Bulk upload vendor listings from a CSV file with row-level validation feedback."
       },
       "title": "Import listings",
@@ -667,7 +667,7 @@
     },
     "manage": {
       "meta": {
-        "title": "Your listings — Convergeo Vendor",
+        "title": "Your listings — Vergeo5 Vendor",
         "description": "⚠ View stock, pause listings, and edit prices."
       },
       "title": "Your listings",
@@ -690,7 +690,7 @@
       },
       "edit": {
         "meta": {
-          "title": "Edit listing — Convergeo Vendor",
+          "title": "Edit listing — Vergeo5 Vendor",
           "description": "⚠ Update price, stock, condition, and return policy."
         },
         "title": "Edit listing",
@@ -738,7 +738,7 @@
       "addPhotoLink": "Add photo",
       "statusLabel": "Status",
       "productStatus": {
-        "inReview": "Live, in review: buyers see it once Convergeo approves it",
+        "inReview": "Live, in review: buyers see it once Vergeo5 approves it",
         "rejected": "Product rejected"
       },
       "stock": {
@@ -912,7 +912,7 @@
   },
   "profile": {
     "meta": {
-      "title": "Storefront profile — Convergeo Vendor",
+      "title": "Storefront profile — Vergeo5 Vendor",
       "description": "Edit your public storefront: logo, description, hours, location, and shop URL."
     },
     "title": "Storefront profile",
@@ -1001,7 +1001,7 @@
       "help": "A wide banner (about 3:1) heads your storefront. Resized before upload to save data."
     },
     "badge": {
-      "preferred": "Convergeo Preferred badge earned",
+      "preferred": "Vergeo5 Preferred badge earned",
       "hint": "Earn the Preferred badge with great service — ≥20 orders, ≥4.5★, low disputes."
     },
     "completeness": {
@@ -1061,7 +1061,7 @@
   },
   "orders": {
     "meta": {
-      "title": "Order detail — Convergeo Vendor",
+      "title": "Order detail — Vergeo5 Vendor",
       "description": "View order items, payment context, timeline, and fulfilment actions."
     },
     "title": "Order",
@@ -1129,7 +1129,7 @@
       "ready_for_collection": "Naipekanya kuli rider",
       "after": {
         "confirm": "The customer is told you accepted. Next you'll pack it.",
-        "reject": "The order is cancelled and the customer is told why. Convergeo handles any refund.",
+        "reject": "The order is cancelled and the customer is told why. Vergeo5 handles any refund.",
         "pack": "The customer sees that you're preparing their order.",
         "ship": "Tap when the rider has the parcel. Add the rider's name or phone.",
         "ready_for_pickup": "The customer is told to come and collect it from you."
@@ -1170,11 +1170,11 @@
       "headingNow": "Ifyakucita nomba",
       "headingNext": "Ifikonkelepo",
       "scanCta": "Open Scan to hand over",
-      "paidExplainer": "The customer has paid. Convergeo holds the money safely until the order is delivered.",
+      "paidExplainer": "The customer has paid. Vergeo5 holds the money safely until the order is delivered.",
       "unpaidExplainer": "The customer hasn't paid yet. Don't pack or send anything until payment shows as received.",
       "cod": {
         "body": "The customer pays the rider in cash when the order arrives. You don't collect any money yourself.",
-        "settlement": "Convergeo settles the order money with you — you don't need to chase the rider or the customer."
+        "settlement": "Vergeo5 settles the order money with you — you don't need to chase the rider or the customer."
       },
       "steps": {
         "confirm": {
@@ -1333,7 +1333,7 @@
         },
         "productsInReview": {
           "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
-          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
+          "body": "These listings are Live on your side, but buyers can't see them until Vergeo5 approves the product."
         },
         "catalogueProducts": {
           "title": "Check your products",
@@ -1381,7 +1381,7 @@
   },
   "queue": {
     "meta": {
-      "title": "Order queue — Convergeo Vendor",
+      "title": "Order queue — Vergeo5 Vendor",
       "description": "See your orders and move them on with one tap."
     },
     "title": "Ama-order",
@@ -1444,7 +1444,7 @@
   },
   "payouts": {
     "meta": {
-      "title": "⚠ Payouts — Convergeo Vendor",
+      "title": "⚠ Payouts — Vergeo5 Vendor",
       "description": "⚠ View escrow-held and released balances, payout history, and download monthly statements."
     },
     "eyebrow": "Money",
@@ -1485,7 +1485,7 @@
     },
     "method": {
       "meta": {
-        "title": "⚠ Payout method — Convergeo Vendor",
+        "title": "⚠ Payout method — Vergeo5 Vendor",
         "description": "⚠ Change the mobile-money number where your payouts are sent."
       },
       "link": "⚠ Change payout method",
@@ -1530,9 +1530,9 @@
       "body": "You won't receive payouts through this app yet, so there's no balance to show here. That's expected — nothing is wrong with your account.",
       "meanwhileHeading": "How money works during the pilot",
       "meanwhile": {
-        "cod": "Cash on delivery: the customer pays the rider in cash, and Convergeo settles with you.",
-        "prepaid": "Paid orders: Convergeo holds the customer's money safely until the order is delivered.",
-        "questions": "Questions about money owed to you? Ask the Convergeo pilot team."
+        "cod": "Cash on delivery: the customer pays the rider in cash, and Vergeo5 settles with you.",
+        "prepaid": "Paid orders: Vergeo5 holds the customer's money safely until the order is delivered.",
+        "questions": "Questions about money owed to you? Ask the Vergeo5 pilot team."
       },
       "laterHeading": "What you'll see here later",
       "later": {
@@ -1546,7 +1546,7 @@
   },
   "scan": {
     "meta": {
-      "title": "Pickup scanner — Convergeo Vendor",
+      "title": "Pickup scanner — Vergeo5 Vendor",
       "description": "Scan customer pickup QR codes or enter PINs to mark orders as collected."
     },
     "eyebrow": "Pickup",
@@ -1586,7 +1586,7 @@
       "retry": "Try again",
       "wrongQr": {
         "title": "Not a pickup code",
-        "body": "This looks like an event ticket or another QR — not an order pickup code. Ask the customer to open their order pickup QR from WhatsApp or the Convergeo app."
+        "body": "This looks like an event ticket or another QR — not an order pickup code. Ask the customer to open their order pickup QR from WhatsApp or the Vergeo5 app."
       },
       "offline": {
         "title": "Cannot verify offline",
@@ -1620,7 +1620,7 @@
     },
     "eventCheckIn": {
       "meta": {
-        "title": "Event scanner — Convergeo Vendor",
+        "title": "Event scanner — Vergeo5 Vendor",
         "description": "Scan attendee ticket QR codes to check them in, online or offline."
       },
       "eyebrow": "Event check-in",
@@ -1741,7 +1741,7 @@
     "eyebrow": "Ificitike",
     "list": {
       "meta": {
-        "title": "Your events — Convergeo Vendor",
+        "title": "Your events — Vergeo5 Vendor",
         "description": "Create and manage ticketed events and free RSVPs."
       },
       "title": "Your events",
@@ -1759,11 +1759,11 @@
     },
     "form": {
       "createMeta": {
-        "title": "Create event — Convergeo Vendor",
+        "title": "Create event — Vergeo5 Vendor",
         "description": "Set up a new event with dates, venue, and photos."
       },
       "editMeta": {
-        "title": "Edit event — Convergeo Vendor",
+        "title": "Edit event — Vergeo5 Vendor",
         "description": "Update event details, instances, and publish status."
       },
       "createTitle": "Create event",
@@ -1894,7 +1894,7 @@
     },
     "collab": {
       "meta": {
-        "title": "⚠ Run an event with an organiser — Convergeo",
+        "title": "⚠ Run an event with an organiser — Vergeo5",
         "description": "⚠ Propose an event to a verified organiser and run it together."
       },
       "loading": "⚠ Loading…",
@@ -2066,7 +2066,7 @@
         "organiserUnavailable": "⚠ That organiser is not accepting requests right now.",
         "pastStart": "⚠ The start time has already passed. Ask the vendor to update it.",
         "disputeSuspended": "⚠ Ticketed publishing is paused after upheld event disputes.",
-        "highValue": "⚠ This event needs a verification call before it can be published. Contact Convergeo support.",
+        "highValue": "⚠ This event needs a verification call before it can be published. Contact Vergeo5 support.",
         "generic": "⚠ Something went wrong. Try again.",
         "pickOrganiser": "⚠ Choose an organiser first."
       }
@@ -2239,7 +2239,7 @@
   },
   "returns": {
     "meta": {
-      "title": "Return requests — Convergeo Vendor",
+      "title": "Return requests — Vergeo5 Vendor",
       "description": "Accept or contest customer return requests for faulty or wrong items."
     },
     "title": "Return requests",
@@ -2343,7 +2343,7 @@
   },
   "reviews": {
     "meta": {
-      "title": "Customer reviews — Convergeo Vendor",
+      "title": "Customer reviews — Vergeo5 Vendor",
       "description": "Reply to verified-purchase reviews on your listings."
     },
     "title": "Customer reviews",
@@ -2498,7 +2498,7 @@
   },
   "intake": {
     "meta": {
-      "title": "Ama-draft ya WhatsApp — Convergeo Vendor",
+      "title": "Ama-draft ya WhatsApp — Vergeo5 Vendor",
       "description": "Review product drafts created from your WhatsApp messages before they go live."
     },
     "title": "Ama-draft ya WhatsApp",
@@ -2506,7 +2506,7 @@
     "loading": "Loading…",
     "empty": {
       "title": "No drafts yet",
-      "body": "Send a photo and a price to the Convergeo vendor number and it will appear here."
+      "body": "Send a photo and a price to the Vergeo5 vendor number and it will appear here."
     },
     "error": {
       "title": "Could not load your drafts",
@@ -2517,14 +2517,14 @@
       "needs_details": "Needs details",
       "ready_for_vendor_review": "Ready to review",
       "submitted": "Submitted",
-      "pending_admin_review": "With Convergeo",
+      "pending_admin_review": "With Vergeo5",
       "approved": "Approved",
       "rejected": "Rejected",
       "expired": "Expired"
     },
     "detail": {
       "title": "Check this draft",
-      "intro": "Correct anything that is wrong. It only goes live after Convergeo approves it.",
+      "intro": "Correct anything that is wrong. It only goes live after Vergeo5 approves it.",
       "photos": "Photos",
       "photoAlt": "Draft photo {position}",
       "noPhotos": "No photos yet.",
@@ -2535,7 +2535,7 @@
       "saved": "Saved",
       "submit": "Submit for review",
       "submitting": "Submitting…",
-      "submitted": "Submitted for review. Convergeo will check it shortly.",
+      "submitted": "Submitted for review. Vergeo5 will check it shortly.",
       "back": "Back to drafts",
       "canonicalProduct": "Catalogue product",
       "canonicalTitle": "Select the catalog product",
@@ -2566,7 +2566,7 @@
       "price_missing": "What is the price in kwacha?",
       "condition_missing": "Is it new or refurbished?",
       "possible_duplicate": "This looks like an earlier draft. Check before submitting.",
-      "prohibited_class": "This product class cannot be listed on Convergeo.",
+      "prohibited_class": "This product class cannot be listed on Vergeo5.",
       "media_failed": "A photo could not be saved. Please send it again."
     },
     "errors": {
@@ -2594,7 +2594,7 @@
   },
   "clips": {
     "meta": {
-      "title": "Clips — Convergeo Vendor",
+      "title": "Clips — Vergeo5 Vendor",
       "description": "Record short product videos and track how they perform."
     },
     "title": "Ama-clip yandi",
@@ -2686,7 +2686,7 @@
   },
   "settings": {
     "meta": {
-      "title": "⚠ Settings — Convergeo Vendor",
+      "title": "⚠ Settings — Vergeo5 Vendor",
       "description": "⚠ Account, notifications, payout method and language."
     },
     "title": "⚠ Settings",
@@ -2872,7 +2872,7 @@
   },
   "coupons": {
     "meta": {
-      "title": "Coupons — Convergeo Vendor",
+      "title": "Coupons — Vergeo5 Vendor",
       "description": "Create discount codes for your shop."
     },
     "manager": {

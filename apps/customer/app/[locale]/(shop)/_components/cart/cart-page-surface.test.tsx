@@ -98,7 +98,7 @@ const labels = {
   loadErrorRetry: cartMessages.loadErrorRetry,
   multiSellerNote: cartMessages.multiSellerNote,
   escrowTeaser: cartMessages.escrowTeaser,
-  escrowSteps: ["You pay", "Held by Convergeo", "Released"],
+  escrowSteps: ["You pay", "Held by Vergeo5", "Released"],
   stockUnavailableNotice: cartMessages.stockUnavailableNotice,
   reservationExpiredNotice:
     "Your reservation expired — items were returned to your cart.",

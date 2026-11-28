@@ -7,7 +7,7 @@ type CodTrustLineProps = {
 /**
  * One-line COD trust statement shared by checkout review, order confirmation
  * and the order page so the wording never drifts. Escrow wording ("You paid →
- * Held by Convergeo → Released") is deliberately NOT here: it only belongs on
+ * Held by Vergeo5 → Released") is deliberately NOT here: it only belongs on
  * prepaid orders.
  */
 export function CodTrustLine({ text, testId = "cod-trust-line" }: CodTrustLineProps) {

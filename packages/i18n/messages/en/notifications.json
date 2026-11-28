@@ -8,54 +8,54 @@
     "stopReply": "Reply STOP to opt out.",
     "stopKeyword": "STOP",
     "startKeyword": "START",
-    "stopConfirmation": "You have been unsubscribed from Convergeo marketing messages. Order updates will still be sent.",
-    "startConfirmation": "You are subscribed to Convergeo updates. Reply STOP to opt out."
+    "stopConfirmation": "You have been unsubscribed from Vergeo5 marketing messages. Order updates will still be sent.",
+    "startConfirmation": "You are subscribed to Vergeo5 updates. Reply STOP to opt out."
   },
   "whatsapp": {
     "order_confirmed": {
-      "body": "Your Convergeo order {order_reference} is confirmed. Total {total}. Track: {track_url} Reply STOP to opt out."
+      "body": "Your Vergeo5 order {order_reference} is confirmed. Total {total}. Track: {track_url} Reply STOP to opt out."
     },
     "payment_received": {
       "body": "{trust_narrative} Order {order_reference}. Reply STOP to opt out.",
-      "trust_narrative": "Your {amount} is held safely by Convergeo until delivery."
+      "trust_narrative": "Your {amount} is held safely by Vergeo5 until delivery."
     },
     "order_shipped": {
-      "body": "Your Convergeo order {order_reference} has shipped. {tracking_info} Reply STOP to opt out."
+      "body": "Your Vergeo5 order {order_reference} has shipped. {tracking_info} Reply STOP to opt out."
     },
     "order_ready_pickup": {
-      "body": "Your Convergeo order {order_reference} is ready for pickup. {pickup_details} Reply STOP to opt out."
+      "body": "Your Vergeo5 order {order_reference} is ready for pickup. {pickup_details} Reply STOP to opt out."
     },
     "order_delivered": {
-      "body": "Your Convergeo order {order_reference} was delivered. Share your experience: {review_url} Reply STOP to opt out."
+      "body": "Your Vergeo5 order {order_reference} was delivered. Share your experience: {review_url} Reply STOP to opt out."
     },
     "vendor_new_order": {
-      "body": "New order {order_reference} on Convergeo: {product_title} × {quantity}. Confirm in the vendor app."
+      "body": "New order {order_reference} on Vergeo5: {product_title} × {quantity}. Confirm in the vendor app."
     },
     "otp_login": {
-      "body": "Your Convergeo login code is {otp_code}. It expires in 10 minutes. Do not share this code."
+      "body": "Your Vergeo5 login code is {otp_code}. It expires in 10 minutes. Do not share this code."
     },
     "event_cancelled": {
-      "body": "Convergeo event \"{event_title}\" on {event_date} has been cancelled. {refund_detail} Reply STOP to opt out.",
-      "refund_pending": "Your payment refund is being processed by Convergeo.",
+      "body": "Vergeo5 event \"{event_title}\" on {event_date} has been cancelled. {refund_detail} Reply STOP to opt out.",
+      "refund_pending": "Your payment refund is being processed by Vergeo5.",
       "refund_none": "No payment was found on your account for this event."
     },
     "event_schedule_changed": {
-      "body": "Convergeo event \"{event_title}\" details have changed. Date: {event_date}. Venue: {venue}. Check your tickets in the app. Reply STOP to opt out."
+      "body": "Vergeo5 event \"{event_title}\" details have changed. Date: {event_date}. Venue: {venue}. Check your tickets in the app. Reply STOP to opt out."
     },
     "courier_dispatch_request": {
-      "body": "Convergeo delivery request {order_reference}. Pickup: {pickup_line}. Drop-off: {dropoff_line}. Items: {items_line}. Payment: {cod_line}. Contacts: {contacts_line}."
+      "body": "Vergeo5 delivery request {order_reference}. Pickup: {pickup_line}. Drop-off: {dropoff_line}. Items: {items_line}. Payment: {cod_line}. Contacts: {contacts_line}."
     },
     "dispatch_stale_alert": {
-      "body": "Convergeo ops: dispatch {order_reference} with {courier_name} has waited {minutes_waiting} min without courier acceptance. Check the dispatch board."
+      "body": "Vergeo5 ops: dispatch {order_reference} with {courier_name} has waited {minutes_waiting} min without courier acceptance. Check the dispatch board."
     },
     "gift_recipient_notice": {
-      "body": "Hi {recipient_name}, {sender_name} sent you a gift from {shop_name} on Convergeo. We'll only message you about this gift. Reply STOP to opt out."
+      "body": "Hi {recipient_name}, {sender_name} sent you a gift from {shop_name} on Vergeo5. We'll only message you about this gift. Reply STOP to opt out."
     },
     "gift_ready_pickup": {
       "body": "Your gift from {shop_name} is ready to collect. Pickup PIN: {pickup_pin}. Don't share it."
     },
     "birthday_greeting": {
-      "body": "Happy birthday from Convergeo! Use code {coupon_code} for {amount} off orders of {min_spend} or more, valid {valid_days} days. Reply STOP to opt out."
+      "body": "Happy birthday from Vergeo5! Use code {coupon_code} for {amount} off orders of {min_spend} or more, valid {valid_days} days. Reply STOP to opt out."
     },
     "points_earned": {
       "body": "You earned {points} points. You now have {balance}. At {threshold} you unlock a reward coupon."
@@ -64,13 +64,13 @@
       "body": "Your week, {shop_name}: {orders} orders, {sales} in sales. Top item: {top_item}. {new_followers} new followers. {pending_actions} actions waiting. Next payout: {next_payout}."
     },
     "order_cancelled": {
-      "body": "Your Convergeo order {order_reference} was cancelled. {refund_detail} Reply STOP to opt out."
+      "body": "Your Vergeo5 order {order_reference} was cancelled. {refund_detail} Reply STOP to opt out."
     },
     "payment_failed": {
       "body": "Your payment of {amount} did not go through. If you were charged, contact support and we will sort it out. Try again: {retry_url} Reply STOP to opt out."
     },
     "order_completed": {
-      "body": "Your Convergeo order {order_reference} is complete. Thank you for shopping with us! See it here: {order_url} Reply STOP to opt out."
+      "body": "Your Vergeo5 order {order_reference} is complete. Thank you for shopping with us! See it here: {order_url} Reply STOP to opt out."
     },
     "ticket_issued": {
       "body": "Your ticket for {event_title} is ready. Show the QR code at the door: {ticket_url} Reply STOP to opt out."
@@ -88,108 +88,108 @@
       "body": "Your payout of {amount} could not be sent. {failure_hint} We will retry once your details are correct."
     },
     "rfq_quoted": {
-      "body": "You received a quote of {quote_price} on Convergeo. Open the app to review it. Reply STOP to opt out."
+      "body": "You received a quote of {quote_price} on Vergeo5. Open the app to review it. Reply STOP to opt out."
     },
     "service_quote_accepted": {
-      "body": "Good news! Your quote was accepted. A deposit of {deposit} (job total {total}) is secured in Convergeo escrow. Open the app to start the job."
+      "body": "Good news! Your quote was accepted. A deposit of {deposit} (job total {total}) is secured in Vergeo5 escrow. Open the app to start the job."
     },
     "vendor_order_unconfirmed_alert": {
-      "body": "Convergeo ops: order {order_reference} from {vendor_name} is still unconfirmed after {minutes_waiting} min. Call the shop."
+      "body": "Vergeo5 ops: order {order_reference} from {vendor_name} is still unconfirmed after {minutes_waiting} min. Call the shop."
     }
   },
   "sms": {
     "order_confirmed": {
-      "body": "Convergeo: order {order_reference} confirmed. Total {total}. {track_url}"
+      "body": "Vergeo5: order {order_reference} confirmed. Total {total}. {track_url}"
     },
     "payment_received": {
-      "body": "Convergeo: payment received for {order_reference}. {trust_narrative}"
+      "body": "Vergeo5: payment received for {order_reference}. {trust_narrative}"
     },
     "order_shipped": {
-      "body": "Convergeo: order {order_reference} shipped. {tracking_info}"
+      "body": "Vergeo5: order {order_reference} shipped. {tracking_info}"
     },
     "order_ready_pickup": {
-      "body": "Convergeo: order {order_reference} ready for pickup. {pickup_details}"
+      "body": "Vergeo5: order {order_reference} ready for pickup. {pickup_details}"
     },
     "order_delivered": {
-      "body": "Convergeo: order {order_reference} delivered. Review: {review_url}"
+      "body": "Vergeo5: order {order_reference} delivered. Review: {review_url}"
     },
     "vendor_new_order": {
-      "body": "Convergeo vendor: new order {order_reference} — {product_title} × {quantity}"
+      "body": "Vergeo5 vendor: new order {order_reference} — {product_title} × {quantity}"
     },
     "otp_login": {
-      "body": "Convergeo code: {otp_code}. Expires in 10 min. Do not share."
+      "body": "Vergeo5 code: {otp_code}. Expires in 10 min. Do not share."
     },
     "review_request": {
-      "body": "How was your Convergeo order {order_reference}? Leave a review: {review_url} Reply STOP to opt out."
+      "body": "How was your Vergeo5 order {order_reference}? Leave a review: {review_url} Reply STOP to opt out."
     },
     "abandoned_cart_recovery": {
-      "body": "You left items in your Convergeo cart. Complete checkout: {checkout_url} Reply STOP to opt out."
+      "body": "You left items in your Vergeo5 cart. Complete checkout: {checkout_url} Reply STOP to opt out."
     },
     "kyc_nudge": {
-      "body": "Your Convergeo vendor verification is waiting. Finish in the vendor app to start selling."
+      "body": "Your Vergeo5 vendor verification is waiting. Finish in the vendor app to start selling."
     },
     "low_stock_alert": {
-      "body": "Convergeo: {title} is low ({stock_qty} left). Restock in the vendor app."
+      "body": "Vergeo5: {title} is low ({stock_qty} left). Restock in the vendor app."
     },
     "payout_failure_alert": {
-      "body": "Convergeo payout failed: {vendor_name} {amount} ref {lenco_reference}. Check admin."
+      "body": "Vergeo5 payout failed: {vendor_name} {amount} ref {lenco_reference}. Check admin."
     },
     "event_cancelled": {
-      "body": "Convergeo: \"{event_title}\" on {event_date} cancelled. {refund_detail}"
+      "body": "Vergeo5: \"{event_title}\" on {event_date} cancelled. {refund_detail}"
     },
     "event_schedule_changed": {
-      "body": "Convergeo: \"{event_title}\" details updated. Date: {event_date}. Venue: {venue}. Check the app."
+      "body": "Vergeo5: \"{event_title}\" details updated. Date: {event_date}. Venue: {venue}. Check the app."
     },
     "order_cancelled": {
-      "body": "Convergeo: order {order_reference} was cancelled. If you paid, we will handle your refund."
+      "body": "Vergeo5: order {order_reference} was cancelled. If you paid, we will handle your refund."
     },
     "payment_failed": {
-      "body": "Convergeo: your payment of K{amount} did not go through. Open the app to try again."
+      "body": "Vergeo5: your payment of K{amount} did not go through. Open the app to try again."
     },
     "order_completed": {
-      "body": "Convergeo: order {order_reference} is complete. Thank you for shopping with us!"
+      "body": "Vergeo5: order {order_reference} is complete. Thank you for shopping with us!"
     },
     "ticket_issued": {
-      "body": "Convergeo: your ticket for \"{event_title}\" is ready. Open My tickets to show the QR."
+      "body": "Vergeo5: your ticket for \"{event_title}\" is ready. Open My tickets to show the QR."
     },
     "dispute_opened": {
-      "body": "Convergeo: a dispute was opened on order {order_reference}. Open the vendor app to respond."
+      "body": "Vergeo5: a dispute was opened on order {order_reference}. Open the vendor app to respond."
     },
     "dispute_resolved": {
-      "body": "Convergeo: the dispute on order {order_reference} is resolved. Open the app to see the outcome."
+      "body": "Vergeo5: the dispute on order {order_reference} is resolved. Open the app to see the outcome."
     },
     "payout_sent": {
-      "body": "Convergeo: your payout of K{amount} is on its way to your {destination_label}."
+      "body": "Vergeo5: your payout of K{amount} is on its way to your {destination_label}."
     },
     "payout_failed": {
-      "body": "Convergeo: your payout of K{amount} could not be sent. Check your payout number in the vendor app."
+      "body": "Vergeo5: your payout of K{amount} could not be sent. Check your payout number in the vendor app."
     },
     "vendor_order_unconfirmed_alert": {
-      "body": "Convergeo ops: {order_reference} not confirmed by {vendor_name} after {minutes_waiting} min."
+      "body": "Vergeo5 ops: {order_reference} not confirmed by {vendor_name} after {minutes_waiting} min."
     }
   },
   "email": {
     "receipt": {
-      "subject": "Your Convergeo receipt — order {order_id}",
-      "body": "<p>Thank you for your payment.</p><p><strong>Order:</strong> {order_id}</p><p><strong>Amount:</strong> K{amount}</p><p>Funds are held safely by Convergeo until delivery.</p>"
+      "subject": "Your Vergeo5 receipt — order {order_id}",
+      "body": "<p>Thank you for your payment.</p><p><strong>Order:</strong> {order_id}</p><p><strong>Amount:</strong> K{amount}</p><p>Funds are held safely by Vergeo5 until delivery.</p>"
     },
     "order_receipt": {
-      "subject": "Your Convergeo receipt — order {order_id}",
+      "subject": "Your Vergeo5 receipt — order {order_id}",
       "body": "<p>Thank you for your order.</p><p><strong>Order:</strong> {order_id}</p><p><strong>Total:</strong> K{amount}</p>"
     },
     "kyc": {
       "approved": {
-        "subject": "Your Convergeo vendor verification is approved",
-        "body": "<p>Good news — your vendor identity verification is approved.</p><p>You can now publish listings and receive payouts on Convergeo.</p>"
+        "subject": "Your Vergeo5 vendor verification is approved",
+        "body": "<p>Good news — your vendor identity verification is approved.</p><p>You can now publish listings and receive payouts on Vergeo5.</p>"
       },
       "rejected": {
-        "subject": "Your Convergeo vendor verification needs attention",
+        "subject": "Your Vergeo5 vendor verification needs attention",
         "body": "<p>We could not approve your vendor verification.</p><p><strong>Reason:</strong> {reason}</p><p>Please resubmit your documents from the vendor app.</p>"
       }
     },
     "courier_dispatch_request": {
-      "subject": "Convergeo delivery request {order_id}",
-      "body": "<p>New delivery job from Convergeo.</p><p>{dispatch_message}</p>"
+      "subject": "Vergeo5 delivery request {order_id}",
+      "body": "<p>New delivery job from Vergeo5.</p><p>{dispatch_message}</p>"
     },
     "dispatch_stale_alert": {
       "subject": "Dispatch {order_id} not accepted",
@@ -198,16 +198,16 @@
   },
   "marketing": {
     "review_request": {
-      "body": "How was your Convergeo order {order_reference} from {vendor_name}? Share your review: {review_url} Reply STOP to opt out."
+      "body": "How was your Vergeo5 order {order_reference} from {vendor_name}? Share your review: {review_url} Reply STOP to opt out."
     },
     "abandoned_cart_recovery": {
-      "body": "You still have items waiting in your Convergeo cart. Pick up where you left off: {checkout_url} Reply STOP to opt out."
+      "body": "You still have items waiting in your Vergeo5 cart. Pick up where you left off: {checkout_url} Reply STOP to opt out."
     },
     "kyc_nudge": {
-      "body": "Your Convergeo vendor application has been waiting 48 hours. Complete verification to start selling."
+      "body": "Your Vergeo5 vendor application has been waiting 48 hours. Complete verification to start selling."
     },
     "low_stock_alert": {
-      "body": "Low stock on Convergeo: {title} has {stock_qty} units left (threshold {threshold}). Update stock in the vendor app."
+      "body": "Low stock on Vergeo5: {title} has {stock_qty} units left (threshold {threshold}). Update stock in the vendor app."
     },
     "payout_failure_alert": {
       "body": "Payout failure alert: {vendor_name} — {amount} (ref {lenco_reference}). Review in admin."
@@ -257,7 +257,7 @@
       "birthday_greeting": "Happy birthday! Use code {code} for a treat in the next {valid_days} days.",
       "points_earned": "You earned {points} points. You now have {balance}.",
       "order_cancelled": "Order {ref} was cancelled. Any payment will be refunded.",
-      "order_completed": "Order {ref} is complete. Thank you for shopping with Convergeo!",
+      "order_completed": "Order {ref} is complete. Thank you for shopping with Vergeo5!",
       "payment_failed": "Your payment did not go through. Open your orders to try again.",
       "dispute_resolved": "The dispute on order {ref} is resolved. Open it to see the outcome."
     },
