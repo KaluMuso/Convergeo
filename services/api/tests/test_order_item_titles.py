@@ -18,8 +18,10 @@ class _Query:
         self.client = client
         self.name = name
         self.ids: list[str] | None = None
+        self.columns = ""
 
-    def select(self, *_a: Any, **_k: Any) -> _Query:
+    def select(self, columns: str = "", *_a: Any, **_k: Any) -> _Query:
+        self.columns = columns
         return self
 
     def eq(self, *_a: Any) -> _Query:
@@ -31,6 +33,11 @@ class _Query:
 
     def execute(self) -> _Resp:
         self.client.calls.append(self.name)
+        if self.client.fail:
+            raise RuntimeError("PGRST200 simulated failure")
+        if self.name == "order_item_products" and "vendor_listings(" not in self.columns:
+            # Real PostgREST only embeds via the FK target table name.
+            raise RuntimeError("PGRST200: no relationship between order_item_products and listings")
         rows = self.client.tables.get(self.name, [])
         if self.name == "order_item_products" and self.ids is not None:
             rows = [r for r in rows if r["order_item_id"] in self.ids]
@@ -42,6 +49,7 @@ class _Client:
         self.tables = tables
         self.calls: list[str] = []
         self.client = self
+        self.fail = False
 
     def table(self, name: str) -> _Query:
         return _Query(self, name)
@@ -50,7 +58,7 @@ class _Client:
 def _link(item_id: str, override: str | None, product: str | None) -> dict[str, Any]:
     return {
         "order_item_id": item_id,
-        "listings": {
+        "vendor_listings": {
             "id": "l-" + item_id,
             "title_override": override,
             "products": {"name": product} if product else None,
@@ -139,3 +147,12 @@ def test_customer_list_loader_resolves_titles_once_for_many_orders() -> None:
     grouped = _load_order_items_many(client, order_ids)
     assert [grouped[o][0].title for o in order_ids] == [f"Product {i}" for i in range(20)]
     assert client.calls == ["order_items", "order_item_products"]
+
+
+def test_lookup_failure_degrades_to_no_titles(caplog: Any) -> None:
+    client = _Client({"order_item_products": LINKS})
+    client.fail = True
+    with caplog.at_level("WARNING"):
+        resolved = resolve_missing_titles(client, ITEMS)
+    assert resolved == {}
+    assert "order_item_titles_lookup_failed" in caplog.text

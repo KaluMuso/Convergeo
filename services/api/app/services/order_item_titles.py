@@ -7,10 +7,13 @@ to fill the gap from the listing (override, then product name) in one batched qu
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from typing import Any
 
 from app.services.cart.grouping import listing_display_title
+
+_log = logging.getLogger(__name__)
 
 _CHUNK = 200
 
@@ -38,14 +41,18 @@ def resolve_missing_titles(client: Any, rows: Iterable[dict[str, Any]]) -> dict[
     resolved: dict[str, str] = {}
     for start in range(0, len(missing), _CHUNK):
         chunk = missing[start : start + _CHUNK]
-        response = (
-            client.table("order_item_products")
-            .select("order_item_id, listings(id, title_override, products(name))")
-            .in_("order_item_id", chunk)
-            .execute()
-        )
+        try:
+            response = (
+                client.table("order_item_products")
+                .select("order_item_id, vendor_listings(id, title_override, products(name))")
+                .in_("order_item_id", chunk)
+                .execute()
+            )
+        except Exception:  # noqa: BLE001 - a title lookup must never break an order page
+            _log.warning("order_item_titles_lookup_failed", exc_info=True)
+            continue
         for link in response.data or []:
-            listing = link.get("listings")
+            listing = link.get("vendor_listings")
             if isinstance(listing, list):
                 listing = listing[0] if listing else None
             if not isinstance(listing, dict):
