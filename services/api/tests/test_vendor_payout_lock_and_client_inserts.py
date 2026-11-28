@@ -23,6 +23,7 @@ MIGRATION = (
     / "supabase/migrations/20261128000000_lock_vendor_payout_columns_and_client_inserts.sql"
 )
 VENDOR_OWNER_ID = "33333333-3333-3333-3333-333333333333"
+NEW_OWNER_ID = "22222222-2222-2222-2222-222222222222"
 LOCKED_COLUMNS = (
     "payout_msisdn",
     "payout_rail",
@@ -42,6 +43,8 @@ def test_migration_text_locks_columns_and_drops_insert_policies() -> None:
     assert "revoke insert on table public.disputes from anon, authenticated" in sql
     assert "revoke insert on table public.returns from anon, authenticated" in sql
     assert "REVERSAL" in sql
+    assert "new.commercial_tier is not null" in sql
+    assert "new.caps_snapshot is distinct from '{}'::jsonb" in sql
 
 
 @pytest.fixture(scope="module")
@@ -102,3 +105,27 @@ def test_dispute_and_return_insert_policies_and_grants_are_gone(db: PgConn) -> N
             assert grant.rows == ["f"], f"{role} still has INSERT on {table}"
         service = db.run(f"SELECT has_table_privilege('service_role', 'public.{table}', 'INSERT');")
         assert service.rows == ["t"]
+
+
+@pytest.mark.parametrize(
+    ("column", "value"),
+    [
+        ("payout_msisdn", "'260971234567'"),
+        ("payout_rail", "'mtn'"),
+        ("payout_hold_until", "now() + interval '1 day'"),
+        ("commercial_tier", "'gold'"),
+        ("caps_snapshot", "'{\"x\": 1}'::jsonb"),
+    ],
+)
+def test_owner_cannot_insert_vendor_with_locked_column(
+    db: PgConn, column: str, value: str
+) -> None:
+    # A user with no storefront yet, so the first-shop branch trigger does not fire.
+    result = db.run_as(
+        "authenticated",
+        f"INSERT INTO public.vendors (owner_user_id, slug, display_name, status, {column}) "
+        f"VALUES ('{NEW_OWNER_ID}', 'insert-guard-test', 'Insert guard test', 'draft', {value});",
+        user_id=NEW_OWNER_ID,
+    )
+    assert not result.ok
+    assert "server-controlled" in (result.error or "")

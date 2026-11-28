@@ -83,6 +83,56 @@ $$;
 comment on function public.guard_vendor_status_update() is
   'Owners must not mutate vendor lifecycle/trust/payout/tier/caps/owner fields via PostgREST; admins/service bypass.';
 
+-- 1b. vendors INSERT: owners may not seed payout/tier/caps columns either.
+--     guard_vendor_lifecycle_insert() (0057) only checked status, kyc_tier and
+--     preferred_badge, so an owner could INSERT their draft row with
+--     commercial_tier='gold', custom caps_snapshot or their own payout details.
+--     Same exemptions as before. The vendor app does not insert vendors rows
+--     from the client (checked: no .insert on vendors in apps/*); creation runs
+--     through the API with the service role, which stays exempt.
+--     Reversal: re-run the 0057 CREATE OR REPLACE of guard_vendor_lifecycle_insert().
+
+create or replace function public.guard_vendor_lifecycle_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  jwt_role text := coalesce(auth.jwt() ->> 'role', '');
+begin
+  if session_user in ('postgres', 'supabase_admin') then
+    return new;
+  end if;
+
+  if jwt_role = 'service_role' or public.has_role('admin') then
+    return new;
+  end if;
+
+  if new.status is distinct from 'draft' then
+    raise exception 'vendor status is server-controlled';
+  end if;
+
+  if new.kyc_tier is not null then
+    raise exception 'vendor kyc_tier is server-controlled';
+  end if;
+
+  if coalesce(new.preferred_badge, false) then
+    raise exception 'vendor preferred_badge is server-controlled';
+  end if;
+
+  if new.payout_msisdn is not null
+    or new.payout_rail is not null
+    or new.payout_hold_until is not null
+    or new.commercial_tier is not null
+    or new.caps_snapshot is distinct from '{}'::jsonb then
+    raise exception 'vendor payout, commercial_tier, and caps_snapshot are server-controlled';
+  end if;
+
+  return new;
+end;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- 2. disputes / returns: service-role API is the only writer
 -- ---------------------------------------------------------------------------
