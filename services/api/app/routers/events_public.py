@@ -772,7 +772,7 @@ def _load_access_credential(client: Any, event_id: str) -> tuple[str, int] | Non
         .maybe_single()
         .execute()
     )
-    row = response.data
+    row = getattr(response, "data", None)
     if not isinstance(row, dict) or not isinstance(row.get("code_hash"), str):
         return None
     try:

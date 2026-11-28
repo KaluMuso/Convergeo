@@ -132,9 +132,7 @@ class InMemoryOutboxStore:
         self.profiles: dict[str, dict[str, Any]] = {}
         self.user_emails: dict[str, str] = {}
         # Mirror the supabase client's auth.admin surface used by lookup_user_email.
-        self.auth = SimpleNamespace(
-            admin=SimpleNamespace(get_user_by_id=self._get_user_by_id)
-        )
+        self.auth = SimpleNamespace(admin=SimpleNamespace(get_user_by_id=self._get_user_by_id))
 
     def _get_user_by_id(self, user_id: str) -> SimpleNamespace:
         email = self.user_emails.get(user_id)
@@ -194,8 +192,7 @@ class InMemoryOutboxStore:
             rows = [
                 row
                 for row in rows
-                if row.get("next_retry_at") is None
-                or _parse_ts(row["next_retry_at"]) <= now
+                if row.get("next_retry_at") is None or _parse_ts(row["next_retry_at"]) <= now
             ]
 
         if order:
@@ -428,9 +425,7 @@ async def test_sms_adapter_truncates_overlength_message() -> None:
         return httpx.Response(
             201,
             json={
-                "SMSMessageData": {
-                    "Recipients": [{"status": "Success", "number": "+260971234567"}]
-                }
+                "SMSMessageData": {"Recipients": [{"status": "Success", "number": "+260971234567"}]}
             },
         )
 
