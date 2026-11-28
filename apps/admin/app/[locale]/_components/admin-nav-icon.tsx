@@ -65,6 +65,7 @@ const NAV_ICON_MAP: Record<AdminNavItemKey, NavIconEntry> = {
   coupons: { hue: "amber", Icon: LcTicket },
   extras: { hue: "cyan", Icon: LcPackage },
   trials: { hue: "pink", Icon: LcGift },
+  askAudit: { hue: "orange", Icon: LcAlertTriangle },
 };
 
 type AdminNavIconProps = {

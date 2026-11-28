@@ -11,6 +11,7 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
+from app.services.order_item_titles import display_title, resolve_missing_titles
 from app.services.orders.state import (
     ActorRole,
     OrderEvent,
@@ -406,9 +407,7 @@ def _search_orders(
     customer_ids = {str(row["customer_id"]) for row in order_rows}
     vendors = _load_vendor_map(client, vendor_ids)
     profiles = _load_profile_map(client, customer_ids)
-    return [
-        _order_to_search_item(row, vendors=vendors, profiles=profiles) for row in order_rows
-    ]
+    return [_order_to_search_item(row, vendors=vendors, profiles=profiles) for row in order_rows]
 
 
 def _load_items_total_map(client: ServiceRoleClient, order_ids: set[str]) -> dict[str, int]:
@@ -506,15 +505,17 @@ def _build_order_detail(client: ServiceRoleClient, order_row: dict[str, Any]) ->
     profile = profile_map.get(str(order_row["customer_id"]), {})
 
     items_response = _table(client, "order_items").select("*").eq("order_id", order_id).execute()
+    item_rows = list(items_response.data or [])
+    resolved_titles = resolve_missing_titles(client.client, item_rows)
     items = [
         OrderItemOut(
             id=row["id"],
             item_kind=row["item_kind"],
             qty=row["qty"],
             unit_price_ngwee=row["unit_price_ngwee"],
-            title_snapshot=row.get("title_snapshot"),
+            title_snapshot=display_title(row, resolved_titles),
         )
-        for row in (items_response.data or [])
+        for row in item_rows
     ]
 
     payments_response = (

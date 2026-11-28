@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -502,6 +503,62 @@ async def test_email_adapter_sends_resend_payload() -> None:
     assert result.success is True
     assert "ord-99" in captured["body"]
     assert "notifications.email.receipt.subject" in captured["body"]
+
+
+@pytest.mark.asyncio
+async def test_resend_adapter_logs_422_response_body(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            422,
+            json={
+                "statusCode": 422,
+                "name": "validation_error",
+                "message": "The `to` field must be a valid email address.",
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    client = httpx.AsyncClient(transport=transport)
+    adapter = ResendEmailAdapter(
+        api_key="re_secret_test_key",
+        from_email="notifications@vergeo5.com",
+        client=client,
+    )
+    message = OutboxMessage(
+        id="msg-422",
+        dedupe_key="payment:pay-422:email",
+        channel=CHANNEL_EMAIL,
+        template="payment_receipt",
+        payload={
+            "email": "buyer@example.com",
+            "order_id": "ord-422",
+            "amount_ngwee": 10000,
+        },
+    )
+
+    with caplog.at_level(logging.WARNING):
+        result = await adapter.send(message)
+
+    assert result.success is False
+    assert result.failure_kind == FailureKind.PERMANENT
+    assert result.message == "Resend HTTP 422"
+
+    failure_records = [r for r in caplog.records if r.getMessage() == "Resend send failed"]
+    assert len(failure_records) == 1
+    record = failure_records[0]
+    assert record.http_status == 422  # type: ignore[attr-defined]
+    assert "validation_error" in record.resend_error  # type: ignore[attr-defined]
+    assert "status=422" in record.resend_error  # type: ignore[attr-defined]
+    assert record.recipient == "b***@example.com"  # type: ignore[attr-defined]
+
+    combined = " ".join(
+        f"{r.getMessage()} {getattr(r, 'resend_error', '')}" for r in caplog.records
+    )
+    assert "buyer@example.com" not in combined
+    assert "re_secret_test_key" not in combined
+    assert "Bearer" not in combined
 
 
 def test_get_channel_adapter_resolves_by_name(noop: NoopAdapter) -> None:
