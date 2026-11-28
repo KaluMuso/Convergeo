@@ -166,7 +166,7 @@ COMMIT;
                 capture_output=True,
             )
             files, first = source_inventory(workdir)
-            self.assertEqual((len(files), first), (200, 131))
+            self.assertEqual((len(files), first), (204, 131))
             with self.assertRaisesRegex(RuntimeError, "fault"):
                 with visible_prefix(files, first - 1, workdir):
                     self.assertEqual(
@@ -174,7 +174,7 @@ COMMIT;
                     )
                     raise RuntimeError("fault")
             self.assertEqual(
-                len(list((workdir / "supabase/migrations").glob("*.sql"))), 200
+                len(list((workdir / "supabase/migrations").glob("*.sql"))), 204
             )
             copied = workdir / "supabase/migrations" / next(iter(BOUND_FILES))
             copied.write_bytes(copied.read_bytes() + b"\n")
@@ -352,7 +352,7 @@ COMMIT;
     def test_failure_cleanup_requires_stack_ownership(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workdir = Path(directory)
-            files = [workdir / f"{index}.sql" for index in range(200)]
+            files = [workdir / f"{index}.sql" for index in range(204)]
             with (
                 patch(
                     "rehearse_explicit_transaction_profile.LOCK",
@@ -387,7 +387,7 @@ COMMIT;
                 ),
                 patch(
                     "rehearse_explicit_transaction_profile.ledger",
-                    return_value=[[]] * 200,
+                    return_value=[[]] * 204,
                 ),
                 patch("rehearse_explicit_transaction_profile.cli") as cli,
                 redirect_stdout(io.StringIO()),
@@ -487,6 +487,34 @@ COMMIT;
         self.assertEqual(caught.exception.code, "SOURCE_MISMATCH")
         self.assertEqual(output.getvalue(), "proof_stage|source_inventory|BEGIN\n")
         self.assertNotIn("private", failure_marker(tracker, caught.exception))
+
+    def test_ghcr_mirror_is_accepted_only_at_the_pinned_digest(self) -> None:
+        from rehearse_explicit_transaction_profile import (
+            IMAGE_DIGEST,
+            IMAGE_MIRROR,
+            require_pinned_digest,
+        )
+
+        details = {"Image": "sha256:" + "a" * 64, "Config": {"Image": IMAGE_MIRROR}}
+        good = json.dumps([f"ghcr.io/supabase/postgres@{IMAGE_DIGEST}"]).encode()
+        with patch("rehearse_explicit_transaction_profile.checked", return_value=good):
+            require_pinned_digest(details)
+        for repo_digests in (
+            json.dumps(["ghcr.io/supabase/postgres@sha256:" + "b" * 64]),
+            json.dumps([]),
+            "null",
+        ):
+            with patch(
+                "rehearse_explicit_transaction_profile.checked",
+                return_value=repo_digests.encode(),
+            ):
+                with self.assertRaises(RehearsalError) as caught:
+                    require_pinned_digest(details)
+            self.assertEqual(caught.exception.code, "IMAGE_MISMATCH")
+        other = {"Image": "sha256:" + "a" * 64, "Config": {"Image": "ghcr.io/x/y:1"}}
+        with patch("rehearse_explicit_transaction_profile.checked", return_value=good):
+            with self.assertRaises(RehearsalError):
+                require_pinned_digest(other)
 
     def test_container_guard_distinguishes_image_and_missing_container(self) -> None:
         container_id = "abcdef123456"

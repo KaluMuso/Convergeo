@@ -64,7 +64,9 @@ export function OversightList({ kind }: { kind: Kind }) {
     let active = true;
     const current = ++generation.current;
     void rolesApi
-      .request<OversightPage>(oversightPath(kind, appliedSearch, 0), { cache: "no-store" })
+      .request<OversightPage>(oversightPath(kind, appliedSearch, 0), {
+        cache: "no-store",
+      })
       .then(
         (result) => {
           if (active && current === generation.current)
@@ -78,7 +80,13 @@ export function OversightList({ kind }: { kind: Kind }) {
         },
         () => {
           if (active && current === generation.current)
-            setSnapshot({ kind, items: null, total: null, nextOffset: null, error: true });
+            setSnapshot({
+              kind,
+              items: null,
+              total: null,
+              nextOffset: null,
+              error: true,
+            });
         },
       );
     return () => {
@@ -129,7 +137,10 @@ export function OversightList({ kind }: { kind: Kind }) {
           </label>
           {current?.items && current.total !== null ? (
             <p className="text-sm text-muted" data-testid="oversight-count">
-              {t("showing", { shown: current.items.length, total: current.total })}
+              {t("showing", {
+                shown: current.items.length,
+                total: current.total,
+              })}
             </p>
           ) : null}
         </div>
@@ -194,7 +205,6 @@ export function OversightList({ kind }: { kind: Kind }) {
 
 type ServicePackageRow = {
   id: string;
-  tier: string;
   name: string;
   price_ngwee: number | null;
   delivery_days: number | null;
@@ -216,7 +226,6 @@ function PackageLines({
       {rows.map((row) => (
         <span key={row.id} className="block">
           {t("packageLine", {
-            tier: row.tier,
             name: row.name,
             price:
               typeof row.price_ngwee === "number" && Number.isInteger(row.price_ngwee)

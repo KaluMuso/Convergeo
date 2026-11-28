@@ -3,11 +3,15 @@
  * Money arrives as integer ngwee and is only formatted through `formatK`.
  */
 
+/** Legacy Basic/Standard/Premium label; open-list packages have none. */
 export type ServicePackageTier = "basic" | "standard" | "premium";
+
+/** A service shows at most this many packages (the API caps active packages at 10). */
+export const MAX_PACKAGES = 10;
 
 export type ServicePackage = {
   id: string;
-  tier: ServicePackageTier;
+  tier?: ServicePackageTier | null;
   name: string;
   description: string | null;
   /** Integer ngwee, or null = "request a quote". */
@@ -17,9 +21,10 @@ export type ServicePackage = {
   includes: string[];
 };
 
-const TIER_ORDER: Record<ServicePackageTier, number> = { basic: 0, standard: 1, premium: 2 };
-
-/** Tier-ordered, at most one per tier, at most three — whatever the API sent. */
+/**
+ * Keeps the vendor's order (the API sends `sort_order`), drops duplicates and
+ * junk, and caps the list — whatever the API sent.
+ */
 export function normalisePackages(input: unknown): ServicePackage[] {
   if (!Array.isArray(input)) return [];
   const seen = new Set<string>();
@@ -27,18 +32,18 @@ export function normalisePackages(input: unknown): ServicePackage[] {
   for (const raw of input) {
     if (!raw || typeof raw !== "object") continue;
     const pkg = raw as Partial<ServicePackage>;
-    if (typeof pkg.id !== "string" || !pkg.tier || !(pkg.tier in TIER_ORDER)) continue;
-    if (seen.has(pkg.tier)) continue;
+    if (typeof pkg.id !== "string" || pkg.id === "" || seen.has(pkg.id)) continue;
     const price =
       typeof pkg.price_ngwee === "number" &&
       Number.isInteger(pkg.price_ngwee) &&
       pkg.price_ngwee > 0
         ? pkg.price_ngwee
         : null;
-    seen.add(pkg.tier);
+    seen.add(pkg.id);
     valid.push({
       id: pkg.id,
-      tier: pkg.tier,
+      tier:
+        pkg.tier === "basic" || pkg.tier === "standard" || pkg.tier === "premium" ? pkg.tier : null,
       name: typeof pkg.name === "string" ? pkg.name : "",
       description: typeof pkg.description === "string" ? pkg.description : null,
       price_ngwee: price,
@@ -53,7 +58,7 @@ export function normalisePackages(input: unknown): ServicePackage[] {
         : [],
     });
   }
-  return valid.sort((a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier]).slice(0, 3);
+  return valid.slice(0, MAX_PACKAGES);
 }
 
 /**
@@ -66,7 +71,6 @@ export function buildPrefill(
   formatPrice: (ngwee: number) => string,
 ): string {
   return t("prefill", {
-    tier: t(`tier.${pkg.tier}`),
     name: pkg.name,
     price: pkg.price_ngwee !== null ? formatPrice(pkg.price_ngwee) : t("prefillPriceQuote"),
     days: pkg.delivery_days,

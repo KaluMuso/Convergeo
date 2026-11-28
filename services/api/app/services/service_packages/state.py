@@ -17,9 +17,14 @@ logger = logging.getLogger(__name__)
 
 TABLE: Final = "service_packages"
 
+#: Legacy optional label (the original fixed Basic/Standard/Premium tiers).
 Tier = Literal["basic", "standard", "premium"]
 TIERS: Final[tuple[Tier, ...]] = ("basic", "standard", "premium")
 TIER_ORDER: Final[dict[str, int]] = {tier: index for index, tier in enumerate(TIERS)}
+
+#: A service may carry at most this many ACTIVE packages (founder decision, 2026-11-27).
+MAX_ACTIVE_PACKAGES: Final = 10
+SORT_ORDER_MAX: Final = 1000
 
 ACTIVE: Final = "active"
 ARCHIVED: Final = "archived"
@@ -30,7 +35,7 @@ ALLOWED_TRANSITIONS: Final[frozenset[tuple[str, str]]] = frozenset(
 #: Columns exposed to callers (never the raw row).
 PACKAGE_COLUMNS: Final = (
     "id, service_id, vendor_id, tier, name, description, price_ngwee, "
-    "delivery_days, revisions, includes, status, updated_at"
+    "delivery_days, revisions, includes, attributes, sort_order, status, created_at, updated_at"
 )
 
 
@@ -48,8 +53,18 @@ def rows(response: Any) -> list[dict[str, Any]]:
     return []
 
 
-def sort_by_tier(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return sorted(items, key=lambda row: TIER_ORDER.get(str(row.get("tier")), 99))
+def sort_packages(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Vendor order: ``sort_order`` ascending, then legacy tier, then creation time."""
+
+    def key(row: dict[str, Any]) -> tuple[int, int, str]:
+        order = row.get("sort_order")
+        return (
+            order if isinstance(order, int) and not isinstance(order, bool) else 0,
+            TIER_ORDER.get(str(row.get("tier")), 99),
+            str(row.get("created_at") or ""),
+        )
+
+    return sorted(items, key=key)
 
 
 def int_or_none(value: Any) -> int | None:
@@ -64,19 +79,22 @@ def snapshot(package: dict[str, Any]) -> dict[str, Any]:
     includes = package.get("includes")
     return {
         "package_id": str(package.get("id") or ""),
-        "tier": str(package.get("tier") or ""),
+        "tier": str(package.get("tier") or "") or None,
         "name": str(package.get("name") or ""),
         "price_ngwee": int_or_none(package.get("price_ngwee")),
         "delivery_days": int_or_none(package.get("delivery_days")),
         "revisions": int_or_none(package.get("revisions")),
         "includes": [str(item) for item in includes] if isinstance(includes, list) else [],
+        "attributes": package.get("attributes")
+        if isinstance(package.get("attributes"), dict)
+        else {},
     }
 
 
 def list_active_for_services(
     service_client: ServiceRoleClient, service_ids: list[str]
 ) -> dict[str, list[dict[str, Any]]]:
-    """Active packages per service, tier-ordered. Empty dict on no ids."""
+    """Active packages per service, vendor-ordered. Empty dict on no ids."""
     if not service_ids:
         return {}
     found = rows(
@@ -89,7 +107,7 @@ def list_active_for_services(
     grouped: dict[str, list[dict[str, Any]]] = {}
     for row in found:
         grouped.setdefault(str(row.get("service_id")), []).append(row)
-    return {key: sort_by_tier(value) for key, value in grouped.items()}
+    return {key: sort_packages(value) for key, value in grouped.items()}
 
 
 def list_active_for_services_safe(
@@ -108,17 +126,47 @@ def list_active_for_services_safe(
 
 
 def load_package(
-    service_client: ServiceRoleClient, *, service_id: str, tier: str
+    service_client: ServiceRoleClient, *, service_id: str, package_id: str
 ) -> dict[str, Any] | None:
     found = rows(
         service_client.client.table(TABLE)
         .select(PACKAGE_COLUMNS)
         .eq("service_id", service_id)
-        .eq("tier", tier)
+        .eq("id", package_id)
         .maybe_single()
         .execute()
     )
     return found[0] if found else None
+
+
+def list_for_service(service_client: ServiceRoleClient, service_id: str) -> list[dict[str, Any]]:
+    """Every package of a service (any status), vendor-ordered."""
+    return sort_packages(
+        rows(
+            service_client.client.table(TABLE)
+            .select(PACKAGE_COLUMNS)
+            .eq("service_id", service_id)
+            .execute()
+        )
+    )
+
+
+def assert_below_cap(active_count: int) -> None:
+    """Raise the stable ``package_limit_reached`` error once the cap is hit."""
+    if active_count >= MAX_ACTIVE_PACKAGES:
+        raise AppError(
+            code="package_limit_reached",
+            message=f"A service can have at most {MAX_ACTIVE_PACKAGES} packages",
+            http_status=409,
+            details={
+                "message_key": "services.vendor.packages.errors.limitReached",
+                "max": MAX_ACTIVE_PACKAGES,
+            },
+        )
+
+
+def count_active(items: list[dict[str, Any]]) -> int:
+    return sum(1 for row in items if str(row.get("status")) == ACTIVE)
 
 
 def transition_status(

@@ -439,6 +439,11 @@ POLICIES: dict[str, RateLimitPolicy] = {
     # Paid extras + free trials (20261117020000). Enforced in-router: vendor routes
     # keyed by user (vendor_extras._limit), admin routes by the acting admin
     # (admin_extras._limit, un-prefixed admin keys).
+    # Vendor sourcing hub (20261127100000). Vendor routes are registered by the router
+    # itself; admin routes are enforced in-router (un-prefixed admin keys).
+    "POST /import-requests/{request_id}/status": ADMIN_WRITE,
+    "POST /import-requests/{request_id}/quotes": ADMIN_WRITE,
+    "POST /made-in-zambia-claims/{listing_id}/decision": ADMIN_WRITE,
     "POST /vendor/extras/requests": STANDARD_WRITE,
     "POST /vendor/extras/requests/{request_id}/cancel": STANDARD_WRITE,
     "POST /vendor/extras/requests/{request_id}/accept": STANDARD_WRITE,
@@ -530,8 +535,11 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /vendor/intake/sessions/{session_id}/submit": SENSITIVE_WRITE,
     "POST /vendor/listings": STANDARD_WRITE,
     # Service packages (docs/plan/service-packages.md).
-    "PUT /vendor/services/{service_id}/packages/{tier}": STANDARD_WRITE,
-    "POST /vendor/services/{service_id}/packages/{tier}/archive": STANDARD_WRITE,
+    "POST /vendor/services/{service_id}/packages": STANDARD_WRITE,
+    "PUT /vendor/services/{service_id}/packages/{package_id}": STANDARD_WRITE,
+    "DELETE /vendor/services/{service_id}/packages/{package_id}": STANDARD_WRITE,
+    "POST /vendor/services/{service_id}/packages/reorder": STANDARD_WRITE,
+    "POST /vendor/services/{service_id}/packages/{package_id}/archive": STANDARD_WRITE,
     "PATCH /vendors/{vendor_id}/status": ADMIN_WRITE,
     "POST /vendor/listings/{listing_id}/images": STANDARD_WRITE,
     "POST /vendor/listings/{listing_id}/pause": STANDARD_WRITE,
