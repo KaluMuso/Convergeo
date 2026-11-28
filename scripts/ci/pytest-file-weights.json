@@ -126,6 +126,7 @@
  "tests/test_vendor_offers_api.py": 31.9,
  "tests/test_vendor_onboarding_beta.py": 5.5,
  "tests/test_vendor_order_queue.py": 33.7,
+ "tests/test_vendor_devices_barcode.py": 3.0,
  "tests/test_vendor_orders.py": 135.6,
  "tests/test_vendor_payouts.py": 3.6,
  "tests/test_vendor_profile.py": 15.3,
