@@ -2,6 +2,8 @@
 
 import { useTranslations } from "next-intl";
 
+import { formatOrderCode } from "../../_lib/order-code";
+
 import type { RecentVerification } from "../_lib/recent-verifications";
 
 type RecentVerificationsProps = {
@@ -63,7 +65,7 @@ export function RecentVerifications({ items }: RecentVerificationsProps) {
                 background: "var(--bg-2)",
               }}
             >
-              <span>{t("scan.recent.order", { orderId: item.orderId.slice(0, 8) })}</span>
+              <span>{t("scan.recent.order", { orderId: formatOrderCode(item.orderId) })}</span>
               <span style={{ color: "var(--text-3)" }}>{formatTime(item.verifiedAt)}</span>
             </li>
           ))}

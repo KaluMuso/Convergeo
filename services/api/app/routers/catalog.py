@@ -4,6 +4,7 @@ import base64
 import hashlib
 import logging
 import math
+import threading
 from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
@@ -31,9 +32,7 @@ EARTH_RADIUS_M = 6_371_000
 
 CATALOG_CANDIDATES_CACHE_TTL_SECONDS = 45
 CATALOG_CANDIDATES_CACHE_PREFIX = "catalog:candidates:v1:"
-PUBLIC_CATALOG_LISTINGS_CACHE_CONTROL = (
-    "public, s-maxage=30, stale-while-revalidate=120"
-)
+PUBLIC_CATALOG_LISTINGS_CACHE_CONTROL = "public, s-maxage=30, stale-while-revalidate=120"
 
 CatalogSort = Literal[
     "relevance", "cheapest", "nearest", "newest", "price_asc", "verified", "bundle", "best"
@@ -745,9 +744,7 @@ def _fetch_listing_ratings(client: Any, listing_ids: list[str]) -> dict[str, tup
             .execute()
         ),
     )
-    rating_by_order_item = {
-        str(row["order_item_id"]): int(row["rating"]) for row in review_rows
-    }
+    rating_by_order_item = {str(row["order_item_id"]): int(row["rating"]) for row in review_rows}
 
     totals: dict[str, list[int]] = {}
     for row in oip_rows:
@@ -904,20 +901,50 @@ def _catalog_candidates_cache_key(client: Any, category_path: str | None) -> str
     return f"{CATALOG_CANDIDATES_CACHE_PREFIX}{digest}"
 
 
+_CANDIDATE_BUILD_LOCKS: dict[str, threading.Lock] = {}
+_CANDIDATE_BUILD_LOCKS_GUARD = threading.Lock()
+
+
+def _candidate_build_lock(cache_key: str) -> threading.Lock:
+    with _CANDIDATE_BUILD_LOCKS_GUARD:
+        return _CANDIDATE_BUILD_LOCKS.setdefault(cache_key, threading.Lock())
+
+
+def _restore_cached_candidates(cache_key: str | None) -> list[_CatalogCandidate] | None:
+    cached = get_cached_json(cache_key) if cache_key else None
+    if not isinstance(cached, list):
+        return None
+    restored: list[_CatalogCandidate] = []
+    try:
+        for item in cached:
+            if isinstance(item, dict):
+                restored.append(_CatalogCandidate.model_validate(item))
+        if restored or cached == []:
+            return restored
+    except Exception:
+        logger.warning("catalog_candidates_cache_invalid", exc_info=True)
+    return None
+
+
 def _build_candidates_cached(client: Any, category_path: str | None) -> list[_CatalogCandidate]:
     cache_key = _catalog_candidates_cache_key(client, category_path)
-    cached = get_cached_json(cache_key) if cache_key else None
-    if isinstance(cached, list):
-        restored: list[_CatalogCandidate] = []
-        try:
-            for item in cached:
-                if isinstance(item, dict):
-                    restored.append(_CatalogCandidate.model_validate(item))
-            if restored or cached == []:
-                return restored
-        except Exception:
-            logger.warning("catalog_candidates_cache_invalid", exc_info=True)
+    restored = _restore_cached_candidates(cache_key)
+    if restored is not None:
+        return restored
+    if not cache_key:
+        return _build_candidates(client, category_path)
+    # Single-flight per key: concurrent misses (e.g. the home BFF fanning out) wait
+    # for one build instead of each running the full multi-query candidate build.
+    with _candidate_build_lock(cache_key):
+        restored = _restore_cached_candidates(cache_key)
+        if restored is not None:
+            return restored
+        return _build_and_store_candidates(client, category_path, cache_key)
 
+
+def _build_and_store_candidates(
+    client: Any, category_path: str | None, cache_key: str | None
+) -> list[_CatalogCandidate]:
     built = _build_candidates(client, category_path)
     if cache_key:
         try:

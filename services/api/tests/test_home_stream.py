@@ -12,6 +12,7 @@ from app.main import create_app
 from app.services.home_feed.stream import (
     HomeStreamPage,
     build_stream_page,
+    clear_stream_snapshot,
     decode_stream_cursor,
     encode_stream_cursor,
 )
@@ -116,6 +117,13 @@ def _no_cache_no_ratelimit(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("app.routers.home_feed.get_cached_json", lambda _key: None)
     monkeypatch.setattr("app.routers.home_feed.set_cached_json", lambda *_a, **_k: None)
     monkeypatch.setattr("app.routers.home_feed.bump_rate_counter", lambda **_k: (True, 0))
+
+
+@pytest.fixture(autouse=True)
+def _fresh_snapshot() -> Generator[None, None, None]:
+    clear_stream_snapshot()
+    yield
+    clear_stream_snapshot()
 
 
 def _walk(client: TestClient, limit: int) -> list[list[str]]:
@@ -235,3 +243,36 @@ def test_endpoint_is_publicly_cacheable_and_ends_with_null_cursor(client: TestCl
     assert len(page.items) == 12 and page.next_cursor is not None
     tail = client.get("/home/stream", params={"limit": 12, "cursor": page.next_cursor}).json()
     assert len(tail["items"]) == 2 and tail["next_cursor"] is None
+
+
+def test_cursor_pages_share_one_snapshot_build(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Perf guard: walking every page must not re-run the catalogue pipeline."""
+    calls = {"n": 0}
+    import app.services.home_feed.stream as stream_mod
+    from app.routers.catalog import build_catalog_candidates as real
+
+    def counting(c: Any, *a: Any, **k: Any) -> Any:
+        calls["n"] += 1
+        return real(c, *a, **k)
+
+    monkeypatch.setattr(stream_mod, "build_catalog_candidates", counting)
+    pages = _walk(client, 4)
+    assert len(pages) >= 3
+    assert calls["n"] == 1
+
+
+def test_snapshot_pages_match_uncached_pages() -> None:
+    fake = FakeSupabaseClient(_store())
+    plain: list[list[str]] = []
+    snap: list[list[str]] = []
+    for sink, ttl in ((plain, 0), (snap, 60)):
+        cursor = None
+        while True:
+            page = build_stream_page(fake, cursor=cursor, limit=5, snapshot_ttl_seconds=ttl)
+            sink.append([i.id for i in page.items])
+            cursor = page.next_cursor
+            if cursor is None:
+                break
+    assert plain == snap

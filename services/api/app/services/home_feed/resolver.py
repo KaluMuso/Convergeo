@@ -16,6 +16,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from app.core.ttl_cache import get_cached_json, set_cached_json
 from app.routers.catalog import (
     CatalogCandidate,
     build_catalog_candidates,
@@ -34,6 +35,9 @@ from app.services.home_feed.models import (
 from app.services.home_feed.personalization import load_user_signals, rank_for_you
 
 logger = logging.getLogger(__name__)
+
+SECTIONS_CACHE_KEY = "home:feed:sections:v1"
+SECTIONS_CACHE_TTL_SECONDS = 30
 
 SECTION_COLUMNS = (
     "id, key, section_type, layout, title_key, title_i18n, config, position, enabled, "
@@ -163,7 +167,54 @@ def load_sections(client: Any) -> list[dict[str, Any]]:
     )
 
 
-def load_live_placements(client: Any, *, now: datetime) -> list[dict[str, Any]]:
+def load_sections_cached(client: Any) -> list[dict[str, Any]]:
+    cached = get_cached_json(SECTIONS_CACHE_KEY)
+    if isinstance(cached, list) and all(isinstance(row, dict) for row in cached):
+        return [dict(row) for row in cached]
+    rows = load_sections(client)
+    set_cached_json(SECTIONS_CACHE_KEY, rows, ttl_seconds=SECTIONS_CACHE_TTL_SECONDS)
+    return rows
+
+
+_CATALOG_SECTION_TYPES = frozenset({"category", "rule", "collection", "for_you"})
+
+
+def _slice_needs_catalog_candidates(
+    sections: list[dict[str, Any]], offset: int, page_size: int
+) -> bool:
+    end = min(len(sections), offset + page_size + 12)
+    return any(row.get("section_type") in _CATALOG_SECTION_TYPES for row in sections[offset:end])
+
+
+def _slice_may_need_trending(sections: list[dict[str, Any]], offset: int, page_size: int) -> bool:
+    """Whether the continuation window might call :attr:`FeedContext.trending_ids`."""
+    end = min(len(sections), offset + page_size + 12)
+    for row in sections[offset:end]:
+        section_type = row.get("section_type")
+        if section_type == "for_you":
+            return True
+        if section_type != "rule":
+            continue
+        try:
+            config = SectionConfig.model_validate(row.get("config") or {})
+        except Exception:
+            continue
+        if config.rule is not None and config.rule.sort == "trending":
+            return True
+    return False
+
+
+def tail_has_for_you(sections: list[dict[str, Any]], offset: int) -> bool:
+    """True when a ``for_you`` section may still appear at or after ``offset``."""
+    return any(row.get("section_type") == "for_you" for row in sections[offset:])
+
+
+def load_live_placements(
+    client: Any,
+    *,
+    now: datetime,
+    placement_types: frozenset[str] | None = None,
+) -> list[dict[str, Any]]:
     rows = _rows(
         client.table("ad_placements")
         .select(PLACEMENT_COLUMNS)
@@ -172,6 +223,8 @@ def load_live_placements(client: Any, *, now: datetime) -> list[dict[str, Any]]:
         .execute()
     )
     live = [row for row in rows if placement_is_live(row, now=now)]
+    if placement_types is not None:
+        live = [row for row in live if str(row.get("placement_type")) in placement_types]
     live = filter_placements_with_visible_targets(client, live)
     live = attach_placement_links(client, live)
     live.sort(key=_placement_order)
@@ -377,6 +430,8 @@ class FeedContext:
         locale: str,
         user_id: str | None,
         candidate_loader: Callable[[Any], list[CatalogCandidate]] | None = None,
+        load_trending: bool = True,
+        load_candidates: bool = True,
     ) -> None:
         self.client = client
         self.now = now
@@ -385,9 +440,13 @@ class FeedContext:
         self._candidate_loader = candidate_loader or (lambda c: build_catalog_candidates(c))
         self._candidates: list[CatalogCandidate] | None = None
         self._trending: list[str] | None = None
+        self._load_trending = load_trending
+        self._load_candidates = load_candidates
 
     @property
     def candidates(self) -> list[CatalogCandidate]:
+        if not self._load_candidates:
+            return []
         if self._candidates is None:
             try:
                 self._candidates = self._candidate_loader(self.client)
@@ -398,6 +457,8 @@ class FeedContext:
 
     @property
     def trending_ids(self) -> list[str]:
+        if not self._load_trending:
+            return []
         if self._trending is None:
             try:
                 from app.services.discovery.trending import fetch_trending_listings
@@ -580,11 +641,14 @@ def build_feed_page(
 
     sections = [
         row
-        for row in load_sections(client)
+        for row in load_sections_cached(client)
         if section_is_live(row, now=reference, signed_in=signed_in)
     ]
+    placement_types: frozenset[str] | None = None
+    if offset > 0:
+        placement_types = frozenset({"feed_slot"})
     try:
-        placements = load_live_placements(client, now=reference)
+        placements = load_live_placements(client, now=reference, placement_types=placement_types)
     except Exception:
         logger.warning("home_feed_placements_failed", exc_info=True)
         placements = []
@@ -599,8 +663,16 @@ def build_feed_page(
                 ad_for_index[index] = feed_ads[ordinal]
             ordinal += 1
 
+    load_trending = _slice_may_need_trending(sections, offset, size)
+    load_candidates = _slice_needs_catalog_candidates(sections, offset, size)
     ctx = FeedContext(
-        client, now=reference, locale=locale, user_id=user_id, candidate_loader=candidate_loader
+        client,
+        now=reference,
+        locale=locale,
+        user_id=user_id,
+        candidate_loader=candidate_loader,
+        load_trending=load_trending,
+        load_candidates=load_candidates,
     )
     resolved: list[FeedSectionOut] = []
     index = offset
