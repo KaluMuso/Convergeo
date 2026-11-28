@@ -163,6 +163,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261127100000",
     # Service packages become an open ordered list, cap 10 (additive, documented down).
     "20261127120000",
+    # Vendor free-delivery terms + listing flag audit triggers (additive, atomic with the change).
+    "20261128120000",
 }
 
 

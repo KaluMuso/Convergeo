@@ -8,6 +8,7 @@ from app.services.logistics.delivery_pricing import (
     PricingLine,
     VendorDeliveryTerms,
     basket_auto_free_eligible,
+    effective_free_min_ngwee,
     price_delivery_groups,
 )
 
@@ -64,7 +65,7 @@ def test_pickup_group_costs_nothing() -> None:
 
 def test_vendor_free_delivery_charges_vendor_not_customer() -> None:
     prices = price_delivery_groups(
-        lines=[_line("v1", 5_000, free=True), _line("v2", 7_000)],
+        lines=[_line("v1", 30_000, free=True), _line("v2", 7_000)],
         delivery_zones={"v1": "lusaka_c", "v2": "lusaka_c"},
         zone_fees=FEES,
         vendor_terms={},
@@ -77,7 +78,7 @@ def test_vendor_free_delivery_charges_vendor_not_customer() -> None:
 
 def test_listing_free_delivery_needs_every_line_of_the_group() -> None:
     prices = price_delivery_groups(
-        lines=[_line("v1", 5_000, free=True), _line("v1", 6_000, free=False)],
+        lines=[_line("v1", 30_000, free=True), _line("v1", 6_000, free=False)],
         delivery_zones={"v1": "lusaka_a"},
         zone_fees=FEES,
         vendor_terms={},
@@ -89,7 +90,7 @@ def test_listing_free_delivery_needs_every_line_of_the_group() -> None:
 
 def test_vendor_wide_free_delivery_and_self_delivery() -> None:
     prices = price_delivery_groups(
-        lines=[_line("v1", 5_000), _line("v2", 5_000)],
+        lines=[_line("v1", 30_000), _line("v2", 30_000)],
         delivery_zones={"v1": "lusaka_a", "v2": "lusaka_a"},
         zone_fees=FEES,
         vendor_terms={
@@ -102,6 +103,50 @@ def test_vendor_wide_free_delivery_and_self_delivery() -> None:
     # Restaurant / own courier / Yango: vendor delivers, nothing is booked.
     assert (prices["v2"].funding, prices["v2"].funded_ngwee) == ("vendor_self", 0)
     assert prices["v2"].customer_fee_ngwee == 0
+
+
+def _price_one(total: int, terms: VendorDeliveryTerms | None, *, free: bool = False):  # type: ignore[no-untyped-def]
+    return price_delivery_groups(
+        lines=[_line("v1", total, free=free)],
+        delivery_zones={"v1": "lusaka_a"},
+        zone_fees=FEES,
+        vendor_terms={"v1": terms} if terms is not None else {},
+        policy=POLICY,
+    )["v1"]
+
+
+def test_vendor_free_delivery_below_the_minimum_falls_back_to_customer_pays() -> None:
+    below = _price_one(29_999, VendorDeliveryTerms(free_delivery_all=True))
+    assert (below.funding, below.customer_fee_ngwee, below.funded_ngwee) == ("customer", 3_000, 0)
+    # Per-listing free delivery obeys the same minimum.
+    listing = _price_one(29_999, None, free=True)
+    assert (listing.funding, listing.customer_fee_ngwee) == ("customer", 3_000)
+
+
+def test_vendor_free_delivery_at_exactly_the_minimum_is_free() -> None:
+    at = _price_one(30_000, VendorDeliveryTerms(free_delivery_all=True))
+    assert (at.funding, at.customer_fee_ngwee, at.funded_ngwee) == ("vendor", 0, 3_000)
+
+
+def test_vendor_can_raise_the_minimum() -> None:
+    terms = VendorDeliveryTerms(free_delivery_all=True, free_delivery_min_ngwee=50_000)
+    assert _price_one(49_999, terms).funding == "customer"
+    assert _price_one(50_000, terms).funding == "vendor"
+
+
+def test_vendor_cannot_go_below_the_platform_floor() -> None:
+    sneaky = VendorDeliveryTerms(free_delivery_all=True, free_delivery_min_ngwee=0)
+    assert _price_one(10_000, sneaky).funding == "customer"
+    assert effective_free_min_ngwee(sneaky) == 30_000
+    assert effective_free_min_ngwee(None) == 30_000
+    # A founder-raised floor applies even when the vendor's stored value is lower.
+    assert effective_free_min_ngwee(sneaky, 40_000) == 40_000
+
+
+def test_minimum_applies_to_self_delivery_too() -> None:
+    terms = VendorDeliveryTerms(free_delivery_all=True, free_delivery_method="self_delivery")
+    assert _price_one(20_000, terms).funding == "customer"
+    assert _price_one(30_000, terms).funding == "vendor_self"
 
 
 def test_automatic_free_delivery_for_large_retail_basket() -> None:

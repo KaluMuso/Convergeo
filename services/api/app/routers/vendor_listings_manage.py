@@ -88,6 +88,8 @@ class ListingSummary(StrictModel):
     moq: int
     returnable: bool
     return_window_hours: int | None
+    free_delivery: bool = False
+    weight_grams: int | None = None
     status: str
     product_id: str | None
     product_status: str | None = None
@@ -117,6 +119,11 @@ class ListingUpdateRequest(StrictModel):
     moq: int | None = Field(default=None, ge=1)
     returnable: bool | None = None
     return_window_hours: int | None = None
+    #: Vendor-funded free delivery for this listing (the vendor bears the courier fee).
+    free_delivery: bool | None = None
+    #: Shipping weight per unit in grams; null clears it (unknown weight never qualifies
+    #: for automatic free delivery). Mirrors the DB check (1..10,000,000).
+    weight_grams: int | None = Field(default=None, ge=1, le=10_000_000)
     status: ListingStatus | None = None
 
     @field_validator("price_ngwee")
@@ -359,6 +366,8 @@ def _to_listing_summary(row: dict[str, Any]) -> ListingSummary:
         return_window_hours=(
             int(row["return_window_hours"]) if row.get("return_window_hours") is not None else None
         ),
+        free_delivery=row.get("free_delivery") is True,
+        weight_grams=int(row["weight_grams"]) if row.get("weight_grams") is not None else None,
         status=str(row["status"]),
         product_id=str(row["product_id"]) if row.get("product_id") else None,
         product_status=_row_product_status(row),
@@ -378,7 +387,7 @@ def _load_listing(
             "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
             "condition_detail, fulfilment_options, "
             "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
-            "return_window_hours, status, products(name, status), "
+            "return_window_hours, free_delivery, weight_grams, status, products(name, status), "
             "listing_images(id, listing_id, cloudinary_public_id, position)"
         )
         .eq("id", listing_id)
@@ -681,6 +690,10 @@ def _apply_listing_update(
         update_payload["returnable"] = body.returnable
     if body.return_window_hours is not None:
         update_payload["return_window_hours"] = body.return_window_hours
+    if body.free_delivery is not None:
+        update_payload["free_delivery"] = body.free_delivery
+    if "weight_grams" in body.model_fields_set:
+        update_payload["weight_grams"] = body.weight_grams
     if body.status is not None:
         update_payload["status"] = body.status
 
@@ -786,7 +799,7 @@ def list_vendor_listings(
             "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
             "condition_detail, fulfilment_options, "
             "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
-            "return_window_hours, status, products(name, status), "
+            "return_window_hours, free_delivery, weight_grams, status, products(name, status), "
             "listing_images(id, listing_id, cloudinary_public_id, position)"
         )
         .eq("vendor_id", vendor_id)

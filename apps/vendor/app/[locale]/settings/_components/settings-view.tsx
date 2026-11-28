@@ -17,6 +17,8 @@ import {
 import { Button, FormField, Select, Switch } from "../../listings/new/_lib/ui";
 import { createPayoutsClient } from "../../payouts/_lib/payouts-client";
 
+import { DeliveryTermsCard } from "./delivery-terms-card";
+
 import type { PayoutBalances } from "../../payouts/_lib/payouts-client";
 
 type Props = { locale: string };
@@ -236,6 +238,10 @@ export function SettingsView({ locale }: Props) {
             {t("settings.payout.change")}
           </Link>
         ) : null}
+      </Section>
+
+      <Section id="delivery" title={t("settings.delivery.heading")}>
+        <DeliveryTermsCard />
       </Section>
 
       {collab?.enabled ? (
