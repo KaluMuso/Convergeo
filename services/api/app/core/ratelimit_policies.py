@@ -340,6 +340,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/order-jobs/auto-confirm": INTERNAL_CRON,
     "POST /internal/order-jobs/auto-release": INTERNAL_CRON,
     "POST /internal/order-jobs/cancel-unpaid": INTERNAL_CRON,
+    "POST /internal/order-jobs/refund-late-collections": INTERNAL_CRON,
     "POST /internal/payment-sweeper/tick": INTERNAL_CRON,
     "POST /internal/payouts/execute": INTERNAL_CRON,
     "POST /internal/payouts/retry": INTERNAL_CRON,
