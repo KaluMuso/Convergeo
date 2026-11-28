@@ -358,6 +358,8 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         # unrestricted only.
         "GET /admin/extras",
         "GET /admin/trials",
+        # Ask Vergeo answer log + auditor findings (20261127090000): admin / superadmin only.
+        "GET /admin/ask-audit",
         "PATCH /admin/extras/{extra_key}",
         "POST /admin/extras",
         "POST /admin/trials/{business_id}",

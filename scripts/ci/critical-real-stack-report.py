@@ -76,6 +76,10 @@ def results(manifest: Path, directory: Path, exits: Path, output: Path) -> int:
         "pytest_exits": exits_by_group,
     }
     output.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    bad = [f"{v} {k}" for k, v in state.items() if v != "PASS"]
+    if bad or exits_by_group and any(exits_by_group.values()):
+        print("non-passing identities (first 30): " + "; ".join(bad[:30]), file=sys.stderr)
+        print(f"pytest exits: {exits_by_group}", file=sys.stderr)
     counts = {
         status: list(state.values()).count(status)
         for status in ("PASS", "FAIL", "SKIP", "XFAIL", "NOT_RUN")

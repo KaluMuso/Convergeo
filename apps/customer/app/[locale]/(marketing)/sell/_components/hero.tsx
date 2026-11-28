@@ -3,7 +3,7 @@ import { Pill } from "@vergeo/ui/src/pill";
 import { tokens } from "@vergeo/ui/tokens";
 import Link from "next/link";
 
-import { getVendorLoginUrl, getVendorPortalUrl } from "./vendor-app";
+import { getVendorJoinUrl, getVendorLoginUrl, getVendorPortalUrl } from "./vendor-app";
 
 type PitchTranslator = {
   (key: string, values?: Record<string, string | number>): string;
@@ -26,6 +26,7 @@ const VERTICAL_COLORS: Record<(typeof VERTICAL_KEYS)[number], string> = {
 
 export function Hero({ locale, t }: HeroProps) {
   const loginUrl = getVendorLoginUrl(locale);
+  const joinUrl = getVendorJoinUrl(locale);
   const portalUrl = getVendorPortalUrl(locale);
 
   return (
@@ -44,14 +45,11 @@ export function Hero({ locale, t }: HeroProps) {
           </h1>
           <p className="text-body leading-relaxed text-text-2">{t("hero.subheadline")}</p>
           <p className="text-sm text-text-3">{t("hero.freeTierNote")}</p>
-          <p className="text-sm font-medium text-text-2" data-testid="sell-invite-only-notice">
-            {t("inviteOnlyNotice")}
-          </p>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <LinkButton
-            href={loginUrl}
+            href={joinUrl}
             variant="primary"
             size="lg"
             data-testid="vendor-hero-cta"
@@ -66,10 +64,10 @@ export function Hero({ locale, t }: HeroProps) {
         <p className="text-sm text-text-2">
           <a
             className="font-medium text-primary underline-offset-2 hover:underline"
-            data-testid="vendor-invite-signin-link"
+            data-testid="vendor-signin-link"
             href={loginUrl}
           >
-            {t("cta.haveInviteSignIn")}
+            {t("cta.haveAccountSignIn")}
           </a>
         </p>
         {portalUrl ? (
