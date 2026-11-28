@@ -252,6 +252,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
     slug: string;
     parent_slug: string | null;
     label_key: string;
+    name?: string | null;
   }[] = [];
   try {
     const taxonomyUrl = absoluteApiUrl("/categories/events");
@@ -267,6 +268,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
             slug: string;
             parent_slug: string | null;
             label_key: string;
+            name?: string | null;
           } =>
             Boolean(row) &&
             typeof row.slug === "string" &&

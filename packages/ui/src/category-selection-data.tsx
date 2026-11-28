@@ -24,7 +24,7 @@ export function categoryPath(nodes: CategoryNode[], value: string): CategoryNode
 }
 
 export function eventCategoryNodes(
-  rows: { slug: string; parent_slug: string | null; label_key: string }[],
+  rows: { slug: string; parent_slug: string | null; label_key: string; name?: string | null }[],
   translate: ((key: string) => string) & { has: (key: string) => boolean },
 ): CategoryNode[] {
   return rows.map((row) => {
@@ -37,7 +37,7 @@ export function eventCategoryNodes(
         ? translate(key)
         : translate.has(fallback)
           ? translate(fallback)
-          : row.slug,
+          : row.name?.trim() || row.slug,
     };
   });
 }

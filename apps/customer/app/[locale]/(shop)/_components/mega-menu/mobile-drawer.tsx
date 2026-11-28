@@ -68,7 +68,7 @@ export default function MobileDrawer({
   const backRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<string | null>(null);
   const { user } = useSession();
-  const { tree, loading } = useMenuTree(true, labels.fallbackRoots, loadCategories);
+  const { tree, groups, loading } = useMenuTree(true, labels.fallbackRoots, loadCategories);
 
   const [drillId, setDrillId] = useState<string | null>(null);
   const [showAllDepts, setShowAllDepts] = useState(false);
@@ -84,8 +84,8 @@ export default function MobileDrawer({
   useFocusTrap(drawerRef, true, onClose);
 
   const model = useMemo(
-    () => (tree ? buildMenuModel(tree, labels, locale) : null),
-    [tree, labels, locale],
+    () => (tree ? buildMenuModel(tree, labels, locale, groups) : null),
+    [tree, groups, labels, locale],
   );
   const drillDepts = useMemo<MenuDept[]>(
     () => (model ? [...model.products, model.services, model.events] : []),

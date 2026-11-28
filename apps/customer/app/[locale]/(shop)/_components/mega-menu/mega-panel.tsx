@@ -68,7 +68,7 @@ export default function MegaPanel({
   const baseId = useId();
   const paneId = `${baseId}-pane`;
 
-  const { tree, loading } = useMenuTree(true, labels.fallbackRoots, loadCategories);
+  const { tree, groups, loading } = useMenuTree(true, labels.fallbackRoots, loadCategories);
   const [browsed, setBrowsed] = useState<BrowsedCategory[]>([]);
   const [top, setTop] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -96,8 +96,8 @@ export default function MegaPanel({
   );
 
   const model = useMemo(
-    () => (tree ? buildMenuModel(tree, labels, locale) : null),
-    [tree, labels, locale],
+    () => (tree ? buildMenuModel(tree, labels, locale, groups) : null),
+    [tree, groups, labels, locale],
   );
 
   const entries = useMemo(() => {
@@ -331,6 +331,8 @@ export default function MegaPanel({
                       href={link.href}
                       label={link.label}
                       seed={link.slug}
+                      imageUrl={link.imageUrl}
+                      imageAlt={link.imageAlt}
                       onNavigate={handleNavigate(link)}
                     />
                   </li>

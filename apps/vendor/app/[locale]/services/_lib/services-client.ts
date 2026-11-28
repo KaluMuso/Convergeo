@@ -2,15 +2,10 @@ import { createApiClient } from "@vergeo/config";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
-export type ServiceVertical =
-  | "beauty"
-  | "food-catering"
-  | "auto"
-  | "printing-creative"
-  | "home-services"
-  | "tech-services"
-  | "cleaning"
-  | "tailoring";
+/** Slug of an admin-managed service category (the original eight verticals keep their slugs). */
+export type ServiceVertical = string;
+
+export type ServiceCategoryOption = { slug: string; parent_slug: string | null; name: string };
 
 export type ServiceStatus = "draft" | "active" | "paused";
 
@@ -50,6 +45,11 @@ export function createServicesClient(getToken: () => string | null | Promise<str
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
 
   return {
+    /** Published, vendor-visible service categories (admin-managed). */
+    listCategories(): Promise<ServiceCategoryOption[]> {
+      return client.request<ServiceCategoryOption[]>("/categories/services?audience=vendor");
+    },
+
     listServices(): Promise<{ items: ServiceSummary[] }> {
       return client.request<{ items: ServiceSummary[] }>("/vendor/services");
     },

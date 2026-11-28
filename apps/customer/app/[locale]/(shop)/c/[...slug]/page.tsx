@@ -9,6 +9,7 @@ import {
 } from "@vergeo/ui/src/seo/json-ld";
 import { buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -207,6 +208,19 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
   const tNav = await getNavTranslator(locale);
   const categoryPath = slugToCategoryPath(slug);
   const categoriesResult = await fetchCategoriesResult();
+  // Blocked / draft / vendor-only categories are not in the public read (RLS + customer flag),
+  // so a slug missing from a successfully loaded, non-empty tree is a 404. Never 404 when the
+  // tree itself could not be loaded.
+  const leafForGuard = slug[slug.length - 1] ?? "";
+  if (
+    categoriesResult.ok &&
+    categoriesResult.categories.length > 0 &&
+    leafForGuard !== "" &&
+    leafForGuard !== "all" &&
+    !categoriesResult.categories.some((row) => row.slug === leafForGuard)
+  ) {
+    notFound();
+  }
   const categoryName =
     categoryDisplayName(
       categoriesResult.ok ? categoriesResult.categories : [],

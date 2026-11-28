@@ -10,7 +10,15 @@ export type NavCategory = {
   id: string;
   name: string;
   slug: string;
-  children: Array<{ id: string; name: string; slug: string }>;
+  imageUrl?: string | null;
+  imageAlt?: string | null;
+  children: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl?: string | null;
+    imageAlt?: string | null;
+  }>;
 };
 
 export type CategoryRecord = {
@@ -20,12 +28,12 @@ export type CategoryRecord = {
   position: number;
   parent_id: string | null;
   prohibited: boolean;
+  /** Admin-managed tile image (Cloudinary delivery URL) and its alt text. */
+  image_url?: string | null;
+  image_alt?: string | null;
 };
 
-function byPosition(
-  left: { position: number },
-  right: { position: number },
-): number {
+function byPosition(left: { position: number }, right: { position: number }): number {
   return left.position - right.position;
 }
 
@@ -62,10 +70,18 @@ export function buildCategoryTree(rows: CategoryRecord[]): NavCategory[] {
       id: top.id,
       name: top.name,
       slug: top.slug,
+      imageUrl: top.image_url ?? null,
+      imageAlt: top.image_alt ?? null,
       children: usable
         .filter((row) => row.parent_id === top.id && byId.has(top.id))
         .sort(byPosition)
-        .map((child) => ({ id: child.id, name: child.name, slug: child.slug })),
+        .map((child) => ({
+          id: child.id,
+          name: child.name,
+          slug: child.slug,
+          imageUrl: child.image_url ?? null,
+          imageAlt: child.image_alt ?? null,
+        })),
     }));
 }
 
@@ -101,9 +117,7 @@ export function categoryDisplayName(
   if (!slug) {
     return "";
   }
-  const match = rows.find(
-    (row) => row.slug === slug && row.name.trim().length > 0,
-  );
+  const match = rows.find((row) => row.slug === slug && row.name.trim().length > 0);
   if (match) {
     return match.name.trim();
   }

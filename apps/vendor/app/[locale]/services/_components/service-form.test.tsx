@@ -10,8 +10,9 @@ import { ServiceForm } from "./service-form";
 
 import type { ServiceSummary } from "../_lib/services-client";
 
-const { createService, updateService, push, refresh, auth } = vi.hoisted(() => ({
+const { createService, updateService, listCategories, push, refresh, auth } = vi.hoisted(() => ({
   createService: vi.fn(),
+  listCategories: vi.fn(),
   updateService: vi.fn(),
   push: vi.fn(),
   refresh: vi.fn(),
@@ -39,7 +40,7 @@ vi.mock("../../events/_components/image-picker", () => ({
 }));
 vi.mock("../_lib/services-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../_lib/services-client")>()),
-  createServicesClient: () => ({ createService, updateService }),
+  createServicesClient: () => ({ createService, updateService, listCategories }),
 }));
 
 const labels = servicesMessages.vendor.form;
@@ -104,6 +105,7 @@ function enableBooking(value: string) {
 
 beforeEach(() => {
   auth.session = { access_token: "test-token", user: { id: "vendor-1" } };
+  listCategories.mockResolvedValue([]);
   createService.mockResolvedValue({ service: {} });
   updateService.mockResolvedValue({ service: {} });
 });
@@ -396,4 +398,23 @@ it("sends uploaded photos as portfolio_images and opens the edit page to add pac
     portfolio_images: ["listings/vendor-1/photo-a"],
   });
   await waitFor(() => expect(push).toHaveBeenCalledWith("/en/services/new-service-1/edit"));
+});
+
+it("offers the admin-managed vendor categories and keeps a blocked current one selectable", async () => {
+  listCategories.mockResolvedValue([
+    { slug: "beauty", parent_slug: null, name: "Beauty" },
+    { slug: "logistics-delivery", parent_slug: null, name: "Logistics & delivery" },
+    { slug: "kid", parent_slug: "beauty", name: "Child node" },
+  ]);
+  mount("edit");
+  const select = screen.getByLabelText(labels.categoryLabel) as HTMLSelectElement;
+  await waitFor(() =>
+    expect(Array.from(select.options).map((o) => o.value)).toContain("logistics-delivery"),
+  );
+  const values = Array.from(select.options).map((o) => o.value);
+  expect(values).not.toContain("kid");
+  // The edited service's own (possibly since-blocked) category is never dropped.
+  expect(values).toContain("home-services");
+  const labelsShown = Array.from(select.options).map((o) => o.textContent);
+  expect(labelsShown).toContain("Logistics & delivery");
 });
