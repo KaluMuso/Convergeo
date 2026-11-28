@@ -1,8 +1,9 @@
 # Vercel — Frontend apps
 
 Live topology (2026-07): **customer, vendor, and admin** each have a Vercel
-project (`convergeo-customer`, `convergeo-vendor`, `convergeo-admin`). API and
-n8n remain on OCI.
+project (`convergeo-customer`, `convergeo-vendor`, `convergeo-admin`); admin is
+protected by Cloudflare Access. This is the confirmed topology (D21 amended
+2026-11-28). The API and n8n run on the Hetzner box, not on Vercel.
 
 ## Production Branch (RELCTRL-01)
 

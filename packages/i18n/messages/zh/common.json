@@ -107,7 +107,8 @@
     "voiceUnsupported": "此浏览器不支持语音输入。",
     "close": "关闭",
     "showFooter": "显示网站链接",
-    "hideFooter": "隐藏网站链接"
+    "hideFooter": "隐藏网站链接",
+    "voiceDenied": "麦克风已被禁用。请在浏览器设置中允许，或直接输入问题。"
   },
   "paymentTrust": {
     "footerSeal": "订单送达时以现金付款",
