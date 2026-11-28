@@ -366,7 +366,8 @@ def test_build_adapters_returns_three_channels_without_env(
         "AT_USERNAME",
         "AT_SENDER_ID",
         "RESEND_API_KEY",
-        "RESEND_FROM_EMAIL",
+        "RESEND_SENDER_DOMAIN",
+        "RESEND_REPLY_TO",
     ):
         monkeypatch.delenv(env, raising=False)
 

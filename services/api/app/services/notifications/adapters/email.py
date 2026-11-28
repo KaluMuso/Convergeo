@@ -20,9 +20,34 @@ from app.services.payments.money import ngwee_to_major_str
 logger = logging.getLogger(__name__)
 
 RESEND_API_KEY_ENV = "RESEND_API_KEY"
-RESEND_FROM_EMAIL_ENV = "RESEND_FROM_EMAIL"
+RESEND_SENDER_DOMAIN_ENV = "RESEND_SENDER_DOMAIN"
+RESEND_REPLY_TO_ENV = "RESEND_REPLY_TO"
 RESEND_API_URL = "https://api.resend.com/emails"
-DEFAULT_FROM_EMAIL = "notifications@vergeo5.com"
+DEFAULT_SENDER_DOMAIN = "mail.vergeo5.com"
+DEFAULT_REPLY_TO = "support@vergeo5.com"
+
+
+@dataclass(frozen=True)
+class EmailStream:
+    """One filterable mail stream: fixed sender name, mailbox and subject prefix.
+
+    King, 28 Nov 2026: every email we send carries a consistent sender and subject
+    prefix so it can be filtered. Only the sender and prefix are standardised; the
+    friendly subject wording after the prefix stays per template. Ops alerts
+    ("Vergeo5 Alerts" <alerts@...>, "[Vergeo5 Alert P0]") are sent by n8n, not here.
+    """
+
+    display_name: str
+    local_part: str
+    subject_prefix: str
+
+    def sender(self, domain: str) -> str:
+        return f"{self.display_name} <{self.local_part}@{domain}>"
+
+
+ORDERS_STREAM = EmailStream("Vergeo5 Orders", "orders", "[Vergeo5 Order]")
+PAYMENTS_STREAM = EmailStream("Vergeo5 Payments", "payments", "[Vergeo5 Payment]")
+VENDORS_STREAM = EmailStream("Vergeo5 Vendors", "vendors", "[Vergeo5 Vendor]")
 
 EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "payment_receipt": {
@@ -233,7 +258,7 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "import_quote_ready": {
         "en": {
             "subject_key": "notifications.email.import_quote_ready.subject",
-            "subject": "Your import quote is ready on Convergeo",
+            "subject": "Your import quote is ready",
             "body_key": "notifications.email.import_quote_ready.body",
             "body": (
                 "<p>We prepared a landed-cost estimate for <strong>{import_title}</strong>: "
@@ -336,6 +361,47 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
 }
 
 
+# Which stream each template belongs to. Every template must be listed (a test
+# enforces it), so a new template cannot silently go out under the wrong sender.
+TEMPLATE_STREAMS: dict[str, EmailStream] = {
+    # Payments, payouts, refunds.
+    "payment_receipt": PAYMENTS_STREAM,
+    "payment_received": PAYMENTS_STREAM,
+    "payment_failed": PAYMENTS_STREAM,
+    "payout_sent": PAYMENTS_STREAM,
+    "payout_failed": PAYMENTS_STREAM,
+    # KYC and vendor/business account.
+    "kyc_approved": VENDORS_STREAM,
+    "kyc_rejected": VENDORS_STREAM,
+    "business_verified": VENDORS_STREAM,
+    "business_rejected": VENDORS_STREAM,
+    # Orders, tickets, services/RFQ, delivery, disputes.
+    "order_receipt": ORDERS_STREAM,
+    "order_confirmed": ORDERS_STREAM,
+    "order_shipped": ORDERS_STREAM,
+    "order_ready_pickup": ORDERS_STREAM,
+    "order_delivered": ORDERS_STREAM,
+    "order_cancelled": ORDERS_STREAM,
+    "order_completed": ORDERS_STREAM,
+    "vendor_new_order": ORDERS_STREAM,
+    "rfq_job_broadcast": ORDERS_STREAM,
+    "rfq_quoted": ORDERS_STREAM,
+    "service_quote_accepted": ORDERS_STREAM,
+    "import_quote_ready": ORDERS_STREAM,
+    "courier_dispatch_request": ORDERS_STREAM,
+    "dispatch_stale_alert": ORDERS_STREAM,
+    "ticket_issued": ORDERS_STREAM,
+    "dispute_opened": ORDERS_STREAM,
+    "dispute_resolved": ORDERS_STREAM,
+}
+
+
+def email_stream_for(template: str | None) -> EmailStream:
+    """Stream for a template; unknown templates render as payment_receipt, so match that."""
+    name = template if template in EMAIL_TEMPLATES else "payment_receipt"
+    return TEMPLATE_STREAMS.get(name, ORDERS_STREAM)
+
+
 def _format_amount(payload: dict[str, Any]) -> str:
     for key in ("amount_ngwee", "total_ngwee"):
         value = payload.get(key)
@@ -359,7 +425,10 @@ def render_email_html(
     locale: str = "en",
     payload: dict[str, Any],
 ) -> tuple[str, str, str, str]:
-    """Render subject + HTML from i18n-keyed template registry."""
+    """Render subject + HTML from i18n-keyed template registry.
+
+    The subject carries the stream prefix, e.g. ``[Vergeo5 Order] Your Vergeo5 order ...``.
+    """
     template_name = template or "payment_receipt"
     locale_templates = EMAIL_TEMPLATES.get(template_name, EMAIL_TEMPLATES["payment_receipt"])
     strings = locale_templates.get(locale) or locale_templates["en"]
@@ -410,7 +479,8 @@ def render_email_html(
             html.escape(line) for line in str(payload.get("dispatch_message") or "").splitlines()
         ),
     }
-    subject = strings["subject"].format(**vars_map)
+    stream = email_stream_for(template_name)
+    subject = f"{stream.subject_prefix} {strings['subject'].format(**vars_map)}"
     body = strings["body"].format(**vars_map)
     subject_key = strings["subject_key"]
     body_key = strings["body_key"]
@@ -487,7 +557,8 @@ class ResendEmailAdapter:
     """Resend email ChannelAdapter with i18n-keyed HTML templates."""
 
     api_key: str
-    from_email: str
+    sender_domain: str = DEFAULT_SENDER_DOMAIN
+    reply_to: str = DEFAULT_REPLY_TO
     client: httpx.AsyncClient | None = None
 
     @classmethod
@@ -495,8 +566,12 @@ class ResendEmailAdapter:
         api_key = os.environ.get(RESEND_API_KEY_ENV, "").strip()
         if not api_key:
             raise ValueError(f"{RESEND_API_KEY_ENV} is required")
-        from_email = os.environ.get(RESEND_FROM_EMAIL_ENV, DEFAULT_FROM_EMAIL).strip()
-        return cls(api_key=api_key, from_email=from_email, client=client)
+        # The sender domain must be verified in Resend. Rollback: RESEND_SENDER_DOMAIN=vergeo5.com.
+        sender_domain = (
+            os.environ.get(RESEND_SENDER_DOMAIN_ENV, "").strip() or DEFAULT_SENDER_DOMAIN
+        )
+        reply_to = os.environ.get(RESEND_REPLY_TO_ENV, "").strip() or DEFAULT_REPLY_TO
+        return cls(api_key=api_key, sender_domain=sender_domain, reply_to=reply_to, client=client)
 
     async def send(self, message: OutboxMessage) -> SendResult:
         to = str(message.payload.get("email") or message.payload.get("to") or "").strip()
@@ -524,8 +599,9 @@ class ResendEmailAdapter:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "from": self.from_email,
+                    "from": email_stream_for(message.template).sender(self.sender_domain),
                     "to": [to],
+                    "reply_to": self.reply_to,
                     "subject": subject,
                     "html": html_body,
                     "tags": [

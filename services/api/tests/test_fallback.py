@@ -485,7 +485,6 @@ async def test_email_adapter_sends_resend_payload() -> None:
     client = httpx.AsyncClient(transport=transport)
     adapter = ResendEmailAdapter(
         api_key="re_test",
-        from_email="notifications@vergeo5.com",
         client=client,
     )
     message = OutboxMessage(
@@ -524,7 +523,7 @@ async def test_email_adapter_tag_values_are_resend_safe_for_every_template() -> 
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     adapter = ResendEmailAdapter(
-        api_key="re_test", from_email="notifications@vergeo5.com", client=client
+        api_key="re_test", client=client
     )
     for template in EMAIL_TEMPLATES:
         message = OutboxMessage(
@@ -560,7 +559,6 @@ async def test_resend_adapter_logs_422_response_body(
     client = httpx.AsyncClient(transport=transport)
     adapter = ResendEmailAdapter(
         api_key="re_secret_test_key",
-        from_email="notifications@vergeo5.com",
         client=client,
     )
     message = OutboxMessage(
