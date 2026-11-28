@@ -17,6 +17,7 @@ from app.routers.vendor_orders import (
     courier_dispatch_owns_shipping,
 )
 from app.schemas.base import StrictModel
+from app.services.order_item_titles import display_title, resolve_missing_titles
 from fastapi import APIRouter, Depends, Query
 
 router = APIRouter(prefix="/vendor/orders", tags=["vendor-orders"])
@@ -238,14 +239,17 @@ def _load_items_by_order(
     def fetch(chunk: list[str]) -> list[dict[str, Any]]:
         response = (
             service_client.client.table("order_items")
-            .select("order_id, qty, unit_price_ngwee, title_snapshot, created_at")
+            .select("id, order_id, qty, unit_price_ngwee, title_snapshot, created_at")
             .in_("order_id", chunk)
             .execute()
         )
         return _rows(response)
 
     grouped: dict[str, list[dict[str, Any]]] = {order_id: [] for order_id in order_ids}
-    for row in _fetch_in_chunks(order_ids, fetch):
+    rows = _fetch_in_chunks(order_ids, fetch)
+    resolved = resolve_missing_titles(service_client.client, rows)
+    for row in rows:
+        row["title_snapshot"] = display_title(row, resolved)
         grouped.setdefault(str(row["order_id"]), []).append(row)
     return grouped
 

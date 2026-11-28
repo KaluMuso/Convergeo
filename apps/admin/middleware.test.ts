@@ -6,7 +6,9 @@ import {
   resolveGatedRedirect,
   updateSession,
 } from "@vergeo/auth/middleware";
+import { cspSha256Source } from "@vergeo/config/security-headers";
 import { LOCALES } from "@vergeo/i18n";
+import { THEME_SCRIPT } from "@vergeo/ui/src/theme-script";
 import { NextRequest, NextResponse } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -167,7 +169,11 @@ describe("recovery composition with current verified-claims authorization", () =
                   claims:
                     kind === "user_metadata"
                       ? { user_metadata: { roles: ["admin"] } }
-                      : { app_metadata: { roles: kind === "error" ? ["admin"] : "admin" } },
+                      : {
+                          app_metadata: {
+                            roles: kind === "error" ? ["admin"] : "admin",
+                          },
+                        },
                 },
           error: kind === "error" ? { message: "fixture" } : null,
         });
@@ -476,7 +482,10 @@ describe("admin middleware — CF Access enforcement", () => {
 
   it("returns 403 in production when assertion verification fails", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "verification_failed" });
+    verifyCfAccessAssertionMock.mockResolvedValue({
+      ok: false,
+      reason: "verification_failed",
+    });
 
     const request = new NextRequest("https://admin.vergeo5.com/en", {
       headers: { "cf-access-jwt-assertion": "tampered.jwt.value" },
@@ -491,7 +500,10 @@ describe("admin middleware — CF Access enforcement", () => {
     "returns 403 without Cloudflare Access on %s",
     async (path) => {
       vi.stubEnv("NODE_ENV", "production");
-      verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+      verifyCfAccessAssertionMock.mockResolvedValue({
+        ok: false,
+        reason: "assertion_missing",
+      });
 
       const request = new NextRequest(`https://admin.vergeo5.com${path}`);
       const response = await middleware(request);
@@ -503,7 +515,10 @@ describe("admin middleware — CF Access enforcement", () => {
 
   it("proceeds past the CF Access gate in production when verification succeeds", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    verifyCfAccessAssertionMock.mockResolvedValue({ ok: true, payload: { sub: "cf-user" } });
+    verifyCfAccessAssertionMock.mockResolvedValue({
+      ok: true,
+      payload: { sub: "cf-user" },
+    });
 
     const request = new NextRequest("https://admin.vergeo5.com/en", {
       headers: { "cf-access-jwt-assertion": "valid.jwt.value" },
@@ -529,7 +544,10 @@ describe("admin middleware — CF Access enforcement", () => {
   it("keeps Cloudflare Access in front of admin role checks", async () => {
     vi.stubEnv("NODE_ENV", "production");
     resolveGatedRedirectMock.mockReturnValue("permission-denied");
-    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+    verifyCfAccessAssertionMock.mockResolvedValue({
+      ok: false,
+      reason: "assertion_missing",
+    });
 
     const response = await middleware(new NextRequest("https://admin.vergeo5.com/en"));
 
@@ -539,7 +557,10 @@ describe("admin middleware — CF Access enforcement", () => {
 
   it("does not grant admin access to an authenticated non-admin after CF Access", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    verifyCfAccessAssertionMock.mockResolvedValue({ ok: true, payload: { sub: "cf-user" } });
+    verifyCfAccessAssertionMock.mockResolvedValue({
+      ok: true,
+      payload: { sub: "cf-user" },
+    });
     resolveGatedRedirectMock.mockReturnValue("permission-denied");
 
     const request = new NextRequest("https://admin.vergeo5.com/en", {
@@ -555,7 +576,10 @@ describe("admin middleware — CF Access enforcement", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL_ENV", "preview");
     vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "staging");
-    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+    verifyCfAccessAssertionMock.mockResolvedValue({
+      ok: false,
+      reason: "assertion_missing",
+    });
 
     const health = await middleware(new NextRequest("https://admin.vergeo5.com/en/health"));
     expect(health.status).toBe(200);
@@ -579,7 +603,10 @@ describe("admin middleware — CF Access enforcement", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "production");
-    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+    verifyCfAccessAssertionMock.mockResolvedValue({
+      ok: false,
+      reason: "assertion_missing",
+    });
 
     const response = await middleware(new NextRequest("https://admin.vergeo5.com/en/health"));
 
@@ -594,7 +621,10 @@ describe("admin middleware — CF Access enforcement", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "staging");
-    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+    verifyCfAccessAssertionMock.mockResolvedValue({
+      ok: false,
+      reason: "assertion_missing",
+    });
 
     const response = await middleware(new NextRequest("https://admin.vergeo5.com/en/health"));
 
@@ -609,7 +639,10 @@ describe("admin middleware — CF Access enforcement", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL_ENV", "preview");
     vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "staging");
-    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+    verifyCfAccessAssertionMock.mockResolvedValue({
+      ok: false,
+      reason: "assertion_missing",
+    });
 
     const response = await middleware(new NextRequest("https://admin.vergeo5.com/en/healthcheck"));
 
@@ -633,6 +666,10 @@ describe("admin middleware — CF Access enforcement", () => {
     expect(scriptSrc).toContain("'strict-dynamic'");
     expect(scriptSrc).not.toContain("'unsafe-inline'");
     expect(scriptSrc).not.toContain("'unsafe-eval'");
+    // The static theme bootstrap is allowed by exactly its sha256; report-only
+    // carries no upgrade-insecure-requests (ignored there, logs a warning).
+    expect(scriptSrc).toContain(await cspSha256Source(THEME_SCRIPT));
+    expect(csp).not.toContain("upgrade-insecure-requests");
   });
 });
 

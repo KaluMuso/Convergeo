@@ -24,7 +24,7 @@ export type VendorActionName =
 
 export type OrderItemSummary = {
   id: string;
-  title: string;
+  title: string | null;
   qty: number;
   unit_price_ngwee: number;
   /** Chosen colour/size, snapshotted when the order was placed. */
@@ -509,7 +509,9 @@ export function OrderDetailView({ orderId, locale = "en" }: OrderDetailViewProps
                 className="flex items-start justify-between gap-3 rounded-lg border border-border p-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-text">{item.title}</p>
+                  <p className="font-medium text-text">
+                    {item.title?.trim() || t("orders.items.untitledItem")}
+                  </p>
                   {item.variant_options && item.variant_options.length > 0 ? (
                     <p
                       className="text-sm font-medium text-text"

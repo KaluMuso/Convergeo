@@ -197,11 +197,17 @@ def preflight(group: str, database: str, container: str) -> None:
     require_base_url(settings.supabase_url)
     service = get_supabase_service_client()
     client = service.client
+    # The service client brings its own httpx.Client (HTTP/1.1, short keep-alive,
+    # #935), so the session carries no base_url: postgrest-py sends absolute URLs
+    # per request. Bind the route by the URLs actually requested instead.
+    requested: list[str] = []
+    client.postgrest.session.event_hooks.setdefault("request", []).append(
+        lambda request: requested.append(str(request.url))
+    )
     try:
         require_rest_urls(
             str(client.rest_url),
             str(client.postgrest.base_url),
-            str(client.postgrest.session.base_url),
         )
         if get_service_client() is not service or _service_client() is not service:
             raise BindingError("nested listing/TTL factories use a stale service client")
@@ -212,6 +218,10 @@ def preflight(group: str, database: str, container: str) -> None:
         # These are the actual listing and TTL client paths, not fabricated rows.
         get_service_client().client.table("vendor_listings").select("id").limit(1).execute()
         _service_client().client.table("platform_config").select("key").limit(1).execute()
+        if len(requested) < 3 or any(
+            not url.startswith(GATEWAY + "/rest/v1/") for url in requested
+        ):
+            raise BindingError("pinned Supabase client does not use the local /rest/v1 route")
     except BindingError:
         raise
     except Exception as exc:
