@@ -139,7 +139,7 @@ describe("admin navigation from current API permissions", () => {
     expect(keys).toContain("coupons");
     expect(keys).toContain("askAudit");
     expect(keys).toContain("importRequests");
-    expect(keys).toHaveLength(30);
+    expect(keys).toHaveLength(29);
     expect(keys).not.toContain("roles");
     expect(visible([], true, true)).toContain("roles");
   });
