@@ -1,10 +1,10 @@
 {
   "title": "Search",
   "meta": {
-    "description": "Search products, services, events, and vendors across Zambia on Convergeo.",
-    "descriptionWithQuery": "Search results for “{query}” on Convergeo."
+    "description": "Search products, services, events, and vendors across Zambia on Vergeo5.",
+    "descriptionWithQuery": "Search results for “{query}” on Vergeo5."
   },
-  "placeholder": "Search Convergeo",
+  "placeholder": "Search Vergeo5",
   "submit": "Search",
   "recent": {
     "title": "Recent searches",
@@ -12,7 +12,7 @@
     "remove": "Remove {term}"
   },
   "popular": {
-    "title": "Popular on Convergeo"
+    "title": "Popular on Vergeo5"
   },
   "tabs": {
     "ariaLabel": "Filter results by type",
@@ -57,9 +57,9 @@
     "groceries": "Groceries & staples"
   },
   "askVergeo": {
-    "title": "Ask Convergeo",
-    "teaser": "Not sure what to search? Ask Convergeo for help finding what you need.",
-    "slotLabel": "Ask Convergeo assistant slot"
+    "title": "Ask Vergeo5",
+    "teaser": "Not sure what to search? Ask Vergeo5 for help finding what you need.",
+    "slotLabel": "Ask Vergeo5 assistant slot"
   },
   "results": {
     "count": "{count, plural, one {# result} other {# results}}",

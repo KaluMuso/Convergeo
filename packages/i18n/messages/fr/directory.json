@@ -62,7 +62,7 @@
     "body": "Essayez d'effacer les filtres ou de rechercher une autre entreprise."
   },
   "profile": {
-    "metaDescription": "Achetez chez {name} sur Convergeo",
+    "metaDescription": "Achetez chez {name} sur Vergeo5",
     "about": "À propos",
     "hours": "Horaires d'ouverture",
     "location": "Emplacement",
@@ -75,7 +75,7 @@
     "noReviews": "Pas encore d'avis",
     "preferredBadge": "Boutique privilégiée",
     "verifiedBadge": "Vendeur vérifié (identité contrôlée)",
-    "shareTitle": "{name} sur Convergeo",
+    "shareTitle": "{name} sur Vergeo5",
     "statRating": "Note",
     "statReviews": "Avis",
     "statListings": "Produits",
@@ -116,7 +116,7 @@
       "compareOthers": "{count, plural, one {Comparer avec # autre boutique} other {Comparer avec # autres boutiques}}",
       "compareFrom": "dès {price}",
       "compareAria": "Comparer {title} dans d'autres boutiques",
-      "verifiedOnly": "Seuls les clients ayant acheté ici via Convergeo peuvent laisser un avis.",
+      "verifiedOnly": "Seuls les clients ayant acheté ici via Vergeo5 peuvent laisser un avis.",
       "clipsHeading": "Clips",
       "clipWatch": "Voir le clip",
       "offersHeading": "Offres",

@@ -12,7 +12,7 @@ const labels = {
   title: "New products are on the way",
   body: "Sellers are listing more every week.",
   browse: "Start browsing",
-  sell: "Sell on Convergeo",
+  sell: "Sell on Vergeo5",
 };
 
 describe("HomeEmptyRails", () => {

@@ -1,10 +1,10 @@
 {
   "title": "Recherche",
   "meta": {
-    "description": "Recherchez des produits, services, événements et vendeurs en Zambie sur Convergeo.",
-    "descriptionWithQuery": "Résultats de recherche pour « {query} » sur Convergeo."
+    "description": "Recherchez des produits, services, événements et vendeurs en Zambie sur Vergeo5.",
+    "descriptionWithQuery": "Résultats de recherche pour « {query} » sur Vergeo5."
   },
-  "placeholder": "Rechercher sur Convergeo",
+  "placeholder": "Rechercher sur Vergeo5",
   "submit": "Rechercher",
   "recent": {
     "title": "Recherches récentes",
@@ -12,7 +12,7 @@
     "remove": "Supprimer {term}"
   },
   "popular": {
-    "title": "Populaire sur Convergeo"
+    "title": "Populaire sur Vergeo5"
   },
   "tabs": {
     "ariaLabel": "Filtrer les résultats par type",
@@ -57,9 +57,9 @@
     "groceries": "Épicerie et produits de base"
   },
   "askVergeo": {
-    "title": "Ask Convergeo",
-    "teaser": "Vous ne savez pas quoi rechercher ? Ask Convergeo vous aide à trouver ce qu'il vous faut.",
-    "slotLabel": "Emplacement de l'assistant Ask Convergeo"
+    "title": "Ask Vergeo5",
+    "teaser": "Vous ne savez pas quoi rechercher ? Ask Vergeo5 vous aide à trouver ce qu'il vous faut.",
+    "slotLabel": "Emplacement de l'assistant Ask Vergeo5"
   },
   "results": {
     "count": "{count, plural, one {# résultat} other {# résultats}}",

@@ -381,7 +381,7 @@
       "pendingBody": "正在等待 Lenco 确认。此页面会自动更新。",
       "error": "出了点问题。请检查网络后重试。",
       "widgetUnavailable": "银行卡付款暂时不能用。请用移动钱包，或稍后再试。",
-      "widgetLabel": "Convergeo 订单",
+      "widgetLabel": "Vergeo5 订单",
       "secureNote": "由支付伙伴 Lenco 提供的安全付款页面（符合 PCI 标准）"
     },
     "tickets": {
@@ -394,7 +394,7 @@
       "applying": "正在验证…",
       "remove": "移除",
       "applied": "已使用 {code}：优惠 {amount}",
-      "paidByPlatform": "此优惠由 Convergeo 承担，店铺仍收到全价。",
+      "paidByPlatform": "此优惠由 Vergeo5 承担，店铺仍收到全价。",
       "paidByShop": "此优惠由店铺提供。",
       "prepaidOnly": "优惠券仅适用于移动支付或银行卡，不适用于货到付款。",
       "errors": {
@@ -422,7 +422,7 @@
       "recipientPhoneHelp": "赞比亚手机号码。我们只会就礼物给对方发送一条消息。",
       "message": "礼物留言（可选）",
       "messageHelp": "最多 200 个字符，不含链接。",
-      "consent": "对方已同意为此礼物向 Convergeo 提供电话（以及送货地址）。",
+      "consent": "对方已同意为此礼物向 Vergeo5 提供电话（以及送货地址）。",
       "pickupNote": "自取：取货 PIN 码发送给收礼人，而不是您。",
       "deliveryNote": "送货：请在送货步骤填写收礼人的地标。",
       "privacyNote": "对方信息仅用于此礼物，完成后删除。对方的收据不显示价格。",
