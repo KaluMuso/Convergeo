@@ -545,7 +545,9 @@ async def test_resend_adapter_logs_422_response_body(
     assert result.failure_kind == FailureKind.PERMANENT
     assert result.message == "Resend HTTP 422"
 
-    failure_records = [r for r in caplog.records if r.getMessage().startswith("Resend send failed:")]
+    failure_records = [
+        r for r in caplog.records if r.getMessage().startswith("Resend send failed:")
+    ]
     assert len(failure_records) == 1
     record = failure_records[0]
     msg = record.getMessage()
