@@ -22,6 +22,8 @@ import binascii
 import json
 import logging
 import math
+import threading
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -103,34 +105,92 @@ def _sort_key(row: CatalogCandidate) -> SortKey:
     return (damped, trust, stock, updated_at, row.listing.id)
 
 
-def build_stream_page(
-    client: Any,
-    *,
-    cursor: str | None,
-    limit: int = STREAM_DEFAULT_LIMIT,
-    candidate_loader: Callable[[Any], list[CatalogCandidate]] | None = None,
-) -> HomeStreamPage:
-    after = decode_stream_cursor(cursor)
-    size = max(1, min(limit, STREAM_MAX_LIMIT))
-    loader = candidate_loader or (lambda c: build_catalog_candidates(c))
-    try:
-        candidates = loader(client)
-    except Exception:
-        logger.warning("home_stream_candidates_failed", exc_info=True)
-        candidates = []
+#: In-process snapshot of the fully ordered stream. Every cursor page used to
+#: re-run the whole catalogue pipeline (cache read + validate thousands of
+#: candidates + sort); the order is identical for every shopper, so one
+#: snapshot serves all pages and all callers for a short TTL.
+_snapshot_lock = threading.Lock()
+_snapshot: tuple[float, list[tuple[SortKey, CatalogListingItem]]] | None = None
 
+
+def clear_stream_snapshot() -> None:
+    global _snapshot
+    with _snapshot_lock:
+        _snapshot = None
+
+
+def _order_candidates(
+    candidates: list[CatalogCandidate],
+) -> list[tuple[SortKey, CatalogListingItem]]:
     keyed: dict[str, tuple[SortKey, CatalogCandidate]] = {}
     for row in candidates:
         if not row.in_stock or row.listing.id in keyed:
             continue
         keyed[row.listing.id] = (_sort_key(row), row)
     ordered = sorted(keyed.values(), key=lambda pair: pair[0], reverse=True)
+    return [(key, catalog_item_from_candidate(row)) for key, row in ordered]
+
+
+def _load_ordered(
+    client: Any,
+    loader: Callable[[Any], list[CatalogCandidate]],
+) -> list[tuple[SortKey, CatalogListingItem]]:
+    try:
+        candidates = loader(client)
+    except Exception:
+        logger.warning("home_stream_candidates_failed", exc_info=True)
+        candidates = []
+    return _order_candidates(candidates)
+
+
+def _ordered_snapshot(client: Any, ttl_seconds: float) -> list[tuple[SortKey, CatalogListingItem]]:
+    """Ordered stream, rebuilt at most once per TTL (single-flight under the lock)."""
+    global _snapshot
+    now = time.monotonic()
+    current = _snapshot
+    if current is not None and current[0] > now:
+        return current[1]
+    with _snapshot_lock:
+        current = _snapshot
+        if current is not None and current[0] > time.monotonic():
+            return current[1]
+        ordered = _load_ordered(client, lambda c: build_catalog_candidates(c))
+        if ordered:  # never pin an empty/failed build for the whole TTL
+            _snapshot = (time.monotonic() + ttl_seconds, ordered)
+        return ordered
+
+
+def build_stream_page(
+    client: Any,
+    *,
+    cursor: str | None,
+    limit: int = STREAM_DEFAULT_LIMIT,
+    candidate_loader: Callable[[Any], list[CatalogCandidate]] | None = None,
+    snapshot_ttl_seconds: float = 0,
+) -> HomeStreamPage:
+    after = decode_stream_cursor(cursor)
+    size = max(1, min(limit, STREAM_MAX_LIMIT))
+    if candidate_loader is None and snapshot_ttl_seconds > 0:
+        ordered = _ordered_snapshot(client, snapshot_ttl_seconds)
+    else:
+        loader = candidate_loader or (lambda c: build_catalog_candidates(c))
+        ordered = _load_ordered(client, loader)
+
     if after is not None:
-        ordered = [pair for pair in ordered if pair[0] < after]
+        # Keys are sorted descending, so everything strictly after the cursor is a suffix.
+        lo, hi = 0, len(ordered)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if ordered[mid][0] < after:
+                hi = mid
+            else:
+                lo = mid + 1
+        ordered = ordered[lo:]
 
     page = ordered[:size]
     has_more = len(ordered) > size
     return HomeStreamPage(
-        items=[catalog_item_from_candidate(row) for _key, row in page],
+        # Copies: the router attaches per-request offer badges onto these items.
+        items=[item.model_copy() for _key, item in page],
         next_cursor=encode_stream_cursor(page[-1][0]) if page and has_more else None,
     )
