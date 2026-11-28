@@ -582,17 +582,17 @@ async def test_resend_adapter_logs_422_response_body(
     assert result.failure_kind == FailureKind.PERMANENT
     assert result.message == "Resend HTTP 422"
 
-    failure_records = [r for r in caplog.records if r.getMessage() == "Resend send failed"]
+    failure_records = [
+        r for r in caplog.records if r.getMessage().startswith("Resend send failed:")
+    ]
     assert len(failure_records) == 1
     record = failure_records[0]
-    assert record.http_status == 422  # type: ignore[attr-defined]
-    assert "validation_error" in record.resend_error  # type: ignore[attr-defined]
-    assert "status=422" in record.resend_error  # type: ignore[attr-defined]
-    assert record.recipient == "b***@example.com"  # type: ignore[attr-defined]
+    msg = record.getMessage()
+    assert "validation_error" in msg
+    assert "status=422" in msg
+    assert "to=b***@example.com" in msg
 
-    combined = " ".join(
-        f"{r.getMessage()} {getattr(r, 'resend_error', '')}" for r in caplog.records
-    )
+    combined = " ".join(r.getMessage() for r in caplog.records)
     assert "buyer@example.com" not in combined
     assert "re_secret_test_key" not in combined
     assert "Bearer" not in combined
