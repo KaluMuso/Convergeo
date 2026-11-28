@@ -28,3 +28,24 @@ export function buildCatalogQuery(
   }
   return params.toString();
 }
+
+/**
+ * The user-facing URL params (price stays in kwacha, no injected `category_path`).
+ * Filter UI state and chip/sort hrefs must derive from this, never from the
+ * ngwee-converted API query, or every re-render multiplies prices by 100.
+ */
+export function buildDisplaySearchParams(
+  searchParams: Record<string, string | string[] | undefined>,
+): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (value === undefined || key === "slug") {
+      continue;
+    }
+    const raw = Array.isArray(value) ? value[0] : value;
+    if (raw) {
+      params.set(key, raw);
+    }
+  }
+  return params;
+}

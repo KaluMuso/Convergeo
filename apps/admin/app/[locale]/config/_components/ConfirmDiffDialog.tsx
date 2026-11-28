@@ -1,6 +1,6 @@
 "use client";
 
-import { glassClass } from "@vergeo/ui/src/glass";
+import { Modal } from "@vergeo/ui/src/modal";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -28,29 +28,20 @@ export function ConfirmDiffDialog({
   const t = useTranslations("admin.config");
   const [pending, setPending] = useState(false);
 
-  if (!open) {
-    return null;
-  }
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-[2px] sm:items-center"
-      role="presentation"
-      onClick={onCancel}
+    <Modal
+      open={open}
+      onClose={pending ? () => undefined : onCancel}
+      title={t("confirm.title")}
+      closeOnEscape={!pending}
+      closeOnScrimClick={!pending}
+      panelStyle={{ width: "min(100% - 2rem, 28rem)" }}
+      data-testid="confirm-diff-dialog"
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirm-diff-title"
-        className={`${glassClass("overlay")} w-full max-w-md rounded-lg p-4`}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h3 id="confirm-diff-title" className="font-serif text-lg text-text">
-          {t("confirm.title")}
-        </h3>
-        <p className="mt-2 text-sm text-muted">{t("confirm.body")}</p>
+      <div className="space-y-2">
+        <p className="text-sm text-muted">{t("confirm.body")}</p>
         {dangerous ? (
-          <p className="mt-2 text-sm font-medium text-danger">{t("confirm.dangerous")}</p>
+          <p className="text-sm font-medium text-danger">{t("confirm.dangerous")}</p>
         ) : null}
 
         <dl className="mt-4 grid grid-cols-2 gap-3 rounded-md bg-bg p-3 text-sm">
@@ -94,6 +85,6 @@ export function ConfirmDiffDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

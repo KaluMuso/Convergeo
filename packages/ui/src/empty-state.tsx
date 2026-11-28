@@ -56,7 +56,7 @@ export function EmptyState({
       }}
     >
       {illustration ? (
-        <div aria-hidden="true" className="mb-2 w-[7.5rem] text-primary">
+        <div aria-hidden="true" className="mb-2 w-24 text-primary sm:w-[7.5rem]">
           <SpotIllustration id={illustration} className="h-auto w-full" />
         </div>
       ) : (

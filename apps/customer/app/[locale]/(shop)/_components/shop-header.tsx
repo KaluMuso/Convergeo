@@ -57,6 +57,8 @@ type ShopHeaderProps = {
   mobileSearchSlot?: ReactNode;
   /** Notification bell island (renders nothing for guests). */
   notificationSlot?: ReactNode;
+  /** Id of the page's main landmark for the skip link (account pages use their own). */
+  mainId?: string;
 };
 
 /** Pill chip on tablet's scroller row, plain nav link on desktop. */
@@ -82,6 +84,7 @@ export function ShopHeader({
   labels,
   mobileSearchSlot,
   notificationSlot,
+  mainId = "shop-main",
 }: ShopHeaderProps) {
   const previewToken = useMerchPreviewToken();
   const { cart } = useCartStore();
@@ -222,7 +225,7 @@ export function ShopHeader({
       className="v-shop-header sticky top-0 z-50 w-full max-w-[100vw] overflow-x-clip"
     >
       <a
-        href="#shop-main"
+        href={`#${mainId}`}
         className="sr-only rounded bg-primary text-sm font-medium text-[var(--primary-btn-fg)] focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4"
       >
         {labels.skipToContent}

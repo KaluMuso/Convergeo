@@ -84,7 +84,7 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
 
   return (
     <section aria-labelledby="home-categories-heading" className="motion-rise flex flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="v-fab-clear flex items-baseline justify-between gap-3">
         <h2
           id="home-categories-heading"
           className="font-display text-h3 font-bold text-display-ink"

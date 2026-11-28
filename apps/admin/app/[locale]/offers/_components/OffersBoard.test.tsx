@@ -112,17 +112,19 @@ describe("OffersBoard", () => {
     await act(async () => {
       (host.querySelector('[data-testid="admin-offer"] button') as HTMLButtonElement).click();
     });
-    const textarea = host.querySelector("textarea") as HTMLTextAreaElement;
+    const textarea = document.body.querySelector("textarea") as HTMLTextAreaElement;
     await act(async () => {
       const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
       setter.call(textarea, "  abuse  ");
       textarea.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await act(async () => {
-      (host.querySelector('[data-testid="offer-pause-confirm"]') as HTMLButtonElement).click();
+      (
+        document.body.querySelector('[data-testid="offer-pause-confirm"]') as HTMLButtonElement
+      ).click();
     });
     expect(mocks.setOfferPaused).toHaveBeenCalledWith("o1", true, "abuse");
-    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
     expect(host.textContent).toContain("state.admin_paused");
     expect(host.textContent).toContain("actions.unpause");
     expect(mocks.success).toHaveBeenCalledWith("pausedToast");
@@ -136,9 +138,11 @@ describe("OffersBoard", () => {
       (host.querySelector('[data-testid="admin-offer"] button') as HTMLButtonElement).click();
     });
     await act(async () => {
-      (host.querySelector('[data-testid="offer-pause-confirm"]') as HTMLButtonElement).click();
+      (
+        document.body.querySelector('[data-testid="offer-pause-confirm"]') as HTMLButtonElement
+      ).click();
     });
-    expect(host.querySelector('[role="alert"]')?.textContent).toBe("actions.failure");
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toBe("actions.failure");
     expect(host.textContent).toContain("state.live");
   });
 
