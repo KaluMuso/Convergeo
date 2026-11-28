@@ -60,9 +60,21 @@ export function buildReportOnlyCsp(inlineScriptHashes: string[] = []): string {
 }
 
 let reportOnlyCspCache: Promise<string> | undefined;
-function getReportOnlyCsp(): Promise<string> {
-  reportOnlyCspCache ??= cspSha256Source(THEME_SCRIPT).then((hash) => buildReportOnlyCsp([hash]));
-  return reportOnlyCspCache;
+async function getReportOnlyCsp(): Promise<string> {
+  if (reportOnlyCspCache !== undefined) {
+    return reportOnlyCspCache;
+  }
+  const pending = (async () => {
+    try {
+      const hash = await cspSha256Source(THEME_SCRIPT);
+      return buildReportOnlyCsp([hash]);
+    } catch {
+      reportOnlyCspCache = undefined;
+      return buildReportOnlyCsp([]);
+    }
+  })();
+  reportOnlyCspCache = pending;
+  return pending;
 }
 
 export default async function middleware(request: NextRequest) {
