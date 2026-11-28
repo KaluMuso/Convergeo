@@ -146,6 +146,8 @@ FORWARD = [
     "20261127100000_vendor_sourcing_hub.sql",
     # Service packages become an open ordered list, cap 10 (additive, documented down).
     "20261127120000_service_packages_open_list.sql",
+    # Event archetype templates: events.archetype + archetype_details (additive, documented down).
+    "20261127150000_event_archetypes.sql",
     # Service archetypes + validated attribute blobs (additive, documented down).
     "20261128090000_service_archetypes.sql",
 ]
@@ -529,7 +531,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 203 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 204 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

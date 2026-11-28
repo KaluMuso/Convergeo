@@ -186,6 +186,8 @@ _ADMIN_ROUTE_PERMISSION_SPEC: dict[tuple[str, str], str | tuple[str, ...]] = {
     ("DELETE", "/admin/products/{product_id}/images/{image_id}"): "products.manage",
     ("GET", "/admin/services"): ("services.read", "services.manage"),
     ("GET", "/admin/inventory"): "inventory.read",
+    ("GET", "/admin/event-sponsors"): "vendors.manage",
+    ("POST", "/admin/event-sponsors/{event_id}/review"): "vendors.manage",
     ("GET", "/admin/branches"): "vendors.manage",
     ("GET", "/admin/branches/flags"): "vendors.manage",
     ("GET", "/admin/branches/{branch_id}"): "vendors.manage",

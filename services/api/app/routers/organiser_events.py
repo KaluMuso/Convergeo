@@ -14,6 +14,15 @@ from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.branches.context import scope_owner_vendor_query
 from app.services.events.access import hash_access_code
+from app.services.events.archetypes import (
+    EventArchetype,
+    has_pending_sponsor,
+    normalize_sponsors,
+    prune_details,
+    read_details,
+    resolve_archetype,
+    validate_details,
+)
 from app.services.events.cancellation import process_event_cancellation
 from app.services.events.recurrence import RecurrenceError, materialize_recurrence_instances
 from app.services.events.type_policy import (
@@ -122,6 +131,9 @@ class EventCreateRequest(StrictModel):
     refund_policy_key: str | None = Field(default=None, max_length=64)
     age_restriction: int | None = Field(default=None, ge=0, le=120)
     terms: str | None = Field(default=None, max_length=4000)
+    # Presentation only (docs/plan/event-type-templates.md). None = derive from category.
+    archetype: EventArchetype | None = None
+    archetype_details: dict[str, Any] = Field(default_factory=dict)
     images: list[str] = Field(default_factory=list, max_length=MAX_EVENT_IMAGES)
     instances: list[EventInstanceInput] = Field(min_length=1)
 
@@ -156,6 +168,9 @@ class EventUpdateRequest(StrictModel):
     refund_policy_key: str | None = Field(default=None, max_length=64)
     age_restriction: int | None = Field(default=None, ge=0, le=120)
     terms: str | None = Field(default=None, max_length=4000)
+    # Explicit null clears the override (back to derived); omitted leaves it as is.
+    archetype: EventArchetype | None = None
+    archetype_details: dict[str, Any] | None = None
     images: list[str] | None = Field(default=None, max_length=MAX_EVENT_IMAGES)
     instances: list[EventInstanceInput] | None = None
 
@@ -178,6 +193,7 @@ class EventSummary(StrictModel):
     status: EventStatus
     category: EventCategory | None = None
     event_type: EventType = "standard"
+    archetype: EventArchetype = "generic"
     visibility: Visibility = "public"
     recurrence_rule: str | None = None
     recurrence_timezone: str | None = None
@@ -200,6 +216,9 @@ class EventDetailResponse(StrictModel):
     status: EventStatus
     category: EventCategory | None = None
     event_type: EventType = "standard"
+    archetype: EventArchetype = "generic"
+    archetype_source: Literal["derived", "override"] = "derived"
+    archetype_details: dict[str, Any] = Field(default_factory=dict)
     visibility: Visibility = "public"
     has_access_code: bool = False
     recurrence_rule: str | None = None
@@ -326,6 +345,39 @@ def _category_from_row(row: dict[str, Any]) -> str | None:
     if isinstance(raw, str) and raw.strip():
         return raw.strip()
     return None
+
+
+def _archetype_from_row(
+    row: dict[str, Any],
+) -> tuple[EventArchetype, Literal["derived", "override"]]:
+    return resolve_archetype(
+        row.get("archetype"), _category_from_row(row), str(row.get("event_type") or "")
+    )
+
+
+def _archetype_updates(body: EventUpdateRequest, event_row: dict[str, Any]) -> dict[str, Any]:
+    """Column updates for archetype/override/details (validated; presentation only)."""
+    fields = body.model_fields_set
+    if not ({"archetype", "archetype_details", "category", "event_type"} & fields):
+        return {}
+    previous, _ = _archetype_from_row(event_row)
+    stored = body.archetype if "archetype" in fields else event_row.get("archetype")
+    category = body.category if body.category is not None else _category_from_row(event_row)
+    event_type = body.event_type or str(event_row.get("event_type") or "")
+    effective, _source = resolve_archetype(stored, category, event_type)
+    updates: dict[str, Any] = {}
+    if "archetype" in fields:
+        updates["archetype"] = body.archetype
+    if "archetype_details" in fields and body.archetype_details is not None:
+        updates["archetype_details"] = normalize_sponsors(
+            validate_details(effective, body.archetype_details),
+            event_row.get("archetype_details"),
+        )
+    elif effective != previous and event_row.get("archetype_details"):
+        updates["archetype_details"] = prune_details(effective, event_row.get("archetype_details"))
+    if "archetype_details" in updates:
+        updates["sponsor_review_pending"] = has_pending_sponsor(updates["archetype_details"])
+    return updates
 
 
 def _landmark_from_row(row: dict[str, Any]) -> str | None:
@@ -510,19 +562,30 @@ def _load_event_for_vendor(
     event_id: str,
     vendor_id: str,
 ) -> dict[str, Any]:
-    response = (
-        service_client.client.table("events")
-        .select(
-            "id, organiser_vendor_id, title, slug, description, venue, lat, lng, images, "
-            "status, category_slug, landmark, event_type, visibility, recurrence_rule, "
-            "recurrence_timezone, recurrence_until, recurrence_horizon_days, "
-            "platform_fee_payer, refund_policy_key, age_restriction, terms, "
-            "city, id_check_enabled, high_value_verified_at"
-        )
-        .eq("id", event_id)
-        .maybe_single()
-        .execute()
+    columns = (
+        "id, organiser_vendor_id, title, slug, description, venue, lat, lng, images, "
+        "status, category_slug, landmark, event_type, visibility, recurrence_rule, "
+        "recurrence_timezone, recurrence_until, recurrence_horizon_days, "
+        "platform_fee_payer, refund_policy_key, age_restriction, terms, "
+        "city, id_check_enabled, high_value_verified_at"
     )
+    try:
+        response = (
+            service_client.client.table("events")
+            .select(f"{columns}, archetype, archetype_details")
+            .eq("id", event_id)
+            .maybe_single()
+            .execute()
+        )
+    except Exception:
+        # API deployed before the archetype migration: degrade to derived archetype.
+        response = (
+            service_client.client.table("events")
+            .select(columns)
+            .eq("id", event_id)
+            .maybe_single()
+            .execute()
+        )
     row = _single_row(response)
     if row is None or str(row.get("organiser_vendor_id")) != vendor_id:
         raise AppError(
@@ -588,6 +651,7 @@ def _serialize_event_detail(
     if status not in {"draft", "published", "cancelled", "completed"}:
         status = "draft"
     age_restriction = event_row.get("age_restriction")
+    archetype, archetype_source = _archetype_from_row(event_row)
     return EventDetailResponse(
         id=str(event_row["id"]),
         title=str(event_row.get("title") or ""),
@@ -595,6 +659,9 @@ def _serialize_event_detail(
         status=status,  # type: ignore[arg-type]
         category=_category_from_row(event_row),
         event_type=normalize_event_type(event_row.get("event_type")),
+        archetype=archetype,
+        archetype_source=archetype_source,
+        archetype_details=read_details(archetype, event_row.get("archetype_details")),
         visibility=_visibility_from_row(event_row),
         has_access_code=bool(event_row.get("_has_access_code")),
         recurrence_rule=_optional_text(event_row, "recurrence_rule"),
@@ -638,6 +705,7 @@ def _serialize_event_summary(
         status=status,  # type: ignore[arg-type]
         category=_category_from_row(event_row),
         event_type=normalize_event_type(event_row.get("event_type")),
+        archetype=_archetype_from_row(event_row)[0],
         visibility=_visibility_from_row(event_row),
         recurrence_rule=_optional_text(event_row, "recurrence_rule"),
         recurrence_timezone=_optional_text(event_row, "recurrence_timezone"),
@@ -922,18 +990,29 @@ async def list_organiser_events(
     vendor_id = str(vendor["id"])
     client = service_client.client
 
-    response = (
-        client.table("events")
-        .select(
-            "id, title, slug, description, venue, images, status, category_slug, landmark, "
-            "event_type, visibility, recurrence_rule, recurrence_timezone, "
-            "recurrence_until, recurrence_horizon_days, platform_fee_payer, "
-            "city, id_check_enabled, high_value_verified_at"
-        )
-        .eq("organiser_vendor_id", vendor_id)
-        .order("updated_at", desc=True)
-        .execute()
+    list_columns = (
+        "id, title, slug, description, venue, images, status, category_slug, landmark, "
+        "event_type, visibility, recurrence_rule, recurrence_timezone, "
+        "recurrence_until, recurrence_horizon_days, platform_fee_payer, "
+        "city, id_check_enabled, high_value_verified_at"
     )
+    try:
+        response = (
+            client.table("events")
+            .select(f"{list_columns}, archetype")
+            .eq("organiser_vendor_id", vendor_id)
+            .order("updated_at", desc=True)
+            .execute()
+        )
+    except Exception:
+        # API deployed before the archetype migration: derived archetype only.
+        response = (
+            client.table("events")
+            .select(list_columns)
+            .eq("organiser_vendor_id", vendor_id)
+            .order("updated_at", desc=True)
+            .execute()
+        )
     events = _rows(response)
     items: list[EventSummary] = []
     for event in events:
@@ -953,6 +1032,10 @@ async def create_organiser_event(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     _require_active_kyc_vendor(service_client, vendor)
     _assert_known_category(body.category)
+    create_archetype, _source = resolve_archetype(body.archetype, body.category, body.event_type)
+    create_details = normalize_sponsors(
+        validate_details(create_archetype, body.archetype_details), None
+    )
     _validate_instance_time_order(body.instances)
     _validate_recurrence_payload(
         event_type=body.event_type,
@@ -977,7 +1060,7 @@ async def create_organiser_event(
     # event_type drives the default visibility (D29): private events default to
     # visibility='private' unless the organiser overrides it explicitly.
     resolved_visibility = body.visibility or policy_for(body.event_type).default_visibility
-    insert_payload = {
+    insert_payload: dict[str, Any] = {
         "organiser_vendor_id": vendor_id,
         "title": body.title.strip(),
         "slug": slug,
@@ -1006,6 +1089,11 @@ async def create_organiser_event(
         "images": body.images,
         "status": "draft",
     }
+    if body.archetype is not None:
+        insert_payload["archetype"] = body.archetype
+    if create_details:
+        insert_payload["archetype_details"] = create_details
+        insert_payload["sponsor_review_pending"] = has_pending_sponsor(create_details)
     response = client.table("events").insert(insert_payload).execute()
     event_row = _single_row(response)
     if event_row is None:
@@ -1216,6 +1304,7 @@ async def update_organiser_event(
         updates["terms"] = body.terms.strip() or None
     if body.images is not None:
         updates["images"] = body.images
+    updates.update(_archetype_updates(body, event_row))
 
     if updates:
         response = (
