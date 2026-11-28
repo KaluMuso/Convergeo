@@ -21,6 +21,7 @@ from app.core.ratelimit import (
 )
 from app.errors import AppError
 from app.main import create_app
+from fastapi import Request
 from fastapi.testclient import TestClient
 
 
@@ -94,11 +95,7 @@ class FakeQuery:
             if op == "eq":
                 filtered = [row for row in filtered if row.get(column) == value]
             elif op == "gt":
-                filtered = [
-                    row
-                    for row in filtered
-                    if str(row.get(column, "")) > str(value)
-                ]
+                filtered = [row for row in filtered if str(row.get(column, "")) > str(value)]
         return filtered
 
 
@@ -389,3 +386,28 @@ def test_raise_rate_limited_shape() -> None:
     with pytest.raises(AppError) as exc:
         raise_rate_limited(retry_after=0, message_key="auth.errors.rate_limited")
     assert exc.value.details["retry_after"] == 1
+
+
+def _ip_request(headers: dict[str, str], peer: str = "10.0.0.5") -> Request:
+    return Request(
+        {
+            "type": "http",
+            "headers": [(k.lower().encode(), v.encode()) for k, v in headers.items()],
+            "client": (peer, 1234),
+        }
+    )
+
+
+def test_get_client_ip_ignores_forged_leftmost_forwarded_for() -> None:
+    from app.core.ratelimit import get_client_ip
+
+    assert get_client_ip(_ip_request({"x-forwarded-for": "6.6.6.6, 41.77.1.9"})) == "41.77.1.9"
+
+
+def test_get_client_ip_uses_cf_connecting_ip_only_behind_cloudflare() -> None:
+    from app.core.ratelimit import get_client_ip
+
+    behind_cf = _ip_request({"x-forwarded-for": "172.67.202.127", "cf-connecting-ip": "41.77.1.9"})
+    assert get_client_ip(behind_cf) == "41.77.1.9"
+    direct = _ip_request({"x-forwarded-for": "41.77.1.9", "cf-connecting-ip": "1.2.3.4"})
+    assert get_client_ip(direct) == "41.77.1.9"
