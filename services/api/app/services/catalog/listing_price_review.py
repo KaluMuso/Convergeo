@@ -32,12 +32,12 @@ TITLE_FLOORS: tuple[tuple[re.Pattern[str], int, str], ...] = (
     ),
 )
 
+_FLOORS_JSON = Path(__file__).resolve().parent / "listing-category-price-floors.json"
+
 
 @lru_cache
 def _floor_config() -> tuple[tuple[str, int, str], ...]:
-    root = Path(__file__).resolve().parents[5]
-    path = root / "packages/config/src/listing-category-price-floors.json"
-    raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    raw: dict[str, Any] = json.loads(_FLOORS_JSON.read_text(encoding="utf-8"))
     rows = raw.get("categoryPathPrefixes") or []
     out: list[tuple[str, int, str]] = []
     for row in rows:
