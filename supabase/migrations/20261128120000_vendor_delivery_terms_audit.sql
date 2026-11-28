@@ -1,3 +1,10 @@
+-- Vendor free-delivery minimum order + audit of every change to who pays delivery.
+--
+-- vendors.free_delivery_min_ngwee: the smallest vendor basket that qualifies for that
+-- vendor's free delivery (default K300, vendor may raise it). The platform floor lives
+-- in platform_config (vendor_free_delivery_min_floor_ngwee, K300) so the founder can
+-- change it without a deploy; pricing takes the larger of the two at checkout.
+--
 -- Audit every change to who pays delivery, atomically with the change itself.
 --
 -- A vendor's free-delivery choices (vendors.free_delivery_all / free_delivery_method,
@@ -11,10 +18,21 @@
 -- they fall back to the shop owner (the only role that can change these through the API).
 --
 -- Additive only. Reversible:
+--   delete from public.platform_config where key = 'vendor_free_delivery_min_floor_ngwee';
+--   alter table public.vendors drop column if exists free_delivery_min_ngwee;
 --   drop trigger if exists vendor_listings_audit_free_delivery on public.vendor_listings;
 --   drop trigger if exists vendors_audit_delivery_terms on public.vendors;
 --   drop function if exists public.audit_vendor_listing_free_delivery();
 --   drop function if exists public.audit_vendor_delivery_terms();
+
+alter table public.vendors
+  add column if not exists free_delivery_min_ngwee bigint not null default 30000
+  check (free_delivery_min_ngwee >= 0);
+
+insert into public.platform_config (key, value, description) values
+  ('vendor_free_delivery_min_floor_ngwee', '30000'::jsonb,
+   'Smallest vendor basket (ngwee) a vendor-funded free delivery may require; vendors can raise their own minimum but not go below this.')
+on conflict (key) do nothing;
 
 create or replace function public.audit_vendor_delivery_terms()
 returns trigger
@@ -24,7 +42,8 @@ set search_path = pg_catalog, public
 as $$
 begin
   if new.free_delivery_all is distinct from old.free_delivery_all
-     or new.free_delivery_method is distinct from old.free_delivery_method then
+     or new.free_delivery_method is distinct from old.free_delivery_method
+     or new.free_delivery_min_ngwee is distinct from old.free_delivery_min_ngwee then
     insert into public.audit_log (actor, action, entity_type, entity_id, before, after)
     values (
       coalesce(auth.uid(), new.owner_user_id),
@@ -33,11 +52,13 @@ begin
       new.id,
       jsonb_build_object(
         'free_delivery_all', old.free_delivery_all,
-        'free_delivery_method', old.free_delivery_method
+        'free_delivery_method', old.free_delivery_method,
+        'free_delivery_min_ngwee', old.free_delivery_min_ngwee
       ),
       jsonb_build_object(
         'free_delivery_all', new.free_delivery_all,
-        'free_delivery_method', new.free_delivery_method
+        'free_delivery_method', new.free_delivery_method,
+        'free_delivery_min_ngwee', new.free_delivery_min_ngwee
       )
     );
   end if;
@@ -75,7 +96,7 @@ revoke execute on function public.audit_vendor_listing_free_delivery() from publ
 
 drop trigger if exists vendors_audit_delivery_terms on public.vendors;
 create trigger vendors_audit_delivery_terms
-  after update of free_delivery_all, free_delivery_method on public.vendors
+  after update of free_delivery_all, free_delivery_method, free_delivery_min_ngwee on public.vendors
   for each row execute function public.audit_vendor_delivery_terms();
 
 drop trigger if exists vendor_listings_audit_free_delivery on public.vendor_listings;

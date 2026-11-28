@@ -23,6 +23,7 @@ class FakeQuery:
         self._single = False
         self._op: str | None = None
         self._payload: dict[str, Any] = {}
+        self._order: tuple[str, bool] | None = None
 
     def select(self, columns: str, *, count: str | None = None) -> FakeQuery:
         _ = (columns, count)
@@ -30,6 +31,10 @@ class FakeQuery:
 
     def eq(self, column: str, value: Any) -> FakeQuery:
         self._filters.append((column, value))
+        return self
+
+    def order(self, column: str, *, desc: bool = False) -> FakeQuery:
+        self._order = (column, desc)
         return self
 
     def maybe_single(self) -> FakeQuery:
@@ -57,6 +62,9 @@ class FakeQuery:
                 row.update(self._payload)
             return MagicMock(data=[dict(r) for r in hit])
         rows = self._match()
+        if self._order:
+            column, desc = self._order
+            rows = sorted(rows, key=lambda r: r[column], reverse=desc)
         if self._single:
             return MagicMock(data=rows[0] if rows else None)
         return MagicMock(data=rows)
@@ -78,7 +86,22 @@ class FakeTable:
 
 class FakeClient:
     def __init__(self) -> None:
-        self.tables = {"vendors": FakeTable(), "audit_log": FakeTable()}
+        self.tables = {
+            "vendors": FakeTable(),
+            "platform_config": FakeTable(),
+            "delivery_zones": FakeTable(),
+        }
+        self.tables["platform_config"].rows.append(
+            {"key": "vendor_free_delivery_min_floor_ngwee", "value": 30_000}
+        )
+        self.tables["delivery_zones"].rows.extend(
+            [
+                {"zone_key": "lusaka_c", "label": "Lusaka C", "fee_ngwee": 6_500, "active": True},
+                {"zone_key": "lusaka_a", "label": "Lusaka A", "fee_ngwee": 3_000, "active": True},
+                {"zone_key": "lusaka_b", "label": "Lusaka B", "fee_ngwee": 4_500, "active": True},
+                {"zone_key": "old", "label": "Retired", "fee_ngwee": 9_999, "active": False},
+            ]
+        )
         self.tables["vendors"].rows.extend(
             [
                 {
@@ -86,12 +109,14 @@ class FakeClient:
                     "owner_user_id": USER_A_ID,
                     "free_delivery_all": False,
                     "free_delivery_method": "platform_courier",
+                    "free_delivery_min_ngwee": 30_000,
                 },
                 {
                     "id": VENDOR_B_ID,
                     "owner_user_id": USER_B_ID,
                     "free_delivery_all": False,
                     "free_delivery_method": "platform_courier",
+                    "free_delivery_min_ngwee": 30_000,
                 },
             ]
         )
@@ -135,10 +160,17 @@ def _h() -> dict[str, str]:
 def test_get_returns_current_terms(client: TestClient) -> None:
     response = client.get("/vendor/delivery-terms", headers=_h())
     assert response.status_code == 200
-    assert response.json() == {
-        "free_delivery_all": False,
-        "free_delivery_method": "platform_courier",
-    }
+    body = response.json()
+    assert body["free_delivery_all"] is False
+    assert body["free_delivery_method"] == "platform_courier"
+    assert body["free_delivery_min_ngwee"] == 30_000
+    assert body["min_floor_ngwee"] == 30_000
+    # Active bands only, cheapest first: the K30 / K45 / K65 the vendor pays per courier trip.
+    assert [(z["zone_key"], z["fee_ngwee"]) for z in body["zone_fees"]] == [
+        ("lusaka_a", 3_000),
+        ("lusaka_b", 4_500),
+        ("lusaka_c", 6_500),
+    ]
 
 
 def test_patch_updates_only_own_shop(client: TestClient, fake: FakeClient) -> None:
@@ -148,14 +180,49 @@ def test_patch_updates_only_own_shop(client: TestClient, fake: FakeClient) -> No
         json={"free_delivery_all": True, "free_delivery_method": "self_delivery"},
     )
     assert response.status_code == 200, response.text
-    assert response.json() == {
-        "free_delivery_all": True,
-        "free_delivery_method": "self_delivery",
-    }
+    body = response.json()
+    assert (body["free_delivery_all"], body["free_delivery_method"]) == (True, "self_delivery")
+    assert body["free_delivery_min_ngwee"] == 30_000
     rows = {r["id"]: r for r in fake.tables["vendors"].rows}
     assert rows[VENDOR_A_ID]["free_delivery_all"] is True
     assert rows[VENDOR_B_ID]["free_delivery_all"] is False
     assert rows[VENDOR_B_ID]["free_delivery_method"] == "platform_courier"
+
+
+def test_patch_can_raise_the_minimum_order(client: TestClient, fake: FakeClient) -> None:
+    response = client.patch(
+        "/vendor/delivery-terms", headers=_h(), json={"free_delivery_min_ngwee": 50_000}
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["free_delivery_min_ngwee"] == 50_000
+    rows = {r["id"]: r for r in fake.tables["vendors"].rows}
+    assert rows[VENDOR_A_ID]["free_delivery_min_ngwee"] == 50_000
+    assert rows[VENDOR_B_ID]["free_delivery_min_ngwee"] == 30_000
+
+
+def test_patch_refuses_a_minimum_below_the_platform_floor(
+    client: TestClient, fake: FakeClient
+) -> None:
+    for too_low in (0, 29_999):
+        response = client.patch(
+            "/vendor/delivery-terms", headers=_h(), json={"free_delivery_min_ngwee": too_low}
+        )
+        assert response.status_code == 422
+        assert response.json()["error"]["details"]["min_floor_ngwee"] == 30_000
+    assert fake.tables["vendors"].rows[0]["free_delivery_min_ngwee"] == 30_000
+
+
+def test_founder_can_raise_the_floor_and_old_lower_values_are_lifted(
+    client: TestClient, fake: FakeClient
+) -> None:
+    fake.tables["platform_config"].rows[0]["value"] = 40_000
+    body = client.get("/vendor/delivery-terms", headers=_h()).json()
+    assert body["min_floor_ngwee"] == 40_000
+    assert body["free_delivery_min_ngwee"] == 40_000  # stored 30,000 is below the new floor
+    refused = client.patch(
+        "/vendor/delivery-terms", headers=_h(), json={"free_delivery_min_ngwee": 35_000}
+    )
+    assert refused.status_code == 422
 
 
 def test_patch_with_no_change_returns_current_terms(client: TestClient, fake: FakeClient) -> None:
@@ -173,6 +240,10 @@ def test_patch_with_no_change_returns_current_terms(client: TestClient, fake: Fa
         {"free_delivery_all": "yes"},
         {"delivery_funding": "vendor"},
         {"free_delivery_all": True, "extra": 1},
+        {"free_delivery_min_ngwee": -1},
+        {"free_delivery_min_ngwee": "300"},
+        {"free_delivery_min_ngwee": 30_000.5},
+        {"free_delivery_min_ngwee": 100_000_001},
     ],
 )
 def test_patch_rejects_bad_or_unknown_fields(

@@ -2752,6 +2752,11 @@
       "allHelp": "Customers never pay delivery on your orders, whatever they buy.",
       "listingsHint": "You can also offer free delivery on single listings when you edit them.",
       "appliesNote": "Orders already placed keep the delivery terms they were placed with.",
+      "minLabel": "Smallest order for free delivery (ZMW)",
+      "minHelp": "Orders below this amount pay normal delivery. Lowest you can set: {floor}.",
+      "minSave": "Save minimum",
+      "minInvalid": "Enter an amount of {floor} or more.",
+      "minBelowFloor": "That is below the lowest allowed minimum. Please enter a higher amount.",
       "methodHeading": "Who delivers your free orders?",
       "method": {
         "platform_courier": "A Vergeo5 courier",
@@ -2766,6 +2771,9 @@
         "yes": "Turn on free delivery",
         "no": "Keep as it is",
         "working": "Saving…",
+        "minNote": "Free delivery applies to orders of {min} or more. Smaller orders pay normal delivery.",
+        "bandsHeading": "Courier fee taken from your earnings for each free order:",
+        "band": "{label}: {fee}",
         "methodTitle": "Switch to a Vergeo5 courier?"
       }
     }

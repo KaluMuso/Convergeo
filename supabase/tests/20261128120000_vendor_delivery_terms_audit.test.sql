@@ -33,7 +33,7 @@ begin
    where id = v_vendor;
   select * into a from public.audit_log
    where entity_id = v_vendor and action = 'vendor.delivery_terms.update'
-   order by at, id limit 1;
+     and after ->> 'free_delivery_method' = 'self_delivery';
   if a.actor <> v_owner
      or (a.before ->> 'free_delivery_all')::boolean is not false
      or (a.after ->> 'free_delivery_all')::boolean is not true
@@ -53,9 +53,32 @@ begin
   perform set_config('request.jwt.claim.sub', '', true);
   select * into a from public.audit_log
    where entity_id = v_vendor and action = 'vendor.delivery_terms.update'
-   order by at desc, id limit 1;
+     and after ->> 'free_delivery_method' = 'platform_courier';
   if a.actor is distinct from v_admin then
     raise exception 'admin change not attributed to admin: %', a;
+  end if;
+
+  -- Minimum order: defaults to K300, a raise is audited with before/after, negatives rejected.
+  if (select free_delivery_min_ngwee from public.vendors where id = v_vendor) <> 30000 then
+    raise exception 'default free_delivery_min_ngwee is not 30000';
+  end if;
+  update public.vendors set free_delivery_min_ngwee = 50000 where id = v_vendor;
+  select * into a from public.audit_log
+   where entity_id = v_vendor and action = 'vendor.delivery_terms.update'
+     and (after ->> 'free_delivery_min_ngwee')::bigint = 50000;
+  if (a.before ->> 'free_delivery_min_ngwee')::bigint <> 30000
+     or (a.after ->> 'free_delivery_min_ngwee')::bigint <> 50000 then
+    raise exception 'minimum change not audited: %', a;
+  end if;
+  begin
+    update public.vendors set free_delivery_min_ngwee = -1 where id = v_vendor;
+    raise exception 'negative minimum was accepted';
+  exception when check_violation then
+    null;
+  end;
+  if not exists (select 1 from public.platform_config
+                  where key = 'vendor_free_delivery_min_floor_ngwee' and value = '30000'::jsonb) then
+    raise exception 'platform floor config row missing';
   end if;
 
   -- Listing-level flag.

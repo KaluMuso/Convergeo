@@ -3,8 +3,10 @@
 Rules, in order, for every vendor group the customer chose to have delivered:
 
 1. **Vendor free delivery.** The vendor marked every listing in the group
-   "free delivery", or offers free delivery on everything. The customer pays
-   nothing. The vendor bears the cost: with ``platform_courier`` the zone fee
+   "free delivery", or offers free delivery on everything, AND the vendor's part
+   of the basket reaches the vendor's minimum order for free delivery (default
+   K300; a vendor may raise it, never go below the platform floor). The customer
+   pays nothing. The vendor bears the cost: with ``platform_courier`` the zone fee
    is charged to the vendor's payable and booked to ``delivery_revenue`` (it
    pays the rider); with ``self_delivery`` the vendor delivers itself (own
    rider, Yango, ...) and nothing is charged.
@@ -35,6 +37,8 @@ FreeDeliveryMethod = Literal["platform_courier", "self_delivery"]
 DEFAULT_AUTO_FREE_THRESHOLD_NGWEE = 1_500_000  # K15,000
 DEFAULT_AUTO_FREE_MAX_WEIGHT_GRAMS = 500_000  # 500 kg
 DEFAULT_AUTO_FREE_COMMISSION_SHARE_BPS = 5_000  # 50% of the basket commission
+#: Lowest minimum order a vendor may set for their own free delivery (K300).
+DEFAULT_VENDOR_FREE_MIN_FLOOR_NGWEE = 30_000
 BPS_DENOMINATOR = 10_000
 
 
@@ -43,9 +47,16 @@ class AutoFreeDeliveryPolicy:
     threshold_ngwee: int = DEFAULT_AUTO_FREE_THRESHOLD_NGWEE
     max_weight_grams: int = DEFAULT_AUTO_FREE_MAX_WEIGHT_GRAMS
     commission_share_bps: int = DEFAULT_AUTO_FREE_COMMISSION_SHARE_BPS
+    #: Platform floor for a vendor's free-delivery minimum order (ngwee).
+    vendor_free_min_floor_ngwee: int = DEFAULT_VENDOR_FREE_MIN_FLOOR_NGWEE
 
     def __post_init__(self) -> None:
-        for name in ("threshold_ngwee", "max_weight_grams", "commission_share_bps"):
+        for name in (
+            "threshold_ngwee",
+            "max_weight_grams",
+            "commission_share_bps",
+            "vendor_free_min_floor_ngwee",
+        ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(f"{name} must be a non-negative integer")
@@ -71,6 +82,8 @@ class PricingLine:
 class VendorDeliveryTerms:
     free_delivery_all: bool = False
     free_delivery_method: FreeDeliveryMethod = "platform_courier"
+    #: Smallest vendor basket (ngwee) that qualifies for the vendor's free delivery.
+    free_delivery_min_ngwee: int = DEFAULT_VENDOR_FREE_MIN_FLOOR_NGWEE
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,11 +126,29 @@ def basket_auto_free_eligible(lines: Sequence[PricingLine], policy: AutoFreeDeli
     return weight < policy.max_weight_grams
 
 
-def vendor_group_is_free(lines: Iterable[PricingLine], terms: VendorDeliveryTerms | None) -> bool:
+def effective_free_min_ngwee(
+    terms: VendorDeliveryTerms | None,
+    floor_ngwee: int = DEFAULT_VENDOR_FREE_MIN_FLOOR_NGWEE,
+) -> int:
+    """The vendor's free-delivery minimum, never below the platform floor."""
+    chosen = terms.free_delivery_min_ngwee if terms is not None else floor_ngwee
+    return max(_int(chosen, "free_delivery_min_ngwee"), _int(floor_ngwee, "floor"))
+
+
+def vendor_group_is_free(
+    lines: Iterable[PricingLine],
+    terms: VendorDeliveryTerms | None,
+    floor_ngwee: int = DEFAULT_VENDOR_FREE_MIN_FLOOR_NGWEE,
+) -> bool:
     group = list(lines)
+    if not group:
+        return False
+    subtotal = sum(_int(line.line_total_ngwee, "line_total_ngwee") for line in group)
+    if subtotal < effective_free_min_ngwee(terms, floor_ngwee):
+        return False
     if terms is not None and terms.free_delivery_all:
         return True
-    return bool(group) and all(line.free_delivery for line in group)
+    return all(line.free_delivery for line in group)
 
 
 def base_group_fee(
@@ -163,7 +194,9 @@ def price_delivery_groups(
             prices[vendor_id] = GroupDeliveryPrice(vendor_id, 0, "customer", 0)
             continue
         terms = vendor_terms.get(vendor_id)
-        if vendor_group_is_free(by_vendor.get(vendor_id, []), terms):
+        if vendor_group_is_free(
+            by_vendor.get(vendor_id, []), terms, policy.vendor_free_min_floor_ngwee
+        ):
             self_delivery = terms is not None and terms.free_delivery_method == "self_delivery"
             prices[vendor_id] = (
                 GroupDeliveryPrice(vendor_id, 0, "vendor_self", 0)
@@ -204,11 +237,15 @@ def _config_int(rows: Sequence[Mapping[str, Any]], key: str, default: int) -> in
     return default
 
 
+FREE_MIN_FLOOR_KEY = "vendor_free_delivery_min_floor_ngwee"
+
+
 def load_auto_free_policy(client: Any) -> AutoFreeDeliveryPolicy:
     keys = [
         "auto_free_delivery_threshold_ngwee",
         "auto_free_delivery_max_weight_grams",
         "auto_free_delivery_commission_share_bps",
+        FREE_MIN_FLOOR_KEY,
     ]
     response = client.table("platform_config").select("key, value").in_("key", keys).execute()
     rows = [r for r in (response.data or []) if isinstance(r, dict)]
@@ -217,6 +254,9 @@ def load_auto_free_policy(client: Any) -> AutoFreeDeliveryPolicy:
         threshold_ngwee=_config_int(rows, keys[0], DEFAULT_AUTO_FREE_THRESHOLD_NGWEE),
         max_weight_grams=_config_int(rows, keys[1], DEFAULT_AUTO_FREE_MAX_WEIGHT_GRAMS),
         commission_share_bps=share,
+        vendor_free_min_floor_ngwee=_config_int(
+            rows, FREE_MIN_FLOOR_KEY, DEFAULT_VENDOR_FREE_MIN_FLOOR_NGWEE
+        ),
     )
 
 
@@ -276,7 +316,7 @@ def load_vendor_delivery_terms(
         return {}
     response = (
         client.table("vendors")
-        .select("id, free_delivery_all, free_delivery_method")
+        .select("id, free_delivery_all, free_delivery_method, free_delivery_min_ngwee")
         .in_("id", ids)
         .execute()
     )
@@ -290,6 +330,13 @@ def load_vendor_delivery_terms(
             free_delivery_method="self_delivery"
             if method == "self_delivery"
             else "platform_courier",
+            free_delivery_min_ngwee=(
+                row["free_delivery_min_ngwee"]
+                if isinstance(row.get("free_delivery_min_ngwee"), int)
+                and not isinstance(row.get("free_delivery_min_ngwee"), bool)
+                and row["free_delivery_min_ngwee"] >= 0
+                else DEFAULT_VENDOR_FREE_MIN_FLOOR_NGWEE
+            ),
         )
     return terms
 

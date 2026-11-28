@@ -1,16 +1,23 @@
 "use client";
 
 import { useSession } from "@vergeo/auth/use-session";
+import { formatK } from "@vergeo/i18n";
 import { Radio } from "@vergeo/ui/src/radio";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Button, Switch } from "../../listings/new/_lib/ui";
+import {
+  isValidZmwDecimal,
+  ngweeToZmwInput,
+  zmwDecimalToNgwee,
+} from "../../listings/[id]/edit/_lib/money";
+import { Button, Input, Switch } from "../../listings/new/_lib/ui";
 import {
   createDeliveryTermsClient,
   deliveryErrorKey,
   type DeliveryTerms,
   type DeliveryTermsClient,
+  type DeliveryTermsUpdate,
   type FreeDeliveryMethod,
 } from "../_lib/delivery-terms-client";
 
@@ -37,7 +44,9 @@ export function DeliveryTermsCard({ client: injected }: Props) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   // A change that moves delivery cost to the vendor waits here for an explicit yes.
-  const [pending, setPending] = useState<Partial<DeliveryTerms> | null>(null);
+  const [pending, setPending] = useState<DeliveryTermsUpdate | null>(null);
+  const [minInput, setMinInput] = useState("");
+  const [minInvalid, setMinInvalid] = useState(false);
   const [message, setMessage] = useState<{
     tone: "ok" | "error";
     key: string;
@@ -50,7 +59,9 @@ export function DeliveryTermsCard({ client: injected }: Props) {
     client
       .get()
       .then((row) => {
-        if (!cancelled) setTerms(row);
+        if (cancelled) return;
+        setTerms(row);
+        setMinInput(ngweeToZmwInput(row.free_delivery_min_ngwee));
       })
       .catch(() => {
         if (!cancelled) setLoadFailed(true);
@@ -61,11 +72,13 @@ export function DeliveryTermsCard({ client: injected }: Props) {
   }, [client, hasToken]);
 
   const save = useCallback(
-    async (changes: Partial<DeliveryTerms>) => {
+    async (changes: DeliveryTermsUpdate) => {
       setSaving(true);
       setMessage(null);
       try {
-        setTerms(await client.update(changes));
+        const next = await client.update(changes);
+        setTerms(next);
+        setMinInput(ngweeToZmwInput(next.free_delivery_min_ngwee));
         setMessage({ tone: "ok", key: "saved" });
       } catch (error) {
         setMessage({ tone: "error", key: deliveryErrorKey(error) });
@@ -111,6 +124,18 @@ export function DeliveryTermsCard({ client: injected }: Props) {
     void save({ free_delivery_method: method });
   };
 
+  const floorLabel = formatK(terms.min_floor_ngwee);
+  const onSaveMin = () => {
+    if (!isValidZmwDecimal(minInput) || zmwDecimalToNgwee(minInput) < terms.min_floor_ngwee) {
+      setMinInvalid(true);
+      setMessage(null);
+      return;
+    }
+    setMinInvalid(false);
+    const ngwee = zmwDecimalToNgwee(minInput);
+    if (ngwee !== terms.free_delivery_min_ngwee) void save({ free_delivery_min_ngwee: ngwee });
+  };
+
   const confirmMethod = pending?.free_delivery_method ?? terms.free_delivery_method;
 
   return (
@@ -127,6 +152,47 @@ export function DeliveryTermsCard({ client: injected }: Props) {
         onChange={(event) => onToggle(event.target.checked)}
       />
       <p className="text-xs text-text-2">{t("allHelp")}</p>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="delivery-min-input" className="text-sm font-medium text-text">
+          {t("minLabel")}
+        </label>
+        <div className="flex flex-wrap items-start gap-2">
+          <Input
+            id="delivery-min-input"
+            inputMode="decimal"
+            value={minInput}
+            disabled={saving}
+            error={minInvalid}
+            aria-describedby="delivery-min-help"
+            data-testid="delivery-min-input"
+            onChange={(event) => {
+              setMinInput(event.target.value);
+              setMinInvalid(false);
+            }}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={saving}
+            loadingLabel={t("confirm.working")}
+            data-testid="delivery-min-save"
+            onClick={onSaveMin}
+          >
+            {t("minSave")}
+          </Button>
+        </div>
+        <p
+          id="delivery-min-help"
+          className={minInvalid ? "text-xs text-danger" : "text-xs text-text-2"}
+          role={minInvalid ? "alert" : undefined}
+          data-testid="delivery-min-help"
+        >
+          {minInvalid
+            ? t("minInvalid", { floor: floorLabel })
+            : t("minHelp", { floor: floorLabel })}
+        </p>
+      </div>
 
       <fieldset className="flex flex-col gap-1 border-0 p-0" disabled={saving}>
         <legend className="mb-1 text-sm font-medium text-text">{t("methodHeading")}</legend>
@@ -158,6 +224,26 @@ export function DeliveryTermsCard({ client: injected }: Props) {
           <p className="text-sm text-text-2">
             {confirmMethod === "self_delivery" ? t("confirm.self") : t("confirm.courier")}
           </p>
+          <p className="text-sm text-text-2" data-testid="delivery-confirm-min">
+            {t("confirm.minNote", {
+              min: formatK(terms.free_delivery_min_ngwee),
+            })}
+          </p>
+          {confirmMethod === "platform_courier" && terms.zone_fees.length > 0 ? (
+            <div data-testid="delivery-confirm-bands">
+              <p className="text-sm font-medium text-text">{t("confirm.bandsHeading")}</p>
+              <ul className="mt-1 list-none p-0 text-sm text-text-2">
+                {terms.zone_fees.map((zone) => (
+                  <li key={zone.zone_key}>
+                    {t("confirm.band", {
+                      label: zone.label,
+                      fee: formatK(zone.fee_ngwee),
+                    })}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
