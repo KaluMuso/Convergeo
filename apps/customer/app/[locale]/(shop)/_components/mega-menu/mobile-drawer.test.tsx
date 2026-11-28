@@ -55,7 +55,7 @@ describe("MobileDrawer", () => {
     expect(within(main).getByRole("button", { name: "Services" })).toBeInTheDocument();
     expect(within(main).getByRole("button", { name: "Events" })).toBeInTheDocument();
     expect(within(main).getByRole("link", { name: "Deals" })).toHaveAttribute("href", "/en/deals");
-    expect(within(main).getByRole("link", { name: "Sell on Convergeo" })).toHaveAttribute(
+    expect(within(main).getByRole("link", { name: "Sell on Vergeo5" })).toHaveAttribute(
       "href",
       "/en/sell",
     );
@@ -150,6 +150,18 @@ describe("MobileDrawer", () => {
     fireEvent.click(screen.getByRole("link", { name: "Laptops" }));
     expect(onClose).toHaveBeenCalledTimes(4);
     expect(window.localStorage.getItem("vergeo5:browsed-categories:v1")).toContain("laptops");
+  });
+
+  it("keeps Tab inside the drill pane and skips the inert main pane", async () => {
+    await renderDrawer();
+    fireEvent.click(screen.getByRole("button", { name: "Department 1" }));
+    const drill = screen.getByTestId("mobile-drawer-drill");
+    const back = within(drill).getByRole("button", { name: "Main menu" });
+    back.focus();
+    fireEvent.keyDown(back, { key: "Tab" });
+    const active = document.activeElement;
+    expect(drill.contains(active)).toBe(true);
+    expect(screen.getByTestId("mobile-drawer-main")).toHaveAttribute("inert");
   });
 
   it("traps Tab inside the dialog (wraps first <-> last, skipping the off-screen pane)", async () => {

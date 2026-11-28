@@ -26,7 +26,7 @@
       "fallbackTitle": "Shiteni ifintu, services, no events mu Zambia",
       "placeholder": {
         "subtitle": "Storefront yenu ya config ileisa apa ilyo merchandising slots fyaya live.",
-        "title": "Mwaiseni pa Convergeo"
+        "title": "Mwaiseni pa Vergeo5"
       },
       "primaryCta": "Tampeniko kutwala",
       "secondaryCta": "Sambeni ukushitisha",
@@ -56,7 +56,7 @@
       }
     },
     "meta": {
-      "description": "⚠ Compare sellers, book services, and find events across Zambia on Convergeo — pay cash on delivery, Lusaka delivery, nationwide pickup.",
+      "description": "⚠ Compare sellers, book services, and find events across Zambia on Vergeo5 — pay cash on delivery, Lusaka delivery, nationwide pickup.",
       "title": "Sanga Zambia"
     },
     "serviceBar": {
@@ -65,7 +65,7 @@
     },
     "rails": {
       "departmentTitle": "Ifyapya mu {category}",
-      "newTitle": "Ifyapya pa Convergeo",
+      "newTitle": "Ifyapya pa Vergeo5",
       "services": {
         "fromPrice": "Ukufuma",
         "noReviews": "Provider umupya",
@@ -92,10 +92,10 @@
     "sellCta": {
       "body": "⚠ Create a seller account, verify your ID and start listing. See how it works.",
       "cta": "Sambeni ukushitisha",
-      "title": "⚠ Want to sell on Convergeo?"
+      "title": "⚠ Want to sell on Vergeo5?"
     },
     "trust": {
-      "ariaLabel": "Cinshi muleshita pa Convergeo",
+      "ariaLabel": "Cinshi muleshita pa Vergeo5",
       "escrow": "⚠ Pay when it arrives — cash on delivery during the pilot",
       "fulfillment": "Delivery ya Lusaka nangu pickup nationwide ilyo listing yaisa",
       "returns": "Amabuloshi ya returns no refunds ku ama-order ayasuminishwa",
@@ -139,7 +139,7 @@
       }
     },
     "trustStrip": {
-      "ariaLabel": "⚠ Why shop on Convergeo",
+      "ariaLabel": "⚠ Why shop on Vergeo5",
       "cod": "⚠ Mobile Money escrow · COD under K500",
       "verified": "⚠ Verified sellers",
       "lusaka": "⚠ Lusaka delivery",
@@ -249,8 +249,8 @@
     "unavailableBody": "Tatwaishibe ukuleta icintu ici nomba. Checkeni connection no wesheni limbi.",
     "unavailableRetry": "Wesheni limbi",
     "meta": {
-      "descriptionFallback": "Shiteni {name} pa Convergeo",
-      "descriptionWithPrice": "Fisankisheni ama-price a {name} kuli {count, plural, one {# ushitisha} other {# abashitisha}} pa Convergeo. Ukutula {price}.",
+      "descriptionFallback": "Shiteni {name} pa Vergeo5",
+      "descriptionWithPrice": "Fisankisheni ama-price a {name} kuli {count, plural, one {# ushitisha} other {# abashitisha}} pa Vergeo5. Ukutula {price}.",
       "notFoundTitle": "Icintu tacisangwa"
     },
     "overview": {
@@ -306,7 +306,7 @@
     "contactVendor": {
       "cta": "Landeni umo ushitisha",
       "dialogTitle": "Ipusheni pa cintu ici",
-      "dialogHint": "Ubutumwa bwenu bukafika ku {vendor} pa listing iyi. Ama-reply yafwile pa Convergeo — teshafwile ukugabana namba ya foni mu butumwa.",
+      "dialogHint": "Ubutumwa bwenu bukafika ku {vendor} pa listing iyi. Ama-reply yafwile pa Vergeo5 — teshafwile ukugabana namba ya foni mu butumwa.",
       "messageLabel": "Ifyo mulefwaya ukwisula",
       "messagePlaceholder": "Ngacakuti: Cili mu stock? Mungatumina ku Kabulonga?",
       "submit": "Tumeni ubutumwa",

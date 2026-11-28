@@ -1,11 +1,11 @@
 {
   "app": {
-    "name": "Convergeo",
+    "name": "Vergeo5",
     "tagline": "Zambia's marketplace — pay when it arrives"
   },
   "meta": {
-    "defaultDescription": "Shop products, book services, and find events across Zambia on Convergeo — Zambia's multivendor marketplace.",
-    "defaultTitle": "Convergeo — Shop, services & events in Zambia"
+    "defaultDescription": "Shop products, book services, and find events across Zambia on Vergeo5 — Zambia's multivendor marketplace.",
+    "defaultTitle": "Vergeo5 — Shop, services & events in Zambia"
   },
   "common": {
     "loading": "Loading…",
@@ -47,11 +47,11 @@
     "home": "Go home"
   },
   "install": {
-    "title": "Install Convergeo",
-    "body": "Add Convergeo to your home screen for faster access and a full-screen app.",
+    "title": "Install Vergeo5",
+    "body": "Add Vergeo5 to your home screen for faster access and a full-screen app.",
     "action": "Install app",
     "dismiss": "Not now",
-    "updateBody": "A new version of Convergeo is ready.",
+    "updateBody": "A new version of Vergeo5 is ready.",
     "updateAction": "Reload to update"
   },
   "contact": {
@@ -60,10 +60,10 @@
   "utilityBar": {
     "ariaLabel": "Language, contact, and social links",
     "socialAria": "Social media",
-    "facebookAria": "Convergeo on Facebook",
-    "twitterAria": "Convergeo on X",
-    "instagramAria": "Convergeo on Instagram",
-    "emailAria": "Email Convergeo",
+    "facebookAria": "Vergeo5 on Facebook",
+    "twitterAria": "Vergeo5 on X",
+    "instagramAria": "Vergeo5 on Instagram",
+    "emailAria": "Email Vergeo5",
     "countryCode": "ZM"
   },
   "categorySelection": {
@@ -102,8 +102,8 @@
     "label": "Share"
   },
   "fab": {
-    "ask": "Ask Convergeo",
-    "askTitle": "Ask Convergeo",
+    "ask": "Ask Vergeo5",
+    "askTitle": "Ask Vergeo5",
     "askHint": "Describe what you need — a product, a service or an event.",
     "askPlaceholder": "e.g. solar panel under K3,000 in Lusaka",
     "send": "Ask",
@@ -117,7 +117,7 @@
     "voiceDenied": "Microphone is blocked. Allow it in your browser settings, or type your question."
   },
   "paymentTrust": {
-    "footerSeal": "You pay → Held by Convergeo → Released",
+    "footerSeal": "You pay → Held by Vergeo5 → Released",
     "footerPaymentNote": "Mobile money & cards with escrow · Cash on delivery on eligible orders"
   },
   "codTrust": {
@@ -133,8 +133,8 @@
       "savedAnnounce": "Saved to your list"
     },
     "trust": {
-      "ariaLabel": "Why it's safe to buy on Convergeo",
-      "escrow": "Held by Convergeo until you're happy",
+      "ariaLabel": "Why it's safe to buy on Vergeo5",
+      "escrow": "Held by Vergeo5 until you're happy",
       "verified": "Verified sellers",
       "returns": "Returns policy",
       "momoCod": "Pay with Mobile Money or cash on delivery"

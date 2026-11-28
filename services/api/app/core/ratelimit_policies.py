@@ -331,6 +331,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/order-jobs/auto-confirm": INTERNAL_CRON,
     "POST /internal/order-jobs/auto-release": INTERNAL_CRON,
     "POST /internal/order-jobs/cancel-unpaid": INTERNAL_CRON,
+    "POST /internal/order-jobs/refund-late-collections": INTERNAL_CRON,
     "POST /internal/payment-sweeper/tick": INTERNAL_CRON,
     "POST /internal/payouts/execute": INTERNAL_CRON,
     "POST /internal/payouts/retry": INTERNAL_CRON,
@@ -438,6 +439,11 @@ POLICIES: dict[str, RateLimitPolicy] = {
     # Paid extras + free trials (20261117020000). Enforced in-router: vendor routes
     # keyed by user (vendor_extras._limit), admin routes by the acting admin
     # (admin_extras._limit, un-prefixed admin keys).
+    # Vendor sourcing hub (20261127100000). Vendor routes are registered by the router
+    # itself; admin routes are enforced in-router (un-prefixed admin keys).
+    "POST /import-requests/{request_id}/status": ADMIN_WRITE,
+    "POST /import-requests/{request_id}/quotes": ADMIN_WRITE,
+    "POST /made-in-zambia-claims/{listing_id}/decision": ADMIN_WRITE,
     "POST /vendor/extras/requests": STANDARD_WRITE,
     "POST /vendor/extras/requests/{request_id}/cancel": STANDARD_WRITE,
     "POST /vendor/extras/requests/{request_id}/accept": STANDARD_WRITE,

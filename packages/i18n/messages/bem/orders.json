@@ -17,17 +17,18 @@
     "untitledItem": "Icintu citapewa ishina"
   },
   "empty": {
-    "body": "Ilyo mwashita ukufuma ku basellers ba Convergeo, ama-order no tracking fyaisa apa.",
+    "body": "Ilyo mwashita ukufuma ku basellers ba Vergeo5, ama-order no tracking fyaisa apa.",
     "cta": "Tampeniko ukushita",
     "title": "Takwaba ama-order"
   },
   "errors": {
     "loadFailed": "Tatwaishibe ukuleta ama-order yenu. Wesheni limbi.",
-    "notFound": "Order tacasangwa"
+    "notFound": "Order tacasangwa",
+    "paymentInFlight": "Ukulipila kuli mu kuya pa order iyi. Linda pa mineti inono, pa numa mukese ukucilila kabili."
   },
   "escrow": {
     "cod": "Lipileni mu cash ilyo mwapokelela order yenu.",
-    "held": "Payment yenu yikwata bwino na Convergeo mpaka mupoke order yenu.",
+    "held": "Payment yenu yikwata bwino na Vergeo5 mpaka mupoke order yenu.",
     "refunded": "Refund ilebwelela ku mobile money wallet yenu.",
     "released": "Indalama shyasuminishwa ku vendor pantu fulfilment.",
     "strip": {
@@ -65,7 +66,7 @@
     "confirmed": "Vendor yasuminisha order yenu",
     "delivered": "Yafika",
     "paymentCod": "Lipileni vendor pa delivery",
-    "paymentHeld": "Mwalipila — yikwata bwino na Convergeo",
+    "paymentHeld": "Mwalipila — yikwata bwino na Vergeo5",
     "placed": "Order yaiswa",
     "processing": "Vendor ilepanga order yenu",
     "ready": "Yikwete kale ku pickup",
@@ -74,7 +75,7 @@
     "title": "Progress ya order",
     "explain": {
       "placed": "Twapokelela order yenu no kuitumina seller.",
-      "paymentHeld": "Indalama yenu yasungwa na Convergeo. Seller alipilwa fye pa numa ya delivery.",
+      "paymentHeld": "Indalama yenu yasungwa na Vergeo5. Seller alipilwa fye pa numa ya delivery.",
       "paymentCod": "Tapali indalama yashimbwa. Mulalipila mu cash ilyo mwapokelela order.",
       "confirmed": "Seller asuminisha order yenu kabili alepekanya.",
       "processing": "Seller alepakila ifintu fyenu.",

@@ -1,7 +1,7 @@
 {
   "analytics": {
     "meta": {
-      "title": "Statistiques — Vendeur Convergeo",
+      "title": "Statistiques — Vendeur Vergeo5",
       "description": "Suivez les ventes, commandes et événements panier/passage en caisse sur 7 ou 30 jours, et comparez des totaux indépendants."
     },
     "eyebrow": "Votre boutique",
@@ -53,11 +53,11 @@
   "vendor.payout.pending": "Versement en attente : {amount}",
   "pitch": {
     "meta": {
-      "title": "Vendre sur Convergeo — ouvrez votre boutique",
-      "description": "Créez un compte vendeur gratuit, vérifiez votre identité et commencez à publier sur Convergeo. Découvrez les commissions et la vérification avant de vous inscrire."
+      "title": "Vendre sur Vergeo5 — ouvrez votre boutique",
+      "description": "Créez un compte vendeur gratuit, vérifiez votre identité et commencez à publier sur Vergeo5. Découvrez les commissions et la vérification avant de vous inscrire."
     },
     "hero": {
-      "eyebrow": "Vendre sur Convergeo",
+      "eyebrow": "Vendre sur Vergeo5",
       "headline": "Publication gratuite.",
       "headlineEmphasis": "Payez seulement quand vous vendez.",
       "subheadline": "Touchez des acheteurs dans toute la Zambie avec des produits, services, événements, fournitures et votre profil professionnel — le tout depuis une seule application vendeur.",
@@ -149,7 +149,7 @@
           "description": "Accès API et éligibilité à l'affichage de bannières pour les vendeurs à fort volume."
         },
         "preferred": {
-          "badge": "Convergeo Preferred",
+          "badge": "Vergeo5 Preferred",
           "title": "Badge de confiance mérité",
           "description": "≥20 commandes, note ≥4,5★, <2 % de litiges, <5 % d'annulations — révisé chaque mois."
         }
@@ -165,7 +165,7 @@
       "items": {
         "fees": {
           "question": "Y a-t-il des frais mensuels ?",
-          "answer": "Non. La publication sur Convergeo est gratuite au lancement. Vous ne payez une commission que lorsque vous vendez. L'offre gratuite comprend jusqu'à 30 annonces."
+          "answer": "Non. La publication sur Vergeo5 est gratuite au lancement. Vous ne payez une commission que lorsque vous vendez. L'offre gratuite comprend jusqu'à 30 annonces."
         },
         "payout": {
           "question": "Quand suis-je payé ?",
@@ -182,7 +182,7 @@
       }
     },
     "cta": {
-      "heading": "Prêt à vendre sur Convergeo ?",
+      "heading": "Prêt à vendre sur Vergeo5 ?",
       "body": "Créez votre compte vendeur, vérifiez votre identité et commencez à publier dès votre approbation. Les outils d'annonces ne se débloquent qu'après l'approbation par un administrateur.",
       "button": "Créer un compte vendeur",
       "loadingLabel": "Ouverture de l'onboarding invitation",
@@ -191,12 +191,12 @@
   },
   "onboarding": {
     "meta": {
-      "title": "Inscription vendeur — Convergeo",
+      "title": "Inscription vendeur — Vergeo5",
       "description": "Terminez votre candidature vendeur et vérifiez votre identité. Les annonces restent verrouillées jusqu'à l'approbation par un administrateur."
     },
     "invite": {
       "eyebrow": "Terminez votre candidature vendeur",
-      "body": "Catalogue, versements et tableau de bord restent verrouillés tant que Convergeo n'a pas vérifié votre identité et accordé l'accès vendeur."
+      "body": "Catalogue, versements et tableau de bord restent verrouillés tant que Vergeo5 n'a pas vérifié votre identité et accordé l'accès vendeur."
     },
     "steps": {
       "business": "Entreprise",
@@ -353,7 +353,7 @@
           "why": "Comparé à la photo de votre NRC pour que personne ne vende en votre nom."
         },
         "review": {
-          "title": "Contrôle par Convergeo",
+          "title": "Contrôle par Vergeo5",
           "why": "Notre équipe vérifie tout, en général sous 1 jour ouvré, et vous informe du résultat."
         }
       },
@@ -414,7 +414,7 @@
       "dedupCanonical": "Cette photo est déjà la photo principale du produit : les acheteurs la voient sur votre annonce. Inutile de la téléverser à nouveau."
     },
     "meta": {
-      "title": "Ajouter un produit — Convergeo Vendeur",
+      "title": "Ajouter un produit — Vergeo5 Vendeur",
       "description": "Ajoutez un produit : trouvez-le dans notre liste, créez-en un ou ajoutez un article unique."
     },
     "title": "Créer une annonce",
@@ -578,7 +578,7 @@
     },
     "import": {
       "meta": {
-        "title": "Importer des annonces — Vendeur Convergeo",
+        "title": "Importer des annonces — Vendeur Vergeo5",
         "description": "Importez en masse des annonces vendeur depuis un fichier CSV avec validation ligne par ligne."
       },
       "title": "Importer des annonces",
@@ -667,7 +667,7 @@
     },
     "manage": {
       "meta": {
-        "title": "Vos annonces — Vendeur Convergeo",
+        "title": "Vos annonces — Vendeur Vergeo5",
         "description": "Consultez le stock, mettez en pause des annonces et modifiez les prix."
       },
       "title": "Vos annonces",
@@ -690,7 +690,7 @@
       },
       "edit": {
         "meta": {
-          "title": "Modifier l'annonce — Vendeur Convergeo",
+          "title": "Modifier l'annonce — Vendeur Vergeo5",
           "description": "Mettez à jour le prix, le stock, l'état et la politique de retour."
         },
         "title": "Modifier l'annonce",
@@ -738,7 +738,7 @@
       "addPhotoLink": "Add photo",
       "statusLabel": "Statut",
       "productStatus": {
-        "inReview": "Live, in review: buyers see it once Convergeo approves it",
+        "inReview": "Live, in review: buyers see it once Vergeo5 approves it",
         "rejected": "Product rejected"
       },
       "stock": {
@@ -912,7 +912,7 @@
   },
   "profile": {
     "meta": {
-      "title": "Profil de la vitrine — Convergeo Vendeur",
+      "title": "Profil de la vitrine — Vergeo5 Vendeur",
       "description": "Modifiez votre vitrine publique : logo, description, horaires, emplacement et URL de la boutique."
     },
     "title": "Profil de la vitrine",
@@ -1001,7 +1001,7 @@
       "help": "Une large bannière (environ 3:1) en tête de votre vitrine. Redimensionnée avant l'importation pour économiser les données."
     },
     "badge": {
-      "preferred": "Badge Convergeo Preferred obtenu",
+      "preferred": "Badge Vergeo5 Preferred obtenu",
       "hint": "Obtenez le badge Preferred grâce à un excellent service — ≥20 commandes, ≥4,5★, peu de litiges."
     },
     "completeness": {
@@ -1061,7 +1061,7 @@
   },
   "orders": {
     "meta": {
-      "title": "Détail de la commande — Convergeo Vendeur",
+      "title": "Détail de la commande — Vergeo5 Vendeur",
       "description": "Consultez les articles de la commande, le contexte de paiement, la chronologie et les actions de traitement."
     },
     "title": "Commande",
@@ -1129,7 +1129,7 @@
       "ready_for_collection": "Prêt pour le livreur",
       "after": {
         "confirm": "Le client est informé que vous avez accepté. Ensuite, vous emballerez.",
-        "reject": "La commande est annulée et le client en est informé. Convergeo gère l'éventuel remboursement.",
+        "reject": "La commande est annulée et le client en est informé. Vergeo5 gère l'éventuel remboursement.",
         "pack": "Le client voit que vous préparez sa commande.",
         "ship": "Appuyez quand le coursier a le colis. Ajoutez son nom ou son téléphone.",
         "ready_for_pickup": "Le client est invité à venir la retirer chez vous."
@@ -1170,11 +1170,11 @@
       "headingNow": "À faire maintenant",
       "headingNext": "Et ensuite",
       "scanCta": "Ouvrir Scan pour remettre",
-      "paidExplainer": "Le client a payé. Convergeo conserve l'argent en sécurité jusqu'à la livraison.",
+      "paidExplainer": "Le client a payé. Vergeo5 conserve l'argent en sécurité jusqu'à la livraison.",
       "unpaidExplainer": "Le client n'a pas encore payé. N'emballez et n'envoyez rien avant que le paiement soit reçu.",
       "cod": {
         "body": "Le client paie le coursier en espèces à la livraison. Vous n'encaissez rien vous-même.",
-        "settlement": "Convergeo vous règle le montant de la commande — inutile de relancer le coursier ou le client."
+        "settlement": "Vergeo5 vous règle le montant de la commande — inutile de relancer le coursier ou le client."
       },
       "steps": {
         "confirm": {
@@ -1333,7 +1333,7 @@
         },
         "productsInReview": {
           "title": "{count, plural, one {# product waiting for review} other {# products waiting for review}}",
-          "body": "These listings are Live on your side, but buyers can't see them until Convergeo approves the product."
+          "body": "These listings are Live on your side, but buyers can't see them until Vergeo5 approves the product."
         },
         "catalogueProducts": {
           "title": "Vérifiez vos produits",
@@ -1381,7 +1381,7 @@
   },
   "queue": {
     "meta": {
-      "title": "File d'attente des commandes — Vendeur Convergeo",
+      "title": "File d'attente des commandes — Vendeur Vergeo5",
       "description": "Voyez vos commandes et avancez-les d'un geste."
     },
     "title": "Commandes",
@@ -1444,7 +1444,7 @@
   },
   "payouts": {
     "meta": {
-      "title": "Votre argent — Convergeo Vendeur",
+      "title": "Votre argent — Vergeo5 Vendeur",
       "description": "Voyez l'argent en attente, prêt et envoyé."
     },
     "eyebrow": "Argent",
@@ -1485,7 +1485,7 @@
     },
     "method": {
       "meta": {
-        "title": "Où nous envoyons votre argent — Convergeo Vendeur",
+        "title": "Où nous envoyons votre argent — Vergeo5 Vendeur",
         "description": "Changez le numéro mobile money qui reçoit votre argent."
       },
       "link": "Changer le numéro de réception",
@@ -1525,9 +1525,9 @@
       "body": "Vous ne recevrez pas encore de versements via cette application, il n'y a donc aucun solde à afficher. C'est normal — votre compte n'a aucun problème.",
       "meanwhileHeading": "Comment fonctionne l'argent pendant le pilote",
       "meanwhile": {
-        "cod": "Paiement à la livraison : le client paie le coursier en espèces et Convergeo vous règle.",
-        "prepaid": "Commandes payées : Convergeo conserve l'argent du client en sécurité jusqu'à la livraison.",
-        "questions": "Des questions sur l'argent qui vous est dû ? Contactez l'équipe pilote Convergeo."
+        "cod": "Paiement à la livraison : le client paie le coursier en espèces et Vergeo5 vous règle.",
+        "prepaid": "Commandes payées : Vergeo5 conserve l'argent du client en sécurité jusqu'à la livraison.",
+        "questions": "Des questions sur l'argent qui vous est dû ? Contactez l'équipe pilote Vergeo5."
       },
       "laterHeading": "Ce que vous verrez ici plus tard",
       "later": {
@@ -1541,7 +1541,7 @@
   },
   "scan": {
     "meta": {
-      "title": "Scanner de retrait — Vendeur Convergeo",
+      "title": "Scanner de retrait — Vendeur Vergeo5",
       "description": "Scannez les QR de retrait des clients ou saisissez les PIN pour marquer les commandes comme récupérées."
     },
     "eyebrow": "Retrait",
@@ -1581,7 +1581,7 @@
       "retry": "Réessayer",
       "wrongQr": {
         "title": "Pas un code de retrait",
-        "body": "Cela ressemble à un billet d'événement ou à un autre QR — pas à un code de retrait de commande. Demandez au client d'ouvrir le QR de retrait de sa commande depuis WhatsApp ou l'application Convergeo."
+        "body": "Cela ressemble à un billet d'événement ou à un autre QR — pas à un code de retrait de commande. Demandez au client d'ouvrir le QR de retrait de sa commande depuis WhatsApp ou l'application Vergeo5."
       },
       "offline": {
         "title": "Vérification impossible hors ligne",
@@ -1615,7 +1615,7 @@
     },
     "eventCheckIn": {
       "meta": {
-        "title": "Scanner d'événement — Vendeur Convergeo",
+        "title": "Scanner d'événement — Vendeur Vergeo5",
         "description": "Scannez les QR des billets des participants pour les enregistrer, en ligne ou hors ligne."
       },
       "eyebrow": "Enregistrement à l'événement",
@@ -1736,7 +1736,7 @@
     "eyebrow": "Événements",
     "list": {
       "meta": {
-        "title": "Vos événements — Convergeo Vendeur",
+        "title": "Vos événements — Vergeo5 Vendeur",
         "description": "Créez et gérez des événements avec billetterie et des inscriptions gratuites."
       },
       "title": "Vos événements",
@@ -1754,11 +1754,11 @@
     },
     "form": {
       "createMeta": {
-        "title": "Créer un événement — Convergeo Vendeur",
+        "title": "Créer un événement — Vergeo5 Vendeur",
         "description": "Configurez un nouvel événement avec dates, lieu et photos."
       },
       "editMeta": {
-        "title": "Modifier l'événement — Convergeo Vendeur",
+        "title": "Modifier l'événement — Vergeo5 Vendeur",
         "description": "Mettez à jour les détails, les séances et le statut de publication de l'événement."
       },
       "createTitle": "Créer un événement",
@@ -1889,7 +1889,7 @@
     },
     "collab": {
       "meta": {
-        "title": "Organiser un événement avec un organisateur — Convergeo",
+        "title": "Organiser un événement avec un organisateur — Vergeo5",
         "description": "Proposez un événement à un organisateur vérifié et menez-le ensemble."
       },
       "loading": "Chargement…",
@@ -2061,7 +2061,7 @@
         "organiserUnavailable": "Cet organisateur n'accepte pas de demandes pour le moment.",
         "pastStart": "L'heure de début est déjà passée. Demandez au vendeur de la mettre à jour.",
         "disputeSuspended": "La publication d'événements payants est suspendue après des litiges confirmés.",
-        "highValue": "Cet événement nécessite un appel de vérification avant publication. Contactez le support Convergeo.",
+        "highValue": "Cet événement nécessite un appel de vérification avant publication. Contactez le support Vergeo5.",
         "generic": "Un problème est survenu. Réessayez.",
         "pickOrganiser": "Choisissez d'abord un organisateur."
       }
@@ -2234,7 +2234,7 @@
   },
   "returns": {
     "meta": {
-      "title": "Demandes de retour — Convergeo Vendeur",
+      "title": "Demandes de retour — Vergeo5 Vendeur",
       "description": "Acceptez ou contestez les demandes de retour des clients pour des articles défectueux ou incorrects."
     },
     "title": "Demandes de retour",
@@ -2338,7 +2338,7 @@
   },
   "reviews": {
     "meta": {
-      "title": "Avis clients — Convergeo Vendeur",
+      "title": "Avis clients — Vergeo5 Vendeur",
       "description": "Répondez aux avis d'achats vérifiés sur vos annonces."
     },
     "title": "Avis clients",
@@ -2493,7 +2493,7 @@
   },
   "intake": {
     "meta": {
-      "title": "WhatsApp drafts — Convergeo Vendor",
+      "title": "WhatsApp drafts — Vergeo5 Vendor",
       "description": "Review product drafts created from your WhatsApp messages before they go live."
     },
     "title": "WhatsApp drafts",
@@ -2501,7 +2501,7 @@
     "loading": "Loading…",
     "empty": {
       "title": "No drafts yet",
-      "body": "Send a photo and a price to the Convergeo vendor number and it will appear here."
+      "body": "Send a photo and a price to the Vergeo5 vendor number and it will appear here."
     },
     "error": {
       "title": "Could not load your drafts",
@@ -2512,14 +2512,14 @@
       "needs_details": "Needs details",
       "ready_for_vendor_review": "Ready to review",
       "submitted": "Submitted",
-      "pending_admin_review": "With Convergeo",
+      "pending_admin_review": "With Vergeo5",
       "approved": "Approved",
       "rejected": "Rejected",
       "expired": "Expired"
     },
     "detail": {
       "title": "Check this draft",
-      "intro": "Correct anything that is wrong. It only goes live after Convergeo approves it.",
+      "intro": "Correct anything that is wrong. It only goes live after Vergeo5 approves it.",
       "photos": "Photos",
       "photoAlt": "Draft photo {position}",
       "noPhotos": "No photos yet.",
@@ -2530,7 +2530,7 @@
       "saved": "Saved",
       "submit": "Submit for review",
       "submitting": "Submitting…",
-      "submitted": "Submitted for review. Convergeo will check it shortly.",
+      "submitted": "Submitted for review. Vergeo5 will check it shortly.",
       "back": "Back to drafts",
       "canonicalProduct": "Produit du catalogue",
       "canonicalTitle": "Select the catalog product",
@@ -2561,7 +2561,7 @@
       "price_missing": "What is the price in kwacha?",
       "condition_missing": "Is it new or refurbished?",
       "possible_duplicate": "This looks like an earlier draft. Check before submitting.",
-      "prohibited_class": "This product class cannot be listed on Convergeo.",
+      "prohibited_class": "This product class cannot be listed on Vergeo5.",
       "media_failed": "A photo could not be saved. Please send it again."
     },
     "errors": {
@@ -2589,7 +2589,7 @@
   },
   "clips": {
     "meta": {
-      "title": "Clips — Convergeo Vendor",
+      "title": "Clips — Vergeo5 Vendor",
       "description": "Record short product videos and track how they perform."
     },
     "title": "My clips",
@@ -2681,7 +2681,7 @@
   },
   "settings": {
     "meta": {
-      "title": "Paramètres — Convergeo Vendeur",
+      "title": "Paramètres — Vergeo5 Vendeur",
       "description": "Compte, notifications, mode de versement et langue."
     },
     "title": "Paramètres",
@@ -2867,7 +2867,7 @@
   },
   "coupons": {
     "meta": {
-      "title": "Coupons — Convergeo Vendeur",
+      "title": "Coupons — Vergeo5 Vendeur",
       "description": "Créez des codes de réduction pour votre boutique."
     },
     "manager": {

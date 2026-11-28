@@ -29,7 +29,7 @@ export type MobileDrawerProps = {
 };
 
 const rowClass =
-  "flex min-h-12 w-full items-center justify-between gap-3 px-4 text-left text-sm text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing";
+  "flex min-h-12 w-full touch-manipulation items-center justify-between gap-3 px-4 text-left text-sm text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing";
 
 function SectionHeading({ children }: { children: string }) {
   return (
@@ -162,14 +162,14 @@ export default function MobileDrawer({
         aria-modal="true"
         aria-label={labels.drawerAria}
         tabIndex={-1}
-        className={`${glassClass("overlay")} fixed inset-y-0 left-0 z-[71] flex w-[min(22rem,88vw)] flex-col overflow-hidden rounded-r-lg`}
+        className={`${glassClass("overlay")} fixed inset-y-0 left-0 z-[71] flex w-[min(20.5rem,calc(100vw-2.5rem))] max-w-full flex-col overflow-hidden rounded-r-lg`}
       >
         <div className="flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-primary px-4 text-[var(--primary-btn-fg)]">
           {user ? (
             <Link
               href={`/${locale}/account`}
               onClick={onClose}
-              className="min-w-0 truncate rounded-sm font-display text-base font-bold focus-visible:outline-none focus-visible:shadow-focusRing"
+              className="inline-flex min-h-11 min-w-0 flex-1 items-center truncate rounded-sm font-display text-base font-bold focus-visible:outline-none focus-visible:shadow-focusRing"
             >
               {greeting}
             </Link>
@@ -178,7 +178,7 @@ export default function MobileDrawer({
               href={`/${locale}/login`}
               onClick={onClose}
               aria-label={`${labels.helloGuest}. ${labels.signIn}`}
-              className="min-w-0 truncate rounded-sm font-display text-base font-bold focus-visible:outline-none focus-visible:shadow-focusRing"
+              className="inline-flex min-h-11 min-w-0 flex-1 items-center truncate rounded-sm font-display text-base font-bold focus-visible:outline-none focus-visible:shadow-focusRing"
             >
               {greeting}
             </Link>
@@ -187,7 +187,7 @@ export default function MobileDrawer({
             type="button"
             onClick={onClose}
             aria-label={labels.close}
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded focus-visible:outline-none focus-visible:shadow-focusRing"
+            className="inline-flex size-11 shrink-0 touch-manipulation items-center justify-center rounded focus-visible:outline-none focus-visible:shadow-focusRing"
           >
             <IconClose />
           </button>
@@ -203,7 +203,7 @@ export default function MobileDrawer({
           >
             <div
               data-testid="mobile-drawer-main"
-              className="h-full w-1/2 overflow-y-auto pb-6"
+              className="h-full w-1/2 overflow-y-auto overscroll-contain pb-6"
               {...(drill ? hidden : {})}
             >
               <SectionHeading>{labels.shopByDepartment}</SectionHeading>
@@ -276,7 +276,7 @@ export default function MobileDrawer({
 
             <div
               data-testid="mobile-drawer-drill"
-              className="h-full w-1/2 overflow-y-auto pb-6"
+              className="h-full w-1/2 overflow-y-auto overscroll-contain pb-6"
               {...(drill ? {} : hidden)}
             >
               <button

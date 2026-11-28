@@ -1,11 +1,11 @@
 {
   "app": {
-    "name": "Convergeo",
+    "name": "Vergeo5",
     "tagline": "赞比亚的市场 — 货到付款"
   },
   "meta": {
-    "defaultDescription": "在 Convergeo 上选购商品、预订服务并发现赞比亚各地活动——多商家市场平台。",
-    "defaultTitle": "Convergeo — 赞比亚购物、服务与活动"
+    "defaultDescription": "在 Vergeo5 上选购商品、预订服务并发现赞比亚各地活动——多商家市场平台。",
+    "defaultTitle": "Vergeo5 — 赞比亚购物、服务与活动"
   },
   "common": {
     "loading": "加载中…",
@@ -41,11 +41,11 @@
     "home": "返回首页"
   },
   "install": {
-    "title": "安装 Convergeo",
-    "body": "将 Convergeo 添加到主屏幕，以便更快访问并获得全屏应用体验。",
+    "title": "安装 Vergeo5",
+    "body": "将 Vergeo5 添加到主屏幕，以便更快访问并获得全屏应用体验。",
     "action": "安装应用",
     "dismiss": "暂不",
-    "updateBody": "Convergeo 的新版本已就绪。",
+    "updateBody": "Vergeo5 的新版本已就绪。",
     "updateAction": "重新加载以更新"
   },
   "contact": {
@@ -54,10 +54,10 @@
   "utilityBar": {
     "ariaLabel": "语言、联系方式与社交媒体",
     "socialAria": "社交媒体",
-    "facebookAria": "Convergeo 的 Facebook",
-    "twitterAria": "Convergeo 的 X",
-    "instagramAria": "Convergeo 的 Instagram",
-    "emailAria": "发送邮件给 Convergeo",
+    "facebookAria": "Vergeo5 的 Facebook",
+    "twitterAria": "Vergeo5 的 X",
+    "instagramAria": "Vergeo5 的 Instagram",
+    "emailAria": "发送邮件给 Vergeo5",
     "countryCode": "ZM"
   },
   "categorySelection": {
@@ -96,8 +96,8 @@
     "label": "分享"
   },
   "fab": {
-    "ask": "询问 Convergeo",
-    "askTitle": "询问 Convergeo",
+    "ask": "询问 Vergeo5",
+    "askTitle": "询问 Vergeo5",
     "askHint": "描述您的需求：商品、服务或活动。",
     "askPlaceholder": "例如：卢萨卡 3,000 克瓦查以内的太阳能板",
     "send": "提问",
@@ -132,8 +132,8 @@
       "savedAnnounce": "Saved to your list"
     },
     "trust": {
-      "ariaLabel": "Why it's safe to buy on Convergeo",
-      "escrow": "Held by Convergeo until you're happy",
+      "ariaLabel": "Why it's safe to buy on Vergeo5",
+      "escrow": "Held by Vergeo5 until you're happy",
       "verified": "Verified sellers",
       "returns": "Returns policy",
       "momoCod": "Pay with Mobile Money or cash on delivery"

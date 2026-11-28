@@ -35,7 +35,7 @@ export function parsePushPayload(raw: string | null, fallbackUrl: string): PushD
       ? Math.floor(data.badge)
       : null;
   return {
-    title: text(data.title) || "Convergeo",
+    title: text(data.title) || "Vergeo5",
     body: text(data.body),
     url: safeNotificationUrl(data.url, fallbackUrl),
     badge,

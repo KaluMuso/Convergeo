@@ -235,3 +235,5 @@ Draft bem/nya for the `/account/privacy` Analytics switch. These govern a privac
 | `services.vendor.packages.title` | Amapakeji                       | Maphukusi                          |
 
 Every other key in both subtrees (tier names, delivery/revision ICU plurals, prefill template, no-payment note, vendor guidance and errors) is **English passthrough** for key parity: the prefill text is sent to the vendor verbatim and the no-payment note is trust copy, so a wrong vernacular guess costs more than English. Also EN passthrough in bem/nya: `vendor.clips.errors.notInPilot` / `paused` (Clips pilot).
+
+**Brand pass: Vergeo5 public name (2026-11-28):** every user-facing "Convergeo" in `bem`, `nya`, `fr`, `zh` (and `en`) became "Vergeo5" by name swap only; sentences were not re-translated. Native reviewers: please re-read Bemba and Nyanja strings that carry the name (grammar around it, e.g. locative or possessive forms) — see `grep -rn Vergeo5 packages/i18n/messages/{bem,nya}`. Legal pages (`legal.json`) keep **Convergeo** as the company/data controller and now say Vergeo5 is operated by Convergeo.

@@ -2,6 +2,8 @@ name: CI
 
 on:
   pull_request:
+    # ready_for_review: a draft's CI is skipped (job-level `if:`), so marking it ready must start a full run.
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - master
@@ -36,6 +38,7 @@ jobs:
     # counts as passing for required checks). Fail-open: if this job fails, every
     # gated job runs (see `needs.changes.result != 'success'` in each `if:`).
     name: Detect changed tiers
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     outputs:
       docs_only: ${{ steps.scope.outputs.docs_only }}
@@ -107,7 +110,7 @@ jobs:
     name: JavaScript / TypeScript
     needs: changes
     if: >-
-      ${{ !cancelled() && (needs.changes.result != 'success' ||
+      ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' ||
       needs.changes.outputs.run_js == 'true') }}
     runs-on: ubuntu-latest
     steps:
@@ -209,7 +212,7 @@ jobs:
     # job below, so the required check name is unchanged.
     name: API tests shard ${{ matrix.shard }}/3
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_python == 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.run_python == 'true') }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -312,7 +315,7 @@ jobs:
     # Required check context "Python API" (master ruleset). Aggregates the shards.
     name: Python API
     needs: [changes, python-shard]
-    if: ${{ always() }}
+    if: ${{ always() && github.event.pull_request.draft != true }}
     runs-on: ubuntu-latest
     steps:
       - name: All API test shards passed
@@ -337,7 +340,7 @@ jobs:
   ask-evals:
     name: Ask Vergeo grounding evals
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -395,7 +398,7 @@ jobs:
   edge-functions:
     name: Supabase edge functions (Deno)
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || (needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_db_light == 'true')) }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || (needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.run_db_light == 'true')) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -416,7 +419,7 @@ jobs:
   staging-guards:
     name: Staging plane guards (STG-01)
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -542,7 +545,7 @@ jobs:
   release-control:
     name: Release control contract (RELCTRL-01)
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -556,7 +559,7 @@ jobs:
 
   merge-release-gate:
     name: Merge release gate (RELCTRL-01)
-    if: github.event_name == 'pull_request' && github.base_ref == 'master'
+    if: github.event_name == 'pull_request' && github.base_ref == 'master' && github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -592,6 +595,7 @@ jobs:
 
   secret-scan:
     name: Secret scan (gitleaks)
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     # Blocking (RC-06 / G8 / VE-P04): any real finding fails the job.
     # Pinned CLI >=8.28 — path/regex allowlists are broken on gitleaks 8.24.x.
@@ -706,7 +710,7 @@ jobs:
   deps-audit:
     name: Dependency audit
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -867,7 +871,7 @@ jobs:
   security-gates:
     name: Security gates (headers + authz matrix)
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_security == 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.run_security == 'true') }}
     # Blocking (M15-P05) and the sole owner of the complete route x role matrix.
     # Keep this job name stable: it is a required master-branch check context.
     runs-on: ubuntu-latest
@@ -946,7 +950,7 @@ jobs:
   i18n-lint:
     name: i18n hardcoded strings
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -1003,7 +1007,7 @@ jobs:
   migrations:
     name: Migration replay (fast)
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -1135,7 +1139,7 @@ jobs:
     # CI-SPEED: the ~45 min migration-ledger proof depends only on schema/typegen
     # inputs; it runs on master pushes, schema or CI-script changes, and API changes
     # into master. Migration replay (above) still runs for every API change.
-    if: ${{ !cancelled() && needs.migrations.result != 'failure' && (needs.changes.result != 'success' || needs.changes.outputs.run_typegen == 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && needs.migrations.result != 'failure' && (needs.changes.result != 'success' || needs.changes.outputs.run_typegen == 'true') }}
     runs-on: ubuntu-latest
     # config.toml uses env() substitution for the enabled send_sms auth hook and
     # Google OAuth provider. The Supabase CLI resolves these on `db start`, so the
@@ -1152,7 +1156,7 @@ jobs:
       EXPECTED_VECTOR_VERSION: "0.8.2"
       EXPECTED_PG_GRAPHQL_VERSION: "1.6.1"
       EXPECTED_PGCRYPTO_VERSION: "1.3"
-      EXPECTED_TYPEGEN_MIGRATION_COUNT: "200"
+      EXPECTED_TYPEGEN_MIGRATION_COUNT: "201"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -1302,7 +1306,7 @@ jobs:
   rls:
     name: RLS isolation matrix
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -1404,7 +1408,7 @@ jobs:
   critical-real-stack:
     name: Critical real-stack execution (88 identities)
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -1460,7 +1464,7 @@ jobs:
   financial-real-stack:
     name: Financial real-stack execution (fresh and upgrade)
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
@@ -1526,7 +1530,7 @@ jobs:
   coordinator-acceptance:
     name: Coordinator acceptance (${{ matrix.gate }})
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
@@ -1603,7 +1607,7 @@ jobs:
   money-db-triggers:
     name: Money DB-trigger integration
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
     runs-on: ubuntu-24.04
     # Release-accounting, release-idempotency and reconciliation DB tests exercise the
     # SQL-trigger money path (zero-sum, guarded release ordering, recon report uniqueness).
@@ -1861,7 +1865,7 @@ jobs:
   cod-container-smoke:
     name: COD production-container smoke
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
     # Blocking (WP-1B): builds the real infra/api.Dockerfile image and drives ONE
     # Cash-on-Delivery order through the running container against an isolated Postgres,
     # asserting order created + audit entry (transaction-local actor/note context) +

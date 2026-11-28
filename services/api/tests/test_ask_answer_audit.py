@@ -14,6 +14,7 @@ from app.services.ask.answer_log import citation_entries, log_and_audit
 from app.services.ask.citations import CitationRef, route_path
 from app.services.ask.enrich import attach_vendor_info
 from fastapi.testclient import TestClient
+from postgrest.exceptions import APIError
 
 
 def _id() -> str:
@@ -813,3 +814,45 @@ def test_admin_list_shows_findings_links_and_filters_flagged() -> None:
     assert item.citations[0].href == f"/p/pixel?listing={listing_id}"
     dumped = item.model_dump_json()
     assert "user_id" not in dumped and "guest_key" not in dumped
+
+
+def test_list_ask_answers_empty_when_tables_missing() -> None:
+    class Table:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def select(self, *_a: Any, **_k: Any) -> Table:
+            return self
+
+        def order(self, *_a: Any, **_k: Any) -> Table:
+            return self
+
+        def limit(self, *_a: Any, **_k: Any) -> Table:
+            return self
+
+        def eq(self, *_a: Any, **_k: Any) -> Table:
+            return self
+
+        def lt(self, *_a: Any, **_k: Any) -> Table:
+            return self
+
+        def or_(self, *_a: Any, **_k: Any) -> Table:
+            return self
+
+        def in_(self, *_a: Any, **_k: Any) -> Table:
+            return self
+
+        def execute(self) -> Result:
+            raise APIError({"code": "42P01", "message": 'relation "ask_answers" does not exist'})
+
+    class Client:
+        def table(self, name: str) -> Table:
+            return Table(name)
+
+    class Service:
+        client = Client()
+
+    page = list_ask_answers(Service(), flagged_only=False, limit=25)
+    assert page.items == []
+    assert page.next_before is None
+    assert page.next_before_id is None

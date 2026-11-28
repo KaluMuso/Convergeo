@@ -60,10 +60,10 @@ evidence. No application server is started, URLs rewritten or external report
 upload performed by the runner. The existing workflow still builds, starts and
 warms the same application URLs and retains its other blocking gates.
 An unusable `NO_NAVSTART` trace with no performance metrics, timeout warning or
-completed content check gets one fresh Chrome retry for the same URL and run.
+completed content check gets up to two fresh Chrome retries (three attempts in all) for the same URL and run. Thresholds are unchanged.
 The rejected JSON/HTML pair is retained separately and recorded in
 `run-summary.json`; it never counts toward the required three valid runs.
-Exhaustion and all other collection errors remain blocking.
+Exhaustion of all three attempts and every other collection error remain blocking.
 Each Chrome startup summary now includes fixed trace-event counts, relative
 navigation timings and main-frame association for that attempt when Lighthouse
 returns a trace. It records neither raw trace events nor frame IDs, document

@@ -8,40 +8,40 @@
     "stopReply": "回复 STOP 退订。",
     "stopKeyword": "STOP",
     "startKeyword": "START",
-    "stopConfirmation": "您已退订 Convergeo 营销消息。订单更新仍会照常发送。",
-    "startConfirmation": "您已订阅 Convergeo 更新。回复 STOP 退订。"
+    "stopConfirmation": "您已退订 Vergeo5 营销消息。订单更新仍会照常发送。",
+    "startConfirmation": "您已订阅 Vergeo5 更新。回复 STOP 退订。"
   },
   "whatsapp": {
     "order_confirmed": {
-      "body": "您的 Convergeo 订单 {order_reference} 已确认。总计 {total}。追踪：{track_url} 回复 STOP 退订。"
+      "body": "您的 Vergeo5 订单 {order_reference} 已确认。总计 {total}。追踪：{track_url} 回复 STOP 退订。"
     },
     "payment_received": {
       "body": "{trust_narrative} 订单 {order_reference}。回复 STOP 退订。",
-      "trust_narrative": "您的 {amount} 由 Convergeo 安全保管，直至送达。"
+      "trust_narrative": "您的 {amount} 由 Vergeo5 安全保管，直至送达。"
     },
     "order_shipped": {
-      "body": "您的 Convergeo 订单 {order_reference} 已发货。{tracking_info} 回复 STOP 退订。"
+      "body": "您的 Vergeo5 订单 {order_reference} 已发货。{tracking_info} 回复 STOP 退订。"
     },
     "order_ready_pickup": {
-      "body": "您的 Convergeo 订单 {order_reference} 已可自取。{pickup_details} 回复 STOP 退订。"
+      "body": "您的 Vergeo5 订单 {order_reference} 已可自取。{pickup_details} 回复 STOP 退订。"
     },
     "order_delivered": {
-      "body": "您的 Convergeo 订单 {order_reference} 已送达。分享您的体验：{review_url} 回复 STOP 退订。"
+      "body": "您的 Vergeo5 订单 {order_reference} 已送达。分享您的体验：{review_url} 回复 STOP 退订。"
     },
     "vendor_new_order": {
-      "body": "Convergeo 上有新订单 {order_reference}：{product_title} × {quantity}。请在卖家应用中确认。"
+      "body": "Vergeo5 上有新订单 {order_reference}：{product_title} × {quantity}。请在卖家应用中确认。"
     },
     "otp_login": {
-      "body": "您的 Convergeo 登录验证码是 {otp_code}，10 分钟后失效。请勿分享此验证码。"
+      "body": "您的 Vergeo5 登录验证码是 {otp_code}，10 分钟后失效。请勿分享此验证码。"
     },
     "gift_recipient_notice": {
-      "body": "{recipient_name} 您好，{sender_name} 在 Convergeo 上从 {shop_name} 给您送了一份礼物。我们只会就此礼物联系您。回复 STOP 退订。"
+      "body": "{recipient_name} 您好，{sender_name} 在 Vergeo5 上从 {shop_name} 给您送了一份礼物。我们只会就此礼物联系您。回复 STOP 退订。"
     },
     "gift_ready_pickup": {
       "body": "您来自 {shop_name} 的礼物已可领取。取货 PIN：{pickup_pin}。请勿泄露。"
     },
     "birthday_greeting": {
-      "body": "Convergeo 祝您生日快乐！使用优惠码 {coupon_code}，满 {min_spend} 立减 {amount}，{valid_days} 天内有效。回复 STOP 退订。"
+      "body": "Vergeo5 祝您生日快乐！使用优惠码 {coupon_code}，满 {min_spend} 立减 {amount}，{valid_days} 天内有效。回复 STOP 退订。"
     },
     "points_earned": {
       "body": "您获得了 {points} 积分，当前共有 {balance} 积分。达到 {threshold} 积分即可解锁奖励优惠券。"
@@ -50,13 +50,13 @@
       "body": "{shop_name} 本周：{orders} 笔订单，销售额 {sales}。热销商品：{top_item}。新增 {new_followers} 位关注者。{pending_actions} 项待处理。下次结算：{next_payout}。"
     },
     "order_cancelled": {
-      "body": "您的 Convergeo 订单 {order_reference} 已取消。{refund_detail} 回复 STOP 即可退订。"
+      "body": "您的 Vergeo5 订单 {order_reference} 已取消。{refund_detail} 回复 STOP 即可退订。"
     },
     "payment_failed": {
       "body": "您的 {amount} 付款未成功。如已被扣款，请联系客服，我们会处理。重试：{retry_url} 回复 STOP 即可退订。"
     },
     "order_completed": {
-      "body": "您的 Convergeo 订单 {order_reference} 已完成。感谢您的购买！查看订单：{order_url} 回复 STOP 即可退订。"
+      "body": "您的 Vergeo5 订单 {order_reference} 已完成。感谢您的购买！查看订单：{order_url} 回复 STOP 即可退订。"
     },
     "ticket_issued": {
       "body": "您的 {event_title} 门票已就绪。入场时出示二维码：{ticket_url} 回复 STOP 即可退订。"
@@ -74,106 +74,106 @@
       "body": "您的 {amount} 提现款项发送失败。{failure_hint} 信息更正后我们会重试。"
     },
     "rfq_quoted": {
-      "body": "您在 Convergeo 收到了 {quote_price} 的报价。请打开应用查看。回复 STOP 即可退订。"
+      "body": "您在 Vergeo5 收到了 {quote_price} 的报价。请打开应用查看。回复 STOP 即可退订。"
     },
     "service_quote_accepted": {
-      "body": "好消息！您的报价已被接受。{deposit} 定金（工作总额 {total}）已存入 Convergeo 托管。请打开应用开始工作。"
+      "body": "好消息！您的报价已被接受。{deposit} 定金（工作总额 {total}）已存入 Vergeo5 托管。请打开应用开始工作。"
     }
   },
   "sms": {
     "order_confirmed": {
-      "body": "Convergeo：订单 {order_reference} 已确认。总计 {total}。{track_url}"
+      "body": "Vergeo5：订单 {order_reference} 已确认。总计 {total}。{track_url}"
     },
     "payment_received": {
-      "body": "Convergeo：已收到 {order_reference} 的付款。{trust_narrative}"
+      "body": "Vergeo5：已收到 {order_reference} 的付款。{trust_narrative}"
     },
     "order_shipped": {
-      "body": "Convergeo：订单 {order_reference} 已发货。{tracking_info}"
+      "body": "Vergeo5：订单 {order_reference} 已发货。{tracking_info}"
     },
     "order_ready_pickup": {
-      "body": "Convergeo：订单 {order_reference} 已可自取。{pickup_details}"
+      "body": "Vergeo5：订单 {order_reference} 已可自取。{pickup_details}"
     },
     "order_delivered": {
-      "body": "Convergeo：订单 {order_reference} 已送达。评价：{review_url}"
+      "body": "Vergeo5：订单 {order_reference} 已送达。评价：{review_url}"
     },
     "vendor_new_order": {
-      "body": "Convergeo 卖家：新订单 {order_reference} — {product_title} × {quantity}"
+      "body": "Vergeo5 卖家：新订单 {order_reference} — {product_title} × {quantity}"
     },
     "otp_login": {
-      "body": "Convergeo 验证码：{otp_code}。10 分钟后失效。请勿分享。"
+      "body": "Vergeo5 验证码：{otp_code}。10 分钟后失效。请勿分享。"
     },
     "review_request": {
-      "body": "您的 Convergeo 订单 {order_reference} 体验如何？请留下评价：{review_url} 回复 STOP 退订。"
+      "body": "您的 Vergeo5 订单 {order_reference} 体验如何？请留下评价：{review_url} 回复 STOP 退订。"
     },
     "abandoned_cart_recovery": {
-      "body": "您的 Convergeo 购物车中还有商品。完成结账：{checkout_url} 回复 STOP 退订。"
+      "body": "您的 Vergeo5 购物车中还有商品。完成结账：{checkout_url} 回复 STOP 退订。"
     },
     "kyc_nudge": {
-      "body": "您的 Convergeo 卖家验证正在等待。请在卖家应用中完成，即可开始销售。"
+      "body": "您的 Vergeo5 卖家验证正在等待。请在卖家应用中完成，即可开始销售。"
     },
     "low_stock_alert": {
-      "body": "Convergeo：{title} 库存不足（仅剩 {stock_qty}）。请在卖家应用中补货。"
+      "body": "Vergeo5：{title} 库存不足（仅剩 {stock_qty}）。请在卖家应用中补货。"
     },
     "payout_failure_alert": {
-      "body": "Convergeo 放款失败：{vendor_name} {amount} 参考号 {lenco_reference}。请检查管理后台。"
+      "body": "Vergeo5 放款失败：{vendor_name} {amount} 参考号 {lenco_reference}。请检查管理后台。"
     },
     "order_cancelled": {
-      "body": "Convergeo：订单 {order_reference} 已取消。如已付款，我们会处理退款。"
+      "body": "Vergeo5：订单 {order_reference} 已取消。如已付款，我们会处理退款。"
     },
     "payment_failed": {
-      "body": "Convergeo：您的 K{amount} 付款未成功。请打开应用重试。"
+      "body": "Vergeo5：您的 K{amount} 付款未成功。请打开应用重试。"
     },
     "order_completed": {
-      "body": "Convergeo：订单 {order_reference} 已完成。感谢您的购买！"
+      "body": "Vergeo5：订单 {order_reference} 已完成。感谢您的购买！"
     },
     "ticket_issued": {
-      "body": "Convergeo：您的“{event_title}”门票已就绪。打开“我的门票”出示二维码。"
+      "body": "Vergeo5：您的“{event_title}”门票已就绪。打开“我的门票”出示二维码。"
     },
     "dispute_opened": {
-      "body": "Convergeo：订单 {order_reference} 被发起纠纷。请打开商家应用回复。"
+      "body": "Vergeo5：订单 {order_reference} 被发起纠纷。请打开商家应用回复。"
     },
     "dispute_resolved": {
-      "body": "Convergeo：订单 {order_reference} 的纠纷已解决。请打开应用查看结果。"
+      "body": "Vergeo5：订单 {order_reference} 的纠纷已解决。请打开应用查看结果。"
     },
     "payout_sent": {
-      "body": "Convergeo：您的 K{amount} 提现款项正在汇往您的 {destination_label}。"
+      "body": "Vergeo5：您的 K{amount} 提现款项正在汇往您的 {destination_label}。"
     },
     "payout_failed": {
-      "body": "Convergeo：您的 K{amount} 提现款项发送失败。请在商家应用中检查收款号码。"
+      "body": "Vergeo5：您的 K{amount} 提现款项发送失败。请在商家应用中检查收款号码。"
     }
   },
   "email": {
     "receipt": {
-      "subject": "您的 Convergeo 收据 — 订单 {order_id}",
-      "body": "<p>感谢您的付款。</p><p><strong>订单：</strong> {order_id}</p><p><strong>金额：</strong> K{amount}</p><p>款项由 Convergeo 安全保管，直至送达。</p>"
+      "subject": "您的 Vergeo5 收据 — 订单 {order_id}",
+      "body": "<p>感谢您的付款。</p><p><strong>订单：</strong> {order_id}</p><p><strong>金额：</strong> K{amount}</p><p>款项由 Vergeo5 安全保管，直至送达。</p>"
     },
     "order_receipt": {
-      "subject": "您的 Convergeo 收据 — 订单 {order_id}",
+      "subject": "您的 Vergeo5 收据 — 订单 {order_id}",
       "body": "<p>感谢您的订购。</p><p><strong>订单：</strong> {order_id}</p><p><strong>总计：</strong> K{amount}</p>"
     },
     "kyc": {
       "approved": {
-        "subject": "您的 Convergeo 卖家验证已通过",
-        "body": "<p>好消息 — 您的卖家身份验证已通过。</p><p>您现在可以在 Convergeo 上发布商品并接收放款。</p>"
+        "subject": "您的 Vergeo5 卖家验证已通过",
+        "body": "<p>好消息 — 您的卖家身份验证已通过。</p><p>您现在可以在 Vergeo5 上发布商品并接收放款。</p>"
       },
       "rejected": {
-        "subject": "您的 Convergeo 卖家验证需要处理",
+        "subject": "您的 Vergeo5 卖家验证需要处理",
         "body": "<p>我们无法通过您的卖家验证。</p><p><strong>原因：</strong> {reason}</p><p>请在卖家应用中重新提交您的文件。</p>"
       }
     }
   },
   "marketing": {
     "review_request": {
-      "body": "您在 {vendor_name} 的 Convergeo 订单 {order_reference} 体验如何？分享您的评价：{review_url} 回复 STOP 退订。"
+      "body": "您在 {vendor_name} 的 Vergeo5 订单 {order_reference} 体验如何？分享您的评价：{review_url} 回复 STOP 退订。"
     },
     "abandoned_cart_recovery": {
-      "body": "您的 Convergeo 购物车中仍有商品在等待。从上次的地方继续：{checkout_url} 回复 STOP 退订。"
+      "body": "您的 Vergeo5 购物车中仍有商品在等待。从上次的地方继续：{checkout_url} 回复 STOP 退订。"
     },
     "kyc_nudge": {
-      "body": "您的 Convergeo 卖家申请已等待 48 小时。完成验证即可开始销售。"
+      "body": "您的 Vergeo5 卖家申请已等待 48 小时。完成验证即可开始销售。"
     },
     "low_stock_alert": {
-      "body": "Convergeo 库存不足：{title} 仅剩 {stock_qty} 件（阈值 {threshold}）。请在卖家应用中更新库存。"
+      "body": "Vergeo5 库存不足：{title} 仅剩 {stock_qty} 件（阈值 {threshold}）。请在卖家应用中更新库存。"
     },
     "payout_failure_alert": {
       "body": "放款失败警报：{vendor_name} — {amount}（参考号 {lenco_reference}）。请在管理后台查看。"
@@ -223,7 +223,7 @@
       "birthday_greeting": "生日快乐！在接下来的 {valid_days} 天内使用优惠码 {code} 领取惊喜。",
       "points_earned": "您获得了 {points} 积分，现在共有 {balance} 积分。",
       "order_cancelled": "订单 {ref} 已取消。已付款项将被退还。",
-      "order_completed": "订单 {ref} 已完成。感谢您在 Convergeo 购物！",
+      "order_completed": "订单 {ref} 已完成。感谢您在 Vergeo5 购物！",
       "payment_failed": "您的付款未成功。请打开订单重试。",
       "dispute_resolved": "订单 {ref} 的纠纷已解决。打开查看结果。"
     },
