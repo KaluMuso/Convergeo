@@ -62,7 +62,15 @@ export function buildReportOnlyCsp(inlineScriptHashes: string[] = []): string {
 
 let reportOnlyCspCache: Promise<string> | undefined;
 function getReportOnlyCsp(): Promise<string> {
-  reportOnlyCspCache ??= cspSha256Source(THEME_SCRIPT).then((hash) => buildReportOnlyCsp([hash]));
+  if (!reportOnlyCspCache) {
+    reportOnlyCspCache = cspSha256Source(THEME_SCRIPT)
+      .then((hash) => buildReportOnlyCsp([hash]))
+      .catch((error: unknown) => {
+        reportOnlyCspCache = undefined;
+        console.error("report-only CSP hash failed; using fallback policy", error);
+        return buildReportOnlyCsp([]);
+      });
+  }
   return reportOnlyCspCache;
 }
 
