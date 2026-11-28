@@ -33,7 +33,7 @@ from app.schemas.service_archetypes import (
 from fastapi.testclient import TestClient
 
 # Reuse the fake database and fixtures from the packages tests.
-from test_service_packages import (  # noqa: F401  (pytest fixtures)
+from tests.test_service_packages import (  # noqa: F401  (pytest fixtures)
     SERVICE_ID,
     FakeClient,
     _pkg,
