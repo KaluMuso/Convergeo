@@ -596,6 +596,34 @@ class Runner:
         self.write_result()
 
 
+def failure_lines(results: dict[str, object], limit: int = 40) -> list[str]:
+    """Output-only digest of why a run was not accepted; it never decides acceptance."""
+    lines: list[str] = []
+    for key in ("error", "cleanup_error"):
+        if results.get(key):
+            lines.append(f"{key}: {str(results[key])[:2200]}")
+    phases = results.get("phases")
+    for phase, groups in (phases.items() if isinstance(phases, dict) else ()):
+        for group, report in (groups.items() if isinstance(groups, dict) else ()):
+            if not isinstance(report, dict) or report.get("accepted") is True:
+                continue
+            counts = {k: report.get(k) for k in
+                      ("expected", "executed", "passed", "skipped", "failed",
+                       "pytest_exit", "collection_exit")}
+            lines.append(f"{phase}/{group} not accepted: {counts}")
+            for label in ("inventory_error", "errors", "duplicates", "unexpected"):
+                if report.get(label):
+                    lines.append(f"  {label}: {report[label]}")
+            identities = report.get("identities")
+            bad = sorted((i, v) for i, v in identities.items() if v != "PASS") \
+                if isinstance(identities, dict) else []
+            for identity, state in bad[:limit]:
+                lines.append(f"  {state} {identity}")
+            if len(bad) > limit:
+                lines.append(f"  ... and {len(bad) - limit} more not passing")
+    return lines
+
+
 def main() -> int:
     validate_host()  # No database, network or runtime operation precedes this check.
     runner = Runner()
@@ -608,6 +636,9 @@ def main() -> int:
         print("::error::real-stack failure: " + detail, file=sys.stderr)
     finally:
         runner.finish()
+    if not runner.results["accepted"]:
+        for line in failure_lines(runner.results):
+            print(runner.redact(line), file=sys.stderr)
     print("FINANCIAL_REAL_STACK_PASS" if runner.results["accepted"]
           else "FINANCIAL_REAL_STACK_INCOMPLETE")
     return 0 if runner.results["accepted"] else 1
