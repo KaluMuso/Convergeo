@@ -66,7 +66,22 @@ export function DashboardsView({ locale, tab }: { locale: string; tab: Dashboard
   const [exportState, setExportState] = useState<ExportState>("idle");
   const query = periodQuery(selection);
 
-  const load = useCallback(async () => {
+  const fetchDashboard = useCallback(async () => {
+    setState({ kind: "loading" });
+    try {
+      const data = await dashboardApi.request<unknown>(`/admin/analytics/${api}?${query}`);
+      setState({ kind: "ready", data });
+    } catch (err) {
+      setState({
+        kind: classifyAdminRequestError(err).kind === "permission" ? "permission" : "error",
+      });
+    }
+  }, [api, query]);
+
+  const reload = useCallback(() => {
+    if (grants === null) {
+      return;
+    }
     if (!allowed) {
       setState({ kind: "permission" });
       return;
@@ -79,20 +94,28 @@ export function DashboardsView({ locale, tab }: { locale: string; tab: Dashboard
       setState({ kind: "idle" });
       return;
     }
-    setState({ kind: "loading" });
-    try {
-      const data = await dashboardApi.request<unknown>(`/admin/analytics/${api}?${query}`);
-      setState({ kind: "ready", data });
-    } catch (err) {
-      setState({
-        kind: classifyAdminRequestError(err).kind === "permission" ? "permission" : "error",
-      });
-    }
-  }, [allowed, api, query]);
+    void fetchDashboard();
+  }, [allowed, fetchDashboard, grants, query]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (grants === null) {
+      setState({ kind: "loading" });
+      return;
+    }
+    if (!allowed) {
+      setState({ kind: "permission" });
+      return;
+    }
+    if (!getApiBaseUrl()) {
+      setState({ kind: "error" });
+      return;
+    }
+    if (query === null) {
+      setState({ kind: "idle" });
+      return;
+    }
+    void fetchDashboard();
+  }, [allowed, fetchDashboard, grants, query]);
 
   const runExport = async () => {
     if (query === null || state.kind !== "ready") {
@@ -225,7 +248,7 @@ export function DashboardsView({ locale, tab }: { locale: string; tab: Dashboard
           <button
             type="button"
             className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
-            onClick={() => void load()}
+            onClick={() => reload()}
           >
             {t("retry")}
           </button>

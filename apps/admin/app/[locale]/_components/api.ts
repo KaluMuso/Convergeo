@@ -5,12 +5,15 @@ import { createApiClient } from "@vergeo/config";
 import { getBrowserAccessToken } from "../../../lib/access-token";
 import { getApiBaseUrl } from "../../../lib/api-base-url";
 
-const API_BASE = getApiBaseUrl();
-
-export const dashboardApi = createApiClient({
-  baseUrl: API_BASE,
-  getToken: getBrowserAccessToken,
-});
+/** Resolves the API base on each call so a stale module-level URL cannot strand fetches. */
+export const dashboardApi = {
+  request<T>(path: string, init?: RequestInit): Promise<T> {
+    return createApiClient({
+      baseUrl: getApiBaseUrl(),
+      getToken: getBrowserAccessToken,
+    }).request<T>(path, init);
+  },
+};
 
 export type OrdersByStatus = {
   placed: number;
