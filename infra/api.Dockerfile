@@ -37,4 +37,9 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Worker count comes from WEB_CONCURRENCY (uvicorn reads it when --workers is absent), so it
+# can be tuned in infra/.env without rebuilding the image. Each worker holds up to
+# SUPABASE_DB_POOL_MAX database connections: total = WEB_CONCURRENCY x SUPABASE_DB_POOL_MAX.
+ENV WEB_CONCURRENCY=2
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
