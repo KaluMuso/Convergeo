@@ -12,8 +12,8 @@ from tests.test_listing_create import (  # noqa: F401 - fixtures
 )
 
 
-def test_category_options_hide_blocked_and_vendor_hidden(  # noqa: F811
-    listing_client: TestClient,
+def test_category_options_hide_blocked_and_vendor_hidden(
+    listing_client: TestClient,  # noqa: F811
     fake_client: FakeSupabaseClient,  # noqa: F811 - pytest fixtures
 ) -> None:
     rows = fake_client.tables["categories"].rows
