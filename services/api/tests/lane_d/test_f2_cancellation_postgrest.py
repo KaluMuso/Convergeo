@@ -65,7 +65,7 @@ def age_attempt(payment: str) -> None:
         f"UPDATE public.payments SET created_at = now() - interval '{minutes} minutes' "
         f"WHERE id='{payment}' RETURNING status;"
     )
-    assert result.ok and result.rows == ["initiated"], result.error
+    assert result.ok and result.rows == ["initiated", "UPDATE 1"], result.error
 
 
 def observe(f: dict[str, Any], payment: str, reference: str, leg: str) -> Any:
