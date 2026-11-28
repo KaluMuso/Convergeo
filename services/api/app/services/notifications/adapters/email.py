@@ -243,19 +243,6 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             ),
         },
     },
-    "import_quote_ready": {
-        "en": {
-            "subject_key": "notifications.email.import_quote_ready.subject",
-            "subject": "Your import quote is ready on Convergeo",
-            "body_key": "notifications.email.import_quote_ready.body",
-            "body": (
-                "<p>We prepared a landed-cost estimate for <strong>{import_title}</strong>: "
-                "about <strong>K{import_total}</strong> in total.</p>"
-                "<p>This is an estimate, not an offer. Open Source in the Convergeo "
-                "vendor app to see the full breakdown.</p>"
-            ),
-        },
-    },
     "order_cancelled": {
         "en": {
             "subject_key": "notifications.email.order_cancelled.subject",
