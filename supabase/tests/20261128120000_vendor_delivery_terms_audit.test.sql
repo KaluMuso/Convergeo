@@ -7,6 +7,7 @@ begin;
 do $$
 declare
   v_owner uuid := gen_random_uuid();
+  v_admin uuid := gen_random_uuid();
   v_vendor uuid;
   v_listing uuid;
   n int;
@@ -31,7 +32,8 @@ begin
   update public.vendors set free_delivery_all = true, free_delivery_method = 'self_delivery'
    where id = v_vendor;
   select * into a from public.audit_log
-   where entity_id = v_vendor and action = 'vendor.delivery_terms.update';
+   where entity_id = v_vendor and action = 'vendor.delivery_terms.update'
+   order by at, id limit 1;
   if a.actor <> v_owner
      or (a.before ->> 'free_delivery_all')::boolean is not false
      or (a.after ->> 'free_delivery_all')::boolean is not true
@@ -44,6 +46,17 @@ begin
   select count(*) into n from public.audit_log
    where entity_id = v_vendor and action = 'vendor.delivery_terms.update';
   if n <> 1 then raise exception 'no-op update was audited (% rows)', n; end if;
+
+  -- A signed-in admin's change is logged as the admin, not the owner.
+  perform set_config('request.jwt.claim.sub', v_admin::text, true);
+  update public.vendors set free_delivery_method = 'platform_courier' where id = v_vendor;
+  perform set_config('request.jwt.claim.sub', '', true);
+  select * into a from public.audit_log
+   where entity_id = v_vendor and action = 'vendor.delivery_terms.update'
+   order by at desc, id limit 1;
+  if a.actor is distinct from v_admin then
+    raise exception 'admin change not attributed to admin: %', a;
+  end if;
 
   -- Listing-level flag.
   select id into v_listing from public.vendor_listings where vendor_id = v_vendor limit 1;

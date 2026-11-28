@@ -6,7 +6,9 @@
 -- statement and transaction as the UPDATE, whichever code path made it (the vendor
 -- API, an admin tool, a script). If the audit insert fails the change rolls back.
 --
--- The actor is the shop owner (the only role that can change these through the API).
+-- The actor is the signed-in user when there is one (auth.uid(), so an admin's change is
+-- logged as the admin); service-role calls from the vendor API carry no end-user JWT, so
+-- they fall back to the shop owner (the only role that can change these through the API).
 --
 -- Additive only. Reversible:
 --   drop trigger if exists vendor_listings_audit_free_delivery on public.vendor_listings;
@@ -25,7 +27,7 @@ begin
      or new.free_delivery_method is distinct from old.free_delivery_method then
     insert into public.audit_log (actor, action, entity_type, entity_id, before, after)
     values (
-      new.owner_user_id,
+      coalesce(auth.uid(), new.owner_user_id),
       'vendor.delivery_terms.update',
       'vendor',
       new.id,
@@ -56,7 +58,7 @@ begin
     select owner_user_id into v_owner from public.vendors where id = new.vendor_id;
     insert into public.audit_log (actor, action, entity_type, entity_id, before, after)
     values (
-      v_owner,
+      coalesce(auth.uid(), v_owner),
       'vendor.listing_free_delivery.update',
       'vendor_listing',
       new.id,
