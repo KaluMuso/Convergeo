@@ -13,6 +13,7 @@ import {
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
 import { buildOgImageUrl, buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -37,6 +38,7 @@ import {
   LazyPdpSpecTable,
 } from "../../_components/pdp/lazy-pdp-fold";
 import { LazyProductQuestions } from "../../_components/pdp/lazy-product-questions";
+import { LazyProductViewTracker } from "../../_components/pdp/lazy-product-view-tracker";
 import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
 import { PdpDetailsTabs } from "../../_components/pdp/pdp-details-tabs";
 import {
@@ -44,7 +46,6 @@ import {
   type ProductListing,
 } from "../../_components/pdp/pdp-interactive-body";
 import { PdpRatingChip } from "../../_components/pdp/pdp-rating-chip";
-import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
 import { groupSpecRows } from "../../_components/pdp/spec-groups";
 import { specRowsFromJson } from "../../_components/pdp/specs-table";
@@ -54,12 +55,8 @@ import {
   productAggregateRatingForJsonLd,
   type ProductReviewAggregate,
 } from "./_components/product-review-aggregate";
-import {
-  ReviewsSection,
-  type ReviewRow,
-  type ReviewsSectionLabels,
-} from "./_components/reviews-section";
 
+import type { ReviewRow, ReviewsSectionLabels } from "./_components/reviews-section";
 import type { ComparisonListing } from "../../_components/pdp/comparison";
 import type { ListingCondition } from "../../_components/pdp/condition-badge";
 import type { Metadata } from "next";
@@ -247,6 +244,11 @@ async function ReviewsPanel({
     />
   );
 }
+
+/** Below the fold and already streamed: split from the PDP entry chunk. */
+const ReviewsSection = dynamic(() =>
+  import("./_components/reviews-section").then((mod) => mod.ReviewsSection),
+);
 
 function selectListing(listings: Listing[], listingId?: string): Listing | null {
   if (listings.length === 0) {
@@ -727,7 +729,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     >
       {productJsonLd ? <JsonLdScript data={productJsonLd} /> : null}
       <JsonLdScript data={breadcrumbJsonLd} />
-      <ProductViewTracker
+      <LazyProductViewTracker
         productId={product.id}
         listingId={selectedListing?.id}
         recent={{

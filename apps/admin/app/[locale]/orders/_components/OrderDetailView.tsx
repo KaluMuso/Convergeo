@@ -160,7 +160,7 @@ export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
             <li key={item.id} className="flex justify-between gap-3 px-3 py-2 text-sm">
               <span>
                 {t("itemLine", {
-                  title: item.title_snapshot ?? item.item_kind,
+                  title: item.title_snapshot?.trim() || t("untitledItem"),
                   qty: item.qty,
                 })}
               </span>

@@ -2,10 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import {
-  isSpeechRecognitionSupported,
-  preferredEnglishLang,
-} from "./speech-support";
+import { isSpeechRecognitionSupported, preferredEnglishLang } from "./speech-support";
 
 import type { SpeechSession } from "./speech-session";
 
@@ -16,8 +13,10 @@ export type AskVoiceButtonLabels = {
   stop: string;
   /** Live-region text while listening. */
   listening: string;
-  /** Live-region text on failure (mic blocked / no speech). */
+  /** Live-region text on failure (no speech / unknown). */
   error: string;
+  /** Shown when the microphone is blocked (permission denied or policy). */
+  denied?: string;
 };
 
 export type AskVoiceButtonProps = {
@@ -47,6 +46,7 @@ export function AskVoiceButton({
 }: AskVoiceButtonProps) {
   const [supported, setSupported] = useState(false);
   const [state, setState] = useState<VoiceState>("idle");
+  const [denied, setDenied] = useState(false);
   const sessionRef = useRef<SpeechSession | null>(null);
   const onTranscriptRef = useRef(onTranscript);
 
@@ -69,6 +69,7 @@ export function AskVoiceButton({
       return;
     }
     setState("listening");
+    setDenied(false);
     let failed = false;
     const { startSpeechSession } = await import("./speech-session");
     sessionRef.current = startSpeechSession({
@@ -78,6 +79,7 @@ export function AskVoiceButton({
         // "aborted" is our own cancel; "no-speech" just means silence.
         if (code !== "aborted") {
           failed = true;
+          setDenied(code === "not-allowed" || code === "service-not-allowed");
           setState("error");
         }
       },
@@ -129,10 +131,16 @@ export function AskVoiceButton({
       <span
         role="status"
         aria-live="polite"
-        className="sr-only"
+        className={state === "error" ? "ms-2 text-xs text-danger" : "sr-only"}
         data-testid="ask-voice-status"
       >
-        {listening ? labels.listening : state === "error" ? labels.error : ""}
+        {listening
+          ? labels.listening
+          : state === "error"
+            ? denied && labels.denied
+              ? labels.denied
+              : labels.error
+            : ""}
       </span>
     </span>
   );

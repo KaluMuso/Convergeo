@@ -11,6 +11,7 @@ import {
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 
 import { BackToTop } from "./_components/back-to-top";
 import { BannerRow } from "./_components/banner-row";
@@ -27,6 +28,7 @@ import {
   HomeServicesRail,
   HomeVendorsRail,
   loadHomeDefaultData,
+  type HomeDefaultData,
 } from "./_components/home-default";
 import { HomeEmptyRails } from "./_components/home-empty-rails";
 import { isRenderableSection } from "./_components/home-feed/feed-types";
@@ -41,6 +43,7 @@ import {
   loadHomeStreamFirstPage,
 } from "./_components/home-feed/home-stream";
 import { planHomeLayout } from "./_components/home-layout";
+import { HomeRailFallback } from "./_components/home-rail-fallback";
 import { HomeRecentlyViewedRail } from "./_components/home-recently-viewed-rail";
 import { HomeTrustStrip } from "./_components/home-trust-strip";
 import { loadHomeMerchData, pickSlot, type HomeSectionKey } from "./_components/merch-data";
@@ -52,6 +55,14 @@ import { buildSignalLabels } from "./_components/plp/signals";
 import type { Metadata } from "next";
 
 export const revalidate = 60;
+
+const EMPTY_DEFAULT_DATA: HomeDefaultData = {
+  deals: [],
+  newest: [],
+  departmentRails: [],
+  services: [],
+  topVendors: [],
+};
 
 type CatalogTranslator = (key: string, values?: Record<string, string | number>) => string;
 
@@ -179,13 +190,15 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   setRequestLocale(locale);
 
-  const [tRaw, merch, baseMessages, directoryMessages, feedPage, streamLoad] = await Promise.all([
+  // Started before any await so it overlaps with merch/feed; consumed (awaited)
+  // only inside the streamed Suspense sections below.
+  const streamPromise = loadHomeStreamFirstPage();
+  const [tRaw, merch, baseMessages, directoryMessages, feedPage] = await Promise.all([
     getCatalogTranslator(locale),
     loadHomeMerchData({ merchPreview }),
     getMessages(),
     loadNamespace(locale as Locale, "directory"),
     loadHomeFeedFirstPage(locale),
-    loadHomeStreamFirstPage(),
   ]);
   const t = tRaw as unknown as CatalogTranslator;
   // Card/rail labels cross into client components as serializable strings and are
@@ -205,8 +218,14 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   });
 
   // Always load catalogue rails so partial/placeholder merch cannot suppress discovery.
-  const defaultData = await loadHomeDefaultData(merch.categories);
-  const plan = planHomeLayout(merch.slots, merch.categories, defaultData);
+  // Second wave (needs the category paths). Not awaited: the hero, trust strip and
+  // category grid paint from merch + feed alone, and the rails stream in after.
+  const defaultPromise = loadHomeDefaultData(merch.categories);
+  // With categories present `hasDefault` is true whatever the rails hold, so the
+  // shell plan is exact without the rails. With none, fall back to awaiting them so
+  // the layout mode is decided on the real data (rare: categories API degraded).
+  const eagerDefault = merch.categories.length === 0 ? await defaultPromise : null;
+  const plan = planHomeLayout(merch.slots, merch.categories, eagerDefault ?? EMPTY_DEFAULT_DATA);
 
   const trustLabels = {
     ariaLabel: t("home.trustStrip.ariaLabel"),
@@ -281,11 +300,144 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   });
 
   const brandName = tCommon("app.name");
-  const homeIsEmpty =
-    !useAdminFeed &&
-    !plan.showDefaultRails &&
-    defaultData.deals.length === 0 &&
-    !(streamLoad.status === "ok" && streamLoad.page.items.length > 0);
+
+  async function HomeDealsSection() {
+    const defaultData = eagerDefault ?? (await defaultPromise);
+    // Existing GET /deals only; hides itself when there are no live deals.
+    return (
+      <HomeProductRail
+        id="home-rail-deals"
+        title={t("home.dealsRail.title")}
+        viewAllHref={`/${locale}/deals`}
+        viewAllLabel={t("home.rails.viewAll")}
+        listings={defaultData.deals}
+        locale={locale}
+        labels={railLabels}
+        priorityCount={2}
+      />
+    );
+  }
+
+  async function HomeLowerSections() {
+    const [defaultData, streamLoad] = await Promise.all([
+      eagerDefault ?? defaultPromise,
+      streamPromise,
+    ]);
+    const fullPlan = planHomeLayout(merch.slots, merch.categories, defaultData);
+    const homeIsEmpty =
+      !useAdminFeed &&
+      !fullPlan.showDefaultRails &&
+      defaultData.deals.length === 0 &&
+      !(streamLoad.status === "ok" && streamLoad.page.items.length > 0);
+
+    return (
+      <>
+        {fullPlan.showDefaultRails && !useAdminFeed ? (
+          <>
+            <HomeProductRail
+              id="home-rail-new"
+              title={t("home.rails.newTitle")}
+              viewAllHref={`/${locale}/c/all`}
+              viewAllLabel={t("home.rails.viewAll")}
+              listings={defaultData.newest}
+              locale={locale}
+              labels={railLabels}
+              priorityCount={0}
+            />
+            {defaultData.departmentRails.map((rail) => (
+              <HomeProductRail
+                key={rail.category.id}
+                id={`home-rail-${rail.category.slug}`}
+                title={t("home.rails.departmentTitle", {
+                  category: rail.category.name,
+                })}
+                viewAllHref={`/${locale}/c/${rail.category.slug}`}
+                viewAllLabel={t("home.rails.viewAll")}
+                listings={rail.listings}
+                locale={locale}
+                labels={railLabels}
+              />
+            ))}
+          </>
+        ) : null}
+
+        {showEventsRow
+          ? renderCampaignSection("events_row", locale, t, merch.slots, merch.categories)
+          : null}
+
+        {fullPlan.showDefaultRails && !useAdminFeed ? (
+          <>
+            <HomeServicesRail
+              id="home-rail-services"
+              title={t("home.rails.servicesTitle")}
+              viewAllHref={`/${locale}/services`}
+              viewAllLabel={t("home.rails.viewAll")}
+              services={defaultData.services}
+              locale={locale}
+              labels={{
+                provider: raw("home.rails.services.provider"),
+                fromPrice: t("home.rails.services.fromPrice"),
+                noReviews: t("home.rails.services.noReviews"),
+                view: t("home.rails.services.view"),
+              }}
+            />
+            <HomeVendorsRail
+              id="home-rail-vendors"
+              title={t("home.rails.vendorsTitle")}
+              viewAllHref={`/${locale}/vendors`}
+              viewAllLabel={t("home.rails.viewAll")}
+              vendors={defaultData.topVendors}
+              locale={locale}
+              labels={{
+                listings: t("home.rails.vendors.listings"),
+                reviews: t("home.rails.vendors.reviews"),
+                rating: raw("home.rails.vendors.rating"),
+                noReviews: t("home.rails.vendors.noReviews"),
+                preferred: t("home.rails.vendors.preferred"),
+                verified: t("home.rails.vendors.verified"),
+                location: t("home.rails.vendors.location"),
+                view: t("home.rails.vendors.view"),
+                trustLabels: vendorLadderLabels,
+              }}
+            />
+          </>
+        ) : null}
+
+        {fullPlan.showSellCta ? <HomeSellCta locale={locale} t={t} /> : null}
+
+        {/* Infinite feed is last so loading more never pushes static modules away. */}
+        {useAdminFeed ? (
+          <HomeFeed
+            page={feedPage}
+            locale={locale}
+            labels={feedLabels}
+            streamFollows={streamLoad.status === "ok" && streamLoad.page.items.length > 0}
+          />
+        ) : null}
+
+        {homeIsEmpty ? (
+          <HomeEmptyRails
+            locale={locale}
+            labels={{
+              title: t("home.feed.stream.emptyTitle"),
+              body: t("home.feed.stream.emptyBody"),
+              browse: t("home.hero.primaryCta"),
+              sell: t("home.feed.stream.emptyCta"),
+            }}
+          />
+        ) : (
+          /* "Popular now": first batch is SSR; only later pages load on the client. */
+          <HomeListingStream
+            stream={streamLoad}
+            sectionListingIds={listingIdsOf(feedPage.sections)}
+            locale={locale}
+            cardLabels={railLabels}
+            labels={streamLabels}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="v-home-fab-pad flex flex-col gap-4 lg:gap-6">
@@ -315,17 +467,9 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
         />
       ) : null}
 
-      {/* Existing GET /deals only; hides itself when there are no live deals. */}
-      <HomeProductRail
-        id="home-rail-deals"
-        title={t("home.dealsRail.title")}
-        viewAllHref={`/${locale}/deals`}
-        viewAllLabel={t("home.rails.viewAll")}
-        listings={defaultData.deals}
-        locale={locale}
-        labels={railLabels}
-        priorityCount={2}
-      />
+      <Suspense fallback={<HomeRailFallback testId="home-deals-fallback" />}>
+        <HomeDealsSection />
+      </Suspense>
 
       {earlyCampaignKeys.map((sectionKey) =>
         renderCampaignSection(sectionKey, locale, t, merch.slots, merch.categories),
@@ -341,109 +485,9 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
         }}
       />
 
-      {plan.showDefaultRails && !useAdminFeed ? (
-        <>
-          <HomeProductRail
-            id="home-rail-new"
-            title={t("home.rails.newTitle")}
-            viewAllHref={`/${locale}/c/all`}
-            viewAllLabel={t("home.rails.viewAll")}
-            listings={defaultData.newest}
-            locale={locale}
-            labels={railLabels}
-            priorityCount={0}
-          />
-          {defaultData.departmentRails.map((rail) => (
-            <HomeProductRail
-              key={rail.category.id}
-              id={`home-rail-${rail.category.slug}`}
-              title={t("home.rails.departmentTitle", {
-                category: rail.category.name,
-              })}
-              viewAllHref={`/${locale}/c/${rail.category.slug}`}
-              viewAllLabel={t("home.rails.viewAll")}
-              listings={rail.listings}
-              locale={locale}
-              labels={railLabels}
-            />
-          ))}
-        </>
-      ) : null}
-
-      {showEventsRow
-        ? renderCampaignSection("events_row", locale, t, merch.slots, merch.categories)
-        : null}
-
-      {plan.showDefaultRails && !useAdminFeed ? (
-        <>
-          <HomeServicesRail
-            id="home-rail-services"
-            title={t("home.rails.servicesTitle")}
-            viewAllHref={`/${locale}/services`}
-            viewAllLabel={t("home.rails.viewAll")}
-            services={defaultData.services}
-            locale={locale}
-            labels={{
-              provider: raw("home.rails.services.provider"),
-              fromPrice: t("home.rails.services.fromPrice"),
-              noReviews: t("home.rails.services.noReviews"),
-              view: t("home.rails.services.view"),
-            }}
-          />
-          <HomeVendorsRail
-            id="home-rail-vendors"
-            title={t("home.rails.vendorsTitle")}
-            viewAllHref={`/${locale}/vendors`}
-            viewAllLabel={t("home.rails.viewAll")}
-            vendors={defaultData.topVendors}
-            locale={locale}
-            labels={{
-              listings: t("home.rails.vendors.listings"),
-              reviews: t("home.rails.vendors.reviews"),
-              rating: raw("home.rails.vendors.rating"),
-              noReviews: t("home.rails.vendors.noReviews"),
-              preferred: t("home.rails.vendors.preferred"),
-              verified: t("home.rails.vendors.verified"),
-              location: t("home.rails.vendors.location"),
-              view: t("home.rails.vendors.view"),
-              trustLabels: vendorLadderLabels,
-            }}
-          />
-        </>
-      ) : null}
-
-      {plan.showSellCta ? <HomeSellCta locale={locale} t={t} /> : null}
-
-      {/* Infinite feed is last so loading more never pushes static modules away. */}
-      {useAdminFeed ? (
-        <HomeFeed
-          page={feedPage}
-          locale={locale}
-          labels={feedLabels}
-          streamFollows={streamLoad.status === "ok" && streamLoad.page.items.length > 0}
-        />
-      ) : null}
-
-      {homeIsEmpty ? (
-        <HomeEmptyRails
-          locale={locale}
-          labels={{
-            title: t("home.feed.stream.emptyTitle"),
-            body: t("home.feed.stream.emptyBody"),
-            browse: t("home.hero.primaryCta"),
-            sell: t("home.feed.stream.emptyCta"),
-          }}
-        />
-      ) : (
-        /* "Popular now": first batch is SSR; only later pages load on the client. */
-        <HomeListingStream
-          stream={streamLoad}
-          sectionListingIds={listingIdsOf(feedPage.sections)}
-          locale={locale}
-          cardLabels={railLabels}
-          labels={streamLabels}
-        />
-      )}
+      <Suspense fallback={<HomeRailFallback testId="home-rails-fallback" rows={2} />}>
+        <HomeLowerSections />
+      </Suspense>
       <BackToTop label={t("plp.backToTop")} />
     </div>
   );

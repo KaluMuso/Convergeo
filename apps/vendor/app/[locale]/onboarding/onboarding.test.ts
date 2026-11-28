@@ -353,11 +353,11 @@ describe("vendor.onboarding i18n", () => {
     }
   });
 
-  it("preserves pitch section from M12-P11 with invite-only beta honesty", () => {
+  it("keeps the pitch section and no longer claims the beta is invite-only", () => {
     const pitch = vendorMessages.pitch as Record<string, unknown>;
     expect(pitch.hero).toBeDefined();
-    expect(pitch.inviteOnlyNotice).toBeTruthy();
-    expect(String(pitch.signupUnavailable)).toMatch(/invite/i);
+    expect(pitch.inviteOnlyNotice).toBeUndefined();
+    expect(pitch.signupUnavailable).toBeUndefined();
     expect(vendorMessages["vendor.dashboard.title"]).toBeDefined();
   });
 });

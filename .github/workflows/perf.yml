@@ -61,6 +61,9 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_perf == 'true') }}
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
     # Same auth-hook/OAuth dummy env as CI db/rls — Supabase CLI cannot start without them.
     env:
       SEND_SMS_HOOK_SECRET: "v1,whsec_Y2ktZHVtbXktc2VuZC1zbXMtaG9vay1zZWNyZXQtMDAw"
@@ -128,11 +131,21 @@ jobs:
           # exceeded`, before a single byte of the bundle was measured.
           version: 2.109.1
 
+      - name: Pull digest-verified Supabase images from ghcr.io mirror
+        # public.ecr.aws anonymous pulls hit "Data limit exceeded"; ghcr is a digest-checked mirror.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bash scripts/ci/pull-supabase-ghcr-images.sh
+
       - name: Start local Supabase stack
         id: cart_local_stack
+        env:
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
         run: supabase start -x edge-runtime
 
       - name: Reset local database (with seed)
+        env:
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
         run: |
           # supabase db reset occasionally 502s while restarting containers after
           # migrations (CLI flake). Bounce the stack between attempts instead of
@@ -336,6 +349,23 @@ jobs:
               fi
             done
           done
+          # Checkout is the only measured route that waits on a live cart API call
+          # (guest cart -> /api/ci-perf/cart -> Python API). Curl on the HTML above never
+          # touches it, so the first measured checkout load paid the cold cart path inside
+          # Lighthouse's page-load window. Exercise the same seed + read path first.
+          jar="$(mktemp)"
+          seed=$(curl -s -o /dev/null -w '%{http_code}' -c "$jar" -b "$jar" \
+            -X POST http://localhost:3000/api/ci-perf/cart/items \
+            -H 'Content-Type: application/json' \
+            -H "Idempotency-Key: ci-perf-warm-$(date +%s%N)" \
+            -H 'Origin: http://localhost:3000' \
+            --data '{"listing_id":"b1000000-0000-0000-0000-000000000001","qty":1}')
+          echo "cart warmup seed -> ${seed}"
+          for round in 1 2; do
+            code=$(curl -s -o /dev/null -w '%{http_code} %{time_total}s' -b "$jar" http://localhost:3000/api/ci-perf/cart)
+            echo "cart warmup read ${round} -> ${code}"
+          done
+          rm -f "$jar"
 
       - name: Lighthouse performance assertions (blocking — see lighthouserc.json)
         # Same five URL policies, three runs, median perf/LCP and checkout SEO warning.

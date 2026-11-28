@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.schemas.base import StrictModel
+from app.schemas.base import NgweeInt, StrictModel
 from app.services.ask.retrieve import RetrievedDoc
 from app.services.ask.sanitize import strip_foreign_urls
 from app.services.notifications.templates.whatsapp import format_k
@@ -22,6 +22,32 @@ class CitationRef(StrictModel):
     slug: str | None = None
     in_stock: bool | None = None
     distance_km: float | None = None
+    # Integer ngwee behind ``price_display`` (the audit log records exactly what was shown).
+    price_min_ngwee: NgweeInt | None = None
+    price_max_ngwee: NgweeInt | None = None
+    # Locale-less customer paths (``/p/{slug}``…); the app prefixes the locale.
+    href: str | None = None
+    # Seller behind the cited item, resolved by ``enrich.attach_vendor_info``.
+    vendor_id: str | None = None
+    vendor_name: str | None = None
+    vendor_slug: str | None = None
+    vendor_href: str | None = None
+
+
+def route_path(kind: str, entity_id: str, slug: str | None) -> str | None:
+    """Locale-less customer path for an entity (mirrors the customer ``searchResultHref``)."""
+    clean = slug.strip() if isinstance(slug, str) and slug.strip() else None
+    if kind == "product":
+        return f"/p/{clean}" if clean else None
+    if kind == "listing":
+        return f"/p/{clean}?listing={entity_id}" if clean else f"/l/{entity_id}"
+    if kind == "service":
+        return f"/s/{clean or entity_id}"
+    if kind == "event":
+        return f"/e/{clean}" if clean else None
+    if kind == "vendor":
+        return f"/v/{clean}" if clean else None
+    return None
 
 
 class ValidatedAnswer(StrictModel):
@@ -61,6 +87,9 @@ def citation_from_doc(doc: RetrievedDoc) -> CitationRef:
         slug=doc.slug,
         in_stock=doc.in_stock,
         distance_km=doc.distance_km,
+        price_min_ngwee=doc.price_min_ngwee,
+        price_max_ngwee=doc.price_max_ngwee,
+        href=route_path(doc.entity_kind, doc.entity_id, doc.slug),
     )
 
 
